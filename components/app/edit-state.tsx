@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { defaultFilename, exportCard } from "@/lib/export-card";
+import type { Visibility } from "@/lib/visibility";
 import { RenderTheme, type ThemeId } from "./render-theme";
 import type { ActivityData } from "./sample-data";
 
@@ -29,25 +30,28 @@ const ACCENTS = [
   "#a98352",
 ];
 
+const VISIBILITY_TOGGLES: { key: keyof Visibility; label: string }[] = [
+  { key: "athleteName", label: "Athlete name" },
+  { key: "location", label: "Location" },
+  { key: "heartRate", label: "Heart rate" },
+  { key: "splits", label: "Splits" },
+];
+
 interface EditStateProps {
   accent: string;
   data: ActivityData;
   onAccentChange: (accent: string) => void;
   onDownload: () => void;
+  onPhotoChange: (file: File | null) => void;
   onThemeChange: (theme: ThemeId) => void;
+  onVisibilityChange: (visibility: Visibility) => void;
   photoUrl: string | null;
   theme: ThemeId;
+  visibility: Visibility;
 }
 
-export function EditState({
-  data,
-  theme,
-  onThemeChange,
-  photoUrl,
-  accent,
-  onAccentChange,
-  onDownload,
-}: EditStateProps) {
+export function EditState(props: EditStateProps) {
+  const { data, theme, photoUrl, onDownload } = props;
   const cardRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -70,14 +74,9 @@ export function EditState({
     <div className="grid flex-1 grid-cols-1 gap-8 px-6 pt-20 pb-8 md:px-10 lg:grid-cols-[1fr_400px] lg:gap-0 lg:px-0 lg:pt-24">
       <PreviewPane data={data} photoUrl={photoUrl} theme={theme} />
       <ControlsPane
-        accent={accent}
-        data={data}
+        {...props}
         isExporting={isExporting}
-        onAccentChange={onAccentChange}
         onDownload={handleDownload}
-        onThemeChange={onThemeChange}
-        photoUrl={photoUrl}
-        theme={theme}
       />
       {/* Native-size mount used by html-to-image. Off-screen via translate
           (which html-to-image strips when capturing) but laid out at full
@@ -135,9 +134,12 @@ function ControlsPane({
   theme,
   onThemeChange,
   photoUrl,
+  onPhotoChange,
   accent,
   onAccentChange,
   onDownload,
+  visibility,
+  onVisibilityChange,
   isExporting,
 }: ControlsPaneProps) {
   const titleId = useId();
@@ -188,31 +190,21 @@ function ControlsPane({
       </ControlBlock>
 
       <ControlBlock label="BACKGROUND PHOTO">
-        <div className="mt-2 flex items-center gap-3 border border-foreground/35 border-dashed p-3">
-          <div
-            aria-hidden
-            className="size-12"
-            style={{
-              background: photoUrl
-                ? `url(${photoUrl}) center/cover`
-                : "linear-gradient(135deg, #d8c5a0, #4a2a18)",
-            }}
-          />
-          <div className="flex-1 font-medium font-mono text-xs opacity-70">
-            {photoUrl ? "sunset_kicker.jpg" : "NO PHOTO · DROP ONE IN"}
-          </div>
-          <Button size="sm" variant="ghost">
-            {photoUrl ? "Replace" : "Upload"}
-          </Button>
-        </div>
+        <PhotoControl onChange={onPhotoChange} photoUrl={photoUrl} />
       </ControlBlock>
 
       <ControlBlock label="SHOW ON CARD">
         <div className="mt-3 flex flex-col gap-2.5">
-          <ToggleRow defaultChecked label="Athlete name" />
-          <ToggleRow defaultChecked label="Location" />
-          <ToggleRow label="Heart rate" />
-          <ToggleRow defaultChecked label="Splits" />
+          {VISIBILITY_TOGGLES.map((t) => (
+            <ToggleRow
+              checked={visibility[t.key]}
+              key={t.key}
+              label={t.label}
+              onCheckedChange={(checked) =>
+                onVisibilityChange({ ...visibility, [t.key]: checked })
+              }
+            />
+          ))}
         </div>
       </ControlBlock>
 
@@ -250,6 +242,56 @@ function ControlsPane({
         <span className="font-medium font-mono text-[10px] tracking-[0.18em] opacity-75">
           1080 × 1350
         </span>
+      </Button>
+    </div>
+  );
+}
+
+function PhotoControl({
+  photoUrl,
+  onChange,
+}: {
+  photoUrl: string | null;
+  onChange: (file: File | null) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <div className="mt-2 flex items-center gap-3 border border-foreground/35 border-dashed p-3">
+      <input
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            onChange(file);
+          }
+        }}
+        ref={inputRef}
+        type="file"
+      />
+      <div
+        aria-hidden
+        className="size-12"
+        style={{
+          background: photoUrl
+            ? `url(${photoUrl}) center/cover`
+            : "linear-gradient(135deg, #d8c5a0, #4a2a18)",
+        }}
+      />
+      <div className="flex-1 font-medium font-mono text-xs opacity-70">
+        {photoUrl ? "Photo loaded" : "NO PHOTO · TAP TO ADD"}
+      </div>
+      {photoUrl ? (
+        <Button onClick={() => onChange(null)} size="sm" variant="ghost">
+          Remove
+        </Button>
+      ) : null}
+      <Button
+        onClick={() => inputRef.current?.click()}
+        size="sm"
+        variant={photoUrl ? "ghost" : "default"}
+      >
+        {photoUrl ? "Replace" : "Upload"}
       </Button>
     </div>
   );
@@ -296,10 +338,12 @@ function ControlBlock({
 
 function ToggleRow({
   label,
-  defaultChecked,
+  checked,
+  onCheckedChange,
 }: {
   label: string;
-  defaultChecked?: boolean;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
 }) {
   const id = useId();
   return (
@@ -307,7 +351,7 @@ function ToggleRow({
       <Label className="font-medium text-sm" htmlFor={id}>
         {label}
       </Label>
-      <Switch defaultChecked={defaultChecked} id={id} />
+      <Switch checked={checked} id={id} onCheckedChange={onCheckedChange} />
     </div>
   );
 }

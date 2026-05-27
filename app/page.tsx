@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DownloadState } from "@/components/app/download-state";
 import { EditState } from "@/components/app/edit-state";
 import { EffortWordmark } from "@/components/app/effort-wordmark";
@@ -12,8 +12,20 @@ import {
   SAMPLE_RUN,
 } from "@/components/app/sample-data";
 import type { ParsedActivity } from "@/lib/parse-activity";
+import {
+  applyVisibility,
+  DEFAULT_VISIBILITY,
+  type Visibility,
+} from "@/lib/visibility";
 
 type AppState = "empty" | "edit" | "download";
+const STORAGE_KEY = "effort:ui:v1";
+
+interface PersistedUi {
+  accent: string;
+  theme: ThemeId;
+  visibility: Visibility;
+}
 
 function adoptParsed(parsed: ParsedActivity): ActivityData {
   // Parsed files give us universals + whichever sport-specific stats we can
@@ -28,12 +40,65 @@ function adoptParsed(parsed: ParsedActivity): ActivityData {
   };
 }
 
+function loadPersistedUi(): Partial<PersistedUi> {
+  if (typeof window === "undefined") {
+    return {};
+  }
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
 export default function Home() {
   const [state, setState] = useState<AppState>("empty");
   const [data, setData] = useState<ActivityData | null>(null);
   const [theme, setTheme] = useState<ThemeId>("path");
-  const [photoUrl] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [accent, setAccent] = useState<string>("#c45a2c");
+  const [visibility, setVisibility] = useState<Visibility>(DEFAULT_VISIBILITY);
+
+  // Restore UI prefs (theme, accent, visibility) on mount.
+  // Hydrating from localStorage is a legitimate cold-start sync; the
+  // setState-in-effect rule's "fix" (useSyncExternalStore + a custom write
+  // path) buys nothing over this small, one-shot read.
+  useEffect(() => {
+    const persisted = loadPersistedUi();
+    /* eslint-disable react-hooks/set-state-in-effect */
+    if (persisted.theme) {
+      setTheme(persisted.theme);
+    }
+    if (persisted.accent) {
+      setAccent(persisted.accent);
+    }
+    if (persisted.visibility) {
+      setVisibility({ ...DEFAULT_VISIBILITY, ...persisted.visibility });
+    }
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, []);
+
+  // Persist on change.
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const payload: PersistedUi = { theme, accent, visibility };
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    } catch {
+      // localStorage may be unavailable (private mode, quota); soft-fail.
+    }
+  }, [theme, accent, visibility]);
+
+  // Object URLs need cleanup or they leak into memory.
+  useEffect(() => {
+    if (!photoUrl) {
+      return;
+    }
+    return () => URL.revokeObjectURL(photoUrl);
+  }, [photoUrl]);
 
   const handleLoadSample = () => {
     setData(SAMPLE_RIDE);
@@ -43,6 +108,15 @@ export default function Home() {
   const handleFileLoaded = (parsed: ParsedActivity) => {
     setData(adoptParsed(parsed));
     setState("edit");
+  };
+
+  const handlePhotoChange = (file: File | null) => {
+    setPhotoUrl((prev) => {
+      if (prev) {
+        URL.revokeObjectURL(prev);
+      }
+      return file ? URL.createObjectURL(file) : null;
+    });
   };
 
   const handleDownload = () => {
@@ -55,8 +129,14 @@ export default function Home() {
 
   const handleNew = () => {
     setData(null);
+    if (photoUrl) {
+      URL.revokeObjectURL(photoUrl);
+    }
+    setPhotoUrl(null);
     setState("empty");
   };
+
+  const visibleData = data ? applyVisibility(data, visibility) : data;
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-background text-foreground">
@@ -67,20 +147,23 @@ export default function Home() {
           onLoadSample={handleLoadSample}
         />
       ) : null}
-      {state === "edit" && data ? (
+      {state === "edit" && visibleData ? (
         <EditState
           accent={accent}
-          data={data}
+          data={visibleData}
           onAccentChange={setAccent}
           onDownload={handleDownload}
+          onPhotoChange={handlePhotoChange}
           onThemeChange={setTheme}
+          onVisibilityChange={setVisibility}
           photoUrl={photoUrl}
           theme={theme}
+          visibility={visibility}
         />
       ) : null}
-      {state === "download" && data ? (
+      {state === "download" && visibleData ? (
         <DownloadState
-          data={data}
+          data={visibleData}
           onKeepEditing={handleKeepEditing}
           onNew={handleNew}
           photoUrl={photoUrl}
