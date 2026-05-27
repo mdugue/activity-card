@@ -1,0 +1,44 @@
+{
+  "dependencies": {
+    "fast-xml-parser": "^5.8.0",
+    "fit-file-parser": "^3.0.1",
+    "html-to-image": "^1.11.13",
+    "next": "16.2.6",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.15",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^25.9.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@typescript/native-preview": "^7.0.0-dev.20260527.1",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.6",
+    "tailwindcss": "^4",
+    "typescript": "^6.0.3",
+    "ultracite": "7.8.0"
+  },
+  "name": "activity-card",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint && ultracite check",
+    "typecheck": "tsgo --noEmit",
+    "check": "ultracite check",
+    "fix": "ultracite fix"
+  },
+  "version": "0.1.0",
+  "private": true,
+  "ignoreScripts": [
+    "sharp",
+    "unrs-resolver"
+  ],
+  "trustedDependencies": [
+    "sharp",
+    "unrs-resolver"
+  ]
+}
