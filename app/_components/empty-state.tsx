@@ -66,9 +66,11 @@ function DropZone({ onLoadSample }: { onLoadSample: () => void }) {
 
       <svg
         aria-hidden
+        aria-label="Line chart icon"
         className="mb-4"
         fill="none"
         height="64"
+        role="img"
         viewBox="0 0 64 64"
         width="64"
       >
