@@ -2,10 +2,8 @@
 
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CardPreview } from "./card-preview";
+import { RenderTheme, type ThemeId } from "./render-theme";
 import type { ActivityData } from "./sample-data";
-
-type Theme = "path" | "altitude" | "photo" | "data" | "editorial" | "triathlon";
 
 const CONFETTI_COLORS = ["#c45a2c", "#1d3a2e", "#1a1714", "#a98352"];
 
@@ -14,7 +12,7 @@ interface DownloadStateProps {
   onKeepEditing: () => void;
   onNew: () => void;
   photoUrl: string | null;
-  theme: Theme;
+  theme: ThemeId;
 }
 
 export function DownloadState({
@@ -44,7 +42,7 @@ export function DownloadState({
                 className="origin-top-left scale-[0.222] sm:scale-[0.296] lg:scale-[0.4166]"
                 style={{ width: 1080, height: 1350 }}
               >
-                <CardPreview data={data} photoUrl={photoUrl} theme={theme} />
+                <RenderTheme data={data} photoUrl={photoUrl} theme={theme} />
               </div>
             </div>
           </div>
@@ -54,25 +52,16 @@ export function DownloadState({
         </div>
 
         <div className="max-w-md">
-          <div
-            className="font-mono text-xs tracking-[0.32em] opacity-55"
-            style={{ fontWeight: 600 }}
-          >
+          <div className="font-mono font-semibold text-xs tracking-[0.32em] opacity-55">
             SAVED · {data.date.toUpperCase()}
           </div>
-          <h2
-            className="mt-4 font-heading text-7xl uppercase leading-[0.88] tracking-tight sm:text-8xl lg:text-9xl"
-            style={{ fontFamily: "var(--font-heading)" }}
-          >
+          <h2 className="mt-4 font-heading text-7xl uppercase leading-[0.88] tracking-tight sm:text-8xl lg:text-9xl">
             THAT&apos;S
             <br />A <span className="text-primary">KEEPER.</span>
           </h2>
           <p className="mt-6 text-base leading-relaxed opacity-75">
             Saved as{" "}
-            <code
-              className="bg-foreground px-2 py-1 font-mono text-background text-xs"
-              style={{ fontWeight: 500 }}
-            >
+            <code className="bg-foreground px-2 py-1 font-medium font-mono text-background text-xs">
               {filename}
             </code>
             <br />

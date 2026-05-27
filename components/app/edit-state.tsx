@@ -1,17 +1,17 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
-import { useId } from "react";
+import { useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { CardPreview } from "./card-preview";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { defaultFilename, exportCard } from "@/lib/export-card";
+import { RenderTheme, type ThemeId } from "./render-theme";
 import type { ActivityData } from "./sample-data";
 
-type Theme = "path" | "altitude" | "photo" | "data" | "editorial" | "triathlon";
-
-const THEMES: { id: Theme; label: string; sub: string }[] = [
+const THEMES: { id: ThemeId; label: string; sub: string }[] = [
   { id: "path", label: "PATH", sub: "route is the hero" },
   { id: "altitude", label: "ALTITUDE", sub: "profile portrait" },
   { id: "photo", label: "PHOTO", sub: "magazine cover" },
@@ -34,9 +34,9 @@ interface EditStateProps {
   data: ActivityData;
   onAccentChange: (accent: string) => void;
   onDownload: () => void;
-  onThemeChange: (theme: Theme) => void;
+  onThemeChange: (theme: ThemeId) => void;
   photoUrl: string | null;
-  theme: Theme;
+  theme: ThemeId;
 }
 
 export function EditState({
@@ -48,18 +48,52 @@ export function EditState({
   onAccentChange,
   onDownload,
 }: EditStateProps) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleDownload = async () => {
+    if (!cardRef.current || isExporting) {
+      return;
+    }
+    setIsExporting(true);
+    try {
+      await exportCard(cardRef.current, {
+        filename: defaultFilename(data.sport, data.date),
+      });
+      onDownload();
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="grid flex-1 grid-cols-1 gap-8 px-6 pt-20 pb-8 md:px-10 lg:grid-cols-[1fr_400px] lg:gap-0 lg:px-0 lg:pt-24">
       <PreviewPane data={data} photoUrl={photoUrl} theme={theme} />
       <ControlsPane
         accent={accent}
         data={data}
+        isExporting={isExporting}
         onAccentChange={onAccentChange}
-        onDownload={onDownload}
+        onDownload={handleDownload}
         onThemeChange={onThemeChange}
         photoUrl={photoUrl}
         theme={theme}
       />
+      {/* Native-size mount used by html-to-image. Off-screen via translate
+          (which html-to-image strips when capturing) but laid out at full
+          1080×1350 so the flex columns reflow correctly inside the clone. */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed top-0 left-0 -z-10"
+        ref={cardRef}
+        style={{
+          width: 1080,
+          height: 1350,
+          transform: "translateX(-200%)",
+        }}
+      >
+        <RenderTheme data={data} photoUrl={photoUrl} theme={theme} />
+      </div>
     </div>
   );
 }
@@ -70,43 +104,30 @@ function PreviewPane({
   photoUrl,
 }: {
   data: ActivityData;
-  theme: Theme;
+  theme: ThemeId;
   photoUrl: string | null;
 }) {
   return (
     <div className="relative flex flex-col items-center justify-start lg:px-10">
-      <div
-        className="mb-4 self-start font-mono text-xs tracking-[0.28em] opacity-55 lg:ml-14"
-        style={{ fontWeight: 500 }}
-      >
+      <div className="mb-4 self-start font-medium font-mono text-xs tracking-[0.28em] opacity-55 lg:ml-14">
         LIVE PREVIEW · 1080 × 1350
       </div>
       <div className="relative aspect-[1080/1350] w-[280px] overflow-hidden bg-white shadow-[0_30px_60px_rgba(26,23,20,0.18),_0_8px_20px_rgba(26,23,20,0.08)] sm:w-[380px] lg:w-[540px]">
-        <ScaledCard data={data} photoUrl={photoUrl} theme={theme} />
+        <div className="absolute inset-0">
+          <div
+            className="origin-top-left scale-[0.26] sm:scale-[0.352] lg:scale-[0.5]"
+            style={{ width: 1080, height: 1350 }}
+          >
+            <RenderTheme data={data} photoUrl={photoUrl} theme={theme} />
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-function ScaledCard({
-  data,
-  theme,
-  photoUrl,
-}: {
-  data: ActivityData;
-  theme: Theme;
-  photoUrl: string | null;
-}) {
-  return (
-    <div className="absolute inset-0">
-      <div
-        className="origin-top-left scale-[0.26] sm:scale-[0.352] lg:scale-[0.5]"
-        style={{ width: 1080, height: 1350 }}
-      >
-        <CardPreview data={data} photoUrl={photoUrl} theme={theme} />
-      </div>
-    </div>
-  );
+interface ControlsPaneProps extends EditStateProps {
+  isExporting: boolean;
 }
 
 function ControlsPane({
@@ -117,7 +138,8 @@ function ControlsPane({
   accent,
   onAccentChange,
   onDownload,
-}: EditStateProps) {
+  isExporting,
+}: ControlsPaneProps) {
   const titleId = useId();
   return (
     <div className="flex flex-col gap-7 pr-2 lg:pr-10">
@@ -131,42 +153,38 @@ function ControlsPane({
           className="h-auto border-foreground border-b-2 py-2 font-heading text-2xl uppercase tracking-tight md:text-2xl"
           defaultValue={data.ride_name}
           id={titleId}
-          style={{ fontFamily: "var(--font-heading)" }}
         />
       </ControlBlock>
 
       <ControlBlock label="THEME">
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          {THEMES.map((t) => {
-            const isActive = t.id === theme;
-            return (
-              <button
-                aria-pressed={isActive}
-                className={
-                  isActive
-                    ? "border-2 border-foreground bg-foreground p-3 text-left text-background"
-                    : "border-2 border-foreground/15 p-3 text-left transition-colors hover:border-foreground/40"
-                }
-                key={t.id}
-                onClick={() => onThemeChange(t.id)}
-                type="button"
-              >
-                <div
-                  className="font-heading text-xl uppercase leading-none"
-                  style={{ fontFamily: "var(--font-heading)" }}
-                >
-                  {t.label}
-                </div>
-                <div
-                  className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.16em] opacity-65"
-                  style={{ fontWeight: 500 }}
-                >
-                  {t.sub}
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        <ToggleGroup
+          aria-label="Theme"
+          className="mt-2 grid w-full grid-cols-2 gap-2"
+          onValueChange={(values) => {
+            if (values[0]) {
+              onThemeChange(values[0] as ThemeId);
+            }
+          }}
+          spacing={2}
+          value={[theme]}
+          variant="outline"
+        >
+          {THEMES.map((t) => (
+            <ToggleGroupItem
+              aria-label={t.label}
+              className="flex h-auto flex-col items-start justify-start px-3 py-3 text-left"
+              key={t.id}
+              value={t.id}
+            >
+              <div className="font-heading text-xl uppercase leading-none">
+                {t.label}
+              </div>
+              <div className="mt-1.5 font-medium font-mono text-[10px] uppercase tracking-[0.16em] opacity-65">
+                {t.sub}
+              </div>
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
       </ControlBlock>
 
       <ControlBlock label="BACKGROUND PHOTO">
@@ -180,10 +198,7 @@ function ControlsPane({
                 : "linear-gradient(135deg, #d8c5a0, #4a2a18)",
             }}
           />
-          <div
-            className="flex-1 font-mono text-xs opacity-70"
-            style={{ fontWeight: 500 }}
-          >
+          <div className="flex-1 font-medium font-mono text-xs opacity-70">
             {photoUrl ? "sunset_kicker.jpg" : "NO PHOTO · DROP ONE IN"}
           </div>
           <Button size="sm" variant="ghost">
@@ -202,36 +217,37 @@ function ControlsPane({
       </ControlBlock>
 
       <ControlBlock label="ACCENT">
-        <div className="mt-2.5 flex gap-2">
+        <ToggleGroup
+          aria-label="Accent colour"
+          className="mt-2.5 flex gap-2"
+          onValueChange={(values) => {
+            if (values[0]) {
+              onAccentChange(values[0]);
+            }
+          }}
+          spacing={2}
+          value={[accent]}
+        >
           {ACCENTS.map((c) => (
-            <button
+            <ToggleGroupItem
               aria-label={`Accent ${c}`}
-              aria-pressed={c === accent}
-              className="size-8"
+              className="size-8 border-2 border-transparent p-0 data-[state=on]:border-foreground"
               key={c}
-              onClick={() => onAccentChange(c)}
-              style={{
-                background: c,
-                outline: c === accent ? "2px solid var(--foreground)" : "none",
-                outlineOffset: 3,
-              }}
-              type="button"
+              style={{ background: c }}
+              value={c}
             />
           ))}
-        </div>
+        </ToggleGroup>
       </ControlBlock>
 
       <Button
         className="mt-4 h-auto justify-between bg-primary py-4 font-heading text-lg text-primary-foreground hover:bg-primary/90"
+        disabled={isExporting}
         onClick={onDownload}
         size="lg"
-        style={{ fontFamily: "var(--font-heading)" }}
       >
-        <span>Download PNG</span>
-        <span
-          className="font-mono text-[10px] tracking-[0.18em] opacity-75"
-          style={{ fontWeight: 500 }}
-        >
+        <span>{isExporting ? "Rendering…" : "Download PNG"}</span>
+        <span className="font-medium font-mono text-[10px] tracking-[0.18em] opacity-75">
           1080 × 1350
         </span>
       </Button>
@@ -245,19 +261,13 @@ function FileLoadedRow({ data }: { data: ActivityData }) {
     <div className="flex items-center gap-3 bg-foreground p-4 text-background">
       <div aria-hidden className="size-2 bg-primary" />
       <div className="flex-1">
-        <div
-          className="font-mono text-[10px] tracking-[0.22em] opacity-60"
-          style={{ fontWeight: 500 }}
-        >
+        <div className="font-medium font-mono text-[10px] tracking-[0.22em] opacity-60">
           FILE LOADED
         </div>
-        <div className="mt-1 font-mono text-sm" style={{ fontWeight: 500 }}>
-          {filename}
-        </div>
+        <div className="mt-1 font-medium font-mono text-sm">{filename}</div>
       </div>
       <button
-        className="flex items-center gap-1 font-mono text-[11px] tracking-[0.18em] opacity-70 hover:opacity-100"
-        style={{ fontWeight: 500 }}
+        className="flex items-center gap-1 font-medium font-mono text-[11px] tracking-[0.18em] opacity-70 hover:opacity-100"
         type="button"
       >
         SWAP
@@ -276,10 +286,7 @@ function ControlBlock({
 }) {
   return (
     <div>
-      <div
-        className="font-mono text-[11px] tracking-[0.28em] opacity-60"
-        style={{ fontWeight: 600 }}
-      >
+      <div className="font-mono font-semibold text-[11px] tracking-[0.28em] opacity-60">
         {label}
       </div>
       {children}

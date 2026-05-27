@@ -1,0 +1,560 @@
+// TRIATHLON / MULTI-SPORT — three sports as one coherent piece.
+// Type: Bricolage Grotesque (display) + IBM Plex Mono (data)
+// Three vertical bands w/ shared identity; transitions as design beats.
+
+import type { TriSegment } from "@/components/app/sample-data";
+import { elevationPath, routePath } from "@/lib/chart-helpers";
+import type { ActivityCardProps } from "./types";
+
+const INK = "#11151a";
+const PAPER = "#f4eee2";
+
+interface StatProps {
+  label: string;
+  v: string | number;
+}
+
+function Stat({ label, v }: StatProps) {
+  return (
+    <div>
+      <div
+        style={{
+          fontSize: 22,
+          letterSpacing: "0.22em",
+          opacity: 0.7,
+          fontWeight: 600,
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontFamily: "var(--font-bricolage), sans-serif",
+          fontWeight: 700,
+          fontSize: 38,
+          lineHeight: 1,
+          marginTop: 6,
+        }}
+      >
+        {v}
+      </div>
+    </div>
+  );
+}
+
+type TriSport = TriSegment["sport"];
+
+function accentFor(s: TriSport): string {
+  if (s === "swim") {
+    return "#1e6fa0";
+  }
+  if (s === "bike") {
+    return "#c2410c";
+  }
+  return "#15803d";
+}
+
+function labelFor(s: TriSport): string {
+  if (s === "swim") {
+    return "SWIM";
+  }
+  if (s === "bike") {
+    return "BIKE";
+  }
+  return "RUN";
+}
+
+function heroFor(seg: TriSegment): string {
+  if (seg.sport === "swim") {
+    return `${seg.avg_pace_per_100m ?? "—"} /100m`;
+  }
+  if (seg.sport === "bike") {
+    return `${seg.avg_speed_kmh ?? "—"} km/h`;
+  }
+  return `${seg.avg_pace_min_per_km ?? "—"} /km`;
+}
+
+const RE_HM = /(\d+)h\s*(\d+)m/;
+const RE_HMS = /^(\d+):(\d+):(\d+)$/;
+const RE_MS = /(\d+)m\s*(\d+)s/;
+const RE_MMSS = /^(\d+):(\d+)$/;
+
+// Parse a duration string like "1h 32m", "34:12", "2:14", "47m 12s" → seconds.
+function parseDuration(s: string): number {
+  const hm = s.match(RE_HM);
+  if (hm) {
+    return +hm[1] * 3600 + +hm[2] * 60;
+  }
+  const hms = s.match(RE_HMS);
+  if (hms) {
+    return +hms[1] * 3600 + +hms[2] * 60 + +hms[3];
+  }
+  const ms = s.match(RE_MS);
+  if (ms) {
+    return +ms[1] * 60 + +ms[2];
+  }
+  const mmss = s.match(RE_MMSS);
+  if (mmss) {
+    return +mmss[1] * 60 + +mmss[2];
+  }
+  return 60;
+}
+
+export function ThemeTriathlon({ data }: ActivityCardProps) {
+  const sports = data.segments || [];
+  const transitions = data.transitions || [];
+
+  if (data.sport !== "triathlon" || sports.length === 0) {
+    return (
+      <div
+        style={{
+          width: 1080,
+          height: 1350,
+          background: PAPER,
+          color: INK,
+          fontFamily: "var(--font-ibm-plex-mono), monospace",
+          padding: "120px 90px",
+          boxSizing: "border-box",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          textAlign: "center",
+        }}
+      >
+        <div
+          style={{
+            fontSize: 26,
+            letterSpacing: "0.3em",
+            opacity: 0.5,
+            marginBottom: 28,
+            fontWeight: 600,
+          }}
+        >
+          TRIATHLON / MULTI-SPORT THEME
+        </div>
+        <div
+          style={{
+            fontFamily: "var(--font-bricolage), sans-serif",
+            fontWeight: 600,
+            fontSize: 56,
+            lineHeight: 1.1,
+            maxWidth: 700,
+          }}
+        >
+          Single-sport activity.
+          <br />
+          <span style={{ opacity: 0.4 }}>
+            Switch to a multi-sport file to see this theme.
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // Build alternating segments + transitions
+  type TimelineItem =
+    | { kind: "seg"; seg: TriSegment }
+    | { kind: "t"; t: { duration: string; name: string } };
+
+  const items: TimelineItem[] = [];
+  sports.forEach((seg, i) => {
+    items.push({ kind: "seg", seg });
+    if (transitions[i]) {
+      items.push({ kind: "t", t: transitions[i] });
+    }
+  });
+  const totals = items.map((it) =>
+    it.kind === "seg"
+      ? parseDuration(it.seg.duration)
+      : parseDuration(it.t.duration)
+  );
+  const sum = totals.reduce((a, b) => a + b, 0) || 1;
+
+  return (
+    <div
+      style={{
+        width: 1080,
+        height: 1350,
+        background: PAPER,
+        color: INK,
+        fontFamily: "var(--font-ibm-plex-mono), monospace",
+        position: "relative",
+        padding: "70px 70px 50px 70px",
+        boxSizing: "border-box",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-end",
+          paddingBottom: 22,
+          borderBottom: `2px solid ${INK}`,
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontSize: 24,
+              letterSpacing: "0.3em",
+              opacity: 0.75,
+              fontWeight: 600,
+            }}
+          >
+            TRIATHLON · MULTI-SPORT
+          </div>
+          <h1
+            style={{
+              fontFamily: "var(--font-bricolage), sans-serif",
+              fontSize: 72,
+              lineHeight: 0.95,
+              fontWeight: 700,
+              letterSpacing: "-0.02em",
+              margin: "10px 0 0 0",
+              maxWidth: 700,
+              textWrap: "pretty",
+            }}
+          >
+            {data.ride_name}
+          </h1>
+        </div>
+        <div
+          style={{
+            textAlign: "right",
+            fontSize: 24,
+            letterSpacing: "0.18em",
+            lineHeight: 1.5,
+            fontWeight: 600,
+          }}
+        >
+          <div>{data.date.toUpperCase()}</div>
+          <div style={{ opacity: 0.7 }}>{data.location.toUpperCase()}</div>
+          <div
+            style={{
+              marginTop: 12,
+              fontFamily: "var(--font-bricolage), sans-serif",
+              fontSize: 36,
+              fontWeight: 700,
+              letterSpacing: "-0.01em",
+            }}
+          >
+            {data.duration}
+          </div>
+        </div>
+      </div>
+
+      {/* Timing strip */}
+      <div style={{ marginTop: 22, marginBottom: 22 }}>
+        <div
+          style={{
+            fontSize: 24,
+            letterSpacing: "0.28em",
+            opacity: 0.7,
+            marginBottom: 12,
+            fontWeight: 600,
+          }}
+        >
+          EFFORT TIMELINE
+        </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "stretch",
+            height: 56,
+            border: `1px solid ${INK}`,
+          }}
+        >
+          {items.map((it, i) => {
+            const flex = totals[i] / sum;
+            const isSeg = it.kind === "seg";
+            const bg = isSeg ? accentFor(it.seg.sport) : "#11151a";
+            const label = isSeg
+              ? `${labelFor(it.seg.sport)} · ${it.seg.duration}`
+              : `${it.t.name} ${it.t.duration}`;
+            return (
+              <div
+                key={`tl-${i}-${label}`}
+                style={{
+                  flex,
+                  background: bg,
+                  color: "#fff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 22,
+                  letterSpacing: "0.18em",
+                  fontWeight: 700,
+                  borderRight:
+                    i < items.length - 1
+                      ? "1px solid rgba(255,255,255,0.4)"
+                      : "none",
+                }}
+              >
+                {label}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Three sport panels stacked */}
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          gap: 18,
+          minHeight: 0,
+        }}
+      >
+        {sports.map((seg, idx) => {
+          const accent = accentFor(seg.sport);
+          return (
+            <div
+              key={`seg-${idx}-${seg.sport}`}
+              style={{
+                flex: 1,
+                position: "relative",
+                border: `1px solid ${INK}`,
+                background: "#faf6ec",
+                padding: "18px 22px",
+                display: "grid",
+                gridTemplateColumns: "0.55fr 1fr 0.5fr",
+                gap: 18,
+                alignItems: "stretch",
+              }}
+            >
+              {/* Number tab */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: -1,
+                  left: -1,
+                  width: 84,
+                  height: 48,
+                  background: accent,
+                  color: "#fff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: "var(--font-bricolage), sans-serif",
+                  fontWeight: 700,
+                  fontSize: 26,
+                  letterSpacing: "0.1em",
+                }}
+              >
+                0{idx + 1}
+              </div>
+
+              {/* Label + distance */}
+              <div
+                style={{
+                  paddingTop: 38,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize: 24,
+                      letterSpacing: "0.3em",
+                      color: accent,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {labelFor(seg.sport)}
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: "var(--font-bricolage), sans-serif",
+                      fontWeight: 700,
+                      fontSize: 80,
+                      lineHeight: 0.95,
+                      letterSpacing: "-0.02em",
+                      marginTop: 10,
+                    }}
+                  >
+                    {seg.distance_km}
+                    <span
+                      style={{
+                        fontSize: 30,
+                        opacity: 0.55,
+                        marginLeft: 6,
+                      }}
+                    >
+                      km
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 24,
+                      opacity: 0.8,
+                      marginTop: 10,
+                      letterSpacing: "0.06em",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {seg.duration}
+                  </div>
+                </div>
+                <div
+                  style={{
+                    fontSize: 22,
+                    letterSpacing: "0.24em",
+                    opacity: 0.7,
+                    fontWeight: 600,
+                  }}
+                >
+                  HERO · {heroFor(seg)}
+                </div>
+              </div>
+
+              {/* Route / profile */}
+              <div style={{ minWidth: 0 }}>
+                <svg
+                  aria-hidden="true"
+                  preserveAspectRatio="none"
+                  style={{ width: "100%", height: "100%" }}
+                  viewBox="0 0 360 160"
+                >
+                  <title>{labelFor(seg.sport)} trace</title>
+                  {seg.sport === "bike" && seg.elevation_profile && (
+                    <>
+                      <path
+                        d={elevationPath(
+                          seg.elevation_profile,
+                          360,
+                          160,
+                          0,
+                          true
+                        )}
+                        fill={accent}
+                        fillOpacity={0.85}
+                      />
+                      <path
+                        d={elevationPath(seg.elevation_profile, 360, 160, 0)}
+                        fill="none"
+                        stroke={INK}
+                        strokeWidth={1}
+                      />
+                    </>
+                  )}
+                  {seg.sport === "swim" && (
+                    <g>
+                      {Array.from({ length: 4 }, (_, i) => (
+                        <path
+                          d={`M0 ${30 + i * 30} Q90 ${30 + i * 30 - 14}, 180 ${30 + i * 30} T360 ${30 + i * 30}`}
+                          fill="none"
+                          key={`swim-wave-${i}`}
+                          opacity={0.55 + i * 0.12}
+                          stroke={accent}
+                          strokeWidth={2}
+                        />
+                      ))}
+                    </g>
+                  )}
+                  {seg.sport === "run" && (
+                    <path
+                      d={routePath(seg.route_coordinates, 360, 160, 8)}
+                      fill="none"
+                      stroke={accent}
+                      strokeLinejoin="round"
+                      strokeWidth={2.5}
+                    />
+                  )}
+                  {seg.sport === "bike" && !seg.elevation_profile && (
+                    <path
+                      d={routePath(seg.route_coordinates, 360, 160, 8)}
+                      fill="none"
+                      stroke={accent}
+                      strokeLinejoin="round"
+                      strokeWidth={2.5}
+                    />
+                  )}
+                </svg>
+              </div>
+
+              {/* Extra stat */}
+              <div
+                style={{
+                  borderLeft: "1px solid rgba(17,21,26,0.2)",
+                  paddingLeft: 18,
+                  paddingTop: 32,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 14,
+                }}
+              >
+                {seg.sport === "bike" && (
+                  <>
+                    <Stat label="ELEV" v={`${seg.elevation_gain_m ?? 0} m`} />
+                    <Stat label="AVG" v={`${seg.avg_speed_kmh ?? "—"} km/h`} />
+                  </>
+                )}
+                {seg.sport === "swim" && (
+                  <>
+                    <Stat label="/100m" v={seg.avg_pace_per_100m ?? "—"} />
+                    <Stat label="STROKE" v="freestyle" />
+                  </>
+                )}
+                {seg.sport === "run" && (
+                  <>
+                    <Stat
+                      label="PACE"
+                      v={`${seg.avg_pace_min_per_km ?? "—"} /km`}
+                    />
+                    <Stat label="ELEV" v={`${seg.elevation_gain_m ?? 0} m`} />
+                  </>
+                )}
+              </div>
+
+              {/* T marker between sports */}
+              {idx < sports.length - 1 && transitions[idx] && (
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: -16,
+                    right: 24,
+                    background: INK,
+                    color: PAPER,
+                    padding: "8px 16px",
+                    fontSize: 22,
+                    letterSpacing: "0.2em",
+                    fontWeight: 700,
+                    zIndex: 2,
+                  }}
+                >
+                  {transitions[idx].name} → {transitions[idx].duration}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Foot */}
+      <div
+        style={{
+          marginTop: 22,
+          paddingTop: 18,
+          borderTop: "1px solid rgba(17,21,26,0.4)",
+          display: "flex",
+          justifyContent: "space-between",
+          fontSize: 24,
+          letterSpacing: "0.24em",
+          opacity: 0.75,
+          fontWeight: 600,
+        }}
+      >
+        <span>EFFORT · TRIATHLON CARD</span>
+        <span>{data.athlete_name ? data.athlete_name.toUpperCase() : "—"}</span>
+      </div>
+    </div>
+  );
+}

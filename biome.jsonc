@@ -22,6 +22,10 @@
           },
           "style": {
             "useAtIndex": "off"
+          },
+          "performance": {
+            "noBarrelFile": "off",
+            "noReExportAll": "off"
           }
         }
       }

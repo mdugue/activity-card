@@ -5,6 +5,7 @@ import { DownloadState } from "@/components/app/download-state";
 import { EditState } from "@/components/app/edit-state";
 import { EffortWordmark } from "@/components/app/effort-wordmark";
 import { EmptyState } from "@/components/app/empty-state";
+import type { ThemeId } from "@/components/app/render-theme";
 import {
   type ActivityData,
   SAMPLE_RIDE,
@@ -12,7 +13,6 @@ import {
 } from "@/components/app/sample-data";
 import type { ParsedActivity } from "@/lib/parse-activity";
 
-type Theme = "path" | "altitude" | "photo" | "data" | "editorial" | "triathlon";
 type AppState = "empty" | "edit" | "download";
 
 function adoptParsed(parsed: ParsedActivity): ActivityData {
@@ -31,7 +31,7 @@ function adoptParsed(parsed: ParsedActivity): ActivityData {
 export default function Home() {
   const [state, setState] = useState<AppState>("empty");
   const [data, setData] = useState<ActivityData | null>(null);
-  const [theme, setTheme] = useState<Theme>("path");
+  const [theme, setTheme] = useState<ThemeId>("path");
   const [photoUrl] = useState<string | null>(null);
   const [accent, setAccent] = useState<string>("#c45a2c");
 
