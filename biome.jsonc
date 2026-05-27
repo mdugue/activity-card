@@ -8,6 +8,25 @@
   ],
   "overrides": [
     {
+      // Theme cards are faithful ports of design prototypes; loosen the
+      // rules that punish their seeded arrays, sport-branch density,
+      // and 1080×1350 inline layout styles.
+      "includes": ["components/themes/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noArrayIndexKey": "off"
+          },
+          "complexity": {
+            "noExcessiveCognitiveComplexity": "off"
+          },
+          "style": {
+            "useAtIndex": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["components/ui/**", "hooks/use-mobile.ts"],
       "linter": {
         "rules": {

@@ -1,5 +1,19 @@
 import type { Metadata } from "next";
-import { Anton, Inter, JetBrains_Mono } from "next/font/google";
+import {
+  Anton,
+  Archivo_Narrow,
+  Bricolage_Grotesque,
+  Cormorant_Garamond,
+  DM_Sans,
+  Geist_Mono,
+  IBM_Plex_Mono,
+  Instrument_Serif,
+  Inter,
+  JetBrains_Mono,
+  Manrope,
+  Playfair_Display,
+  Space_Grotesk,
+} from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -15,6 +29,63 @@ const anton = Anton({
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
+});
+
+const cormorant = Cormorant_Garamond({
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  subsets: ["latin"],
+  variable: "--font-cormorant",
+});
+
+const manrope = Manrope({
+  subsets: ["latin"],
+  variable: "--font-manrope",
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-space-grotesk",
+});
+
+const playfair = Playfair_Display({
+  style: ["normal", "italic"],
+  subsets: ["latin"],
+  variable: "--font-playfair",
+});
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-dm-sans",
+});
+
+const archivoNarrow = Archivo_Narrow({
+  weight: ["400", "500", "600", "700"],
+  subsets: ["latin"],
+  variable: "--font-archivo-narrow",
+});
+
+const instrumentSerif = Instrument_Serif({
+  weight: ["400"],
+  style: ["normal", "italic"],
+  subsets: ["latin"],
+  variable: "--font-instrument-serif",
+});
+
+const bricolage = Bricolage_Grotesque({
+  subsets: ["latin"],
+  variable: "--font-bricolage",
+});
+
+const ibmPlexMono = IBM_Plex_Mono({
+  weight: ["400", "500", "600", "700"],
+  subsets: ["latin"],
+  variable: "--font-ibm-plex-mono",
+});
+
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
 });
 
 export const metadata: Metadata = {
@@ -36,6 +107,16 @@ export default function RootLayout({
         jetbrainsMono.variable,
         anton.variable,
         inter.variable,
+        cormorant.variable,
+        manrope.variable,
+        spaceGrotesk.variable,
+        playfair.variable,
+        dmSans.variable,
+        archivoNarrow.variable,
+        instrumentSerif.variable,
+        bricolage.variable,
+        ibmPlexMono.variable,
+        geistMono.variable,
         "font-sans"
       )}
       lang="en"
