@@ -1,10 +1,19 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Anton, Geist_Mono, Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const spaceGroteskHeading = Space_Grotesk({
   subsets: ["latin"],
+  variable: "--font-heading",
+});
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+
+const anton = Anton({
+  weight: ["400"],
+  variable: "--font-heading",
 });
 
 const geistMono = Geist_Mono({
@@ -24,10 +33,20 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={cn(
+        "h-full",
+        "antialiased",
+        geistMono.variable,
+        anton.variable,
+        "font-sans",
+        inter.variable,
+        spaceGroteskHeading.variable
+      )}
       lang="en"
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <TooltipProvider>{children}</TooltipProvider>
+      </body>
     </html>
   );
 }

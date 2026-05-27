@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
 
 export default function Home() {
   return (
@@ -13,7 +14,7 @@ export default function Home() {
           width={100}
         />
         <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs font-semibold text-3xl text-black leading-10 tracking-tight dark:text-zinc-50">
+          <h1 className="max-w-xs font-heading font-semibold text-3xl leading-10 dark:text-zinc-50">
             To get started, edit the page.tsx file.
           </h1>
           <p className="max-w-md text-lg text-zinc-600 leading-8 dark:text-zinc-400">
@@ -58,6 +59,7 @@ export default function Home() {
           >
             Documentation
           </a>
+          <Button>Test</Button>
         </div>
       </main>
     </div>
