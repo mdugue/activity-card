@@ -1,67 +1,80 @@
-import Image from "next/image";
-import { Button } from "@/components/ui/button";
+"use client";
+
+import { useState } from "react";
+import { DownloadState } from "./_components/download-state";
+import { EditState } from "./_components/edit-state";
+import { EffortWordmark } from "./_components/effort-wordmark";
+import { EmptyState } from "./_components/empty-state";
+import { type ActivityData, SAMPLE_RIDE } from "./_components/sample-data";
+
+type Theme = "path" | "altitude" | "photo" | "data" | "editorial" | "triathlon";
+type AppState = "empty" | "edit" | "download";
 
 export default function Home() {
+  const [state, setState] = useState<AppState>("empty");
+  const [data, setData] = useState<ActivityData | null>(null);
+  const [theme, setTheme] = useState<Theme>("path");
+  const [photoUrl] = useState<string | null>(null);
+  const [accent, setAccent] = useState<string>("#c45a2c");
+
+  const handleLoadSample = () => {
+    setData(SAMPLE_RIDE);
+    setState("edit");
+  };
+
+  const handleDownload = () => {
+    setState("download");
+  };
+
+  const handleKeepEditing = () => {
+    setState("edit");
+  };
+
+  const handleNew = () => {
+    setData(null);
+    setState("empty");
+  };
+
   return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex w-full max-w-3xl flex-1 flex-col items-center justify-between bg-white px-16 py-32 sm:items-start dark:bg-black">
-        <Image
-          alt="Next.js logo"
-          className="dark:invert"
-          height={20}
-          priority
-          src="/next.svg"
-          width={100}
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-background text-foreground">
+      <Header date={data?.date} />
+      {state === "empty" ? (
+        <EmptyState onLoadSample={handleLoadSample} />
+      ) : null}
+      {state === "edit" && data ? (
+        <EditState
+          accent={accent}
+          data={data}
+          onAccentChange={setAccent}
+          onDownload={handleDownload}
+          onThemeChange={setTheme}
+          photoUrl={photoUrl}
+          theme={theme}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs font-heading font-semibold text-3xl leading-10 dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg text-zinc-600 leading-8 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 font-medium text-base sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] md:w-[158px] dark:hover:bg-[#ccc]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            <Image
-              alt="Vercel logomark"
-              className="dark:invert"
-              height={16}
-              src="/vercel.svg"
-              width={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-black/[.08] border-solid px-5 transition-colors hover:border-transparent hover:bg-black/[.04] md:w-[158px] dark:border-white/[.145] dark:hover:bg-[#1a1a1a]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            Documentation
-          </a>
-          <Button>Test</Button>
-        </div>
-      </main>
+      ) : null}
+      {state === "download" && data ? (
+        <DownloadState
+          data={data}
+          onKeepEditing={handleKeepEditing}
+          onNew={handleNew}
+          photoUrl={photoUrl}
+          theme={theme}
+        />
+      ) : null}
     </div>
+  );
+}
+
+function Header({ date }: { date?: string }) {
+  return (
+    <header className="absolute top-0 right-0 left-0 z-10 flex items-start justify-between px-6 pt-7 md:px-10">
+      <EffortWordmark />
+      <div
+        className="hidden font-mono text-[11px] tracking-[0.22em] opacity-55 sm:block"
+        style={{ fontWeight: 500 }}
+      >
+        ACTIVITY CARD{date ? ` · ${date.toUpperCase()}` : ""}
+      </div>
+    </header>
   );
 }
