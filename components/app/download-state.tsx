@@ -9,13 +9,13 @@ type Theme = "path" | "altitude" | "photo" | "data" | "editorial" | "triathlon";
 
 const CONFETTI_COLORS = ["#c45a2c", "#1d3a2e", "#1a1714", "#a98352"];
 
-type DownloadStateProps = {
+interface DownloadStateProps {
   data: ActivityData;
-  theme: Theme;
-  photoUrl: string | null;
   onKeepEditing: () => void;
   onNew: () => void;
-};
+  photoUrl: string | null;
+  theme: Theme;
+}
 
 export function DownloadState({
   data,
@@ -103,11 +103,12 @@ function Confetti() {
         const s = 4 + (i % 4) * 2;
         const c = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
         const rot = (i * 31) % 90;
+        const k = `c-${i}-${c}-${s}-${rot}`;
         return (
           <rect
             fill={c}
             height={s}
-            key={i}
+            key={k}
             opacity={0.5}
             transform={`rotate(${rot})`}
             width={s}

@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { DownloadState } from "./_components/download-state";
-import { EditState } from "./_components/edit-state";
-import { EffortWordmark } from "./_components/effort-wordmark";
-import { EmptyState } from "./_components/empty-state";
-import { type ActivityData, SAMPLE_RIDE } from "./_components/sample-data";
+import { DownloadState } from "@/components/app/download-state";
+import { EditState } from "@/components/app/edit-state";
+import { EffortWordmark } from "@/components/app/effort-wordmark";
+import { EmptyState } from "@/components/app/empty-state";
+import { type ActivityData, SAMPLE_RIDE } from "@/components/app/sample-data";
 
 type Theme = "path" | "altitude" | "photo" | "data" | "editorial" | "triathlon";
 type AppState = "empty" | "edit" | "download";

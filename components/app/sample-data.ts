@@ -1,19 +1,19 @@
 export type Sport = "ride" | "run" | "swim" | "triathlon";
 
-export type ActivityData = {
-  sport: Sport;
-  ride_name: string;
-  date: string;
-  location: string;
+export interface ActivityData {
   athlete_name: string;
+  avg_heart_rate?: number;
+  avg_pace_min_per_km?: string;
+  avg_pace_per_100m?: string;
+  avg_speed_kmh?: number;
+  date: string;
   distance_km: number;
   duration: string;
   elevation_gain_m?: number;
-  avg_speed_kmh?: number;
-  avg_pace_min_per_km?: string;
-  avg_pace_per_100m?: string;
-  avg_heart_rate?: number;
-};
+  location: string;
+  ride_name: string;
+  sport: Sport;
+}
 
 export const SAMPLE_RIDE: ActivityData = {
   sport: "ride",

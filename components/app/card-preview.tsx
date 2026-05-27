@@ -2,11 +2,11 @@ import type { ActivityData } from "./sample-data";
 
 type Theme = "path" | "altitude" | "photo" | "data" | "editorial" | "triathlon";
 
-type CardPreviewProps = {
+interface CardPreviewProps {
   data: ActivityData;
-  theme: Theme;
   photoUrl?: string | null;
-};
+  theme: Theme;
+}
 
 function sportLabel(sport: ActivityData["sport"]) {
   return sport.toUpperCase();
@@ -95,6 +95,7 @@ export function CardPreview({ data, theme, photoUrl }: CardPreviewProps) {
           fill="none"
           viewBox="0 0 1000 420"
         >
+          <title>route silhouette</title>
           <path
             d="M40 320 Q160 80 320 240 T620 180 Q780 100 940 280"
             stroke={themeAccent}

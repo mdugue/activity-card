@@ -29,15 +29,15 @@ const ACCENTS = [
   "#a98352",
 ];
 
-type EditStateProps = {
-  data: ActivityData;
-  theme: Theme;
-  onThemeChange: (theme: Theme) => void;
-  photoUrl: string | null;
+interface EditStateProps {
   accent: string;
+  data: ActivityData;
   onAccentChange: (accent: string) => void;
   onDownload: () => void;
-};
+  onThemeChange: (theme: Theme) => void;
+  photoUrl: string | null;
+  theme: Theme;
+}
 
 export function EditState({
   data,

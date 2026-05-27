@@ -2,9 +2,9 @@
 
 import { Button } from "@/components/ui/button";
 
-type EmptyStateProps = {
+interface EmptyStateProps {
   onLoadSample: () => void;
-};
+}
 
 export function EmptyState({ onLoadSample }: EmptyStateProps) {
   return (
@@ -74,6 +74,7 @@ function DropZone({ onLoadSample }: { onLoadSample: () => void }) {
         viewBox="0 0 64 64"
         width="64"
       >
+        <title>route mark</title>
         <path
           d="M14 44 Q24 18, 32 32 T54 22"
           stroke="currentColor"
