@@ -44,6 +44,7 @@ interface EditStateProps {
   onDownload: () => void;
   onPhotoChange: (file: File | null) => void;
   onThemeChange: (theme: ThemeId) => void;
+  onTitleChange: (title: string) => void;
   onVisibilityChange: (visibility: Visibility) => void;
   photoUrl: string | null;
   theme: ThemeId;
@@ -133,6 +134,7 @@ function ControlsPane({
   data,
   theme,
   onThemeChange,
+  onTitleChange,
   photoUrl,
   onPhotoChange,
   accent,
@@ -153,8 +155,9 @@ function ControlsPane({
         </Label>
         <Input
           className="h-auto border-foreground border-b-2 py-2 font-heading text-2xl uppercase tracking-tight md:text-2xl"
-          defaultValue={data.ride_name}
           id={titleId}
+          onChange={(e) => onTitleChange(e.target.value)}
+          value={data.ride_name}
         />
       </ControlBlock>
 
@@ -298,15 +301,19 @@ function PhotoControl({
 }
 
 function FileLoadedRow({ data }: { data: ActivityData }) {
-  const filename = `${data.sport}_${data.date.replace(/\s|,/g, "").toLowerCase()}.fit`;
+  const segCount = data.segments?.length ?? 0;
+  const isMulti = data.sport === "triathlon" && segCount >= 2;
+  const label = isMulti
+    ? `${segCount} files · assembled`
+    : `${data.sport}_${data.date.replace(/\s|,/g, "").toLowerCase()}.fit`;
   return (
     <div className="flex items-center gap-3 bg-foreground p-4 text-background">
       <div aria-hidden className="size-2 bg-primary" />
       <div className="flex-1">
         <div className="font-medium font-mono text-[10px] tracking-[0.22em] opacity-60">
-          FILE LOADED
+          {isMulti ? "MULTI-SPORT LOADED" : "FILE LOADED"}
         </div>
-        <div className="mt-1 font-medium font-mono text-sm">{filename}</div>
+        <div className="mt-1 font-medium font-mono text-sm">{label}</div>
       </div>
       <button
         className="flex items-center gap-1 font-medium font-mono text-[11px] tracking-[0.18em] opacity-70 hover:opacity-100"

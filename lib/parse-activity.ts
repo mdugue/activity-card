@@ -13,13 +13,18 @@ export interface ParsedActivity {
   date: string;
   distance_km: number;
   duration: string;
+  /** Total elapsed seconds — preserved for triathlon aggregation. */
+  duration_sec?: number;
   elevation_gain_m?: number;
   elevation_profile?: number[];
+  end_time_ms?: number;
   location: string;
   max_speed_kmh?: number;
   ride_name: string;
   route_coordinates?: [number, number][];
   sport: ParsedSport;
+  /** Epoch ms; used to order multi-file uploads and compute transitions. */
+  start_time_ms?: number;
 }
 
 interface TrackPoint {
@@ -227,6 +232,10 @@ function finalise(input: FinaliseInput): ParsedActivity {
   const distanceKm = input.sessionDistanceKm ?? cumulativeDistanceKm(points);
 
   const durationSec = input.sessionDurationSec ?? totalDurationSec(points);
+  const ptTimes = points.map((p) => p.time).filter(isNum);
+  const startTimeMs =
+    isoDate === undefined ? ptTimes[0] : new Date(isoDate).getTime();
+  const endTimeMs = ptTimes.at(-1);
 
   const elevationGainM =
     input.sessionElevationM ?? cumulativeElevationGain(points);
@@ -260,25 +269,41 @@ function finalise(input: FinaliseInput): ParsedActivity {
     duration: formatDuration(durationSec),
     elevation_gain_m:
       elevationGainM > 0 ? Math.round(elevationGainM) : undefined,
-    avg_speed_kmh:
-      sport === "ride" && avgSpeedKmh ? round(avgSpeedKmh, 1) : undefined,
-    max_speed_kmh:
-      sport === "ride" && input.sessionMaxSpeedKmh
-        ? round(input.sessionMaxSpeedKmh, 1)
-        : undefined,
-    avg_pace_min_per_km:
-      sport === "run" && avgSpeedKmh
-        ? speedToPaceMinPerKm(avgSpeedKmh)
-        : undefined,
-    avg_pace_per_100m:
-      sport === "swim" && avgSpeedKmh
-        ? speedToPacePer100m(avgSpeedKmh)
-        : undefined,
+    ...sportSpecificStats(sport, avgSpeedKmh, input.sessionMaxSpeedKmh),
     avg_heart_rate: avgHr ? Math.round(avgHr) : undefined,
     avg_cadence: avgCadence ? Math.round(avgCadence) : undefined,
     route_coordinates: route_coordinates.length ? route_coordinates : undefined,
     elevation_profile: elevation_profile.length ? elevation_profile : undefined,
+    start_time_ms: startTimeMs,
+    end_time_ms: endTimeMs,
+    duration_sec: durationSec > 0 ? Math.round(durationSec) : undefined,
   };
+}
+
+function sportSpecificStats(
+  sport: ParsedSport,
+  avgSpeedKmh: number | undefined,
+  maxSpeedKmh: number | undefined
+): Pick<
+  ParsedActivity,
+  | "avg_speed_kmh"
+  | "max_speed_kmh"
+  | "avg_pace_min_per_km"
+  | "avg_pace_per_100m"
+> {
+  if (sport === "ride") {
+    return {
+      avg_speed_kmh: avgSpeedKmh ? round(avgSpeedKmh, 1) : undefined,
+      max_speed_kmh: maxSpeedKmh ? round(maxSpeedKmh, 1) : undefined,
+    };
+  }
+  if (sport === "run" && avgSpeedKmh) {
+    return { avg_pace_min_per_km: speedToPaceMinPerKm(avgSpeedKmh) };
+  }
+  if (sport === "swim" && avgSpeedKmh) {
+    return { avg_pace_per_100m: speedToPacePer100m(avgSpeedKmh) };
+  }
+  return {};
 }
 
 function detectSport(raw: string | undefined, filename: string): ParsedSport {

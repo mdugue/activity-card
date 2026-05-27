@@ -10,7 +10,9 @@ import {
   type ActivityData,
   SAMPLE_RIDE,
   SAMPLE_RUN,
+  SAMPLE_TRI,
 } from "@/components/app/sample-data";
+import { assembleTriathlon } from "@/lib/assemble-triathlon";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import {
   applyVisibility,
@@ -25,6 +27,16 @@ interface PersistedUi {
   accent: string;
   theme: ThemeId;
   visibility: Visibility;
+}
+
+function sampleForTheme(theme: ThemeId): ActivityData {
+  if (theme === "triathlon") {
+    return SAMPLE_TRI;
+  }
+  if (theme === "photo" || theme === "editorial") {
+    return SAMPLE_RUN;
+  }
+  return SAMPLE_RIDE;
 }
 
 function adoptParsed(parsed: ParsedActivity): ActivityData {
@@ -101,13 +113,23 @@ export default function Home() {
   }, [photoUrl]);
 
   const handleLoadSample = () => {
-    setData(SAMPLE_RIDE);
+    // Pick a sample that matches the persisted theme so the user sees
+    // something representative of what they last chose.
+    setData(sampleForTheme(theme));
     setState("edit");
   };
 
-  const handleFileLoaded = (parsed: ParsedActivity) => {
-    setData(adoptParsed(parsed));
+  const handleFilesLoaded = (parts: ParsedActivity[]) => {
+    if (parts.length === 1) {
+      setData(adoptParsed(parts[0]));
+    } else {
+      setData(assembleTriathlon(parts));
+    }
     setState("edit");
+  };
+
+  const handleTitleChange = (title: string) => {
+    setData((prev) => (prev ? { ...prev, ride_name: title } : prev));
   };
 
   const handlePhotoChange = (file: File | null) => {
@@ -143,7 +165,7 @@ export default function Home() {
       <Header date={data?.date} />
       {state === "empty" ? (
         <EmptyState
-          onFileLoaded={handleFileLoaded}
+          onFilesLoaded={handleFilesLoaded}
           onLoadSample={handleLoadSample}
         />
       ) : null}
@@ -155,6 +177,7 @@ export default function Home() {
           onDownload={handleDownload}
           onPhotoChange={handlePhotoChange}
           onThemeChange={setTheme}
+          onTitleChange={handleTitleChange}
           onVisibilityChange={setVisibility}
           photoUrl={photoUrl}
           theme={theme}

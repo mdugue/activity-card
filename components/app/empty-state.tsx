@@ -4,12 +4,14 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { type ParsedActivity, parseActivityFile } from "@/lib/parse-activity";
 
+const ACTIVITY_FILE_RE = /\.(gpx|fit)$/i;
+
 interface EmptyStateProps {
-  onFileLoaded: (data: ParsedActivity) => void;
+  onFilesLoaded: (parts: ParsedActivity[]) => void;
   onLoadSample: () => void;
 }
 
-export function EmptyState({ onLoadSample, onFileLoaded }: EmptyStateProps) {
+export function EmptyState({ onLoadSample, onFilesLoaded }: EmptyStateProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-8 py-24">
       <div className="font-medium font-mono text-xs tracking-[0.32em] opacity-55">
@@ -23,19 +25,19 @@ export function EmptyState({ onLoadSample, onFileLoaded }: EmptyStateProps) {
       </h1>
 
       <p className="mt-6 max-w-xl text-center text-base leading-relaxed opacity-65 sm:text-lg">
-        A{" "}
+        One{" "}
         <code className="bg-foreground px-2 py-1 font-mono text-background text-sm">
           .gpx
         </code>{" "}
         or{" "}
         <code className="bg-foreground px-2 py-1 font-mono text-background text-sm">
           .fit
-        </code>{" "}
-        file from any ride, run, swim, or triathlon. We&apos;ll make something
-        worth keeping.
+        </code>
+        , or drop two-plus together for a triathlon / brick. We&apos;ll make
+        something worth keeping.
       </p>
 
-      <DropZone onFileLoaded={onFileLoaded} onLoadSample={onLoadSample} />
+      <DropZone onFilesLoaded={onFilesLoaded} onLoadSample={onLoadSample} />
 
       <div className="mt-9 flex flex-wrap justify-center gap-3">
         {(["RIDE", "RUN", "SWIM", "TRIATHLON"] as const).map((s) => (
@@ -53,28 +55,42 @@ export function EmptyState({ onLoadSample, onFileLoaded }: EmptyStateProps) {
 
 function DropZone({
   onLoadSample,
-  onFileLoaded,
+  onFilesLoaded,
 }: {
   onLoadSample: () => void;
-  onFileLoaded: (data: ParsedActivity) => void;
+  onFilesLoaded: (parts: ParsedActivity[]) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [progress, setProgress] = useState<string | null>(null);
 
-  const handleFile = async (file: File) => {
+  const handleFiles = async (fileList: FileList | File[]) => {
+    const files = Array.from(fileList).filter((f) =>
+      ACTIVITY_FILE_RE.test(f.name)
+    );
+    if (!files.length) {
+      setError("Drop a .gpx or .fit file.");
+      return;
+    }
     setError(null);
     setIsParsing(true);
+    setProgress(
+      files.length === 1 ? "Reading…" : `Reading ${files.length} files…`
+    );
     try {
-      const parsed = await parseActivityFile(file);
-      onFileLoaded(parsed);
+      const parts = await Promise.all(files.map((f) => parseActivityFile(f)));
+      onFilesLoaded(parts);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not read that file.");
     } finally {
       setIsParsing(false);
+      setProgress(null);
     }
   };
+
+  const idle = !(isParsing || isDragging);
 
   return (
     // biome-ignore lint/a11y/useSemanticElements: dropzone wraps inner buttons; cannot be a <button> itself
@@ -101,9 +117,8 @@ function DropZone({
       onDrop={(e) => {
         e.preventDefault();
         setIsDragging(false);
-        const file = e.dataTransfer.files[0];
-        if (file) {
-          handleFile(file);
+        if (e.dataTransfer.files.length) {
+          handleFiles(e.dataTransfer.files);
         }
       }}
       onKeyDown={(e) => {
@@ -124,10 +139,10 @@ function DropZone({
       <input
         accept=".gpx,.fit"
         className="hidden"
+        multiple
         onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) {
-            handleFile(file);
+          if (e.target.files?.length) {
+            handleFiles(e.target.files);
           }
         }}
         ref={inputRef}
@@ -160,10 +175,10 @@ function DropZone({
       </svg>
 
       <div className="text-center font-heading text-4xl uppercase leading-none tracking-tight sm:text-5xl">
-        {isParsing ? "Reading…" : "DROP A FILE HERE"}
+        {progress ?? (idle ? "DROP A FILE HERE" : "DROP TO READ")}
       </div>
       <div className="mt-3 font-medium font-mono text-xs tracking-[0.16em] opacity-55">
-        OR
+        {idle ? "ONE FILE OR MANY · OR" : ""}
       </div>
       <div className="mt-3 flex gap-2">
         <Button
