@@ -250,6 +250,7 @@ export default function Home() {
           onAltitudeMoodChange={setAltitudeMood}
           onAthleteNameChange={handleAthleteNameChange}
           onDownload={handleDownload}
+          onFilesLoaded={handleFilesLoaded}
           onLocationChange={handleLocationChange}
           onPhotoChange={handlePhotoChange}
           onPhotoMoodChange={setPhotoMood}

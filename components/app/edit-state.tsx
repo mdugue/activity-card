@@ -29,10 +29,13 @@ import type { PaletteStatus } from "@/hooks/use-image-palette";
 import { defaultFilename, exportCard } from "@/lib/export-card";
 import { formatDate } from "@/lib/format";
 import type { PaletteTheme, PhotoMood } from "@/lib/palette";
+import { type ParsedActivity, parseActivityFile } from "@/lib/parse-activity";
 import type { Visibility } from "@/lib/visibility";
 import { RenderTheme, type ThemeId } from "./render-theme";
 import type { ActivityData, Sport } from "./sample-data";
 import { ThemeCarousel } from "./theme-carousel";
+
+const ACTIVITY_FILE_RE = /\.(gpx|fit)$/i;
 
 const ACCENTS = [
   "#c45a2c",
@@ -93,6 +96,7 @@ interface EditStateProps {
   onAltitudeMoodChange: (mood: AltitudeMood) => void;
   onAthleteNameChange: (name: string) => void;
   onDownload: () => void;
+  onFilesLoaded: (parts: ParsedActivity[]) => void;
   onLocationChange: (location: string) => void;
   onPhotoChange: (file: File | null) => void;
   onPhotoMoodChange: (mood: PhotoMood) => void;
@@ -197,6 +201,7 @@ function ControlsPane({
   accent,
   onAccentChange,
   onDownload,
+  onFilesLoaded,
   visibility,
   onVisibilityChange,
   isExporting,
@@ -221,7 +226,7 @@ function ControlsPane({
 
   return (
     <div className="flex flex-col gap-7 pr-2 lg:pr-10">
-      <FileLoadedRow data={data} />
+      <FileLoadedRow data={data} onFilesLoaded={onFilesLoaded} />
 
       <ControlBlock label="TITLE">
         <Label className="sr-only" htmlFor={titleId}>
@@ -586,7 +591,13 @@ function PhotoControl({
   );
 }
 
-function FileLoadedRow({ data }: { data: ActivityData }) {
+function FileLoadedRow({
+  data,
+  onFilesLoaded,
+}: {
+  data: ActivityData;
+  onFilesLoaded: (parts: ParsedActivity[]) => void;
+}) {
   const segCount = data.segments?.length ?? 0;
   const isMulti = data.sport === "triathlon" && segCount >= 2;
   const friendlyDate = formatDate(data.date);
@@ -594,17 +605,63 @@ function FileLoadedRow({ data }: { data: ActivityData }) {
   const label = isMulti
     ? `${segCount} files · assembled`
     : `${data.sport}_${slug}.fit`;
+
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [isSwapping, setIsSwapping] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleFiles = async (fileList: FileList | null) => {
+    if (!fileList) {
+      return;
+    }
+    const files = Array.from(fileList).filter((f) =>
+      ACTIVITY_FILE_RE.test(f.name)
+    );
+    if (!files.length) {
+      setError("Drop a .gpx or .fit file.");
+      return;
+    }
+    setError(null);
+    setIsSwapping(true);
+    try {
+      const parts = await Promise.all(files.map((f) => parseActivityFile(f)));
+      onFilesLoaded(parts);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not read that file.");
+    } finally {
+      setIsSwapping(false);
+    }
+  };
+
   return (
-    <div className="flex items-center gap-2 font-medium font-mono text-[11px] opacity-60">
-      <div aria-hidden className="size-1.5 rounded-full bg-primary" />
-      <span className="truncate">{label}</span>
-      <button
-        className="ml-auto flex items-center gap-1 text-[10px] uppercase tracking-[0.18em] underline-offset-4 hover:underline"
-        type="button"
-      >
-        Swap
-        <ArrowRight aria-hidden className="size-2.5" />
-      </button>
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2 font-medium font-mono text-[11px] opacity-60">
+        <div aria-hidden className="size-1.5 rounded-full bg-primary" />
+        <span className="truncate">{isSwapping ? "Reading…" : label}</span>
+        <input
+          accept=".gpx,.fit"
+          className="hidden"
+          multiple
+          onChange={(e) => {
+            handleFiles(e.target.files);
+            e.target.value = "";
+          }}
+          ref={inputRef}
+          type="file"
+        />
+        <button
+          className="ml-auto flex items-center gap-1 text-[10px] uppercase tracking-[0.18em] underline-offset-4 hover:underline disabled:no-underline disabled:opacity-50"
+          disabled={isSwapping}
+          onClick={() => inputRef.current?.click()}
+          type="button"
+        >
+          Swap
+          <ArrowRight aria-hidden className="size-2.5" />
+        </button>
+      </div>
+      {error ? (
+        <div className="font-mono text-[10px] text-destructive">{error}</div>
+      ) : null}
     </div>
   );
 }

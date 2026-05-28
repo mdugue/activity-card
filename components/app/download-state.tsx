@@ -1,9 +1,10 @@
 "use client";
 
 import { Check } from "lucide-react";
+import { useRef, useState } from "react";
 import type { AltitudeMood } from "@/components/themes/altitude";
 import { Button } from "@/components/ui/button";
-import { defaultFilename } from "@/lib/export-card";
+import { defaultFilename, exportCard } from "@/lib/export-card";
 import { formatDateUpper } from "@/lib/format";
 import type { PaletteTheme } from "@/lib/palette";
 import { RenderTheme, type ThemeId } from "./render-theme";
@@ -31,6 +32,21 @@ export function DownloadState({
   onNew,
 }: DownloadStateProps) {
   const filename = defaultFilename(data.sport, data.date);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [isSharing, setIsSharing] = useState(false);
+
+  const handleShare = async () => {
+    if (!cardRef.current || isSharing) {
+      return;
+    }
+    setIsSharing(true);
+    try {
+      await exportCard(cardRef.current, { filename });
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
   return (
     <div className="relative flex flex-1 items-center justify-center px-6 py-10">
       <Confetti />
@@ -82,7 +98,9 @@ export function DownloadState({
             1080 × 1350 — Instagram-ready.
           </p>
           <div className="mt-8 flex flex-wrap gap-2">
-            <Button size="lg">Share</Button>
+            <Button disabled={isSharing} onClick={handleShare} size="lg">
+              {isSharing ? "Sharing…" : "Share"}
+            </Button>
             <Button onClick={onKeepEditing} size="lg" variant="outline">
               Keep editing
             </Button>
@@ -91,6 +109,24 @@ export function DownloadState({
             </Button>
           </div>
         </div>
+      </div>
+
+      {/* Native-size mount used by html-to-image when re-sharing. Off-screen
+          via translate but laid out at full 1080×1350 so the theme's flex
+          columns reflow correctly inside the clone. Same trick as EditState. */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed top-0 left-0 -z-10"
+        ref={cardRef}
+        style={{ width: 1080, height: 1350, transform: "translateX(-200%)" }}
+      >
+        <RenderTheme
+          altitudeMood={altitudeMood}
+          data={data}
+          photoPaletteTheme={photoPaletteTheme}
+          photoUrl={photoUrl}
+          theme={theme}
+        />
       </div>
     </div>
   );
