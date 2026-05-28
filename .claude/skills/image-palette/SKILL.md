@@ -20,6 +20,7 @@ A photo produces colors via three stages:
    - `headline` — best-contrast light swatch over background
    - `body` — dimmed headline, lower contrast bar
    - `accent` — variant-dependent (see below)
+   - `accent2` — secondary accent. Equal to `accent` for every variant except **spectrum**, which sets it to the complementary rotation of `accent` so the card can carry two hues at once (gradient rule, ornamental italics).
    - `onAccent` — auto black/white for text placed on the accent
 3. **Guarantee contrast** — every text/bg pair is checked with `wcagContrast` (culori). Headline must clear 4.5:1, body 3:1. If no swatch qualifies, fall back to white or black. **Legibility always wins over aesthetics.**
 
@@ -30,7 +31,7 @@ Don't ship one fixed mapping — auto-color is delightful when it hits and jarri
 - **vibrant** — accent = the Vibrant swatch. Punchy, photo-forward.
 - **muted** — accent = LightMuted/Muted. Calm, editorial.
 - **complementary** — accent = Vibrant hue rotated 180° in OKLCH. Striking, designed-looking.
-- **spectrum** — headline pulls LightVibrant, body pulls LightMuted, accent pulls Vibrant. The headline and body carry distinct hues, so the card reads as layered rather than monochrome.
+- **spectrum** — headline pulls LightVibrant, body pulls LightMuted, accent pulls Vibrant, and a *second* accent (`accent2`) is set to the complementary rotation of the primary. Themes can paint different elements with `accent` vs `accent2` (or use them together in a gradient) so a Spectrum card visibly carries two hues at once. The wildest of the moods by design.
 - **pure** — ignores the swatches entirely and returns fixed white type with a white accent. The photo still shows as background; the type stays neutral so the image speaks for itself. Use this as the "opt out" — when the extracted colours don't land or the user wants the original look.
 
 `buildPaletteFromImage()` returns all five pre-built. The caller picks one and the hook returns `themes[variant]`.
@@ -66,9 +67,11 @@ Quantization is the slow stage and can jank on large photos. node-vibrant v4 shi
 ## Consuming the theme
 
 `paletteToCssVars(theme)` maps the theme onto CSS custom properties
-(`--bg`, `--headline`, `--body`, `--accent`, `--on-accent`). Spread onto the
-card root; reference the vars in the theme's CSS. This keeps the photo theme's
-markup identical to other themes — only the variable values change.
+(`--bg`, `--headline`, `--body`, `--accent`, `--accent-2`, `--on-accent`).
+Spread onto the card root; reference the vars in the theme's CSS. This keeps
+the photo theme's markup identical to other themes — only the variable
+values change. Use `--accent-2` for ornamental "second colour" elements; it
+gracefully collapses to `--accent` outside Spectrum.
 
 ## Edge cases handled
 

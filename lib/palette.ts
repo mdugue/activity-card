@@ -41,8 +41,12 @@ export type PhotoMood = PaletteVariant;
 
 /** The final object a theme consumes — assign these to CSS variables. */
 export interface PaletteTheme {
-  // route stroke, key stat highlight
+  // primary accent — hero number, divider, key stat highlight
   accent: string;
+  // secondary accent — paired with `accent` for multi-colour moments
+  // (gradient rule, ornamental italics). Equals `accent` for most variants;
+  // only Spectrum sets it to a distinct hue.
+  accent2: string;
   // page/card background
   background: string;
   // secondary text — guaranteed >= 3:1 on background
@@ -193,6 +197,7 @@ function buildPureTheme(): PaletteTheme {
     headline: "#ffffff",
     body: "rgba(255,255,255,0.82)",
     accent: "#ffffff",
+    accent2: "#ffffff",
     onAccent: BLACK,
   };
 }
@@ -267,6 +272,14 @@ function buildTheme(
   const background = byName(swatches, "DarkMuted") ?? darkest(swatches);
   const accent = pickAccent(swatches, variant);
 
+  // Spectrum is the multi-colour mood: accent2 = the complementary rotation
+  // of the primary accent (chroma-guarded). Other variants leave accent2
+  // equal to accent so they stay single-colour by design.
+  const accent2 =
+    variant === "spectrum" && chroma(accent) >= MIN_ACCENT_CHROMA
+      ? rotateHue(accent, 180)
+      : accent;
+
   // Headline: best-contrast swatch over background, else auto black/white.
   // Prefer the light swatches as text candidates since bg is dark.
   const candidates = [
@@ -286,6 +299,7 @@ function buildTheme(
   return {
     variant,
     background,
+    accent2,
     headline,
     body,
     accent,
@@ -310,6 +324,7 @@ export async function buildPaletteFromImage(
       headline: WHITE,
       body: "#bbbbbb",
       accent: "#888888",
+      accent2: "#888888",
       onAccent: BLACK,
     };
     return {

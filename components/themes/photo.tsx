@@ -60,6 +60,9 @@ function fallbackVars(palette: StaticPalette): React.CSSProperties {
     ["--headline" as string]: palette.headline,
     ["--body" as string]: palette.body,
     ["--accent" as string]: palette.accent,
+    // Static fallback has no second accent — mirror the primary so the
+    // gradient divider and accent-2 elements still render as flat colour.
+    ["--accent-2" as string]: palette.accent,
     ["--on-accent" as string]: palette.onAccent,
   } as React.CSSProperties;
 }
@@ -163,15 +166,16 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
         </svg>
       )}
 
-      {/* Photo-tinted vignette: top + bottom edges blend toward the extracted
-          background colour so the headline + masthead always sit on a quiet
-          area regardless of what the photo looks like at those spots. */}
+      {/* Dark vignette at top + bottom for text legibility. Stays pure black
+          regardless of mood — a neutral protection layer reads consistently
+          across any photo, where a tinted vignette can fight the chosen
+          accent. */}
       <div
         style={{
           position: "absolute",
           inset: 0,
           background:
-            "linear-gradient(180deg, color-mix(in oklab, var(--bg) 75%, transparent) 0%, transparent 28%, transparent 55%, color-mix(in oklab, var(--bg) 88%, transparent) 100%)",
+            "linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.7) 100%)",
         }}
       />
 
@@ -188,14 +192,17 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
         }}
       >
         <div>
-          {/* Wordmark — italic display in accent for a signature brand moment. */}
+          {/* Wordmark — italic display in the secondary accent. For most
+              moods accent-2 == accent so it reads as the brand accent; in
+              Spectrum it picks up the complementary hue and pairs with the
+              primary-accent hero stat across the canvas. */}
           <div
             style={{
               fontFamily: "var(--font-playfair), serif",
               fontSize: 52,
               fontStyle: "italic",
               letterSpacing: "-0.01em",
-              color: "var(--accent)",
+              color: "var(--accent-2)",
             }}
           >
             Effort
@@ -233,10 +240,10 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
         </div>
       </div>
 
-      {/* Route trace — thin, elegant, top-right area. Drawn as two stacked
-          paths: a soft white halo behind, the accent stroke on top. The halo
-          keeps the line readable when the extracted accent is dark or sits
-          on a similarly-toned area of the photo. */}
+      {/* Route trace — always white. Coloured strokes read poorly against
+          arbitrary photos; a thin white stroke with a soft dark shadow is
+          legible on every background and matches the masthead's neutral
+          treatment. */}
       {!isPool && (
         <svg
           aria-hidden="true"
@@ -246,6 +253,7 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
             right: 60,
             width: 320,
             height: 240,
+            opacity: 0.9,
           }}
           viewBox="0 0 400 300"
         >
@@ -253,37 +261,27 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
           <path
             d={routePath(data.route_coordinates, 400, 300, 20)}
             fill="none"
-            stroke="rgba(255,255,255,0.55)"
+            stroke="#ffffff"
             strokeLinecap="round"
             strokeLinejoin="round"
-            strokeWidth={7}
-            style={{ filter: "blur(3px)" }}
-          />
-          <path
-            d={routePath(data.route_coordinates, 400, 300, 20)}
-            fill="none"
-            stroke="var(--accent)"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={3.5}
-            style={{
-              filter:
-                "drop-shadow(0 0 6px rgba(255,255,255,0.45)) drop-shadow(0 2px 4px rgba(0,0,0,0.45))",
-            }}
+            strokeWidth={2.5}
+            style={{ filter: "drop-shadow(0 0 12px rgba(0,0,0,0.4))" }}
           />
         </svg>
       )}
 
-      {/* Big headline near bottom + accent rule. The rule borrows the
-          extracted accent so the headline area picks up a third colour cue
-          without crowding the type. */}
+      {/* Big headline near bottom + accent rule. The rule is a gradient from
+          accent → accent-2; for most moods both ends are the same colour and
+          it reads as a flat bar. In Spectrum the two ends are distinct hues,
+          so the rule becomes the most visible "two colours at once" moment. */}
       <div style={{ position: "absolute", bottom: 220, left: 80, right: 80 }}>
         <div
           aria-hidden
           style={{
-            width: 96,
+            width: 120,
             height: 4,
-            background: "var(--accent)",
+            background:
+              "linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%)",
             marginBottom: 28,
             boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
           }}
@@ -336,7 +334,7 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
             <span
               style={{
                 fontSize: 40,
-                color: "var(--accent)",
+                color: "var(--accent-2)",
                 fontStyle: "italic",
                 fontFamily: "var(--font-playfair), serif",
               }}
@@ -376,7 +374,7 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
                 fontSize: 42,
                 letterSpacing: "0",
                 fontWeight: 400,
-                color: "var(--accent)",
+                color: "var(--accent-2)",
               }}
             >
               {data.athlete_name}

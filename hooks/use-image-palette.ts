@@ -107,6 +107,7 @@ export function paletteToCssVars(theme: PaletteTheme): React.CSSProperties {
     ["--headline" as string]: theme.headline,
     ["--body" as string]: theme.body,
     ["--accent" as string]: theme.accent,
+    ["--accent-2" as string]: theme.accent2,
     ["--on-accent" as string]: theme.onAccent,
   } as React.CSSProperties;
 }
