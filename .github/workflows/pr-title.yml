@@ -7,9 +7,6 @@ on:
 permissions:
   pull-requests: read
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 # A separate workflow from ci.yml because the trigger is different
 # (`pull_request_target` so the title check still runs on PRs from forks)
 # and because the check should not be cancelled by ci.yml's concurrency group.
@@ -19,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - uses: amannn/action-semantic-pull-request@v5
+      - uses: amannn/action-semantic-pull-request@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
