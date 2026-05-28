@@ -15,6 +15,13 @@ concurrency:
 permissions:
   contents: read
 
+# Opt these actions runs into Node 24 ahead of the June 2 2026 cutover.
+# Removes the deprecation warning the runner prints under the default Node 20
+# and surfaces any Node-24-only incompatibilities now rather than on the
+# automatic flip.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   lint:
     name: Lint
