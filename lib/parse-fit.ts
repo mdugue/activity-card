@@ -82,7 +82,12 @@ export function parseFit(
           lat: r.position_lat,
           lng: r.position_long,
           elevation: r.altitude,
-          time: r.timestamp ? new Date(r.timestamp).getTime() : undefined,
+          time: r.timestamp
+            ? (() => {
+                const t = new Date(r.timestamp).getTime();
+                return Number.isFinite(t) ? t : undefined;
+              })()
+            : undefined,
           heartRate: r.heart_rate,
           cadence: r.cadence,
         }));

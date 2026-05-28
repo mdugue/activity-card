@@ -62,6 +62,20 @@ const GpxSchema = z.object({
 
 type GpxTrkPt = z.infer<typeof TrkPtSchema>;
 
+/**
+ * Coerce a value to a finite number, or `undefined` on bad input. fast-xml-parser
+ * may yield strings, and `Number("foo")` / `Date.parse("bad")` both return `NaN`
+ * — letting that through poisons haversine, splits, and route projection
+ * downstream because `lat === undefined` is false for NaN.
+ */
+function toFiniteNumber(v: unknown): number | undefined {
+  if (v === undefined || v === null || v === "") {
+    return;
+  }
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 export function parseGpx(text: string, filename: string): ParsedActivity {
   const parser = new XMLParser({
     ignoreAttributes: false,
@@ -99,22 +113,14 @@ export function parseGpx(text: string, filename: string): ParsedActivity {
   }
 
   const points: TrackPoint[] = flatPts.map((p) => {
-    const lat = Number(p["@_lat"]);
-    const lng = Number(p["@_lon"]);
-    const elevation = p.ele === undefined ? undefined : Number(p.ele);
-    const time = p.time ? Date.parse(p.time) : undefined;
     const ext = p.extensions?.["gpxtpx:TrackPointExtension"];
     return {
-      lat,
-      lng,
-      elevation,
-      time,
-      heartRate:
-        ext?.["gpxtpx:hr"] === undefined ? undefined : Number(ext["gpxtpx:hr"]),
-      cadence:
-        ext?.["gpxtpx:cad"] === undefined
-          ? undefined
-          : Number(ext["gpxtpx:cad"]),
+      lat: toFiniteNumber(p["@_lat"]),
+      lng: toFiniteNumber(p["@_lon"]),
+      elevation: toFiniteNumber(p.ele),
+      time: p.time ? toFiniteNumber(Date.parse(p.time)) : undefined,
+      heartRate: toFiniteNumber(ext?.["gpxtpx:hr"]),
+      cadence: toFiniteNumber(ext?.["gpxtpx:cad"]),
     };
   });
 

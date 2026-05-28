@@ -73,8 +73,18 @@ export function finalise(input: FinaliseInput): ParsedActivity {
   const durationSec = input.sessionDurationSec ?? totalDurationSec(points);
 
   const ptTimes = points.map((p) => p.time).filter(isNum);
-  const startTimeMs =
-    isoDate === undefined ? ptTimes[0] : new Date(isoDate).getTime();
+  // Prefer the declared start time, but only if it parses to a finite epoch.
+  // Malformed metadata (e.g. a `<time>` element with junk in it) would
+  // otherwise propagate NaN through triathlon ordering and transition math.
+  const startTimeMs = (() => {
+    if (isoDate !== undefined) {
+      const parsed = new Date(isoDate).getTime();
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+    return ptTimes[0];
+  })();
   const endTimeMs = ptTimes.at(-1);
 
   const elevationGainM =
@@ -256,18 +266,21 @@ function derivePerKmSplits(
   }
   const stamped: { time: number; cumM: number }[] = [];
   let cumM = 0;
-  for (let i = 0; i < points.length; i++) {
-    const p = points[i];
+  // Track the last *stamped* coords, not `points[i - 1]`: when the previous
+  // raw point is missing lat/lng/time we'd otherwise skip the haversine and
+  // undercount distance, pushing every following split boundary off.
+  let lastLat: number | undefined;
+  let lastLng: number | undefined;
+  for (const p of points) {
     if (p.lat === undefined || p.lng === undefined || p.time === undefined) {
       continue;
     }
-    if (stamped.length > 0) {
-      const prev = points[i - 1];
-      if (prev?.lat !== undefined && prev.lng !== undefined) {
-        cumM += haversineMeters(prev.lat, prev.lng, p.lat, p.lng);
-      }
+    if (lastLat !== undefined && lastLng !== undefined) {
+      cumM += haversineMeters(lastLat, lastLng, p.lat, p.lng);
     }
     stamped.push({ time: p.time, cumM });
+    lastLat = p.lat;
+    lastLng = p.lng;
   }
   if (stamped.length < 2) {
     return;
