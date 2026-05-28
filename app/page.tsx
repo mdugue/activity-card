@@ -11,10 +11,12 @@ import {
   SAMPLE_RIDE,
   SAMPLE_RUN,
   SAMPLE_TRI,
+  type Sport,
 } from "@/components/app/sample-data";
 import type { AltitudeMood } from "@/components/themes/altitude";
 import { useImagePalette } from "@/hooks/use-image-palette";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
+import { formatDateUpper } from "@/lib/format";
 import type { PhotoMood } from "@/lib/palette";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import {
@@ -57,8 +59,8 @@ function adoptParsed(
     ...base,
     ...parsed,
     location: parsed.location || base.location,
-    athlete_name:
-      parsed.athlete_name || persistedAthleteName || base.athlete_name,
+    athleteName: parsed.athleteName || persistedAthleteName || base.athleteName,
+    splits: parsed.splits ?? base.splits,
   };
 }
 
@@ -141,14 +143,14 @@ export default function Home() {
       visibility,
       altitudeMood,
       photoMood,
-      athleteName: data?.athlete_name || persistedAthleteNameRef.current,
+      athleteName: data?.athleteName || persistedAthleteNameRef.current,
     };
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch {
       // localStorage may be unavailable (private mode, quota); soft-fail.
     }
-  }, [theme, accent, visibility, altitudeMood, photoMood, data?.athlete_name]);
+  }, [theme, accent, visibility, altitudeMood, photoMood, data?.athleteName]);
 
   // Object URLs need cleanup or they leak into memory.
   useEffect(() => {
@@ -162,8 +164,8 @@ export default function Home() {
     // Pick a sample that matches the persisted theme so the user sees
     // something representative of what they last chose.
     const sample = sampleForTheme(theme);
-    const athleteName = persistedAthleteNameRef.current ?? sample.athlete_name;
-    setData({ ...sample, athlete_name: athleteName });
+    const athleteName = persistedAthleteNameRef.current ?? sample.athleteName;
+    setData({ ...sample, athleteName });
     setState("edit");
   };
 
@@ -176,22 +178,24 @@ export default function Home() {
       // pulls from the first parsed file which may be blank.
       setData({
         ...tri,
-        athlete_name:
-          tri.athlete_name ||
-          persistedAthleteNameRef.current ||
-          tri.athlete_name,
+        athleteName:
+          tri.athleteName || persistedAthleteNameRef.current || tri.athleteName,
       });
     }
     setState("edit");
   };
 
   const handleTitleChange = (title: string) => {
-    setData((prev) => (prev ? { ...prev, ride_name: title } : prev));
+    setData((prev) => (prev ? { ...prev, title } : prev));
+  };
+
+  const handleSportChange = (sport: Sport) => {
+    setData((prev) => (prev ? { ...prev, sport } : prev));
   };
 
   const handleAthleteNameChange = (name: string) => {
     persistedAthleteNameRef.current = name;
-    setData((prev) => (prev ? { ...prev, athlete_name: name } : prev));
+    setData((prev) => (prev ? { ...prev, athleteName: name } : prev));
   };
 
   const handleLocationChange = (location: string) => {
@@ -239,7 +243,7 @@ export default function Home() {
         <EditState
           accent={accent}
           altitudeMood={altitudeMood}
-          athleteName={data.athlete_name}
+          athleteName={data.athleteName}
           data={visibleData}
           location={data.location}
           onAccentChange={setAccent}
@@ -249,6 +253,7 @@ export default function Home() {
           onLocationChange={handleLocationChange}
           onPhotoChange={handlePhotoChange}
           onPhotoMoodChange={setPhotoMood}
+          onSportChange={handleSportChange}
           onThemeChange={setTheme}
           onTitleChange={handleTitleChange}
           onVisibilityChange={setVisibility}
@@ -276,11 +281,12 @@ export default function Home() {
 }
 
 function Header({ date }: { date?: string }) {
+  const upper = date ? formatDateUpper(date) : "";
   return (
     <header className="absolute top-0 right-0 left-0 z-10 flex items-start justify-between px-6 pt-7 md:px-10">
       <EffortWordmark />
       <div className="hidden font-medium font-mono text-[11px] tracking-[0.22em] opacity-55 sm:block">
-        ACTIVITY CARD{date ? ` · ${date.toUpperCase()}` : ""}
+        ACTIVITY CARD{upper ? ` · ${upper}` : ""}
       </div>
     </header>
   );

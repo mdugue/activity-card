@@ -7,6 +7,8 @@ export interface ExportOptions {
   width?: number;
 }
 
+const IOS_USER_AGENT_RE = /iPad|iPhone|iPod/;
+
 /**
  * Rasterize a DOM node to PNG at the given intrinsic size, then either
  * share via the Web Share API (mobile) or trigger a download (desktop).
@@ -27,7 +29,7 @@ export async function exportCard(
     await document.fonts.ready;
   }
 
-  const dataUrl = await toPng(node, {
+  const renderOptions = {
     width,
     height,
     pixelRatio,
@@ -36,7 +38,16 @@ export async function exportCard(
       transform: "none",
       transformOrigin: "top left",
     },
-  });
+  };
+
+  // iOS Safari: html-to-image's first pass returns a blank/partial canvas
+  // because the WebKit layer cache lags one paint behind. Re-rasterise and
+  // discard the first result. Cheap to do everywhere; required on iOS.
+  if (isIos()) {
+    await toPng(node, renderOptions);
+  }
+
+  const dataUrl = await toPng(node, renderOptions);
 
   const blob = await (await fetch(dataUrl)).blob();
   const file = new File([blob], filename, { type: "image/png" });
@@ -57,6 +68,13 @@ export async function exportCard(
   triggerDownload(dataUrl, filename);
 }
 
+function isIos(): boolean {
+  if (typeof navigator === "undefined") {
+    return false;
+  }
+  return IOS_USER_AGENT_RE.test(navigator.userAgent);
+}
+
 function triggerDownload(dataUrl: string, filename: string) {
   const a = document.createElement("a");
   a.href = dataUrl;
@@ -67,6 +85,7 @@ function triggerDownload(dataUrl: string, filename: string) {
 }
 
 export function defaultFilename(sport: string, date: string): string {
-  const slug = date.split(" ").join("-").toLowerCase().replace(",", "");
+  // `date` is an ISO yyyy-mm-dd string; render it into the filename as-is.
+  const slug = date.replace(/[^0-9-]/g, "") || "undated";
   return `effort_${sport}_${slug}.png`;
 }

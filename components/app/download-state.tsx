@@ -4,6 +4,7 @@ import { Check } from "lucide-react";
 import type { AltitudeMood } from "@/components/themes/altitude";
 import { Button } from "@/components/ui/button";
 import { defaultFilename } from "@/lib/export-card";
+import { formatDateUpper } from "@/lib/format";
 import type { PaletteTheme } from "@/lib/palette";
 import { RenderTheme, type ThemeId } from "./render-theme";
 import type { ActivityData } from "./sample-data";
@@ -66,7 +67,7 @@ export function DownloadState({
 
         <div className="max-w-md">
           <div className="font-mono font-semibold text-xs tracking-[0.32em] opacity-55">
-            SAVED · {data.date.toUpperCase()}
+            SAVED · {formatDateUpper(data.date)}
           </div>
           <h2 className="mt-4 font-heading text-7xl uppercase leading-[0.88] tracking-tight sm:text-8xl lg:text-9xl">
             THAT&apos;S

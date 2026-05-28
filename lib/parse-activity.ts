@@ -1,36 +1,47 @@
 import { XMLParser } from "fast-xml-parser";
 import FitParser from "fit-file-parser";
+import type { Coord, Split } from "@/components/app/sample-data";
+import { resampleTo, simplifyToCount, smooth } from "@/lib/simplify";
 
 export type ParsedSport = "ride" | "run" | "swim" | "triathlon";
 
+/**
+ * Output shape used by `assembleTriathlon` and the page-level adopter.
+ * All numerics are raw — never preformatted. `ActivityData` is a superset
+ * of these fields; missing pieces (zones, splits beyond the basics) come
+ * from sport-appropriate sample fallbacks in `adoptParsed`.
+ */
 export interface ParsedActivity {
-  athlete_name: string;
-  avg_cadence?: number;
-  avg_heart_rate?: number;
-  avg_pace_min_per_km?: string;
-  avg_pace_per_100m?: string;
-  avg_speed_kmh?: number;
+  athleteName: string;
+  avgCadence?: number;
+  avgHeartRate?: number;
+  avgPaceMinPerKm?: number;
+  avgPacePer100m?: number;
+
+  avgSpeedKmh?: number;
   date: string;
-  distance_km: number;
-  duration: string;
-  /** Total elapsed seconds — preserved for triathlon aggregation. */
-  duration_sec?: number;
-  elevation_gain_m?: number;
-  elevation_profile?: number[];
-  end_time_ms?: number;
+
+  distanceKm: number;
+  durationSec: number;
+  elevationGainM?: number;
+  elevationProfile?: number[];
+  endTimeMs?: number;
   location: string;
-  max_speed_kmh?: number;
-  ride_name: string;
-  route_coordinates?: [number, number][];
+  maxSpeedKmh?: number;
+  paceProfile?: number[];
+
+  routeCoordinates?: Coord[];
+  splits?: Split[];
   sport: ParsedSport;
-  /** Epoch ms; used to order multi-file uploads and compute transitions. */
-  start_time_ms?: number;
+
+  startTimeMs?: number;
+  title: string;
 }
 
 interface TrackPoint {
   cadence?: number;
   elevation?: number;
-  heart_rate?: number;
+  heartRate?: number;
   lat?: number;
   lng?: number;
   time?: number;
@@ -38,6 +49,10 @@ interface TrackPoint {
 
 const GPX_EXT_RE = /\.gpx$/i;
 const FIT_EXT_RE = /\.fit$/i;
+const ROUTE_TARGET_POINTS = 150;
+const ELEVATION_TARGET_POINTS = 80;
+const PACE_TARGET_POINTS = 80;
+const PACE_SMOOTH_WINDOW = 7;
 
 export async function parseActivityFile(file: File): Promise<ParsedActivity> {
   const ext = file.name.toLowerCase().split(".").pop();
@@ -111,7 +126,7 @@ function parseGpx(text: string, filename: string): ParsedActivity {
       lng,
       elevation,
       time,
-      heart_rate:
+      heartRate:
         ext?.["gpxtpx:hr"] === undefined ? undefined : Number(ext["gpxtpx:hr"]),
       cadence:
         ext?.["gpxtpx:cad"] === undefined
@@ -187,7 +202,7 @@ function parseFit(
           lng: r.position_long,
           elevation: r.altitude,
           time: r.timestamp ? new Date(r.timestamp).getTime() : undefined,
-          heart_rate: r.heart_rate,
+          heartRate: r.heart_rate,
           cadence: r.cadence,
         }));
 
@@ -230,8 +245,8 @@ function finalise(input: FinaliseInput): ParsedActivity {
   const { points, sport, name, isoDate } = input;
 
   const distanceKm = input.sessionDistanceKm ?? cumulativeDistanceKm(points);
-
   const durationSec = input.sessionDurationSec ?? totalDurationSec(points);
+
   const ptTimes = points.map((p) => p.time).filter(isNum);
   const startTimeMs =
     isoDate === undefined ? ptTimes[0] : new Date(isoDate).getTime();
@@ -241,7 +256,7 @@ function finalise(input: FinaliseInput): ParsedActivity {
     input.sessionElevationM ?? cumulativeElevationGain(points);
 
   const avgHr =
-    input.sessionAvgHr ?? mean(points.map((p) => p.heart_rate).filter(isNum));
+    input.sessionAvgHr ?? mean(points.map((p) => p.heartRate).filter(isNum));
 
   const avgCadence =
     input.sessionAvgCadence ?? mean(points.map((p) => p.cadence).filter(isNum));
@@ -250,33 +265,47 @@ function finalise(input: FinaliseInput): ParsedActivity {
     input.sessionAvgSpeedKmh ??
     (durationSec > 0 ? (distanceKm / durationSec) * 3600 : undefined);
 
-  const route_coordinates = points
+  // route in (lng, -lat) so y grows downwards and `chart-helpers` can treat
+  // it as plain Cartesian without flipping per call. RDP is run in this same
+  // space — its tolerance is degrees, fine for visual simplification.
+  const rawRoute: Coord[] = points
     .filter((p) => p.lat !== undefined && p.lng !== undefined)
-    .map((p) => [p.lng as number, -(p.lat as number)] as [number, number]);
+    .map((p) => [p.lng as number, -(p.lat as number)] as Coord);
+  const routeCoordinates = rawRoute.length
+    ? simplifyToCount(rawRoute, ROUTE_TARGET_POINTS)
+    : undefined;
 
-  const elevation_profile = points
-    .map((p) => p.elevation)
-    .filter(isNum)
-    .map((e) => Math.round(e));
+  const rawElevation = points.map((p) => p.elevation).filter(isNum);
+  const elevationProfile = rawElevation.length
+    ? resampleTo(
+        rawElevation,
+        Math.min(ELEVATION_TARGET_POINTS, rawElevation.length)
+      ).map((v) => Math.round(v))
+    : undefined;
+
+  const splits =
+    sport === "swim" ? undefined : derivePerKmSplits(points, distanceKm);
+
+  const paceProfile = sport === "run" ? derivePaceProfile(points) : undefined;
 
   return {
     sport,
-    ride_name: prettifyName(name),
-    date: formatDate(isoDate),
+    title: prettifyName(name),
+    date: toIsoDate(isoDate),
     location: "",
-    athlete_name: "",
-    distance_km: round(distanceKm, 2),
-    duration: formatDuration(durationSec),
-    elevation_gain_m:
-      elevationGainM > 0 ? Math.round(elevationGainM) : undefined,
+    athleteName: "",
+    distanceKm: round(distanceKm, 2),
+    durationSec: durationSec > 0 ? Math.round(durationSec) : 0,
+    elevationGainM: elevationGainM > 0 ? Math.round(elevationGainM) : undefined,
     ...sportSpecificStats(sport, avgSpeedKmh, input.sessionMaxSpeedKmh),
-    avg_heart_rate: avgHr ? Math.round(avgHr) : undefined,
-    avg_cadence: avgCadence ? Math.round(avgCadence) : undefined,
-    route_coordinates: route_coordinates.length ? route_coordinates : undefined,
-    elevation_profile: elevation_profile.length ? elevation_profile : undefined,
-    start_time_ms: startTimeMs,
-    end_time_ms: endTimeMs,
-    duration_sec: durationSec > 0 ? Math.round(durationSec) : undefined,
+    avgHeartRate: avgHr ? Math.round(avgHr) : undefined,
+    avgCadence: avgCadence ? Math.round(avgCadence) : undefined,
+    routeCoordinates,
+    elevationProfile,
+    paceProfile,
+    splits,
+    startTimeMs,
+    endTimeMs,
   };
 }
 
@@ -286,22 +315,21 @@ function sportSpecificStats(
   maxSpeedKmh: number | undefined
 ): Pick<
   ParsedActivity,
-  | "avg_speed_kmh"
-  | "max_speed_kmh"
-  | "avg_pace_min_per_km"
-  | "avg_pace_per_100m"
+  "avgSpeedKmh" | "maxSpeedKmh" | "avgPaceMinPerKm" | "avgPacePer100m"
 > {
   if (sport === "ride") {
     return {
-      avg_speed_kmh: avgSpeedKmh ? round(avgSpeedKmh, 1) : undefined,
-      max_speed_kmh: maxSpeedKmh ? round(maxSpeedKmh, 1) : undefined,
+      avgSpeedKmh: avgSpeedKmh ? round(avgSpeedKmh, 1) : undefined,
+      maxSpeedKmh: maxSpeedKmh ? round(maxSpeedKmh, 1) : undefined,
     };
   }
-  if (sport === "run" && avgSpeedKmh) {
-    return { avg_pace_min_per_km: speedToPaceMinPerKm(avgSpeedKmh) };
+  if (sport === "run" && avgSpeedKmh && avgSpeedKmh > 0) {
+    // float minutes per km
+    return { avgPaceMinPerKm: 60 / avgSpeedKmh };
   }
-  if (sport === "swim" && avgSpeedKmh) {
-    return { avg_pace_per_100m: speedToPacePer100m(avgSpeedKmh) };
+  if (sport === "swim" && avgSpeedKmh && avgSpeedKmh > 0) {
+    // seconds per 100m
+    return { avgPacePer100m: Math.round(360 / avgSpeedKmh) };
   }
   return {};
 }
@@ -389,6 +417,99 @@ function cumulativeElevationGain(points: TrackPoint[]): number {
   return gain;
 }
 
+/**
+ * Per-km splits via cumulative-distance crossings. Uses linear interpolation
+ * of timestamps between the two points that straddle each km boundary.
+ */
+function derivePerKmSplits(
+  points: TrackPoint[],
+  totalDistanceKm: number
+): Split[] | undefined {
+  if (totalDistanceKm < 1.5) {
+    return;
+  }
+  const stamped: { time: number; cumM: number }[] = [];
+  let cumM = 0;
+  for (let i = 0; i < points.length; i++) {
+    const p = points[i];
+    if (p.lat === undefined || p.lng === undefined || p.time === undefined) {
+      continue;
+    }
+    if (stamped.length > 0) {
+      const prev = points[i - 1];
+      if (prev?.lat !== undefined && prev.lng !== undefined) {
+        cumM += haversineMeters(prev.lat, prev.lng, p.lat, p.lng);
+      }
+    }
+    stamped.push({ time: p.time, cumM });
+  }
+  if (stamped.length < 2) {
+    return;
+  }
+
+  const splits: Split[] = [];
+  let nextKm = 1;
+  let prevTime = stamped[0].time;
+  for (let i = 1; i < stamped.length; i++) {
+    while (stamped[i].cumM >= nextKm * 1000) {
+      // interpolate the time at the kilometre boundary
+      const a = stamped[i - 1];
+      const b = stamped[i];
+      const span = b.cumM - a.cumM || 1;
+      const f = (nextKm * 1000 - a.cumM) / span;
+      const tBoundary = a.time + (b.time - a.time) * f;
+      const durSec = Math.round((tBoundary - prevTime) / 1000);
+      if (durSec > 0) {
+        splits.push({ km: nextKm, durationSec: durSec });
+      }
+      prevTime = tBoundary;
+      nextKm += 1;
+    }
+  }
+  return splits.length ? splits : undefined;
+}
+
+/**
+ * Smoothed pace profile (sec/km) for runs. Derived from rolling distance and
+ * time deltas, then resampled to a fixed length so themes don't have to
+ * re-bucket per render.
+ */
+function derivePaceProfile(points: TrackPoint[]): number[] | undefined {
+  const stamped: { time: number; lat: number; lng: number }[] = [];
+  for (const p of points) {
+    if (p.lat !== undefined && p.lng !== undefined && p.time !== undefined) {
+      stamped.push({ time: p.time, lat: p.lat, lng: p.lng });
+    }
+  }
+  if (stamped.length < 4) {
+    return;
+  }
+  const paces: number[] = [];
+  // Window in points — at typical 1Hz this is ~10s of running.
+  const win = Math.max(4, Math.floor(stamped.length / 60));
+  for (let i = win; i < stamped.length; i++) {
+    const a = stamped[i - win];
+    const b = stamped[i];
+    const meters = haversineMeters(a.lat, a.lng, b.lat, b.lng);
+    const secs = (b.time - a.time) / 1000;
+    if (meters > 1 && secs > 0) {
+      const secPerKm = (secs * 1000) / meters;
+      // Clamp absurd values (GPS jumps, stops at lights, …)
+      if (secPerKm > 60 && secPerKm < 1800) {
+        paces.push(secPerKm);
+      }
+    }
+  }
+  if (paces.length < 8) {
+    return;
+  }
+  const smoothed = smooth(paces, PACE_SMOOTH_WINDOW);
+  return resampleTo(
+    smoothed,
+    Math.min(PACE_TARGET_POINTS, smoothed.length)
+  ).map((v) => Math.round(v));
+}
+
 function mean(xs: number[]): number | undefined {
   if (!xs.length) {
     return;
@@ -405,53 +526,15 @@ function round(n: number, digits: number): number {
   return Math.round(n * f) / f;
 }
 
-function formatDuration(sec: number): string {
-  if (!sec || sec < 0) {
-    return "—";
-  }
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = Math.floor(sec % 60);
-  if (h > 0) {
-    return `${h}h ${m}m`;
-  }
-  if (m > 0) {
-    return `${m}m ${s}s`;
-  }
-  return `${s}s`;
-}
-
-function formatDate(input?: string | number | Date): string {
+function toIsoDate(input?: string | number | Date): string {
   if (!input) {
-    return new Date().toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    });
+    return new Date().toISOString().slice(0, 10);
   }
   const d = new Date(input);
   if (Number.isNaN(d.getTime())) {
-    return "—";
+    return new Date().toISOString().slice(0, 10);
   }
-  return d.toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function speedToPaceMinPerKm(kmh: number): string {
-  const secPerKm = 3600 / kmh;
-  const m = Math.floor(secPerKm / 60);
-  const s = Math.round(secPerKm % 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
-
-function speedToPacePer100m(kmh: number): string {
-  const secPer100m = 360 / kmh;
-  const m = Math.floor(secPer100m / 60);
-  const s = Math.round(secPer100m % 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
+  return d.toISOString().slice(0, 10);
 }
 
 function prettifyName(name: string): string {

@@ -10,6 +10,13 @@ import { THEME_META } from "@/components/themes/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -20,10 +27,11 @@ import {
 } from "@/components/ui/tooltip";
 import type { PaletteStatus } from "@/hooks/use-image-palette";
 import { defaultFilename, exportCard } from "@/lib/export-card";
+import { formatDate } from "@/lib/format";
 import type { PaletteTheme, PhotoMood } from "@/lib/palette";
 import type { Visibility } from "@/lib/visibility";
 import { RenderTheme, type ThemeId } from "./render-theme";
-import type { ActivityData } from "./sample-data";
+import type { ActivityData, Sport } from "./sample-data";
 import { ThemeCarousel } from "./theme-carousel";
 
 const ACCENTS = [
@@ -68,6 +76,13 @@ const PHOTO_MOODS: { id: PhotoMood; label: string; sub: string }[] = [
   { id: "pure", label: "PURE", sub: "type only · ignores photo" },
 ];
 
+const SPORT_OPTIONS: { value: Sport; label: string }[] = [
+  { value: "ride", label: "Ride" },
+  { value: "run", label: "Run" },
+  { value: "swim", label: "Swim" },
+  { value: "triathlon", label: "Triathlon" },
+];
+
 interface EditStateProps {
   accent: string;
   altitudeMood: AltitudeMood;
@@ -81,6 +96,7 @@ interface EditStateProps {
   onLocationChange: (location: string) => void;
   onPhotoChange: (file: File | null) => void;
   onPhotoMoodChange: (mood: PhotoMood) => void;
+  onSportChange: (sport: Sport) => void;
   onThemeChange: (theme: ThemeId) => void;
   onTitleChange: (title: string) => void;
   onVisibilityChange: (visibility: Visibility) => void;
@@ -175,6 +191,7 @@ function ControlsPane({
   data,
   theme,
   onTitleChange,
+  onSportChange,
   photoUrl,
   onPhotoChange,
   accent,
@@ -214,8 +231,26 @@ function ControlsPane({
           className="h-auto border-foreground border-b-2 py-2 font-heading text-2xl tracking-tight md:text-2xl"
           id={titleId}
           onChange={(e) => onTitleChange(e.target.value)}
-          value={data.ride_name}
+          value={data.title}
         />
+      </ControlBlock>
+
+      <ControlBlock label="SPORT">
+        <Select
+          onValueChange={(v) => onSportChange(v as Sport)}
+          value={data.sport}
+        >
+          <SelectTrigger aria-label="Sport" className="mt-2 w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SPORT_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </ControlBlock>
 
       <ControlBlock label="DETAILS">
@@ -554,9 +589,11 @@ function PhotoControl({
 function FileLoadedRow({ data }: { data: ActivityData }) {
   const segCount = data.segments?.length ?? 0;
   const isMulti = data.sport === "triathlon" && segCount >= 2;
+  const friendlyDate = formatDate(data.date);
+  const slug = friendlyDate.replace(/\s|,/g, "").toLowerCase() || "activity";
   const label = isMulti
     ? `${segCount} files · assembled`
-    : `${data.sport}_${data.date.replace(/\s|,/g, "").toLowerCase()}.fit`;
+    : `${data.sport}_${slug}.fit`;
   return (
     <div className="flex items-center gap-2 font-medium font-mono text-[11px] opacity-60">
       <div aria-hidden className="size-1.5 rounded-full bg-primary" />
