@@ -49,7 +49,9 @@ export function elevationPath(
   const dv = maxV - minV || 1;
   const innerW = w - pad * 2;
   const innerH = h - pad * 2;
-  const stepX = innerW / (profile.length - 1);
+  // Single-point profile: anchor at the left edge so stepX division below
+  // can't blow up to Infinity and emit NaN coords.
+  const stepX = profile.length > 1 ? innerW / (profile.length - 1) : 0;
   const pts: Coord[] = profile.map((v, i) => [
     pad + i * stepX,
     pad + innerH - ((v - minV) / dv) * innerH,
@@ -82,7 +84,7 @@ export function pacePath(
   const dv = maxV - minV || 1;
   const innerW = w - pad * 2;
   const innerH = h - pad * 2;
-  const stepX = innerW / (profile.length - 1);
+  const stepX = profile.length > 1 ? innerW / (profile.length - 1) : 0;
   const pts: Coord[] = profile.map((v, i) => [
     pad + i * stepX,
     pad + ((v - minV) / dv) * innerH,

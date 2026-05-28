@@ -2,6 +2,7 @@
 
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { defaultFilename } from "@/lib/export-card";
 import { RenderTheme, type ThemeId } from "./render-theme";
 import type { ActivityData } from "./sample-data";
 
@@ -22,7 +23,7 @@ export function DownloadState({
   onKeepEditing,
   onNew,
 }: DownloadStateProps) {
-  const filename = `effort_${data.sport}_${data.date.split(" ").join("-").toLowerCase().replace(",", "")}.png`;
+  const filename = defaultFilename(data.sport, data.date);
   return (
     <div className="relative flex flex-1 items-center justify-center px-6 py-10">
       <Confetti />

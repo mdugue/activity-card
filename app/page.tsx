@@ -58,7 +58,17 @@ function loadPersistedUi(): Partial<PersistedUi> {
   }
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
+    if (!raw) {
+      return {};
+    }
+    const parsed: unknown = JSON.parse(raw);
+    // `JSON.parse("null")` returns null and `JSON.parse("42")` returns a
+    // number — both would crash the property access on mount. Only accept
+    // plain object shapes.
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return {};
+    }
+    return parsed as Partial<PersistedUi>;
   } catch {
     return {};
   }
