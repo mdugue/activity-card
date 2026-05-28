@@ -4,6 +4,7 @@ import { ChevronDown } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { RenderTheme, type ThemeId } from "@/components/app/render-theme";
 import type { ActivityData } from "@/components/app/sample-data";
+import type { AltitudeMood } from "@/components/themes/altitude";
 import { THEME_META, THEME_ORDER } from "@/components/themes/index";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,11 +27,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import type { PaletteTheme } from "@/lib/palette";
 
 interface ThemeCarouselProps {
+  altitudeMood: AltitudeMood;
   data: ActivityData;
   onThemeChange: (theme: ThemeId) => void;
   photoBackdropEnabled: boolean;
+  photoPaletteTheme: PaletteTheme | null;
   photoUrl: string | null;
   theme: ThemeId;
 }
@@ -41,6 +45,8 @@ export function ThemeCarousel({
   photoUrl,
   photoBackdropEnabled,
   theme,
+  altitudeMood,
+  photoPaletteTheme,
 }: ThemeCarouselProps) {
   const [api, setApi] = useState<CarouselApi | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -144,8 +150,10 @@ export function ThemeCarousel({
                     }}
                   >
                     <RenderTheme
+                      altitudeMood={altitudeMood}
                       data={data}
                       photoBackdropEnabled={photoBackdropEnabled}
+                      photoPaletteTheme={photoPaletteTheme}
                       photoUrl={photoUrl}
                       theme={id}
                     />

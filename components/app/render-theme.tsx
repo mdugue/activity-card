@@ -7,6 +7,7 @@ import { THEME_META } from "@/components/themes/index";
 import { ThemePath } from "@/components/themes/path";
 import { ThemePhoto } from "@/components/themes/photo";
 import { ThemeTriathlon } from "@/components/themes/triathlon";
+import type { PaletteTheme } from "@/lib/palette";
 
 export type ThemeId =
   | "path"
@@ -20,6 +21,8 @@ interface RenderThemeProps {
   altitudeMood?: AltitudeMood;
   data: ActivityData;
   photoBackdropEnabled?: boolean;
+  /** Photo theme: pre-resolved palette extracted from the photo, if available. */
+  photoPaletteTheme?: PaletteTheme | null;
   photoUrl?: string | null;
   theme: ThemeId;
 }
@@ -54,13 +57,20 @@ export function RenderTheme({
   photoUrl,
   photoBackdropEnabled = true,
   altitudeMood = "night",
+  photoPaletteTheme = null,
 }: RenderThemeProps) {
   const photo = effectivePhotoUrl(theme, photoUrl, photoBackdropEnabled);
   if (theme === "altitude") {
     return <ThemeAltitude data={data} mood={altitudeMood} photoUrl={photo} />;
   }
   if (theme === "photo") {
-    return <ThemePhoto data={data} photoUrl={photo} />;
+    return (
+      <ThemePhoto
+        data={data}
+        paletteTheme={photoPaletteTheme}
+        photoUrl={photo}
+      />
+    );
   }
   if (theme === "data") {
     return <ThemeData data={data} photoUrl={photo} />;

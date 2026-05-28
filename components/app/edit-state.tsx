@@ -2,6 +2,10 @@
 
 import { ArrowRight } from "lucide-react";
 import { useId, useRef, useState } from "react";
+import {
+  ALTITUDE_MOODS,
+  type AltitudeMood,
+} from "@/components/themes/altitude";
 import { THEME_META } from "@/components/themes/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +19,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { defaultFilename, exportCard } from "@/lib/export-card";
+import type { PaletteTheme, PhotoMood } from "@/lib/palette";
 import type { Visibility } from "@/lib/visibility";
 import { RenderTheme, type ThemeId } from "./render-theme";
 import type { ActivityData } from "./sample-data";
@@ -43,27 +48,60 @@ const VISIBILITY_TOGGLES: VisibilityToggleDef[] = [
   { key: "splits", label: "Splits", capability: "usesSplits" },
 ];
 
+// Ordered moods for the Altitude theme — keys map to ALTITUDE_MOODS specs.
+// Labels are derived from each spec's `label` field for a single source of truth.
+const ALTITUDE_MOOD_ORDER: AltitudeMood[] = [
+  "day",
+  "dawn",
+  "night",
+  "heat",
+  "rain",
+  "snow",
+];
+
+const PHOTO_MOODS: { id: PhotoMood; label: string; sub: string }[] = [
+  { id: "vibrant", label: "VIBRANT", sub: "photo-forward" },
+  { id: "muted", label: "MUTED", sub: "editorial calm" },
+  { id: "complementary", label: "COMPLEMENT", sub: "designed contrast" },
+  { id: "spectrum", label: "SPECTRUM", sub: "every swatch in play" },
+  { id: "pure", label: "PURE", sub: "type only · ignores photo" },
+];
+
 interface EditStateProps {
   accent: string;
+  altitudeMood: AltitudeMood;
   athleteName: string;
   data: ActivityData;
   location: string;
   onAccentChange: (accent: string) => void;
+  onAltitudeMoodChange: (mood: AltitudeMood) => void;
   onAthleteNameChange: (name: string) => void;
   onDownload: () => void;
   onLocationChange: (location: string) => void;
   onPhotoChange: (file: File | null) => void;
+  onPhotoMoodChange: (mood: PhotoMood) => void;
   onThemeChange: (theme: ThemeId) => void;
   onTitleChange: (title: string) => void;
   onVisibilityChange: (visibility: Visibility) => void;
+  photoMood: PhotoMood;
+  photoPaletteReady: boolean;
+  photoPaletteTheme: PaletteTheme | null;
   photoUrl: string | null;
   theme: ThemeId;
   visibility: Visibility;
 }
 
 export function EditState(props: EditStateProps) {
-  const { data, theme, photoUrl, onDownload, onThemeChange, visibility } =
-    props;
+  const {
+    data,
+    theme,
+    photoUrl,
+    photoPaletteTheme,
+    altitudeMood,
+    onDownload,
+    onThemeChange,
+    visibility,
+  } = props;
   const cardRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -87,9 +125,11 @@ export function EditState(props: EditStateProps) {
       <div className="mx-auto grid w-full max-w-[1180px] flex-1 grid-cols-1 gap-8 px-6 pt-20 pb-8 md:px-10 lg:grid-cols-[minmax(0,640px)_400px] lg:gap-12 lg:px-10 lg:pt-24">
         <div className="min-w-0">
           <ThemeCarousel
+            altitudeMood={altitudeMood}
             data={data}
             onThemeChange={onThemeChange}
             photoBackdropEnabled={visibility.photoBackdrop}
+            photoPaletteTheme={photoPaletteTheme}
             photoUrl={photoUrl}
             theme={theme}
           />
@@ -113,8 +153,10 @@ export function EditState(props: EditStateProps) {
           }}
         >
           <RenderTheme
+            altitudeMood={altitudeMood}
             data={data}
             photoBackdropEnabled={visibility.photoBackdrop}
+            photoPaletteTheme={photoPaletteTheme}
             photoUrl={photoUrl}
             theme={theme}
           />
@@ -144,6 +186,11 @@ function ControlsPane({
   location,
   onAthleteNameChange,
   onLocationChange,
+  altitudeMood,
+  onAltitudeMoodChange,
+  photoMood,
+  onPhotoMoodChange,
+  photoPaletteReady,
 }: ControlsPaneProps) {
   const titleId = useId();
   const athleteId = useId();
@@ -151,6 +198,8 @@ function ControlsPane({
   const meta = THEME_META[theme];
   const photoSupported = meta.photoMode !== "none";
   const showBackdropSwitch = meta.photoMode === "supports";
+  const showAltitudeMood = theme === "altitude";
+  const showPhotoMood = theme === "photo" && photoUrl !== null;
 
   return (
     <div className="flex flex-col gap-7 pr-2 lg:pr-10">
@@ -208,7 +257,7 @@ function ControlsPane({
           onChange={onPhotoChange}
           photoUrl={photoUrl}
         />
-        {!photoSupported && (
+        {photoSupported ? null : (
           <p className="mt-2 font-medium font-mono text-[10px] uppercase tracking-[0.18em] opacity-55">
             {meta.label} theme has no room for a photo
           </p>
@@ -234,6 +283,74 @@ function ControlsPane({
           </div>
         ) : null}
       </ControlBlock>
+
+      {showAltitudeMood ? (
+        <ControlBlock label="MOOD">
+          <ToggleGroup
+            aria-label="Altitude mood"
+            className="mt-2 grid w-full grid-cols-3 gap-2"
+            onValueChange={(values) => {
+              if (values[0]) {
+                onAltitudeMoodChange(values[0] as AltitudeMood);
+              }
+            }}
+            spacing={2}
+            value={[altitudeMood]}
+            variant="outline"
+          >
+            {ALTITUDE_MOOD_ORDER.map((id) => (
+              <ToggleGroupItem
+                aria-label={ALTITUDE_MOODS[id].label}
+                className="flex h-auto flex-col items-start justify-start px-3 py-2.5 text-left"
+                key={id}
+                value={id}
+              >
+                <div className="font-heading text-base uppercase leading-none">
+                  {ALTITUDE_MOODS[id].label}
+                </div>
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </ControlBlock>
+      ) : null}
+
+      {showPhotoMood ? (
+        <ControlBlock label="MOOD">
+          <ToggleGroup
+            aria-label="Photo mood"
+            className="mt-2 grid w-full grid-cols-3 gap-2"
+            onValueChange={(values) => {
+              if (values[0]) {
+                onPhotoMoodChange(values[0] as PhotoMood);
+              }
+            }}
+            spacing={2}
+            value={[photoMood]}
+            variant="outline"
+          >
+            {PHOTO_MOODS.map((m) => (
+              <ToggleGroupItem
+                aria-label={m.label}
+                className="flex h-auto flex-col items-start justify-start px-3 py-2.5 text-left"
+                key={m.id}
+                value={m.id}
+              >
+                <div className="font-heading text-base uppercase leading-none">
+                  {m.label}
+                </div>
+                <div className="mt-1 font-medium font-mono text-[10px] uppercase tracking-[0.16em] opacity-65">
+                  {m.sub}
+                </div>
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+          {photoPaletteReady ? null : (
+            <div className="mt-2 font-medium font-mono text-[10px] tracking-[0.16em] opacity-55">
+              READING COLOURS…
+            </div>
+          )}
+        </ControlBlock>
+      ) : null}
 
       <ControlBlock label="EXTRA METRICS">
         <div className="mt-3 flex flex-col gap-2.5">

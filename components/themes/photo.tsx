@@ -1,13 +1,76 @@
 // PHOTO — magazine cover. Full-bleed background photo, route + type overlaid.
 // Type: Playfair Display (display) + DM Sans (body)
 // User uploads photo; we use a rich placeholder gradient if none.
+// Colours come from the photo via the image-palette pipeline → CSS custom
+// properties (--bg / --headline / --body / --accent / --on-accent). A static
+// fallback palette is applied inline so the card stays legible while
+// extraction is in flight or when no photo is loaded.
 
+import { paletteToCssVars } from "@/hooks/use-image-palette";
 import { routePath } from "@/lib/chart-helpers";
+import type { PaletteTheme } from "@/lib/palette";
 import type { ActivityCardProps } from "./types";
 
-export function ThemePhoto({ data, photoUrl }: ActivityCardProps) {
+interface ThemePhotoProps extends ActivityCardProps {
+  paletteTheme?: PaletteTheme | null;
+}
+
+interface StaticPalette {
+  accent: string;
+  background: string;
+  body: string;
+  headline: string;
+  onAccent: string;
+}
+
+// Sport-tinted fallback used when no photo is loaded (or extraction is in
+// flight on the very first photo). Picks up the moody-landscape feel of the
+// original hardcoded gradient.
+function fallbackPalette(sport: string): StaticPalette {
+  if (sport === "swim") {
+    return {
+      background: "#2d5a78",
+      headline: "#ffffff",
+      body: "rgba(255,255,255,0.78)",
+      accent: "#6ba8c5",
+      onAccent: "#0a0a0a",
+    };
+  }
+  if (sport === "run") {
+    return {
+      background: "#4a2a18",
+      headline: "#ffffff",
+      body: "rgba(255,255,255,0.78)",
+      accent: "#d8c5a0",
+      onAccent: "#0a0a0a",
+    };
+  }
+  return {
+    background: "#5a6a7e",
+    headline: "#ffffff",
+    body: "rgba(255,255,255,0.78)",
+    accent: "#c89d6e",
+    onAccent: "#0a0a0a",
+  };
+}
+
+function fallbackVars(palette: StaticPalette): React.CSSProperties {
+  return {
+    ["--bg" as string]: palette.background,
+    ["--headline" as string]: palette.headline,
+    ["--body" as string]: palette.body,
+    ["--accent" as string]: palette.accent,
+    ["--on-accent" as string]: palette.onAccent,
+  } as React.CSSProperties;
+}
+
+export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
   const sport = data.sport;
   const isPool = sport === "swim";
+
+  const cssVars = paletteTheme
+    ? paletteToCssVars(paletteTheme)
+    : fallbackVars(fallbackPalette(sport));
 
   // sport-appropriate hero stat + small stats
   let hero: { big: string | number; unit: string; sub: string };
@@ -60,11 +123,12 @@ export function ThemePhoto({ data, photoUrl }: ActivityCardProps) {
   return (
     <div
       style={{
+        ...cssVars,
         width: 1080,
         height: 1350,
         background: photoUrl ? `url(${photoUrl}) center/cover` : placeholderBg,
         fontFamily: "var(--font-dm-sans), sans-serif",
-        color: "#fff",
+        color: "var(--headline)",
         position: "relative",
         overflow: "hidden",
       }}
@@ -99,13 +163,15 @@ export function ThemePhoto({ data, photoUrl }: ActivityCardProps) {
         </svg>
       )}
 
-      {/* Dark vignette at top + bottom for text legibility */}
+      {/* Photo-tinted vignette: top + bottom edges blend toward the extracted
+          background colour so the headline + masthead always sit on a quiet
+          area regardless of what the photo looks like at those spots. */}
       <div
         style={{
           position: "absolute",
           inset: 0,
           background:
-            "linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.7) 100%)",
+            "linear-gradient(180deg, color-mix(in oklab, var(--bg) 75%, transparent) 0%, transparent 28%, transparent 55%, color-mix(in oklab, var(--bg) 88%, transparent) 100%)",
         }}
       />
 
@@ -128,6 +194,7 @@ export function ThemePhoto({ data, photoUrl }: ActivityCardProps) {
               fontSize: 52,
               fontStyle: "italic",
               letterSpacing: "-0.01em",
+              color: "var(--headline)",
             }}
           >
             Effort
@@ -137,7 +204,7 @@ export function ThemePhoto({ data, photoUrl }: ActivityCardProps) {
               fontSize: 26,
               letterSpacing: "0.28em",
               marginTop: 12,
-              opacity: 0.95,
+              color: "var(--body)",
               fontWeight: 700,
             }}
           >
@@ -149,14 +216,14 @@ export function ThemePhoto({ data, photoUrl }: ActivityCardProps) {
             textAlign: "right",
             fontSize: 26,
             letterSpacing: "0.2em",
-            opacity: 0.95,
+            color: "var(--body)",
             fontWeight: 700,
             lineHeight: 1.45,
           }}
         >
           {storyLabel}
           <br />
-          <span style={{ opacity: 0.7 }}>{data.location.toUpperCase()}</span>
+          <span style={{ opacity: 0.75 }}>{data.location.toUpperCase()}</span>
         </div>
       </div>
 
@@ -170,7 +237,7 @@ export function ThemePhoto({ data, photoUrl }: ActivityCardProps) {
             right: 60,
             width: 320,
             height: 240,
-            opacity: 0.85,
+            opacity: 0.9,
           }}
           viewBox="0 0 400 300"
         >
@@ -178,7 +245,7 @@ export function ThemePhoto({ data, photoUrl }: ActivityCardProps) {
           <path
             d={routePath(data.route_coordinates, 400, 300, 20)}
             fill="none"
-            stroke="#fff"
+            stroke="var(--accent)"
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth={2.5}
@@ -198,6 +265,7 @@ export function ThemePhoto({ data, photoUrl }: ActivityCardProps) {
             lineHeight: 0.95,
             letterSpacing: "-0.015em",
             margin: 0,
+            color: "var(--headline)",
             textShadow: "0 4px 24px rgba(0,0,0,0.4)",
             textWrap: "pretty",
             maxWidth: 800,
@@ -228,6 +296,7 @@ export function ThemePhoto({ data, photoUrl }: ActivityCardProps) {
                 fontWeight: 400,
                 lineHeight: 1,
                 letterSpacing: "-0.04em",
+                color: "var(--accent)",
               }}
             >
               {hero.big}
@@ -235,7 +304,7 @@ export function ThemePhoto({ data, photoUrl }: ActivityCardProps) {
             <span
               style={{
                 fontSize: 40,
-                opacity: 0.9,
+                color: "var(--body)",
                 fontStyle: "italic",
                 fontFamily: "var(--font-playfair), serif",
               }}
@@ -247,7 +316,7 @@ export function ThemePhoto({ data, photoUrl }: ActivityCardProps) {
             style={{
               fontSize: 26,
               letterSpacing: "0.16em",
-              opacity: 0.95,
+              color: "var(--body)",
               marginTop: 14,
               fontWeight: 700,
             }}
@@ -261,7 +330,7 @@ export function ThemePhoto({ data, photoUrl }: ActivityCardProps) {
               textAlign: "right",
               fontSize: 24,
               letterSpacing: "0.22em",
-              opacity: 0.95,
+              color: "var(--body)",
               paddingBottom: 18,
               fontWeight: 700,
             }}
@@ -275,6 +344,7 @@ export function ThemePhoto({ data, photoUrl }: ActivityCardProps) {
                 fontSize: 42,
                 letterSpacing: "0",
                 fontWeight: 400,
+                color: "var(--headline)",
               }}
             >
               {data.athlete_name}
