@@ -5,5 +5,91 @@
     "ultracite/biome/react",
     "ultracite/biome/next",
     "ultracite/biome/vitest"
+  ],
+  "overrides": [
+    {
+      // Theme cards are faithful ports of design prototypes; loosen the
+      // rules that punish their seeded arrays, sport-branch density,
+      // and 1080×1350 inline layout styles.
+      "includes": ["components/themes/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noArrayIndexKey": "off"
+          },
+          "complexity": {
+            "noExcessiveCognitiveComplexity": "off"
+          },
+          "style": {
+            "useAtIndex": "off"
+          },
+          "performance": {
+            "noBarrelFile": "off",
+            "noReExportAll": "off"
+          }
+        }
+      }
+    },
+    {
+      // E2E specs read more clearly with inline regex assertions; the
+      // perf gain from hoisting them is irrelevant in a test process.
+      "includes": ["e2e/**", "playwright.config.ts"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "useTopLevelRegex": "off"
+          },
+          "style": {
+            "noNestedTernary": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["components/ui/**", "hooks/use-mobile.ts"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useFocusableInteractive": "off",
+            "useSemanticElements": "off",
+            "noStaticElementInteractions": "off",
+            "noNoninteractiveElementInteractions": "off",
+            "noSvgWithoutTitle": "off",
+            "useKeyWithClickEvents": "off",
+            "useAriaPropsForRole": "off",
+            "noLabelWithoutControl": "off",
+            "noRedundantRoles": "off"
+          },
+          "correctness": {
+            "noNestedComponentDefinitions": "off",
+            "useUniqueElementIds": "off",
+            "useExhaustiveDependencies": "off"
+          },
+          "performance": {
+            "noNamespaceImport": "off",
+            "noBarrelFile": "off",
+            "noReExportAll": "off"
+          },
+          "style": {
+            "useConsistentTypeDefinitions": "off",
+            "noNestedTernary": "off",
+            "useNamingConvention": "off",
+            "useComponentExportOnlyModules": "off"
+          },
+          "suspicious": {
+            "noArrayIndexKey": "off",
+            "noExplicitAny": "off",
+            "noDoubleEquals": "off",
+            "noDocumentCookie": "off"
+          },
+          "security": {
+            "noDangerouslySetInnerHtml": "off"
+          },
+          "complexity": {
+            "noExcessiveCognitiveComplexity": "off"
+          }
+        }
+      }
+    }
   ]
 }

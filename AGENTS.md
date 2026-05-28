@@ -41,10 +41,54 @@ bun typecheck
 
 - **TypeScript strict mode.** No `any` without a `// reason:` comment.
 - **Tailwind for styling.** No CSS-in-JS, no styled-components. Theme components may use scoped `<style>` for fonts.
-- **Components** in `app/_components/` (private to the route) or `components/` (shared).
-- **Themes** live in `app/_components/themes/`, one file per theme, all exporting a component with the same `<ActivityCardProps>` interface.
 - **No console.log in committed code.** Use proper error UI for user-facing failures.
 - **Commit messages**: Conventional Commits (`feat:`, `fix:`, `refactor:`, etc.).
+- **Lint + typecheck must be green** before pushing: `bun lint && bun typecheck`.
+
+## File structure
+
+```
+app/                  Next.js App Router routes only (page.tsx, layout.tsx, route handlers).
+                      No private `_components/` folders — keep components in `/components/`.
+components/
+  ui/                 shadcn primitives. VENDOR — do NOT edit; re-add via `bunx shadcn add`.
+  app/                App-level composite components (states, shell, wordmark, sample data).
+  themes/             Activity-card themes, one file per theme. All export a component
+                      matching the shared `ActivityCardProps` interface.
+hooks/                Shared client hooks. (`use-mobile.ts` is shadcn-vendor.)
+lib/                  Utilities (`cn`, parsers, formatters).
+public/               Static assets.
+.claude/skills/       Focused references — read before non-trivial work in their area.
+```
+
+### Naming
+
+- **No underscore-prefixed folders.** Next.js treats `_foo/` as private routes; we keep
+  components under `/components/` instead so they're importable everywhere via `@/components/...`.
+- **Files** are `kebab-case.tsx` / `kebab-case.ts`.
+- **Components** are `PascalCase` named exports. No default exports except for Next.js
+  page/layout files.
+- **Hooks** start with `use` and live in `hooks/`.
+- Prefer `interface` over `type` for object shapes (lint enforces this via ultracite).
+- Use the `@/...` path alias for absolute imports across folders. Sibling files may use
+  relative paths.
+
+### Where new code goes
+
+- **A new screen or state of the app** → `components/app/<name>.tsx`, wired from `app/page.tsx`.
+- **A new theme** → `components/themes/<name>.tsx`, registered in the theme map.
+- **A new shadcn primitive** → `bunx shadcn add <name>` (lands in `components/ui/`, untouched).
+- **A new shared utility** → `lib/<name>.ts`.
+
+### Vendor files
+
+`components/ui/**` and `hooks/use-mobile.ts` are scaffolded by the shadcn / Next.js CLIs.
+For these files `biome.jsonc` disables a curated set of rules that shadcn's generated
+code violates (see the `overrides` block); `eslint.config.mjs` ignores them entirely
+since react-hooks rules can't be turned off per-folder cleanly. `components/ui/calendar.tsx`
+is additionally excluded from `bun typecheck` (see `tsconfig.json`) — it ships against
+`react-day-picker` v9 but v10 is installed. Don't restyle vendor files; if a primitive
+doesn't fit, wrap it in `components/app/`.
 
 ## Non-goals (MVP)
 

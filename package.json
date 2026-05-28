@@ -26,6 +26,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.15",
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^25.9.1",
     "@types/react": "^19",
@@ -46,7 +47,8 @@
     "lint": "eslint && ultracite check",
     "typecheck": "tsgo --noEmit",
     "check": "ultracite check",
-    "fix": "ultracite fix"
+    "fix": "ultracite fix",
+    "test:e2e": "playwright test"
   },
   "version": "0.1.0",
   "private": true,
