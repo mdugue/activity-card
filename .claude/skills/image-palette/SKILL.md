@@ -1,6 +1,6 @@
 ---
 name: image-palette
-description: Use when working on the photo-driven theme that derives card colors from the user's uploaded background image. Covers node-vibrant v4 swatch extraction, OKLCH-based color math via culori (complementary hue rotation, lightness derivation), WCAG contrast guarantees with black/white fallback, the role-based assignment model (background / headline / body / accent / onAccent), the three user-facing preset variants, and the greyish-photo guard. Read before touching lib/palette.ts, hooks/use-image-palette.ts, or any theme that auto-colors from a photo.
+description: Use when working on the photo-driven theme that derives card colors from the user's uploaded background image. Covers node-vibrant v4 swatch extraction, OKLCH-based color math via culori (complementary hue rotation, lightness derivation), WCAG contrast guarantees with black/white fallback, the role-based assignment model (background / headline / body / accent / accent2 / onAccent), the five user-facing preset variants (vibrant / muted / complementary / spectrum / pure), and the greyish-photo guard. Read before touching lib/palette.ts, hooks/use-image-palette.ts, or any theme that auto-colors from a photo.
 ---
 
 # image-palette

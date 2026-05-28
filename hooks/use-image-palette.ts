@@ -14,6 +14,7 @@ import {
   type ExtractedPalette,
   type PaletteTheme,
   type PaletteVariant,
+  PURE_THEME,
 } from "@/lib/palette";
 
 // `palette` is held during loading transitions so consumers don't flash to a
@@ -24,11 +25,13 @@ type State =
   | { palette: ExtractedPalette; status: "ready" }
   | { error: Error; palette: ExtractedPalette | null; status: "error" };
 
+export type PaletteStatus = State["status"];
+
 export interface UseImagePalette {
   error: Error | null;
-  /** All three preset themes, or null until ready. */
+  /** All five preset themes, or null until ready. */
   palette: ExtractedPalette | null;
-  status: State["status"];
+  status: PaletteStatus;
   /** The currently selected theme, ready to map onto CSS variables. */
   theme: PaletteTheme | null;
 }
@@ -89,10 +92,22 @@ export function useImagePalette(
 
   const palette = "palette" in state ? state.palette : null;
 
+  // Pure ignores the swatches entirely, so it must not wait on extraction.
+  // Return PURE_THEME as soon as there's a photo source — even during
+  // loading or after a failed extraction — so the user can always opt out
+  // to the typographic look. Without this, picking Pure mid-extraction (or
+  // after an error) would drop to the sport-tinted static fallback.
+  let theme: PaletteTheme | null;
+  if (variant === "pure") {
+    theme = src ? PURE_THEME : null;
+  } else {
+    theme = palette ? palette.themes[variant] : null;
+  }
+
   return {
     status: state.status,
     palette,
-    theme: palette ? palette.themes[variant] : null,
+    theme,
     error: state.status === "error" ? state.error : null,
   };
 }

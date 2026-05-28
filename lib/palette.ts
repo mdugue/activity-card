@@ -183,24 +183,25 @@ function mostVibrant(swatches: NormalisedSwatch[]): string {
 }
 
 /**
- * "Pure" mood — ignore the swatches entirely. Returns the original photo
- * theme's typographic look: white headline / soft-white body / white accent.
- * The photo still shows through as the background image; this just keeps the
+ * "Pure" mood — ignore the swatches entirely. The original photo theme's
+ * typographic look: white headline / soft-white body / white accent. The
+ * photo still shows through as the background image; this just keeps the
  * type and route stroke neutral so the photo speaks for itself.
+ *
+ * Exposed as a const (not a builder) so callers can opt out of waiting on
+ * `buildPaletteFromImage` when they only need the pure theme.
  */
-function buildPureTheme(): PaletteTheme {
-  return {
-    variant: "pure",
-    // --bg is consumed by the vignette only when no photo is loaded; a dark
-    // neutral keeps the gradient credible without tinting toward any swatch.
-    background: "#141414",
-    headline: "#ffffff",
-    body: "rgba(255,255,255,0.82)",
-    accent: "#ffffff",
-    accent2: "#ffffff",
-    onAccent: BLACK,
-  };
-}
+export const PURE_THEME: PaletteTheme = {
+  variant: "pure",
+  // --bg is consumed by the vignette only when no photo is loaded; a dark
+  // neutral keeps the gradient credible without tinting toward any swatch.
+  background: "#141414",
+  headline: "#ffffff",
+  body: "rgba(255,255,255,0.82)",
+  accent: "#ffffff",
+  accent2: "#ffffff",
+  onAccent: BLACK,
+};
 
 /** Accent choice for the photo-derived variants (everything except pure). */
 function pickAccent(
@@ -265,7 +266,7 @@ function buildTheme(
   variant: PaletteVariant
 ): PaletteTheme {
   if (variant === "pure") {
-    return buildPureTheme();
+    return PURE_THEME;
   }
 
   const allHexes = swatches.map((s) => s.hex);
@@ -334,7 +335,7 @@ export async function buildPaletteFromImage(
         muted: neutral,
         complementary: neutral,
         spectrum: neutral,
-        pure: buildPureTheme(),
+        pure: PURE_THEME,
       },
     };
   }
@@ -346,7 +347,7 @@ export async function buildPaletteFromImage(
       muted: buildTheme(swatches, "muted"),
       complementary: buildTheme(swatches, "complementary"),
       spectrum: buildTheme(swatches, "spectrum"),
-      pure: buildPureTheme(),
+      pure: PURE_THEME,
     },
   };
 }

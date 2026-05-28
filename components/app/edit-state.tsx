@@ -18,6 +18,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { PaletteStatus } from "@/hooks/use-image-palette";
 import { defaultFilename, exportCard } from "@/lib/export-card";
 import type { PaletteTheme, PhotoMood } from "@/lib/palette";
 import type { Visibility } from "@/lib/visibility";
@@ -84,7 +85,7 @@ interface EditStateProps {
   onTitleChange: (title: string) => void;
   onVisibilityChange: (visibility: Visibility) => void;
   photoMood: PhotoMood;
-  photoPaletteReady: boolean;
+  photoPaletteStatus: PaletteStatus;
   photoPaletteTheme: PaletteTheme | null;
   photoUrl: string | null;
   theme: ThemeId;
@@ -190,7 +191,7 @@ function ControlsPane({
   onAltitudeMoodChange,
   photoMood,
   onPhotoMoodChange,
-  photoPaletteReady,
+  photoPaletteStatus,
 }: ControlsPaneProps) {
   const titleId = useId();
   const athleteId = useId();
@@ -344,11 +345,16 @@ function ControlsPane({
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
-          {photoPaletteReady ? null : (
+          {photoPaletteStatus === "loading" ? (
             <div className="mt-2 font-medium font-mono text-[10px] tracking-[0.16em] opacity-55">
               READING COLOURS…
             </div>
-          )}
+          ) : null}
+          {photoPaletteStatus === "error" ? (
+            <div className="mt-2 font-medium font-mono text-[10px] tracking-[0.16em] opacity-65">
+              COULDN&apos;T READ COLOURS · PURE STILL WORKS
+            </div>
+          ) : null}
         </ControlBlock>
       ) : null}
 

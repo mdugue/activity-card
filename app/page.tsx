@@ -253,7 +253,7 @@ export default function Home() {
           onTitleChange={handleTitleChange}
           onVisibilityChange={setVisibility}
           photoMood={photoMood}
-          photoPaletteReady={photoPalette.status === "ready"}
+          photoPaletteStatus={photoPalette.status}
           photoPaletteTheme={photoPalette.theme}
           photoUrl={photoUrl}
           theme={theme}
