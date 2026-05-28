@@ -12,7 +12,10 @@ import {
   SAMPLE_RUN,
   SAMPLE_TRI,
 } from "@/components/app/sample-data";
+import type { AltitudeMood } from "@/components/themes/altitude";
+import { useImagePalette } from "@/hooks/use-image-palette";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
+import type { PhotoMood } from "@/lib/palette";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import {
   applyVisibility,
@@ -25,7 +28,9 @@ const STORAGE_KEY = "effort:ui:v1";
 
 interface PersistedUi {
   accent: string;
+  altitudeMood: AltitudeMood;
   athleteName?: string;
+  photoMood: PhotoMood;
   theme: ThemeId;
   visibility: Visibility;
 }
@@ -86,11 +91,17 @@ export default function Home() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [accent, setAccent] = useState<string>("#c45a2c");
   const [visibility, setVisibility] = useState<Visibility>(DEFAULT_VISIBILITY);
+  const [altitudeMood, setAltitudeMood] = useState<AltitudeMood>("night");
+  const [photoMood, setPhotoMood] = useState<PhotoMood>("vibrant");
   // Held outside `data` so it survives between activities and can seed
   // `adoptParsed` when the parsed file lacks an athlete name.
   const persistedAthleteNameRef = useRef<string | undefined>(undefined);
 
-  // Restore UI prefs (theme, accent, visibility, athleteName) on mount.
+  // One palette extraction for the whole app, regardless of how many copies
+  // of the photo theme are mounted (preview + offscreen export mount).
+  const photoPalette = useImagePalette(photoUrl, photoMood);
+
+  // Restore UI prefs (theme, accent, visibility, moods, athleteName) on mount.
   // Hydrating from localStorage is a legitimate cold-start sync; the
   // setState-in-effect rule's "fix" (useSyncExternalStore + a custom write
   // path) buys nothing over this small, one-shot read.
@@ -105,6 +116,12 @@ export default function Home() {
     }
     if (persisted.visibility) {
       setVisibility({ ...DEFAULT_VISIBILITY, ...persisted.visibility });
+    }
+    if (persisted.altitudeMood) {
+      setAltitudeMood(persisted.altitudeMood);
+    }
+    if (persisted.photoMood) {
+      setPhotoMood(persisted.photoMood);
     }
     if (persisted.athleteName) {
       persistedAthleteNameRef.current = persisted.athleteName;
@@ -122,6 +139,8 @@ export default function Home() {
       theme,
       accent,
       visibility,
+      altitudeMood,
+      photoMood,
       athleteName: data?.athlete_name || persistedAthleteNameRef.current,
     };
     try {
@@ -129,7 +148,7 @@ export default function Home() {
     } catch {
       // localStorage may be unavailable (private mode, quota); soft-fail.
     }
-  }, [theme, accent, visibility, data?.athlete_name]);
+  }, [theme, accent, visibility, altitudeMood, photoMood, data?.athlete_name]);
 
   // Object URLs need cleanup or they leak into memory.
   useEffect(() => {
@@ -219,17 +238,23 @@ export default function Home() {
       {state === "edit" && visibleData && data ? (
         <EditState
           accent={accent}
+          altitudeMood={altitudeMood}
           athleteName={data.athlete_name}
           data={visibleData}
           location={data.location}
           onAccentChange={setAccent}
+          onAltitudeMoodChange={setAltitudeMood}
           onAthleteNameChange={handleAthleteNameChange}
           onDownload={handleDownload}
           onLocationChange={handleLocationChange}
           onPhotoChange={handlePhotoChange}
+          onPhotoMoodChange={setPhotoMood}
           onThemeChange={setTheme}
           onTitleChange={handleTitleChange}
           onVisibilityChange={setVisibility}
+          photoMood={photoMood}
+          photoPaletteStatus={photoPalette.status}
+          photoPaletteTheme={photoPalette.theme}
           photoUrl={photoUrl}
           theme={theme}
           visibility={visibility}
@@ -237,9 +262,11 @@ export default function Home() {
       ) : null}
       {state === "download" && visibleData ? (
         <DownloadState
+          altitudeMood={altitudeMood}
           data={visibleData}
           onKeepEditing={handleKeepEditing}
           onNew={handleNew}
+          photoPaletteTheme={photoPalette.theme}
           photoUrl={photoUrl}
           theme={theme}
         />

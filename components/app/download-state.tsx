@@ -1,17 +1,21 @@
 "use client";
 
 import { Check } from "lucide-react";
+import type { AltitudeMood } from "@/components/themes/altitude";
 import { Button } from "@/components/ui/button";
 import { defaultFilename } from "@/lib/export-card";
+import type { PaletteTheme } from "@/lib/palette";
 import { RenderTheme, type ThemeId } from "./render-theme";
 import type { ActivityData } from "./sample-data";
 
 const CONFETTI_COLORS = ["#c45a2c", "#1d3a2e", "#1a1714", "#a98352"];
 
 interface DownloadStateProps {
+  altitudeMood: AltitudeMood;
   data: ActivityData;
   onKeepEditing: () => void;
   onNew: () => void;
+  photoPaletteTheme: PaletteTheme | null;
   photoUrl: string | null;
   theme: ThemeId;
 }
@@ -20,6 +24,8 @@ export function DownloadState({
   data,
   theme,
   photoUrl,
+  altitudeMood,
+  photoPaletteTheme,
   onKeepEditing,
   onNew,
 }: DownloadStateProps) {
@@ -43,7 +49,13 @@ export function DownloadState({
                 className="origin-top-left scale-[0.222] sm:scale-[0.296] lg:scale-[0.4166]"
                 style={{ width: 1080, height: 1350 }}
               >
-                <RenderTheme data={data} photoUrl={photoUrl} theme={theme} />
+                <RenderTheme
+                  altitudeMood={altitudeMood}
+                  data={data}
+                  photoPaletteTheme={photoPaletteTheme}
+                  photoUrl={photoUrl}
+                  theme={theme}
+                />
               </div>
             </div>
           </div>
