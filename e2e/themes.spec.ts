@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { selectTheme } from "./helpers";
 
 const THEMES = [
   "PATH",
@@ -15,10 +16,8 @@ test.describe("themes", () => {
     await page.evaluate(() => localStorage.clear());
     await page.reload();
     await page.getByRole("button", { name: /try a sample/i }).click();
-    // Wait for the FILE LOADED chip so we know we're in edit state.
-    await expect(
-      page.getByText(/FILE LOADED|MULTI-SPORT LOADED/i)
-    ).toBeVisible();
+    // Wait for the theme picker so we know we're in edit state.
+    await expect(page.getByTestId("theme-picker-trigger")).toBeVisible();
   });
 
   for (const theme of THEMES) {
@@ -33,14 +32,7 @@ test.describe("themes", () => {
         }
       });
 
-      await page
-        .getByRole("button", { name: new RegExp(`^${theme}$`) })
-        .click();
-      // base-ui Toggle exposes its pressed state as a value-less
-      // `data-pressed` attribute. Reading it back round-trips the click.
-      await expect(
-        page.getByRole("button", { name: new RegExp(`^${theme}$`) })
-      ).toHaveAttribute("data-pressed", "");
+      await selectTheme(page, theme);
 
       // Give the theme a beat to render so a runtime error inside a deferred
       // useEffect or font fallback has time to surface.
@@ -53,7 +45,7 @@ test.describe("themes", () => {
     page,
   }) => {
     // Path theme — fastest to render.
-    await page.getByRole("button", { name: /^PATH$/ }).click();
+    await selectTheme(page, "PATH");
     const downloadPromise = page.waitForEvent("download");
     await page.getByRole("button", { name: /download png/i }).click();
     const download = await downloadPromise;
