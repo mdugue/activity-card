@@ -29,7 +29,12 @@ export interface NormalisedSwatch {
   population: number;
 }
 
-export type PaletteVariant = "vibrant" | "muted" | "complementary";
+export type PaletteVariant =
+  | "vibrant"
+  | "muted"
+  | "complementary"
+  | "spectrum"
+  | "pure";
 
 /** User-facing alias — the Photo theme's mood is the palette variant. */
 export type PhotoMood = PaletteVariant;
@@ -174,6 +179,78 @@ function mostVibrant(swatches: NormalisedSwatch[]): string {
 }
 
 /**
+ * "Pure" mood — ignore the swatches entirely. Returns the original photo
+ * theme's typographic look: white headline / soft-white body / white accent.
+ * The photo still shows through as the background image; this just keeps the
+ * type and route stroke neutral so the photo speaks for itself.
+ */
+function buildPureTheme(): PaletteTheme {
+  return {
+    variant: "pure",
+    // --bg is consumed by the vignette only when no photo is loaded; a dark
+    // neutral keeps the gradient credible without tinting toward any swatch.
+    background: "#141414",
+    headline: "#ffffff",
+    body: "rgba(255,255,255,0.82)",
+    accent: "#ffffff",
+    onAccent: BLACK,
+  };
+}
+
+/** Accent choice for the photo-derived variants (everything except pure). */
+function pickAccent(
+  swatches: NormalisedSwatch[],
+  variant: Exclude<PaletteVariant, "pure">
+): string {
+  if (variant === "muted") {
+    return (
+      byName(swatches, "LightMuted") ??
+      byName(swatches, "Muted") ??
+      mostVibrant(swatches)
+    );
+  }
+  if (variant === "complementary") {
+    // Rotate the dominant vibrant hue 180° — but only if the photo has
+    // enough chroma. Greyish photos keep the base colour instead.
+    const base = byName(swatches, "Vibrant") ?? mostVibrant(swatches);
+    return chroma(base) >= MIN_ACCENT_CHROMA ? rotateHue(base, 180) : base;
+  }
+  // vibrant + spectrum both pull the punchy Vibrant swatch.
+  return byName(swatches, "Vibrant") ?? mostVibrant(swatches);
+}
+
+/** Body colour for all non-spectrum variants: a dimmed headline that
+ *  still clears the lower contrast bar, with a swatch fallback. */
+function dimmedBody(
+  headline: string,
+  background: string,
+  candidates: string[]
+): string {
+  const dimmed = withLightness(
+    headline,
+    Math.max(0.55, lightness(headline) - 0.18)
+  );
+  return wcagContrast(dimmed, background) >= MIN_BODY_CONTRAST
+    ? dimmed
+    : pickTextColor(background, candidates, MIN_BODY_CONTRAST);
+}
+
+/** Spectrum body: prefer LightMuted so headline + body carry distinct tints. */
+function spectrumBody(
+  swatches: NormalisedSwatch[],
+  background: string,
+  headline: string,
+  candidates: string[]
+): string {
+  const mutedLight =
+    byName(swatches, "LightMuted") ?? byName(swatches, "Muted");
+  if (mutedLight && wcagContrast(mutedLight, background) >= MIN_BODY_CONTRAST) {
+    return mutedLight;
+  }
+  return dimmedBody(headline, background, candidates);
+}
+
+/**
  * Build a single theme for a given variant. All text/bg pairings are
  * contrast-guaranteed; the accent is the only "expressive" colour and it
  * never carries text without an auto-contrast onAccent.
@@ -182,51 +259,29 @@ function buildTheme(
   swatches: NormalisedSwatch[],
   variant: PaletteVariant
 ): PaletteTheme {
-  const allHexes = swatches.map((s) => s.hex);
-
-  // Background: dark-muted reads best behind a photo overlay; fall back to darkest.
-  const background = byName(swatches, "DarkMuted") ?? darkest(swatches);
-
-  // Accent depends on variant.
-  let accent: string;
-  if (variant === "vibrant") {
-    accent = byName(swatches, "Vibrant") ?? mostVibrant(swatches);
-  } else if (variant === "muted") {
-    accent =
-      byName(swatches, "LightMuted") ??
-      byName(swatches, "Muted") ??
-      mostVibrant(swatches);
-  } else {
-    // complementary: rotate the dominant vibrant hue 180° in OKLCH,
-    // but only if the photo has enough colour to justify it.
-    const base = byName(swatches, "Vibrant") ?? mostVibrant(swatches);
-    accent = chroma(base) >= MIN_ACCENT_CHROMA ? rotateHue(base, 180) : base;
+  if (variant === "pure") {
+    return buildPureTheme();
   }
+
+  const allHexes = swatches.map((s) => s.hex);
+  const background = byName(swatches, "DarkMuted") ?? darkest(swatches);
+  const accent = pickAccent(swatches, variant);
 
   // Headline: best-contrast swatch over background, else auto black/white.
   // Prefer the light swatches as text candidates since bg is dark.
-  const lightCandidates = [
+  const candidates = [
     byName(swatches, "LightVibrant"),
     byName(swatches, "LightMuted"),
     WHITE,
     ...allHexes,
   ].filter((x): x is string => Boolean(x));
 
-  const headline = pickTextColor(
-    background,
-    lightCandidates,
-    MIN_HEADLINE_CONTRAST
-  );
+  const headline = pickTextColor(background, candidates, MIN_HEADLINE_CONTRAST);
 
-  // Body: a dimmer version of headline that still clears the lower bar.
-  const dimmed = withLightness(
-    headline,
-    Math.max(0.55, lightness(headline) - 0.18)
-  );
   const body =
-    wcagContrast(dimmed, background) >= MIN_BODY_CONTRAST
-      ? dimmed
-      : pickTextColor(background, lightCandidates, MIN_BODY_CONTRAST);
+    variant === "spectrum"
+      ? spectrumBody(swatches, background, headline, candidates)
+      : dimmedBody(headline, background, candidates);
 
   return {
     variant,
@@ -259,7 +314,13 @@ export async function buildPaletteFromImage(
     };
     return {
       swatches: [],
-      themes: { vibrant: neutral, muted: neutral, complementary: neutral },
+      themes: {
+        vibrant: neutral,
+        muted: neutral,
+        complementary: neutral,
+        spectrum: neutral,
+        pure: buildPureTheme(),
+      },
     };
   }
 
@@ -269,6 +330,8 @@ export async function buildPaletteFromImage(
       vibrant: buildTheme(swatches, "vibrant"),
       muted: buildTheme(swatches, "muted"),
       complementary: buildTheme(swatches, "complementary"),
+      spectrum: buildTheme(swatches, "spectrum"),
+      pure: buildPureTheme(),
     },
   };
 }

@@ -23,15 +23,17 @@ A photo produces colors via three stages:
    - `onAccent` — auto black/white for text placed on the accent
 3. **Guarantee contrast** — every text/bg pair is checked with `wcagContrast` (culori). Headline must clear 4.5:1, body 3:1. If no swatch qualifies, fall back to white or black. **Legibility always wins over aesthetics.**
 
-## Three preset moods
+## Five preset moods
 
-Don't ship one fixed mapping — auto-color is delightful when it hits and jarring when it misses. Offer three valid interpretations the user flips between:
+Don't ship one fixed mapping — auto-color is delightful when it hits and jarring when it misses. Offer several valid interpretations the user flips between:
 
 - **vibrant** — accent = the Vibrant swatch. Punchy, photo-forward.
 - **muted** — accent = LightMuted/Muted. Calm, editorial.
 - **complementary** — accent = Vibrant hue rotated 180° in OKLCH. Striking, designed-looking.
+- **spectrum** — headline pulls LightVibrant, body pulls LightMuted, accent pulls Vibrant. The headline and body carry distinct hues, so the card reads as layered rather than monochrome.
+- **pure** — ignores the swatches entirely and returns fixed white type with a white accent. The photo still shows as background; the type stays neutral so the image speaks for itself. Use this as the "opt out" — when the extracted colours don't land or the user wants the original look.
 
-`buildPaletteFromImage()` returns all three pre-built. The hook selects one via `setVariant`.
+`buildPaletteFromImage()` returns all five pre-built. The caller picks one and the hook returns `themes[variant]`.
 
 ## Why OKLCH (not HSL)
 

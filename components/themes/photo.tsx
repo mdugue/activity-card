@@ -188,13 +188,14 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
         }}
       >
         <div>
+          {/* Wordmark — italic display in accent for a signature brand moment. */}
           <div
             style={{
               fontFamily: "var(--font-playfair), serif",
               fontSize: 52,
               fontStyle: "italic",
               letterSpacing: "-0.01em",
-              color: "var(--headline)",
+              color: "var(--accent)",
             }}
           >
             Effort
@@ -216,18 +217,26 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
             textAlign: "right",
             fontSize: 26,
             letterSpacing: "0.2em",
-            color: "var(--body)",
+            color: "var(--headline)",
             fontWeight: 700,
             lineHeight: 1.45,
           }}
         >
+          {/* Story label inherits headline for a tonal lift over the body row;
+              the location below it drops back to body so the two read as a
+              labelled pair rather than two equal lines. */}
           {storyLabel}
           <br />
-          <span style={{ opacity: 0.75 }}>{data.location.toUpperCase()}</span>
+          <span style={{ color: "var(--body)" }}>
+            {data.location.toUpperCase()}
+          </span>
         </div>
       </div>
 
-      {/* Route trace — thin, elegant, top-right area */}
+      {/* Route trace — thin, elegant, top-right area. Drawn as two stacked
+          paths: a soft white halo behind, the accent stroke on top. The halo
+          keeps the line readable when the extracted accent is dark or sits
+          on a similarly-toned area of the photo. */}
       {!isPool && (
         <svg
           aria-hidden="true"
@@ -237,7 +246,6 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
             right: 60,
             width: 320,
             height: 240,
-            opacity: 0.9,
           }}
           viewBox="0 0 400 300"
         >
@@ -245,17 +253,41 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
           <path
             d={routePath(data.route_coordinates, 400, 300, 20)}
             fill="none"
+            stroke="rgba(255,255,255,0.55)"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={7}
+            style={{ filter: "blur(3px)" }}
+          />
+          <path
+            d={routePath(data.route_coordinates, 400, 300, 20)}
+            fill="none"
             stroke="var(--accent)"
             strokeLinecap="round"
             strokeLinejoin="round"
-            strokeWidth={2.5}
-            style={{ filter: "drop-shadow(0 0 12px rgba(0,0,0,0.4))" }}
+            strokeWidth={3.5}
+            style={{
+              filter:
+                "drop-shadow(0 0 6px rgba(255,255,255,0.45)) drop-shadow(0 2px 4px rgba(0,0,0,0.45))",
+            }}
           />
         </svg>
       )}
 
-      {/* Big headline near bottom */}
+      {/* Big headline near bottom + accent rule. The rule borrows the
+          extracted accent so the headline area picks up a third colour cue
+          without crowding the type. */}
       <div style={{ position: "absolute", bottom: 220, left: 80, right: 80 }}>
+        <div
+          aria-hidden
+          style={{
+            width: 96,
+            height: 4,
+            background: "var(--accent)",
+            marginBottom: 28,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
+          }}
+        />
         <h1
           style={{
             fontFamily: "var(--font-playfair), serif",
@@ -304,7 +336,7 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
             <span
               style={{
                 fontSize: 40,
-                color: "var(--body)",
+                color: "var(--accent)",
                 fontStyle: "italic",
                 fontFamily: "var(--font-playfair), serif",
               }}
@@ -344,7 +376,7 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
                 fontSize: 42,
                 letterSpacing: "0",
                 fontWeight: 400,
-                color: "var(--headline)",
+                color: "var(--accent)",
               }}
             >
               {data.athlete_name}
