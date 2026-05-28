@@ -111,34 +111,36 @@ export function ThemeCarousel({
   );
 
   return (
-    <div className="relative flex flex-col items-center justify-start">
-      <div className="mb-3 self-start font-medium font-mono text-xs tracking-[0.28em] opacity-55 lg:ml-14">
+    <div className="relative flex flex-col items-stretch justify-start">
+      <div className="mb-3 self-start px-6 font-medium font-mono text-xs tracking-[0.28em] opacity-55 md:px-10 lg:ml-14 lg:px-0">
         LIVE PREVIEW · 1080 × 1350
       </div>
       <Carousel
-        className="mx-auto w-full max-w-[340px] sm:max-w-[460px] lg:max-w-[640px]"
+        className="-mx-6 w-auto md:-mx-10 lg:mx-0 lg:w-full"
         opts={{ align: "center", loop: false, containScroll: false }}
         setApi={setApi}
       >
-        <CarouselContent className="-ml-6">
+        <CarouselContent className="-ml-4 py-10">
           {THEME_ORDER.map((id) => (
             <CarouselItem
-              className="flex basis-auto justify-center pl-6"
+              className="flex basis-[78%] justify-center pl-4 sm:basis-[64%] lg:basis-[82%]"
               key={id}
             >
-              <div className="relative aspect-[1080/1350] w-[280px] overflow-hidden bg-white shadow-[0_30px_60px_rgba(26,23,20,0.18),_0_8px_20px_rgba(26,23,20,0.08)] sm:w-[380px] lg:w-[540px]">
-                <div className="absolute inset-0">
-                  <div
-                    className="origin-top-left scale-[0.26] sm:scale-[0.352] lg:scale-[0.5]"
-                    style={{ width: 1080, height: 1350 }}
-                  >
-                    <RenderTheme
-                      data={data}
-                      photoBackdropEnabled={photoBackdropEnabled}
-                      photoUrl={photoUrl}
-                      theme={id}
-                    />
-                  </div>
+              <div className="@container relative aspect-[1080/1350] w-full overflow-hidden bg-white shadow-[0_30px_60px_rgba(26,23,20,0.18),_0_8px_20px_rgba(26,23,20,0.08)]">
+                <div
+                  className="absolute inset-0 origin-top-left"
+                  style={{
+                    width: 1080,
+                    height: 1350,
+                    transform: "scale(calc(100cqw / 1080px))",
+                  }}
+                >
+                  <RenderTheme
+                    data={data}
+                    photoBackdropEnabled={photoBackdropEnabled}
+                    photoUrl={photoUrl}
+                    theme={id}
+                  />
                 </div>
               </div>
             </CarouselItem>
