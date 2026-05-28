@@ -362,7 +362,7 @@ function toIsoDate(input?: string | number | Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function prettifyName(name: string): string {
+function prettifyName(name: string): string {
   return name
     .replace(/[_-]+/g, " ")
     .replace(/\s+/g, " ")

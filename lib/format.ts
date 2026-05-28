@@ -83,15 +83,3 @@ export function formatDate(iso: string | undefined): string {
 export function formatDateUpper(iso: string | undefined): string {
   return formatDate(iso).toUpperCase();
 }
-
-/** Distance in km → "87.3" or, for swims, raw metres "2400". */
-export function formatDistance(distanceKm: number, sport: string): string {
-  if (sport === "swim") {
-    return Math.round(distanceKm * 1000).toString();
-  }
-  return distanceKm.toFixed(1);
-}
-
-export function distanceUnit(sport: string): string {
-  return sport === "swim" ? "m" : "km";
-}
