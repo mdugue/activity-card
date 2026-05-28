@@ -31,6 +31,21 @@
       }
     },
     {
+      // E2E specs read more clearly with inline regex assertions; the
+      // perf gain from hoisting them is irrelevant in a test process.
+      "includes": ["e2e/**", "playwright.config.ts"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "useTopLevelRegex": "off"
+          },
+          "style": {
+            "noNestedTernary": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["components/ui/**", "hooks/use-mobile.ts"],
       "linter": {
         "rules": {
