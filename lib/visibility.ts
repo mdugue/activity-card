@@ -27,9 +27,9 @@ export function applyVisibility(
 ): ActivityData {
   return {
     ...data,
-    athlete_name: vis.athleteName ? data.athlete_name : "",
+    athleteName: vis.athleteName ? data.athleteName : "",
     location: vis.location ? data.location : "",
-    avg_heart_rate: vis.heartRate ? data.avg_heart_rate : undefined,
+    avgHeartRate: vis.heartRate ? data.avgHeartRate : undefined,
     splits: vis.splits ? data.splits : undefined,
   };
 }

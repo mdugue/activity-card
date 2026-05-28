@@ -3,6 +3,13 @@
 // Palette: warm off-white paper, deep ink, single rust accent
 
 import { abstractLanes, routePath } from "@/lib/chart-helpers";
+import {
+  formatDateUpper,
+  formatDuration,
+  formatNumber,
+  formatPaceMin,
+  formatPaceSec,
+} from "@/lib/format";
 import { PhotoBackdrop } from "./photo-backdrop";
 import type { ActivityCardProps } from "./types";
 
@@ -10,7 +17,6 @@ export function ThemePath({ data, photoUrl }: ActivityCardProps) {
   const isPool = data.sport === "swim";
   const sport = data.sport;
 
-  // sport-specific accent + label
   let sportLabel = "A TRIATHLON";
   if (sport === "ride") {
     sportLabel = "A CYCLE";
@@ -20,31 +26,30 @@ export function ThemePath({ data, photoUrl }: ActivityCardProps) {
     sportLabel = "A SWIM";
   }
 
-  // sport-appropriate stat trio
   let statTrio: [string, string][];
   if (sport === "ride") {
     statTrio = [
-      ["DISTANCE", `${data.distance_km.toFixed(1)} km`],
-      ["ELEVATION", `${data.elevation_gain_m ?? "—"} m`],
-      ["AVG SPEED", `${data.avg_speed_kmh ?? "—"} km/h`],
+      ["DISTANCE", `${data.distanceKm.toFixed(1)} km`],
+      ["ELEVATION", `${formatNumber(data.elevationGainM)} m`],
+      ["AVG SPEED", `${formatNumber(data.avgSpeedKmh, 1)} km/h`],
     ];
   } else if (sport === "run") {
     statTrio = [
-      ["DISTANCE", `${data.distance_km.toFixed(1)} km`],
-      ["DURATION", data.duration],
-      ["AVG PACE", `${data.avg_pace_min_per_km ?? "—"} /km`],
+      ["DISTANCE", `${data.distanceKm.toFixed(1)} km`],
+      ["DURATION", formatDuration(data.durationSec)],
+      ["AVG PACE", `${formatPaceMin(data.avgPaceMinPerKm)} /km`],
     ];
   } else if (sport === "swim") {
     statTrio = [
-      ["DISTANCE", `${(data.distance_km * 1000).toFixed(0)} m`],
-      ["DURATION", data.duration],
-      ["PACE", `${data.avg_pace_per_100m ?? "—"} /100m`],
+      ["DISTANCE", `${(data.distanceKm * 1000).toFixed(0)} m`],
+      ["DURATION", formatDuration(data.durationSec)],
+      ["PACE", `${formatPaceSec(data.avgPacePer100m)} /100m`],
     ];
   } else {
     statTrio = [
-      ["DISTANCE", `${data.distance_km} km`],
-      ["DURATION", data.duration],
-      ["ELEVATION", `${data.elevation_gain_m ?? "—"} m`],
+      ["DISTANCE", `${data.distanceKm.toFixed(1)} km`],
+      ["DURATION", formatDuration(data.durationSec)],
+      ["ELEVATION", `${formatNumber(data.elevationGainM)} m`],
     ];
   }
 
@@ -87,7 +92,7 @@ export function ThemePath({ data, photoUrl }: ActivityCardProps) {
           }}
         >
           <span>{sportLabel}</span>
-          <span style={{ opacity: 0.55 }}>{data.date.toUpperCase()}</span>
+          <span style={{ opacity: 0.55 }}>{formatDateUpper(data.date)}</span>
         </div>
         <div
           style={{
@@ -113,7 +118,7 @@ export function ThemePath({ data, photoUrl }: ActivityCardProps) {
               maxWidth: "90%",
             }}
           >
-            {data.ride_name}
+            {data.title}
           </h1>
           <div
             style={{
@@ -143,7 +148,6 @@ export function ThemePath({ data, photoUrl }: ActivityCardProps) {
             viewBox="0 0 900 720"
           >
             <title>Route silhouette</title>
-            {/* faint paper-grain rings */}
             <defs>
               <radialGradient cx="50%" cy="50%" id="path-grain" r="60%">
                 <stop offset="0%" stopColor="#c45a2c" stopOpacity="0.05" />
@@ -182,7 +186,7 @@ export function ThemePath({ data, photoUrl }: ActivityCardProps) {
                 ))}
               </g>
             ) : (
-              <PathRoute coords={data.route_coordinates} />
+              <PathRoute coords={data.routeCoordinates} />
             )}
           </svg>
         </div>
@@ -243,7 +247,7 @@ export function ThemePath({ data, photoUrl }: ActivityCardProps) {
           >
             <span>№ 01 — EFFORT</span>
             <span>
-              {data.athlete_name ? `— ${data.athlete_name.toUpperCase()}` : ""}
+              {data.athleteName ? `— ${data.athleteName.toUpperCase()}` : ""}
             </span>
           </div>
         </div>
@@ -281,7 +285,6 @@ function PathRoute({ coords }: { coords?: [number, number][] }) {
   const d = routePath(coords, 900, 720, 60);
   return (
     <g>
-      {/* shadow trace */}
       <path
         d={d}
         fill="none"

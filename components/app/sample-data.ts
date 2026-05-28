@@ -1,28 +1,34 @@
-// Deterministic sample datasets — believable shapes via parametric math.
-// Each route is in normalized [-1..1] x/y space; theme code re-projects to viewBox.
+/**
+ * Deterministic sample datasets and the canonical `ActivityData` shape.
+ *
+ * Activity numerics are stored raw (seconds, km, float minutes, integer
+ * sec/100m). Themes call `lib/format.ts` to render. Route coordinates live
+ * in normalised x/y for the samples and in `[lng, -lat]` for parsed files —
+ * `chart-helpers.ts` only cares about bbox-relative positions.
+ */
 
 export type Sport = "ride" | "run" | "swim" | "triathlon";
 
 export type Coord = [number, number];
 
 export interface TriSegment {
-  avg_pace_min_per_km?: string;
-  avg_pace_per_100m?: string;
-  avg_speed_kmh?: number;
-  distance_km: number;
-  duration: string;
-  elevation_gain_m?: number;
-  elevation_profile?: number[];
-  pace_profile?: number[];
-  route_coordinates?: Coord[];
+  avgPaceMinPerKm?: number; // run, float minutes
+  avgPacePer100m?: number; // swim, seconds
+  avgSpeedKmh?: number; // bike
+  distanceKm: number;
+  durationSec: number;
+  elevationGainM?: number;
+  elevationProfile?: number[];
+  paceProfile?: number[];
+  routeCoordinates?: Coord[];
   sport: "swim" | "bike" | "run";
 }
 
 export interface Split {
-  avg_kmh?: number;
-  km?: number;
-  lap?: number;
-  time: string;
+  avgSpeedKmh?: number; // ride splits
+  durationSec: number;
+  km?: number; // per-km splits for run / ride
+  lap?: number; // per-lap for swim
 }
 
 export interface Zone {
@@ -31,39 +37,45 @@ export interface Zone {
 }
 
 export interface Transition {
-  duration: string;
-  name: string;
+  durationSec: number;
+  name: string; // "T1", "T2", …
 }
 
 export interface ActivityData {
-  athlete_name: string;
-  avg_cadence?: number;
-  avg_heart_rate?: number;
-  avg_pace_min_per_km?: string;
-  avg_pace_per_100m?: string;
-  avg_speed_kmh?: number;
-  date: string;
-  distance_km: number;
-  duration: string;
-  elevation_gain_m?: number;
-  elevation_profile?: number[];
-  hr_zones?: Zone[];
-  lap_paces_per_100m?: number[];
+  athleteName: string;
+  avgCadence?: number;
+  avgHeartRate?: number;
+  avgPaceMinPerKm?: number; // run, float minutes (4.95 = 4:57/km)
+  avgPacePer100m?: number; // swim, integer seconds
+
+  avgSpeedKmh?: number; // ride
+  date: string; // ISO date string; format at render
+
+  distanceKm: number;
+  durationSec: number;
+  elevationGainM?: number;
+  elevationProfile?: number[];
+  hrZones?: Zone[];
+  lapPacesPer100m?: number[]; // swim, sec/100m per lap
   location: string;
-  max_speed_kmh?: number;
-  normalized_power_w?: number;
-  pace_profile?: number[];
-  power_zones?: Zone[];
-  ride_name: string;
-  route_coordinates?: Coord[];
+  maxSpeedKmh?: number; // ride
+  normalizedPowerW?: number; // ride
+  paceProfile?: number[]; // run, sec/km
+  powerZones?: Zone[];
+
+  routeCoordinates?: Coord[];
+
   segments?: TriSegment[];
   splits?: Split[];
   sport: Sport;
-  stroke_count_avg?: number;
-  swolf?: number;
+  strokeCountAvg?: number; // swim
+  swolf?: number; // swim
+  title: string;
   transitions?: Transition[];
-  vam_mph?: number;
+  vamMph?: number; // ride: vertical metres / hour (label kept "mph" for legacy)
 }
+
+/* ------------- deterministic shape generators ------------- */
 
 export function genLoop(seed: number, n: number): Coord[] {
   const out: Coord[] = [];
@@ -121,7 +133,6 @@ export function genPace(
   basePaceSec = 272,
   varSec = 35
 ): number[] {
-  // pace in seconds per km — lower is faster
   const out: number[] = [];
   for (let i = 0; i < n; i++) {
     const t = i / (n - 1);
@@ -129,7 +140,7 @@ export function genPace(
       basePaceSec +
       varSec * Math.sin(t * 7 + seed) +
       varSec * 0.4 * Math.sin(t * 23 + seed * 2) +
-      (t > 0.7 ? (t - 0.7) * 80 : 0); // fade at the end
+      (t > 0.7 ? (t - 0.7) * 80 : 0);
     out.push(Math.round(v));
   }
   return out;
@@ -145,7 +156,6 @@ export function genSwimLaps(n: number, basePaceSec = 108, drift = 6): number[] {
 }
 
 const swimRouteCoords = ((): Coord[] => {
-  // an open-water rectangle-ish swim with drift
   const out: Coord[] = [];
   for (let i = 0; i < 120; i++) {
     const t = i / 119;
@@ -182,33 +192,35 @@ const triSwimRouteCoords = ((): Coord[] => {
   return out;
 })();
 
+/* ------------- sample fixtures ------------- */
+
 export const SAMPLE_RIDE: ActivityData = {
   sport: "ride",
-  ride_name: "Saturday in the Elbsandstein",
-  date: "May 18, 2026",
+  title: "Saturday in the Elbsandstein",
+  date: "2026-05-18",
   location: "Sächsische Schweiz, Germany",
-  athlete_name: "Manuel",
-  distance_km: 87.3,
-  duration: "3h 42m",
-  elevation_gain_m: 1240,
-  avg_speed_kmh: 23.6,
-  max_speed_kmh: 58.2,
-  avg_heart_rate: 142,
-  avg_cadence: 84,
-  normalized_power_w: 215,
-  route_coordinates: genLoop(1.7, 180),
-  elevation_profile: genElevation(2.3, 180, 180, 980),
+  athleteName: "Manuel",
+  distanceKm: 87.3,
+  durationSec: 3 * 3600 + 42 * 60,
+  elevationGainM: 1240,
+  avgSpeedKmh: 23.6,
+  maxSpeedKmh: 58.2,
+  avgHeartRate: 142,
+  avgCadence: 84,
+  normalizedPowerW: 215,
+  routeCoordinates: genLoop(1.7, 180),
+  elevationProfile: genElevation(2.3, 180, 180, 980),
   splits: [
-    { km: 10, time: "24:18", avg_kmh: 24.7 },
-    { km: 20, time: "50:02", avg_kmh: 23.3 },
-    { km: 30, time: "1:16:44", avg_kmh: 22.4 },
-    { km: 40, time: "1:42:20", avg_kmh: 23.5 },
-    { km: 50, time: "2:08:01", avg_kmh: 23.4 },
-    { km: 60, time: "2:33:18", avg_kmh: 23.7 },
-    { km: 70, time: "2:58:54", avg_kmh: 23.4 },
-    { km: 80, time: "3:24:11", avg_kmh: 23.6 },
+    { km: 10, durationSec: 24 * 60 + 18, avgSpeedKmh: 24.7 },
+    { km: 20, durationSec: 50 * 60 + 2, avgSpeedKmh: 23.3 },
+    { km: 30, durationSec: 1 * 3600 + 16 * 60 + 44, avgSpeedKmh: 22.4 },
+    { km: 40, durationSec: 1 * 3600 + 42 * 60 + 20, avgSpeedKmh: 23.5 },
+    { km: 50, durationSec: 2 * 3600 + 8 * 60 + 1, avgSpeedKmh: 23.4 },
+    { km: 60, durationSec: 2 * 3600 + 33 * 60 + 18, avgSpeedKmh: 23.7 },
+    { km: 70, durationSec: 2 * 3600 + 58 * 60 + 54, avgSpeedKmh: 23.4 },
+    { km: 80, durationSec: 3 * 3600 + 24 * 60 + 11, avgSpeedKmh: 23.6 },
   ],
-  power_zones: [
+  powerZones: [
     { zone: "Z1", pct: 12 },
     { zone: "Z2", pct: 38 },
     { zone: "Z3", pct: 27 },
@@ -216,45 +228,45 @@ export const SAMPLE_RIDE: ActivityData = {
     { zone: "Z5", pct: 7 },
     { zone: "Z6", pct: 2 },
   ],
-  vam_mph: 612,
+  vamMph: 612,
 };
 
 export const SAMPLE_RUN: ActivityData = {
   sport: "run",
-  ride_name: "Föhrer Westwind",
-  date: "April 27, 2026",
+  title: "Föhrer Westwind",
+  date: "2026-04-27",
   location: "Föhr, North Sea",
-  athlete_name: "Manuel",
-  distance_km: 18.4,
-  duration: "1h 32m",
-  elevation_gain_m: 86,
-  avg_pace_min_per_km: "4:59",
-  avg_heart_rate: 158,
-  avg_cadence: 178,
-  route_coordinates: genOutBack(4.1, 140),
-  elevation_profile: genElevation(0.9, 140, 4, 24),
-  pace_profile: genPace(3.1, 140, 299, 22),
+  athleteName: "Manuel",
+  distanceKm: 18.4,
+  durationSec: 1 * 3600 + 32 * 60,
+  elevationGainM: 86,
+  avgPaceMinPerKm: 4 + 59 / 60,
+  avgHeartRate: 158,
+  avgCadence: 178,
+  routeCoordinates: genOutBack(4.1, 140),
+  elevationProfile: genElevation(0.9, 140, 4, 24),
+  paceProfile: genPace(3.1, 140, 299, 22),
   splits: [
-    { km: 1, time: "4:48" },
-    { km: 2, time: "4:52" },
-    { km: 3, time: "4:55" },
-    { km: 4, time: "5:01" },
-    { km: 5, time: "4:57" },
-    { km: 6, time: "5:04" },
-    { km: 7, time: "4:58" },
-    { km: 8, time: "5:02" },
-    { km: 9, time: "5:09" },
-    { km: 10, time: "5:11" },
-    { km: 11, time: "5:07" },
-    { km: 12, time: "5:03" },
-    { km: 13, time: "4:55" },
-    { km: 14, time: "4:52" },
-    { km: 15, time: "4:49" },
-    { km: 16, time: "4:46" },
-    { km: 17, time: "4:51" },
-    { km: 18, time: "4:42" },
+    { km: 1, durationSec: 4 * 60 + 48 },
+    { km: 2, durationSec: 4 * 60 + 52 },
+    { km: 3, durationSec: 4 * 60 + 55 },
+    { km: 4, durationSec: 5 * 60 + 1 },
+    { km: 5, durationSec: 4 * 60 + 57 },
+    { km: 6, durationSec: 5 * 60 + 4 },
+    { km: 7, durationSec: 4 * 60 + 58 },
+    { km: 8, durationSec: 5 * 60 + 2 },
+    { km: 9, durationSec: 5 * 60 + 9 },
+    { km: 10, durationSec: 5 * 60 + 11 },
+    { km: 11, durationSec: 5 * 60 + 7 },
+    { km: 12, durationSec: 5 * 60 + 3 },
+    { km: 13, durationSec: 4 * 60 + 55 },
+    { km: 14, durationSec: 4 * 60 + 52 },
+    { km: 15, durationSec: 4 * 60 + 49 },
+    { km: 16, durationSec: 4 * 60 + 46 },
+    { km: 17, durationSec: 4 * 60 + 51 },
+    { km: 18, durationSec: 4 * 60 + 42 },
   ],
-  hr_zones: [
+  hrZones: [
     { zone: "Z1", pct: 6 },
     { zone: "Z2", pct: 22 },
     { zone: "Z3", pct: 48 },
@@ -265,63 +277,63 @@ export const SAMPLE_RUN: ActivityData = {
 
 export const SAMPLE_SWIM: ActivityData = {
   sport: "swim",
-  ride_name: "Sunrise at Müggelsee",
-  date: "June 02, 2026",
+  title: "Sunrise at Müggelsee",
+  date: "2026-06-02",
   location: "Berlin Müggelsee",
-  athlete_name: "Manuel",
-  distance_km: 2.4,
-  duration: "47m 12s",
-  avg_pace_per_100m: "1:58",
-  avg_heart_rate: 138,
+  athleteName: "Manuel",
+  distanceKm: 2.4,
+  durationSec: 47 * 60 + 12,
+  avgPacePer100m: 60 + 58,
+  avgHeartRate: 138,
   swolf: 38,
-  route_coordinates: swimRouteCoords,
-  lap_paces_per_100m: genSwimLaps(24, 113, 5),
-  stroke_count_avg: 16,
+  routeCoordinates: swimRouteCoords,
+  lapPacesPer100m: genSwimLaps(24, 113, 5),
+  strokeCountAvg: 16,
   splits: Array.from({ length: 24 }, (_, i) => ({
     lap: i + 1,
-    time: `1:${50 + (i % 8)}`,
+    durationSec: 60 + 50 + (i % 8),
   })),
 };
 
 export const SAMPLE_TRI: ActivityData = {
   sport: "triathlon",
-  ride_name: "IRONMAN 70.3 Lanzarote",
-  date: "March 22, 2026",
+  title: "IRONMAN 70.3 Lanzarote",
+  date: "2026-03-22",
   location: "Puerto del Carmen, Canary Islands",
-  athlete_name: "Manuel",
-  distance_km: 113,
-  duration: "5h 18m",
-  elevation_gain_m: 980,
-  avg_heart_rate: 151,
+  athleteName: "Manuel",
+  distanceKm: 113,
+  durationSec: 5 * 3600 + 18 * 60,
+  elevationGainM: 980,
+  avgHeartRate: 151,
   segments: [
     {
       sport: "swim",
-      distance_km: 1.9,
-      duration: "34:12",
-      avg_pace_per_100m: "1:48",
-      route_coordinates: triSwimRouteCoords,
+      distanceKm: 1.9,
+      durationSec: 34 * 60 + 12,
+      avgPacePer100m: 60 + 48,
+      routeCoordinates: triSwimRouteCoords,
     },
     {
       sport: "bike",
-      distance_km: 90,
-      duration: "2h 41m",
-      avg_speed_kmh: 33.5,
-      elevation_gain_m: 920,
-      route_coordinates: genLoop(0.7, 140),
-      elevation_profile: genElevation(0.7, 140, 20, 720),
+      distanceKm: 90,
+      durationSec: 2 * 3600 + 41 * 60,
+      avgSpeedKmh: 33.5,
+      elevationGainM: 920,
+      routeCoordinates: genLoop(0.7, 140),
+      elevationProfile: genElevation(0.7, 140, 20, 720),
     },
     {
       sport: "run",
-      distance_km: 21.1,
-      duration: "1h 38m",
-      avg_pace_min_per_km: "4:38",
-      elevation_gain_m: 60,
-      route_coordinates: genOutBack(2.1, 100),
-      pace_profile: genPace(2.1, 100, 278, 18),
+      distanceKm: 21.1,
+      durationSec: 1 * 3600 + 38 * 60,
+      avgPaceMinPerKm: 4 + 38 / 60,
+      elevationGainM: 60,
+      routeCoordinates: genOutBack(2.1, 100),
+      paceProfile: genPace(2.1, 100, 278, 18),
     },
   ],
   transitions: [
-    { name: "T1", duration: "2:14" },
-    { name: "T2", duration: "1:48" },
+    { name: "T1", durationSec: 2 * 60 + 14 },
+    { name: "T2", durationSec: 1 * 60 + 48 },
   ],
 };

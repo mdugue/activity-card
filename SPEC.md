@@ -63,33 +63,7 @@ The route is rendered as a clean SVG polyline derived from lat/lng coordinates, 
 
 ### File structure
 
-```
-app/
-  page.tsx                          # single-page app
-  _components/
-    upload/                         # drag-and-drop, file parsing UI
-    editor/                         # preview + controls
-    themes/
-      path.tsx
-      altitude.tsx
-      photo.tsx
-      data.tsx
-      editorial.tsx
-      triathlon.tsx
-      shared/                       # RoutePath, ElevationChart, StatBlock
-  _lib/
-    parsers/
-      gpx.ts
-      fit.ts
-      normalise.ts                  # → unified Activity shape
-    metrics/
-      distance.ts                   # haversine
-      pace.ts                       # min/km
-      simplify.ts                   # RDP
-    rasterise.ts                    # html-to-image wrapper with iOS workaround
-public/
-  fonts/                            # self-hosted theme fonts
-```
+See AGENTS.md for the binding layout. The short version: `/components/app/` for app shell states, `/components/themes/` for one file per theme, `/lib/` for parsers, formatters, chart helpers, simplification, and the html-to-image wrapper. No `app/_components/` private folders.
 
 ## Data model
 

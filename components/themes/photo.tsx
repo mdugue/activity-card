@@ -8,6 +8,13 @@
 
 import { paletteToCssVars } from "@/hooks/use-image-palette";
 import { routePath } from "@/lib/chart-helpers";
+import {
+  formatDateUpper,
+  formatDuration,
+  formatNumber,
+  formatPaceMin,
+  formatPaceSec,
+} from "@/lib/format";
 import type { PaletteTheme } from "@/lib/palette";
 import type { ActivityCardProps } from "./types";
 
@@ -23,9 +30,6 @@ interface StaticPalette {
   onAccent: string;
 }
 
-// Sport-tinted fallback used when no photo is loaded (or extraction is in
-// flight on the very first photo). Picks up the moody-landscape feel of the
-// original hardcoded gradient.
 function fallbackPalette(sport: string): StaticPalette {
   if (sport === "swim") {
     return {
@@ -60,8 +64,6 @@ function fallbackVars(palette: StaticPalette): React.CSSProperties {
     ["--headline" as string]: palette.headline,
     ["--body" as string]: palette.body,
     ["--accent" as string]: palette.accent,
-    // Static fallback has no second accent — mirror the primary so the
-    // gradient divider and accent-2 elements still render as flat colour.
     ["--accent-2" as string]: palette.accent,
     ["--on-accent" as string]: palette.onAccent,
   } as React.CSSProperties;
@@ -75,35 +77,33 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
     ? paletteToCssVars(paletteTheme)
     : fallbackVars(fallbackPalette(sport));
 
-  // sport-appropriate hero stat + small stats
   let hero: { big: string | number; unit: string; sub: string };
   if (sport === "ride") {
     hero = {
-      big: data.distance_km.toFixed(1),
+      big: data.distanceKm.toFixed(1),
       unit: "km",
-      sub: `${data.duration} · ${data.elevation_gain_m ?? "—"} m elev`,
+      sub: `${formatDuration(data.durationSec)} · ${formatNumber(data.elevationGainM)} m elev`,
     };
   } else if (sport === "run") {
     hero = {
-      big: data.distance_km.toFixed(1),
+      big: data.distanceKm.toFixed(1),
       unit: "km",
-      sub: `${data.duration} · ${data.avg_pace_min_per_km ?? "—"} /km`,
+      sub: `${formatDuration(data.durationSec)} · ${formatPaceMin(data.avgPaceMinPerKm)} /km`,
     };
   } else if (sport === "swim") {
     hero = {
-      big: (data.distance_km * 1000).toFixed(0),
+      big: (data.distanceKm * 1000).toFixed(0),
       unit: "m",
-      sub: `${data.duration} · ${data.avg_pace_per_100m ?? "—"} /100m`,
+      sub: `${formatDuration(data.durationSec)} · ${formatPaceSec(data.avgPacePer100m)} /100m`,
     };
   } else {
     hero = {
-      big: data.distance_km,
+      big: data.distanceKm.toFixed(1),
       unit: "km",
-      sub: `${data.duration} · triathlon`,
+      sub: `${formatDuration(data.durationSec)} · triathlon`,
     };
   }
 
-  // Placeholder photo — moody landscape gradient if none
   let placeholderBg =
     "linear-gradient(180deg, #2c3848 0%, #5a6a7e 40%, #8e7458 80%, #c89d6e 100%)";
   if (sport === "swim") {
@@ -136,7 +136,6 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
         overflow: "hidden",
       }}
     >
-      {/* placeholder texture if no photo */}
       {!photoUrl && (
         <svg
           aria-hidden="true"
@@ -166,10 +165,7 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
         </svg>
       )}
 
-      {/* Dark vignette at top + bottom for text legibility. Stays pure black
-          regardless of mood — a neutral protection layer reads consistently
-          across any photo, where a tinted vignette can fight the chosen
-          accent. */}
+      {/* Neutral vignette — pure black to read consistently across any photo. */}
       <div
         style={{
           position: "absolute",
@@ -192,10 +188,6 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
         }}
       >
         <div>
-          {/* Wordmark — italic display in the secondary accent. For most
-              moods accent-2 == accent so it reads as the brand accent; in
-              Spectrum it picks up the complementary hue and pairs with the
-              primary-accent hero stat across the canvas. */}
           <div
             style={{
               fontFamily: "var(--font-playfair), serif",
@@ -216,7 +208,7 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
               fontWeight: 700,
             }}
           >
-            VOL. 01 · {data.date.toUpperCase()}
+            VOL. 01 · {formatDateUpper(data.date)}
           </div>
         </div>
         <div
@@ -229,9 +221,6 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
             lineHeight: 1.45,
           }}
         >
-          {/* Story label inherits headline for a tonal lift over the body row;
-              the location below it drops back to body so the two read as a
-              labelled pair rather than two equal lines. */}
           {storyLabel}
           <br />
           <span style={{ color: "var(--body)" }}>
@@ -240,10 +229,7 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
         </div>
       </div>
 
-      {/* Route trace — always white. Coloured strokes read poorly against
-          arbitrary photos; a thin white stroke with a soft dark shadow is
-          legible on every background and matches the masthead's neutral
-          treatment. */}
+      {/* Route trace — always white for legibility across arbitrary photos. */}
       {!isPool && (
         <svg
           aria-hidden="true"
@@ -259,7 +245,7 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
         >
           <title>Route trace</title>
           <path
-            d={routePath(data.route_coordinates, 400, 300, 20)}
+            d={routePath(data.routeCoordinates, 400, 300, 20)}
             fill="none"
             stroke="#ffffff"
             strokeLinecap="round"
@@ -270,10 +256,6 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
         </svg>
       )}
 
-      {/* Big headline near bottom + accent rule. The rule is a gradient from
-          accent → accent-2; for most moods both ends are the same colour and
-          it reads as a flat bar. In Spectrum the two ends are distinct hues,
-          so the rule becomes the most visible "two colours at once" moment. */}
       <div style={{ position: "absolute", bottom: 220, left: 80, right: 80 }}>
         <div
           aria-hidden
@@ -301,7 +283,7 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
             maxWidth: 800,
           }}
         >
-          {data.ride_name}
+          {data.title}
         </h1>
       </div>
 
@@ -354,7 +336,7 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
             {hero.sub.toUpperCase()}
           </div>
         </div>
-        {data.athlete_name && (
+        {data.athleteName && (
           <div
             style={{
               textAlign: "right",
@@ -377,7 +359,7 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
                 color: "var(--accent-2)",
               }}
             >
-              {data.athlete_name}
+              {data.athleteName}
             </span>
           </div>
         )}

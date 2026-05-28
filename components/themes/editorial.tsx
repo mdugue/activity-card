@@ -3,6 +3,14 @@
 // Cream paper, soft black, single deep-forest accent
 
 import { routePath } from "@/lib/chart-helpers";
+import {
+  formatDate,
+  formatDateUpper,
+  formatDuration,
+  formatNumber,
+  formatPaceMin,
+  formatPaceSec,
+} from "@/lib/format";
 import { PhotoBackdrop } from "./photo-backdrop";
 import type { ActivityCardProps } from "./types";
 
@@ -38,17 +46,17 @@ export function ThemeEditorial({ data, photoUrl }: ActivityCardProps) {
 
   const dist =
     sport === "swim"
-      ? (data.distance_km * 1000).toFixed(0)
-      : data.distance_km.toFixed(1);
+      ? (data.distanceKm * 1000).toFixed(0)
+      : data.distanceKm.toFixed(1);
   const distUnit = sport === "swim" ? "meters" : "kilometres";
 
-  let paceLabel = `${data.duration} total time`;
+  let paceLabel = `${formatDuration(data.durationSec)} total time`;
   if (sport === "ride") {
-    paceLabel = `${data.avg_speed_kmh ?? "—"} km/h average`;
+    paceLabel = `${formatNumber(data.avgSpeedKmh, 1)} km/h average`;
   } else if (sport === "run") {
-    paceLabel = `${data.avg_pace_min_per_km ?? "—"} per kilometre`;
+    paceLabel = `${formatPaceMin(data.avgPaceMinPerKm)} per kilometre`;
   } else if (sport === "swim") {
-    paceLabel = `${data.avg_pace_per_100m ?? "—"} per 100 metres`;
+    paceLabel = `${formatPaceSec(data.avgPacePer100m)} per 100 metres`;
   }
 
   let issueNum = "07";
@@ -72,6 +80,7 @@ export function ThemeEditorial({ data, photoUrl }: ActivityCardProps) {
   }
 
   const morningWord = MORNING_WORDS[data.date.length % MORNING_WORDS.length];
+  const friendlyDate = formatDate(data.date);
 
   return (
     <div
@@ -114,7 +123,7 @@ export function ThemeEditorial({ data, photoUrl }: ActivityCardProps) {
           }}
         >
           <span>EFFORT · ISSUE №{issueNum}</span>
-          <span>{data.date.toUpperCase()}</span>
+          <span>{formatDateUpper(data.date)}</span>
         </div>
 
         {/* Massive distance numeral as the visual anchor */}
@@ -179,7 +188,7 @@ export function ThemeEditorial({ data, photoUrl }: ActivityCardProps) {
                 textWrap: "pretty",
               }}
             >
-              {data.ride_name}.
+              {data.title}.
             </h2>
             <div
               style={{
@@ -237,7 +246,7 @@ export function ThemeEditorial({ data, photoUrl }: ActivityCardProps) {
                   ))
                 ) : (
                   <path
-                    d={routePath(data.route_coordinates, 280, 200, 16)}
+                    d={routePath(data.routeCoordinates, 280, 200, 16)}
                     fill="none"
                     stroke={ACCENT}
                     strokeLinecap="round"
@@ -261,29 +270,40 @@ export function ThemeEditorial({ data, photoUrl }: ActivityCardProps) {
               >
                 THE FIGURES
               </div>
-              <Row k="Date" v={data.date} />
+              <Row k="Date" v={friendlyDate} />
               <Row k="Place" v={data.location} />
-              <Row k="Time" v={data.duration} />
+              <Row k="Time" v={formatDuration(data.durationSec)} />
               {sport === "ride" && (
-                <Row k="Elevation" v={`${data.elevation_gain_m ?? "—"} m`} />
+                <Row
+                  k="Elevation"
+                  v={`${formatNumber(data.elevationGainM)} m`}
+                />
               )}
               {sport === "ride" && (
-                <Row k="Speed" v={`${data.avg_speed_kmh ?? "—"} km/h`} />
+                <Row
+                  k="Speed"
+                  v={`${formatNumber(data.avgSpeedKmh, 1)} km/h`}
+                />
               )}
               {sport === "run" && (
-                <Row k="Pace" v={`${data.avg_pace_min_per_km ?? "—"} /km`} />
+                <Row
+                  k="Pace"
+                  v={`${formatPaceMin(data.avgPaceMinPerKm)} /km`}
+                />
               )}
               {sport === "run" && (
-                <Row k="Cadence" v={`${data.avg_cadence ?? "—"} spm`} />
+                <Row k="Cadence" v={`${formatNumber(data.avgCadence)} spm`} />
               )}
               {sport === "swim" && (
-                <Row k="/100 m" v={data.avg_pace_per_100m ?? "—"} />
+                <Row k="/100 m" v={formatPaceSec(data.avgPacePer100m)} />
               )}
-              {sport === "swim" && <Row k="SWOLF" v={data.swolf ?? "—"} />}
-              {data.avg_heart_rate && (
-                <Row k="Heart" v={`${data.avg_heart_rate} bpm`} />
+              {sport === "swim" && (
+                <Row k="SWOLF" v={formatNumber(data.swolf)} />
               )}
-              {data.athlete_name && <Row k="By" v={data.athlete_name} />}
+              {data.avgHeartRate && (
+                <Row k="Heart" v={`${data.avgHeartRate} bpm`} />
+              )}
+              {data.athleteName && <Row k="By" v={data.athleteName} />}
             </div>
           </div>
         </div>

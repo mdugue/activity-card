@@ -1,21 +1,10 @@
-import type { ComponentProps } from "react";
 import type { ActivityData } from "@/components/app/sample-data";
+import { THEME_META, THEMES, type ThemeId } from "@/components/themes";
 import { type AltitudeMood, ThemeAltitude } from "@/components/themes/altitude";
-import { ThemeData } from "@/components/themes/data";
-import { ThemeEditorial } from "@/components/themes/editorial";
-import { THEME_META } from "@/components/themes/index";
-import { ThemePath } from "@/components/themes/path";
 import { ThemePhoto } from "@/components/themes/photo";
-import { ThemeTriathlon } from "@/components/themes/triathlon";
 import type { PaletteTheme } from "@/lib/palette";
 
-export type ThemeId =
-  | "path"
-  | "altitude"
-  | "photo"
-  | "data"
-  | "editorial"
-  | "triathlon";
+export type { ThemeId } from "@/components/themes";
 
 interface RenderThemeProps {
   altitudeMood?: AltitudeMood;
@@ -56,7 +45,7 @@ export function RenderTheme({
   data,
   photoUrl,
   photoBackdropEnabled = true,
-  altitudeMood = "night",
+  altitudeMood,
   photoPaletteTheme = null,
 }: RenderThemeProps) {
   const photo = effectivePhotoUrl(theme, photoUrl, photoBackdropEnabled);
@@ -72,17 +61,6 @@ export function RenderTheme({
       />
     );
   }
-  if (theme === "data") {
-    return <ThemeData data={data} photoUrl={photo} />;
-  }
-  if (theme === "editorial") {
-    return <ThemeEditorial data={data} photoUrl={photo} />;
-  }
-  if (theme === "triathlon") {
-    return <ThemeTriathlon data={data} photoUrl={photo} />;
-  }
-  return <ThemePath data={data} photoUrl={photo} />;
+  const Theme = THEMES[theme];
+  return <Theme data={data} photoUrl={photo} />;
 }
-
-// Keep the ActivityCardProps shape inferable from any theme component.
-export type ThemeProps = ComponentProps<typeof ThemePath>;

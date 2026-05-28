@@ -10,6 +10,14 @@ import {
   pacePath,
   routePath,
 } from "@/lib/chart-helpers";
+import {
+  formatClock,
+  formatDateUpper,
+  formatDuration,
+  formatNumber,
+  formatPaceMin,
+  formatPaceSec,
+} from "@/lib/format";
 import type { ActivityCardProps } from "./types";
 
 const INK = "#0e0e0e";
@@ -93,30 +101,66 @@ export function ThemeData({ data }: ActivityCardProps) {
   if (sport === "ride") {
     cells = (
       <>
-        <Cell label="Distance" unit="km" value={data.distance_km.toFixed(1)} />
-        <Cell label="Time" value={data.duration} />
-        <Cell label="Elevation" unit="m" value={data.elevation_gain_m ?? "—"} />
-        <Cell label="Avg" unit="km/h" value={data.avg_speed_kmh ?? "—"} />
+        <Cell label="Distance" unit="km" value={data.distanceKm.toFixed(1)} />
+        <Cell label="Time" value={formatDuration(data.durationSec)} />
+        <Cell
+          label="Elevation"
+          unit="m"
+          value={formatNumber(data.elevationGainM)}
+        />
+        <Cell
+          label="Avg"
+          unit="km/h"
+          value={formatNumber(data.avgSpeedKmh, 1)}
+        />
         <Cell
           label="Norm Power"
           unit="W"
-          value={data.normalized_power_w ?? "—"}
+          value={formatNumber(data.normalizedPowerW)}
         />
-        <Cell label="VAM" unit="m/h" value={data.vam_mph ?? "—"} />
-        <Cell label="Max Speed" unit="km/h" value={data.max_speed_kmh ?? "—"} />
-        <Cell label="Avg HR" unit="bpm" value={data.avg_heart_rate ?? "—"} />
-        <Cell label="Cadence" unit="rpm" value={data.avg_cadence ?? "—"} />
+        <Cell label="VAM" unit="m/h" value={formatNumber(data.vamMph)} />
+        <Cell
+          label="Max Speed"
+          unit="km/h"
+          value={formatNumber(data.maxSpeedKmh, 1)}
+        />
+        <Cell
+          label="Avg HR"
+          unit="bpm"
+          value={formatNumber(data.avgHeartRate)}
+        />
+        <Cell
+          label="Cadence"
+          unit="rpm"
+          value={formatNumber(data.avgCadence)}
+        />
       </>
     );
   } else if (sport === "run") {
     cells = (
       <>
-        <Cell label="Distance" unit="km" value={data.distance_km.toFixed(1)} />
-        <Cell label="Time" value={data.duration} />
-        <Cell label="Pace" unit="/km" value={data.avg_pace_min_per_km ?? "—"} />
-        <Cell label="Elevation" unit="m" value={data.elevation_gain_m ?? "—"} />
-        <Cell label="Avg HR" unit="bpm" value={data.avg_heart_rate ?? "—"} />
-        <Cell label="Cadence" unit="spm" value={data.avg_cadence ?? "—"} />
+        <Cell label="Distance" unit="km" value={data.distanceKm.toFixed(1)} />
+        <Cell label="Time" value={formatDuration(data.durationSec)} />
+        <Cell
+          label="Pace"
+          unit="/km"
+          value={formatPaceMin(data.avgPaceMinPerKm)}
+        />
+        <Cell
+          label="Elevation"
+          unit="m"
+          value={formatNumber(data.elevationGainM)}
+        />
+        <Cell
+          label="Avg HR"
+          unit="bpm"
+          value={formatNumber(data.avgHeartRate)}
+        />
+        <Cell
+          label="Cadence"
+          unit="spm"
+          value={formatNumber(data.avgCadence)}
+        />
       </>
     );
   } else if (sport === "swim") {
@@ -125,13 +169,17 @@ export function ThemeData({ data }: ActivityCardProps) {
         <Cell
           label="Distance"
           unit="m"
-          value={(data.distance_km * 1000).toFixed(0)}
+          value={(data.distanceKm * 1000).toFixed(0)}
         />
-        <Cell label="Time" value={data.duration} />
-        <Cell label="/100 m" value={data.avg_pace_per_100m ?? "—"} />
-        <Cell label="SWOLF" value={data.swolf ?? "—"} />
-        <Cell label="Strokes/L" value={data.stroke_count_avg ?? "—"} />
-        <Cell label="Avg HR" unit="bpm" value={data.avg_heart_rate ?? "—"} />
+        <Cell label="Time" value={formatDuration(data.durationSec)} />
+        <Cell label="/100 m" value={formatPaceSec(data.avgPacePer100m)} />
+        <Cell label="SWOLF" value={formatNumber(data.swolf)} />
+        <Cell label="Strokes/L" value={formatNumber(data.strokeCountAvg)} />
+        <Cell
+          label="Avg HR"
+          unit="bpm"
+          value={formatNumber(data.avgHeartRate)}
+        />
       </>
     );
   }
@@ -153,7 +201,7 @@ export function ThemeData({ data }: ActivityCardProps) {
   })();
 
   let chartLabel = "ELEVATION (m)";
-  if (sport === "run" && data.pace_profile) {
+  if (sport === "run" && data.paceProfile) {
     chartLabel = "PACE (s/km)";
   } else if (sport === "swim") {
     chartLabel = "LAP PACE (s/100m)";
@@ -167,10 +215,10 @@ export function ThemeData({ data }: ActivityCardProps) {
   }
 
   let zones = DEFAULT_ZONES;
-  if (sport === "ride" && data.power_zones) {
-    zones = data.power_zones;
-  } else if (sport === "run" && data.hr_zones) {
-    zones = data.hr_zones;
+  if (sport === "ride" && data.powerZones) {
+    zones = data.powerZones;
+  } else if (sport === "run" && data.hrZones) {
+    zones = data.hrZones;
   }
 
   return (
@@ -188,7 +236,6 @@ export function ThemeData({ data }: ActivityCardProps) {
         flexDirection: "column",
       }}
     >
-      {/* Header — newspaper-like nameplate */}
       <div
         style={{
           display: "flex",
@@ -217,7 +264,7 @@ export function ThemeData({ data }: ActivityCardProps) {
               textWrap: "pretty",
             }}
           >
-            {data.ride_name}
+            {data.title}
           </h1>
         </div>
         <div
@@ -231,19 +278,18 @@ export function ThemeData({ data }: ActivityCardProps) {
             marginLeft: 24,
           }}
         >
-          <div>{data.date.toUpperCase()}</div>
+          <div>{formatDateUpper(data.date)}</div>
           <div style={{ opacity: 0.7 }}>
             {data.location.split(",")[0].toUpperCase()}
           </div>
-          {data.athlete_name && (
+          {data.athleteName && (
             <div style={{ marginTop: 8 }}>
-              ATH · {data.athlete_name.toUpperCase()}
+              ATH · {data.athleteName.toUpperCase()}
             </div>
           )}
         </div>
       </div>
 
-      {/* Map + Elevation strip */}
       <div
         style={{
           display: "grid",
@@ -313,7 +359,7 @@ export function ThemeData({ data }: ActivityCardProps) {
               </g>
             ) : (
               <path
-                d={routePath(data.route_coordinates, 460, 200, 14)}
+                d={routePath(data.routeCoordinates, 460, 200, 14)}
                 fill="none"
                 stroke={INK}
                 strokeLinejoin="round"
@@ -356,9 +402,9 @@ export function ThemeData({ data }: ActivityCardProps) {
                 y2={i * 50}
               />
             ))}
-            {sport === "run" && data.pace_profile && (
+            {sport === "run" && data.paceProfile && (
               <path
-                d={pacePath(data.pace_profile, 460, 200, 8, true)}
+                d={pacePath(data.paceProfile, 460, 200, 8, true)}
                 fill={ACCENT}
                 fillOpacity={0.22}
                 stroke={ACCENT}
@@ -367,7 +413,7 @@ export function ThemeData({ data }: ActivityCardProps) {
             )}
             {sport === "swim" &&
               (() => {
-                const bars = data.lap_paces_per_100m || [];
+                const bars = data.lapPacesPer100m || [];
                 if (bars.length === 0) {
                   return null;
                 }
@@ -390,27 +436,24 @@ export function ThemeData({ data }: ActivityCardProps) {
                   );
                 });
               })()}
-            {sport !== "run" && sport !== "swim" && data.elevation_profile && (
+            {sport !== "run" && sport !== "swim" && data.elevationProfile && (
               <path
-                d={elevationPath(data.elevation_profile, 460, 200, 8, true)}
+                d={elevationPath(data.elevationProfile, 460, 200, 8, true)}
                 fill={INK}
                 fillOpacity={0.85}
               />
             )}
-            {sport === "run" &&
-              !data.pace_profile &&
-              data.elevation_profile && (
-                <path
-                  d={elevationPath(data.elevation_profile, 460, 200, 8, true)}
-                  fill={INK}
-                  fillOpacity={0.85}
-                />
-              )}
+            {sport === "run" && !data.paceProfile && data.elevationProfile && (
+              <path
+                d={elevationPath(data.elevationProfile, 460, 200, 8, true)}
+                fill={INK}
+                fillOpacity={0.85}
+              />
+            )}
           </svg>
         </div>
       </div>
 
-      {/* Stat grid */}
       <div
         style={{
           display: "grid",
@@ -422,7 +465,6 @@ export function ThemeData({ data }: ActivityCardProps) {
         {cells}
       </div>
 
-      {/* Bottom: zone histogram + splits */}
       <div
         style={{
           display: "grid",
@@ -530,7 +572,7 @@ export function ThemeData({ data }: ActivityCardProps) {
           >
             {splitSample.slice(0, 6).map((s, i) => (
               <div
-                key={`split-${i}-${s.time}`}
+                key={`split-${i}-${s.durationSec}`}
                 style={{ borderTop: `2px solid ${INK}`, paddingTop: 8 }}
               >
                 <div
@@ -552,9 +594,9 @@ export function ThemeData({ data }: ActivityCardProps) {
                     marginTop: 4,
                   }}
                 >
-                  {s.time}
+                  {formatClock(s.durationSec)}
                 </div>
-                {s.avg_kmh && (
+                {s.avgSpeedKmh && (
                   <div
                     style={{
                       opacity: 0.65,
@@ -563,7 +605,7 @@ export function ThemeData({ data }: ActivityCardProps) {
                       fontWeight: 500,
                     }}
                   >
-                    {s.avg_kmh} km/h
+                    {s.avgSpeedKmh.toFixed(1)} km/h
                   </div>
                 )}
               </div>
@@ -572,7 +614,6 @@ export function ThemeData({ data }: ActivityCardProps) {
         </div>
       </div>
 
-      {/* serial bottom strip */}
       <div
         style={{
           marginTop: 20,

@@ -4,6 +4,14 @@
 
 import type { TriSegment } from "@/components/app/sample-data";
 import { elevationPath, routePath } from "@/lib/chart-helpers";
+import {
+  formatClock,
+  formatDateUpper,
+  formatDuration,
+  formatNumber,
+  formatPaceMin,
+  formatPaceSec,
+} from "@/lib/format";
 import type { ActivityCardProps } from "./types";
 
 const INK = "#11151a";
@@ -66,38 +74,12 @@ function labelFor(s: TriSport): string {
 
 function heroFor(seg: TriSegment): string {
   if (seg.sport === "swim") {
-    return `${seg.avg_pace_per_100m ?? "—"} /100m`;
+    return `${formatPaceSec(seg.avgPacePer100m)} /100m`;
   }
   if (seg.sport === "bike") {
-    return `${seg.avg_speed_kmh ?? "—"} km/h`;
+    return `${formatNumber(seg.avgSpeedKmh, 1)} km/h`;
   }
-  return `${seg.avg_pace_min_per_km ?? "—"} /km`;
-}
-
-const RE_HM = /(\d+)h\s*(\d+)m/;
-const RE_HMS = /^(\d+):(\d+):(\d+)$/;
-const RE_MS = /(\d+)m\s*(\d+)s/;
-const RE_MMSS = /^(\d+):(\d+)$/;
-
-// Parse a duration string like "1h 32m", "34:12", "2:14", "47m 12s" → seconds.
-function parseDuration(s: string): number {
-  const hm = s.match(RE_HM);
-  if (hm) {
-    return +hm[1] * 3600 + +hm[2] * 60;
-  }
-  const hms = s.match(RE_HMS);
-  if (hms) {
-    return +hms[1] * 3600 + +hms[2] * 60 + +hms[3];
-  }
-  const ms = s.match(RE_MS);
-  if (ms) {
-    return +ms[1] * 60 + +ms[2];
-  }
-  const mmss = s.match(RE_MMSS);
-  if (mmss) {
-    return +mmss[1] * 60 + +mmss[2];
-  }
-  return 60;
+  return `${formatPaceMin(seg.avgPaceMinPerKm)} /km`;
 }
 
 export function ThemeTriathlon({ data }: ActivityCardProps) {
@@ -152,10 +134,10 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
     );
   }
 
-  // Build alternating segments + transitions
+  // Alternating segments + transitions, widths proportional to duration.
   type TimelineItem =
     | { kind: "seg"; seg: TriSegment }
-    | { kind: "t"; t: { duration: string; name: string } };
+    | { kind: "t"; t: { name: string; durationSec: number } };
 
   const items: TimelineItem[] = [];
   sports.forEach((seg, i) => {
@@ -165,9 +147,7 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
     }
   });
   const totals = items.map((it) =>
-    it.kind === "seg"
-      ? parseDuration(it.seg.duration)
-      : parseDuration(it.t.duration)
+    it.kind === "seg" ? it.seg.durationSec : it.t.durationSec
   );
   const sum = totals.reduce((a, b) => a + b, 0) || 1;
 
@@ -186,7 +166,6 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
         flexDirection: "column",
       }}
     >
-      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -219,7 +198,7 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
               textWrap: "pretty",
             }}
           >
-            {data.ride_name}
+            {data.title}
           </h1>
         </div>
         <div
@@ -231,7 +210,7 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
             fontWeight: 600,
           }}
         >
-          <div>{data.date.toUpperCase()}</div>
+          <div>{formatDateUpper(data.date)}</div>
           <div style={{ opacity: 0.7 }}>{data.location.toUpperCase()}</div>
           <div
             style={{
@@ -242,12 +221,11 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
               letterSpacing: "-0.01em",
             }}
           >
-            {data.duration}
+            {formatDuration(data.durationSec)}
           </div>
         </div>
       </div>
 
-      {/* Timing strip */}
       <div style={{ marginTop: 22, marginBottom: 22 }}>
         <div
           style={{
@@ -273,8 +251,8 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
             const isSeg = it.kind === "seg";
             const bg = isSeg ? accentFor(it.seg.sport) : "#11151a";
             const label = isSeg
-              ? `${labelFor(it.seg.sport)} · ${it.seg.duration}`
-              : `${it.t.name} ${it.t.duration}`;
+              ? `${labelFor(it.seg.sport)} · ${formatClock(it.seg.durationSec)}`
+              : `${it.t.name} ${formatClock(it.t.durationSec)}`;
             return (
               <div
                 key={`tl-${i}-${label}`}
@@ -301,7 +279,6 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
         </div>
       </div>
 
-      {/* Three sport panels stacked */}
       <div
         style={{
           flex: 1,
@@ -328,7 +305,6 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
                 alignItems: "stretch",
               }}
             >
-              {/* Number tab */}
               <div
                 style={{
                   position: "absolute",
@@ -350,7 +326,6 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
                 0{idx + 1}
               </div>
 
-              {/* Label + distance */}
               <div
                 style={{
                   paddingTop: 38,
@@ -380,7 +355,7 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
                       marginTop: 10,
                     }}
                   >
-                    {seg.distance_km}
+                    {seg.distanceKm}
                     <span
                       style={{
                         fontSize: 30,
@@ -400,7 +375,7 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
                       fontWeight: 600,
                     }}
                   >
-                    {seg.duration}
+                    {formatClock(seg.durationSec)}
                   </div>
                 </div>
                 <div
@@ -415,7 +390,6 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
                 </div>
               </div>
 
-              {/* Route / profile */}
               <div style={{ minWidth: 0 }}>
                 <svg
                   aria-hidden="true"
@@ -424,11 +398,11 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
                   viewBox="0 0 360 160"
                 >
                   <title>{labelFor(seg.sport)} trace</title>
-                  {seg.sport === "bike" && seg.elevation_profile && (
+                  {seg.sport === "bike" && seg.elevationProfile && (
                     <>
                       <path
                         d={elevationPath(
-                          seg.elevation_profile,
+                          seg.elevationProfile,
                           360,
                           160,
                           0,
@@ -438,7 +412,7 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
                         fillOpacity={0.85}
                       />
                       <path
-                        d={elevationPath(seg.elevation_profile, 360, 160, 0)}
+                        d={elevationPath(seg.elevationProfile, 360, 160, 0)}
                         fill="none"
                         stroke={INK}
                         strokeWidth={1}
@@ -461,16 +435,16 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
                   )}
                   {seg.sport === "run" && (
                     <path
-                      d={routePath(seg.route_coordinates, 360, 160, 8)}
+                      d={routePath(seg.routeCoordinates, 360, 160, 8)}
                       fill="none"
                       stroke={accent}
                       strokeLinejoin="round"
                       strokeWidth={2.5}
                     />
                   )}
-                  {seg.sport === "bike" && !seg.elevation_profile && (
+                  {seg.sport === "bike" && !seg.elevationProfile && (
                     <path
-                      d={routePath(seg.route_coordinates, 360, 160, 8)}
+                      d={routePath(seg.routeCoordinates, 360, 160, 8)}
                       fill="none"
                       stroke={accent}
                       strokeLinejoin="round"
@@ -480,7 +454,6 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
                 </svg>
               </div>
 
-              {/* Extra stat */}
               <div
                 style={{
                   borderLeft: "1px solid rgba(17,21,26,0.2)",
@@ -493,13 +466,16 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
               >
                 {seg.sport === "bike" && (
                   <>
-                    <Stat label="ELEV" v={`${seg.elevation_gain_m ?? 0} m`} />
-                    <Stat label="AVG" v={`${seg.avg_speed_kmh ?? "—"} km/h`} />
+                    <Stat label="ELEV" v={`${seg.elevationGainM ?? 0} m`} />
+                    <Stat
+                      label="AVG"
+                      v={`${formatNumber(seg.avgSpeedKmh, 1)} km/h`}
+                    />
                   </>
                 )}
                 {seg.sport === "swim" && (
                   <>
-                    <Stat label="/100m" v={seg.avg_pace_per_100m ?? "—"} />
+                    <Stat label="/100m" v={formatPaceSec(seg.avgPacePer100m)} />
                     <Stat label="STROKE" v="freestyle" />
                   </>
                 )}
@@ -507,14 +483,13 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
                   <>
                     <Stat
                       label="PACE"
-                      v={`${seg.avg_pace_min_per_km ?? "—"} /km`}
+                      v={`${formatPaceMin(seg.avgPaceMinPerKm)} /km`}
                     />
-                    <Stat label="ELEV" v={`${seg.elevation_gain_m ?? 0} m`} />
+                    <Stat label="ELEV" v={`${seg.elevationGainM ?? 0} m`} />
                   </>
                 )}
               </div>
 
-              {/* T marker between sports */}
               {idx < sports.length - 1 && transitions[idx] && (
                 <div
                   style={{
@@ -530,7 +505,8 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
                     zIndex: 2,
                   }}
                 >
-                  {transitions[idx].name} → {transitions[idx].duration}
+                  {transitions[idx].name} →{" "}
+                  {formatClock(transitions[idx].durationSec)}
                 </div>
               )}
             </div>
@@ -538,7 +514,6 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
         })}
       </div>
 
-      {/* Foot */}
       <div
         style={{
           marginTop: 22,
@@ -553,7 +528,7 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
         }}
       >
         <span>EFFORT · TRIATHLON CARD</span>
-        <span>{data.athlete_name ? data.athlete_name.toUpperCase() : "—"}</span>
+        <span>{data.athleteName ? data.athleteName.toUpperCase() : "—"}</span>
       </div>
     </div>
   );

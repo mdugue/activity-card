@@ -3,6 +3,13 @@
 // Parameterized by `mood`: night | dawn | day | heat | rain | snow
 
 import { elevationPath, pacePath } from "@/lib/chart-helpers";
+import {
+  formatDateUpper,
+  formatDuration,
+  formatNumber,
+  formatPaceMin,
+  formatPaceSec,
+} from "@/lib/format";
 import { PhotoBackdrop } from "./photo-backdrop";
 import type { ActivityCardProps } from "./types";
 
@@ -206,51 +213,50 @@ export function ThemeAltitude({
   const M = ALTITUDE_MOODS[mood] || ALTITUDE_MOODS.night;
   const sport = data.sport;
 
-  const usePace = sport === "run" && data.pace_profile;
+  const usePace = sport === "run" && data.paceProfile;
   const useLapBars = sport === "swim";
-  const useElev = !(usePace || useLapBars) && data.elevation_profile;
+  const useElev = !(usePace || useLapBars) && data.elevationProfile;
 
   let statRow: StatTuple[];
   if (sport === "ride") {
     statRow = [
-      ["DST", data.distance_km.toFixed(1), "km"],
-      ["ELEV", data.elevation_gain_m ?? "—", "m"],
-      ["VAM", data.vam_mph || "—", "m/h"],
-      ["AVG", data.avg_speed_kmh ?? "—", "km/h"],
+      ["DST", data.distanceKm.toFixed(1), "km"],
+      ["ELEV", formatNumber(data.elevationGainM), "m"],
+      ["VAM", formatNumber(data.vamMph), "m/h"],
+      ["AVG", formatNumber(data.avgSpeedKmh, 1), "km/h"],
     ];
   } else if (sport === "run") {
     statRow = [
-      ["DST", data.distance_km.toFixed(1), "km"],
-      ["TIME", data.duration, ""],
-      ["PACE", data.avg_pace_min_per_km ?? "—", "/km"],
-      ["HR", data.avg_heart_rate ?? "—", "bpm"],
+      ["DST", data.distanceKm.toFixed(1), "km"],
+      ["TIME", formatDuration(data.durationSec), ""],
+      ["PACE", formatPaceMin(data.avgPaceMinPerKm), "/km"],
+      ["HR", formatNumber(data.avgHeartRate), "bpm"],
     ];
   } else if (sport === "swim") {
     statRow = [
-      ["DST", (data.distance_km * 1000).toFixed(0), "m"],
-      ["TIME", data.duration, ""],
-      ["/100", data.avg_pace_per_100m ?? "—", ""],
-      ["SWOLF", data.swolf ?? "—", ""],
+      ["DST", (data.distanceKm * 1000).toFixed(0), "m"],
+      ["TIME", formatDuration(data.durationSec), ""],
+      ["/100", formatPaceSec(data.avgPacePer100m), ""],
+      ["SWOLF", formatNumber(data.swolf), ""],
     ];
   } else {
     statRow = [
-      ["DST", data.distance_km, "km"],
-      ["TIME", data.duration, ""],
-      ["ELEV", data.elevation_gain_m ?? "—", "m"],
-      ["HR", data.avg_heart_rate ?? "—", "bpm"],
+      ["DST", data.distanceKm.toFixed(1), "km"],
+      ["TIME", formatDuration(data.durationSec), ""],
+      ["ELEV", formatNumber(data.elevationGainM), "m"],
+      ["HR", formatNumber(data.avgHeartRate), "bpm"],
     ];
   }
 
   const peakInfo =
-    useElev && data.elevation_profile
+    useElev && data.elevationProfile
       ? (() => {
-          const max = Math.max(...data.elevation_profile);
-          const min = Math.min(...data.elevation_profile);
+          const max = Math.max(...data.elevationProfile);
+          const min = Math.min(...data.elevationProfile);
           return { max, min };
         })()
       : null;
 
-  // unique gradient id per mood to avoid collisions between multiple instances on the same page
   const gid = `alt-${mood}`;
   const statText = M.inkOnStat ? M.text : "#fff";
 
@@ -280,7 +286,6 @@ export function ThemeAltitude({
       {photoUrl ? (
         <PhotoBackdrop photoUrl={photoUrl} treatment="altitude" />
       ) : null}
-      {/* Disk — sun / moon / cloud */}
       <div
         style={{
           position: "absolute",
@@ -294,7 +299,6 @@ export function ThemeAltitude({
         }}
       />
 
-      {/* Extras: stars / haze / snow / rain / clouds */}
       {M.extras === "stars" && (
         <svg
           aria-hidden="true"
@@ -454,7 +458,7 @@ export function ThemeAltitude({
             fontWeight: 500,
           }}
         >
-          {data.date.toUpperCase()}
+          {formatDateUpper(data.date)}
         </div>
         <h1
           style={{
@@ -467,7 +471,7 @@ export function ThemeAltitude({
             maxWidth: "88%",
           }}
         >
-          {data.ride_name}
+          {data.title}
         </h1>
         <div
           style={{
@@ -513,11 +517,11 @@ export function ThemeAltitude({
               <stop offset="100%" stopColor={M.paceFill} stopOpacity="0" />
             </linearGradient>
           </defs>
-          {useElev && data.elevation_profile && (
+          {useElev && data.elevationProfile && (
             <>
               <path
                 d={`${elevationPath(
-                  data.elevation_profile
+                  data.elevationProfile
                     .filter((_, i) => i % 3 === 0)
                     .map((v) => v * 0.6),
                   1080,
@@ -530,7 +534,7 @@ export function ThemeAltitude({
               />
               <path
                 d={`${elevationPath(
-                  data.elevation_profile
+                  data.elevationProfile
                     .filter((_, i) => i % 2 === 0)
                     .map((v) => v * 0.8),
                   1080,
@@ -542,21 +546,21 @@ export function ThemeAltitude({
                 transform="translate(0, 260)"
               />
               <path
-                d={`${elevationPath(data.elevation_profile, 1080, 540, 0, true)} Z`}
+                d={`${elevationPath(data.elevationProfile, 1080, 540, 0, true)} Z`}
                 fill={`url(#${gid}-front)`}
                 transform="translate(0, 160)"
               />
             </>
           )}
-          {usePace && data.pace_profile && (
+          {usePace && data.paceProfile && (
             <>
               <path
-                d={pacePath(data.pace_profile, 1080, 480, 40, true)}
+                d={pacePath(data.paceProfile, 1080, 480, 40, true)}
                 fill={`url(#${gid}-pace)`}
                 transform="translate(0, 180)"
               />
               <path
-                d={pacePath(data.pace_profile, 1080, 480, 40)}
+                d={pacePath(data.paceProfile, 1080, 480, 40)}
                 fill="none"
                 stroke={M.paceStroke}
                 strokeWidth={3}
@@ -566,7 +570,7 @@ export function ThemeAltitude({
           )}
           {useLapBars &&
             (() => {
-              const bars = data.lap_paces_per_100m || [];
+              const bars = data.lapPacesPer100m || [];
               if (bars.length === 0) {
                 return null;
               }
@@ -592,7 +596,6 @@ export function ThemeAltitude({
             })()}
         </svg>
 
-        {/* peak callout */}
         {useElev && peakInfo && (
           <div
             style={{
