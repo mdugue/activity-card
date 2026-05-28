@@ -3,9 +3,10 @@
 // Palette: warm off-white paper, deep ink, single rust accent
 
 import { abstractLanes, routePath } from "@/lib/chart-helpers";
+import { PhotoBackdrop } from "./photo-backdrop";
 import type { ActivityCardProps } from "./types";
 
-export function ThemePath({ data }: ActivityCardProps) {
+export function ThemePath({ data, photoUrl }: ActivityCardProps) {
   const isPool = data.sport === "swim";
   const sport = data.sport;
 
@@ -60,172 +61,191 @@ export function ThemePath({ data }: ActivityCardProps) {
         boxSizing: "border-box",
         display: "flex",
         flexDirection: "column",
+        overflow: "hidden",
       }}
     >
-      {/* Top meta band */}
+      {photoUrl ? <PhotoBackdrop photoUrl={photoUrl} treatment="path" /> : null}
+      {/* Content sits above the backdrop layer. */}
       <div
         style={{
+          position: "relative",
+          zIndex: 1,
           display: "flex",
-          justifyContent: "space-between",
-          alignItems: "baseline",
-          letterSpacing: "0.28em",
-          fontSize: 24,
-          fontWeight: 600,
+          flexDirection: "column",
+          flex: 1,
         }}
       >
-        <span>{sportLabel}</span>
-        <span style={{ opacity: 0.55 }}>{data.date.toUpperCase()}</span>
-      </div>
-      <div
-        style={{
-          height: 1,
-          background: "#1a1714",
-          opacity: 0.35,
-          margin: "24px 0 0 0",
-        }}
-      />
-
-      {/* Title */}
-      <div style={{ marginTop: 38, marginBottom: 24 }}>
-        <h1
-          style={{
-            fontFamily: "var(--font-cormorant), serif",
-            fontWeight: 400,
-            fontStyle: "italic",
-            fontSize: 76,
-            lineHeight: 0.95,
-            letterSpacing: "-0.01em",
-            margin: 0,
-            textWrap: "pretty",
-            maxWidth: "90%",
-          }}
-        >
-          {data.ride_name}
-        </h1>
+        {/* Top meta band */}
         <div
           style={{
-            marginTop: 18,
-            fontSize: 26,
-            letterSpacing: "0.18em",
-            opacity: 0.62,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            letterSpacing: "0.28em",
+            fontSize: 24,
+            fontWeight: 600,
           }}
         >
-          {data.location.toUpperCase()}
+          <span>{sportLabel}</span>
+          <span style={{ opacity: 0.55 }}>{data.date.toUpperCase()}</span>
         </div>
-      </div>
-
-      {/* Route — the hero */}
-      <div
-        style={{
-          flex: 1,
-          position: "relative",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <svg
-          aria-hidden="true"
-          style={{ width: "100%", height: "100%" }}
-          viewBox="0 0 900 720"
-        >
-          <title>Route silhouette</title>
-          {/* faint paper-grain rings */}
-          <defs>
-            <radialGradient cx="50%" cy="50%" id="path-grain" r="60%">
-              <stop offset="0%" stopColor="#c45a2c" stopOpacity="0.05" />
-              <stop offset="100%" stopColor="#c45a2c" stopOpacity="0" />
-            </radialGradient>
-          </defs>
-          <rect fill="url(#path-grain)" height="720" width="900" x="0" y="0" />
-          {isPool ? (
-            <g>
-              {abstractLanes(900, 720, 6, 60).map((l, i) => (
-                <g key={`path-lane-${i}-${l.y}`}>
-                  <line
-                    stroke="#1a1714"
-                    strokeDasharray="4 14"
-                    strokeOpacity={0.15}
-                    strokeWidth={1}
-                    x1={l.x}
-                    x2={l.x + l.w}
-                    y1={l.y + l.h / 2}
-                    y2={l.y + l.h / 2}
-                  />
-                  <path
-                    d={`M${l.x} ${l.y + l.h / 2} Q${l.x + l.w / 4} ${l.y + l.h / 2 - 18}, ${l.x + l.w / 2} ${l.y + l.h / 2} T${l.x + l.w} ${l.y + l.h / 2}`}
-                    fill="none"
-                    stroke="#c45a2c"
-                    strokeOpacity={0.55 - i * 0.05}
-                    strokeWidth={2.5}
-                  />
-                </g>
-              ))}
-            </g>
-          ) : (
-            <PathRoute coords={data.route_coordinates} />
-          )}
-        </svg>
-      </div>
-
-      {/* Stats — quiet supporting characters */}
-      <div style={{ marginTop: 30 }}>
         <div
           style={{
             height: 1,
             background: "#1a1714",
             opacity: 0.35,
-            marginBottom: 22,
+            margin: "24px 0 0 0",
           }}
         />
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr",
-            gap: 24,
-          }}
-        >
-          {statTrio.map(([k, v]) => (
-            <div key={k}>
-              <div
-                style={{
-                  fontSize: 24,
-                  letterSpacing: "0.22em",
-                  opacity: 0.55,
-                  fontWeight: 600,
-                }}
-              >
-                {k}
-              </div>
-              <div
-                style={{
-                  fontFamily: "var(--font-cormorant), serif",
-                  fontSize: 60,
-                  fontWeight: 400,
-                  marginTop: 10,
-                  lineHeight: 1,
-                }}
-              >
-                {v}
-              </div>
-            </div>
-          ))}
+
+        {/* Title */}
+        <div style={{ marginTop: 38, marginBottom: 24 }}>
+          <h1
+            style={{
+              fontFamily: "var(--font-cormorant), serif",
+              fontWeight: 400,
+              fontStyle: "italic",
+              fontSize: 76,
+              lineHeight: 0.95,
+              letterSpacing: "-0.01em",
+              margin: 0,
+              textWrap: "pretty",
+              maxWidth: "90%",
+            }}
+          >
+            {data.ride_name}
+          </h1>
+          <div
+            style={{
+              marginTop: 18,
+              fontSize: 26,
+              letterSpacing: "0.18em",
+              opacity: 0.62,
+            }}
+          >
+            {data.location.toUpperCase()}
+          </div>
         </div>
+
+        {/* Route — the hero */}
         <div
           style={{
-            marginTop: 32,
+            flex: 1,
+            position: "relative",
             display: "flex",
-            justifyContent: "space-between",
-            fontSize: 24,
-            letterSpacing: "0.2em",
-            opacity: 0.55,
-            fontWeight: 600,
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
-          <span>№ 01 — EFFORT</span>
-          <span>
-            {data.athlete_name ? `— ${data.athlete_name.toUpperCase()}` : ""}
-          </span>
+          <svg
+            aria-hidden="true"
+            style={{ width: "100%", height: "100%" }}
+            viewBox="0 0 900 720"
+          >
+            <title>Route silhouette</title>
+            {/* faint paper-grain rings */}
+            <defs>
+              <radialGradient cx="50%" cy="50%" id="path-grain" r="60%">
+                <stop offset="0%" stopColor="#c45a2c" stopOpacity="0.05" />
+                <stop offset="100%" stopColor="#c45a2c" stopOpacity="0" />
+              </radialGradient>
+            </defs>
+            <rect
+              fill="url(#path-grain)"
+              height="720"
+              width="900"
+              x="0"
+              y="0"
+            />
+            {isPool ? (
+              <g>
+                {abstractLanes(900, 720, 6, 60).map((l, i) => (
+                  <g key={`path-lane-${i}-${l.y}`}>
+                    <line
+                      stroke="#1a1714"
+                      strokeDasharray="4 14"
+                      strokeOpacity={0.15}
+                      strokeWidth={1}
+                      x1={l.x}
+                      x2={l.x + l.w}
+                      y1={l.y + l.h / 2}
+                      y2={l.y + l.h / 2}
+                    />
+                    <path
+                      d={`M${l.x} ${l.y + l.h / 2} Q${l.x + l.w / 4} ${l.y + l.h / 2 - 18}, ${l.x + l.w / 2} ${l.y + l.h / 2} T${l.x + l.w} ${l.y + l.h / 2}`}
+                      fill="none"
+                      stroke="#c45a2c"
+                      strokeOpacity={0.55 - i * 0.05}
+                      strokeWidth={2.5}
+                    />
+                  </g>
+                ))}
+              </g>
+            ) : (
+              <PathRoute coords={data.route_coordinates} />
+            )}
+          </svg>
+        </div>
+
+        {/* Stats — quiet supporting characters */}
+        <div style={{ marginTop: 30 }}>
+          <div
+            style={{
+              height: 1,
+              background: "#1a1714",
+              opacity: 0.35,
+              marginBottom: 22,
+            }}
+          />
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr 1fr",
+              gap: 24,
+            }}
+          >
+            {statTrio.map(([k, v]) => (
+              <div key={k}>
+                <div
+                  style={{
+                    fontSize: 24,
+                    letterSpacing: "0.22em",
+                    opacity: 0.55,
+                    fontWeight: 600,
+                  }}
+                >
+                  {k}
+                </div>
+                <div
+                  style={{
+                    fontFamily: "var(--font-cormorant), serif",
+                    fontSize: 60,
+                    fontWeight: 400,
+                    marginTop: 10,
+                    lineHeight: 1,
+                  }}
+                >
+                  {v}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div
+            style={{
+              marginTop: 32,
+              display: "flex",
+              justifyContent: "space-between",
+              fontSize: 24,
+              letterSpacing: "0.2em",
+              opacity: 0.55,
+              fontWeight: 600,
+            }}
+          >
+            <span>№ 01 — EFFORT</span>
+            <span>
+              {data.athlete_name ? `— ${data.athlete_name.toUpperCase()}` : ""}
+            </span>
+          </div>
         </div>
       </div>
     </div>

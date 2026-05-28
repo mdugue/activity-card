@@ -1,0 +1,142 @@
+// Shared photo-backdrop layer used by "supports" themes so a user-uploaded
+// photo can enrich themes that otherwise wouldn't show it. Each treatment is
+// hand-tuned to protect that theme's specific text layout.
+//
+// Implementation notes:
+// - We use CSS background-image rather than <img>; this layer is purely
+//   decorative, has no semantic meaning, and avoids next/image complaints
+//   about blob URLs that the server-side optimiser can't process.
+// - Blur is applied via inline `filter`, not `backdrop-filter`. The latter is
+//   unreliable inside html-to-image's clone tree and broken in iOS Safari for
+//   our export path.
+
+export type BackdropTreatment = "path" | "altitude" | "editorial";
+
+interface PhotoBackdropProps {
+  photoUrl: string;
+  treatment: BackdropTreatment;
+}
+
+export function PhotoBackdrop({ photoUrl, treatment }: PhotoBackdropProps) {
+  if (treatment === "path") {
+    // Paper-tone overlay multiplies down the photo so the route ink stays the
+    // hero. 14px blur softens any detail the eye might catch.
+    return (
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          inset: 0,
+          zIndex: 0,
+          overflow: "hidden",
+          pointerEvents: "none",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            inset: -40,
+            backgroundImage: `url(${photoUrl})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            filter: "blur(14px) saturate(0.85)",
+            opacity: 0.55,
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "#f3ede2",
+            mixBlendMode: "multiply",
+            opacity: 0.7,
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "radial-gradient(ellipse at 50% 50%, rgba(243,237,226,0) 0%, rgba(243,237,226,0.55) 80%)",
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (treatment === "altitude") {
+    // Photo anchors the bottom band; the top of the canvas remains the mood
+    // sky. A horizontal scrim hands off cleanly between the two.
+    return (
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          inset: 0,
+          zIndex: 0,
+          overflow: "hidden",
+          pointerEvents: "none",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            left: -20,
+            right: -20,
+            bottom: -20,
+            height: "62%",
+            backgroundImage: `url(${photoUrl})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            filter: "blur(6px) saturate(0.9) brightness(0.85)",
+            opacity: 0.62,
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 38%, rgba(0,0,0,0.35) 100%)",
+          }}
+        />
+      </div>
+    );
+  }
+
+  // editorial: full image at low opacity behind dense type, with a strong
+  // vertical paper-scrim top and bottom so headlines and the footer remain
+  // legible on busy photos.
+  return (
+    <div
+      aria-hidden
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 0,
+        overflow: "hidden",
+        pointerEvents: "none",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          inset: -30,
+          backgroundImage: `url(${photoUrl})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          filter: "blur(10px) saturate(0.7) contrast(0.95)",
+          opacity: 0.22,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background:
+            "linear-gradient(180deg, #efe9dc 0%, rgba(239,233,220,0.6) 18%, rgba(239,233,220,0.45) 50%, rgba(239,233,220,0.7) 82%, #efe9dc 100%)",
+        }}
+      />
+    </div>
+  );
+}

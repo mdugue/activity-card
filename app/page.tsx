@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DownloadState } from "@/components/app/download-state";
 import { EditState } from "@/components/app/edit-state";
 import { EffortWordmark } from "@/components/app/effort-wordmark";
@@ -25,6 +25,7 @@ const STORAGE_KEY = "effort:ui:v1";
 
 interface PersistedUi {
   accent: string;
+  athleteName?: string;
   theme: ThemeId;
   visibility: Visibility;
 }
@@ -39,7 +40,10 @@ function sampleForTheme(theme: ThemeId): ActivityData {
   return SAMPLE_RIDE;
 }
 
-function adoptParsed(parsed: ParsedActivity): ActivityData {
+function adoptParsed(
+  parsed: ParsedActivity,
+  persistedAthleteName?: string
+): ActivityData {
   // Parsed files give us universals + whichever sport-specific stats we can
   // compute; merge over a sport-appropriate sample so themes that lean on
   // optional fields (splits, zones, segments) still have something to draw.
@@ -48,7 +52,8 @@ function adoptParsed(parsed: ParsedActivity): ActivityData {
     ...base,
     ...parsed,
     location: parsed.location || base.location,
-    athlete_name: parsed.athlete_name || base.athlete_name,
+    athlete_name:
+      parsed.athlete_name || persistedAthleteName || base.athlete_name,
   };
 }
 
@@ -81,8 +86,11 @@ export default function Home() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [accent, setAccent] = useState<string>("#c45a2c");
   const [visibility, setVisibility] = useState<Visibility>(DEFAULT_VISIBILITY);
+  // Held outside `data` so it survives between activities and can seed
+  // `adoptParsed` when the parsed file lacks an athlete name.
+  const persistedAthleteNameRef = useRef<string | undefined>(undefined);
 
-  // Restore UI prefs (theme, accent, visibility) on mount.
+  // Restore UI prefs (theme, accent, visibility, athleteName) on mount.
   // Hydrating from localStorage is a legitimate cold-start sync; the
   // setState-in-effect rule's "fix" (useSyncExternalStore + a custom write
   // path) buys nothing over this small, one-shot read.
@@ -98,21 +106,30 @@ export default function Home() {
     if (persisted.visibility) {
       setVisibility({ ...DEFAULT_VISIBILITY, ...persisted.visibility });
     }
+    if (persisted.athleteName) {
+      persistedAthleteNameRef.current = persisted.athleteName;
+    }
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
-  // Persist on change.
+  // Persist on change. Athlete name comes from `data` (which the user edits
+  // in-place), so it shares this effect rather than getting its own.
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
-    const payload: PersistedUi = { theme, accent, visibility };
+    const payload: PersistedUi = {
+      theme,
+      accent,
+      visibility,
+      athleteName: data?.athlete_name || persistedAthleteNameRef.current,
+    };
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch {
       // localStorage may be unavailable (private mode, quota); soft-fail.
     }
-  }, [theme, accent, visibility]);
+  }, [theme, accent, visibility, data?.athlete_name]);
 
   // Object URLs need cleanup or they leak into memory.
   useEffect(() => {
@@ -125,21 +142,41 @@ export default function Home() {
   const handleLoadSample = () => {
     // Pick a sample that matches the persisted theme so the user sees
     // something representative of what they last chose.
-    setData(sampleForTheme(theme));
+    const sample = sampleForTheme(theme);
+    const athleteName = persistedAthleteNameRef.current ?? sample.athlete_name;
+    setData({ ...sample, athlete_name: athleteName });
     setState("edit");
   };
 
   const handleFilesLoaded = (parts: ParsedActivity[]) => {
     if (parts.length === 1) {
-      setData(adoptParsed(parts[0]));
+      setData(adoptParsed(parts[0], persistedAthleteNameRef.current));
     } else {
-      setData(assembleTriathlon(parts));
+      const tri = assembleTriathlon(parts);
+      // Seed athlete name on assembled triathlons too, since assembleTriathlon
+      // pulls from the first parsed file which may be blank.
+      setData({
+        ...tri,
+        athlete_name:
+          tri.athlete_name ||
+          persistedAthleteNameRef.current ||
+          tri.athlete_name,
+      });
     }
     setState("edit");
   };
 
   const handleTitleChange = (title: string) => {
     setData((prev) => (prev ? { ...prev, ride_name: title } : prev));
+  };
+
+  const handleAthleteNameChange = (name: string) => {
+    persistedAthleteNameRef.current = name;
+    setData((prev) => (prev ? { ...prev, athlete_name: name } : prev));
+  };
+
+  const handleLocationChange = (location: string) => {
+    setData((prev) => (prev ? { ...prev, location } : prev));
   };
 
   const handlePhotoChange = (file: File | null) => {
@@ -179,12 +216,16 @@ export default function Home() {
           onLoadSample={handleLoadSample}
         />
       ) : null}
-      {state === "edit" && visibleData ? (
+      {state === "edit" && visibleData && data ? (
         <EditState
           accent={accent}
+          athleteName={data.athlete_name}
           data={visibleData}
+          location={data.location}
           onAccentChange={setAccent}
+          onAthleteNameChange={handleAthleteNameChange}
           onDownload={handleDownload}
+          onLocationChange={handleLocationChange}
           onPhotoChange={handlePhotoChange}
           onThemeChange={setTheme}
           onTitleChange={handleTitleChange}
