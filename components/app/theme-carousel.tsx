@@ -117,34 +117,43 @@ export function ThemeCarousel({
       </div>
       <Carousel
         className="-mx-6 w-auto md:-mx-10 lg:mx-0 lg:w-full"
-        opts={{ align: "center", loop: false, containScroll: false }}
+        opts={{ align: "center", loop: true, containScroll: false }}
         setApi={setApi}
       >
-        <CarouselContent className="-ml-4 py-10">
-          {THEME_ORDER.map((id) => (
-            <CarouselItem
-              className="flex basis-[78%] justify-center pl-4 sm:basis-[64%] lg:basis-[82%]"
-              key={id}
-            >
-              <div className="@container relative aspect-[1080/1350] w-full overflow-hidden bg-white shadow-[0_30px_60px_rgba(26,23,20,0.18),_0_8px_20px_rgba(26,23,20,0.08)]">
+        <CarouselContent className="-ml-4 py-20">
+          {THEME_ORDER.map((id) => {
+            const isActive = id === theme;
+            return (
+              <CarouselItem
+                className="flex basis-[78%] justify-center pl-4 sm:basis-[64%] lg:basis-[82%]"
+                key={id}
+              >
                 <div
-                  className="absolute inset-0 origin-top-left"
-                  style={{
-                    width: 1080,
-                    height: 1350,
-                    transform: "scale(calc(100cqw / 1080px))",
-                  }}
+                  className={`@container relative aspect-[1080/1350] w-full overflow-hidden bg-white transition-shadow duration-300 ${
+                    isActive
+                      ? "shadow-[0_40px_80px_-12px_rgba(26,23,20,0.32),_0_18px_36px_-8px_rgba(26,23,20,0.18)]"
+                      : "shadow-[0_2px_6px_rgba(26,23,20,0.08)]"
+                  }`}
                 >
-                  <RenderTheme
-                    data={data}
-                    photoBackdropEnabled={photoBackdropEnabled}
-                    photoUrl={photoUrl}
-                    theme={id}
-                  />
+                  <div
+                    className="absolute inset-0 origin-top-left"
+                    style={{
+                      width: 1080,
+                      height: 1350,
+                      transform: "scale(calc(100cqw / 1080px))",
+                    }}
+                  >
+                    <RenderTheme
+                      data={data}
+                      photoBackdropEnabled={photoBackdropEnabled}
+                      photoUrl={photoUrl}
+                      theme={id}
+                    />
+                  </div>
                 </div>
-              </div>
-            </CarouselItem>
-          ))}
+              </CarouselItem>
+            );
+          })}
         </CarouselContent>
         <CarouselPrevious className="hidden lg:flex" />
         <CarouselNext className="hidden lg:flex" />

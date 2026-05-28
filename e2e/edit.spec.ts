@@ -8,9 +8,7 @@ test.describe("edit controls", () => {
     await page.evaluate(() => localStorage.clear());
     await page.reload();
     await page.getByRole("button", { name: /try a sample/i }).click();
-    await expect(
-      page.getByText(/FILE LOADED|MULTI-SPORT LOADED/i)
-    ).toBeVisible();
+    await expect(page.getByTestId("theme-picker-trigger")).toBeVisible();
   });
 
   test("title editor updates the card preview live", async ({ page }) => {
@@ -73,7 +71,7 @@ test.describe("persistence", () => {
     await page.evaluate(() => localStorage.clear());
     await page.reload();
     await page.getByRole("button", { name: /try a sample/i }).click();
-    await expect(page.getByText(/FILE LOADED/i)).toBeVisible();
+    await expect(page.getByTestId("theme-picker-trigger")).toBeVisible();
 
     await selectTheme(page, "EDITORIAL");
     const hrSwitch = page.getByRole("switch", { name: /heart rate/i });

@@ -15,9 +15,10 @@ test.describe("upload", () => {
       buffer: Buffer.from(SINGLE_RUN_GPX),
     });
 
-    // Edit state is recognisable by the FILE LOADED chip.
-    await expect(page.getByText(/FILE LOADED/i)).toBeVisible();
-    await expect(page.getByText(/MULTI-SPORT LOADED/i)).not.toBeVisible();
+    // Edit state is recognisable by the theme picker + filename row.
+    await expect(page.getByTestId("theme-picker-trigger")).toBeVisible();
+    await expect(page.getByText(/morning-run\.gpx|run_/i)).toBeVisible();
+    await expect(page.getByText(/files · assembled/i)).not.toBeVisible();
   });
 
   test("multiple files → triathlon assembly with computed transitions", async ({
@@ -46,7 +47,6 @@ test.describe("upload", () => {
       },
     ]);
 
-    await expect(page.getByText(/MULTI-SPORT LOADED/i)).toBeVisible();
     await expect(page.getByText(/3 files · assembled/i)).toBeVisible();
 
     // Switch to the triathlon theme — segments should appear with transitions.
@@ -70,7 +70,7 @@ test.describe("upload", () => {
     });
     await expect(page.getByText(/Drop a \.gpx or \.fit file/i)).toBeVisible();
     // Should NOT have advanced to the edit state.
-    await expect(page.getByText(/FILE LOADED/i)).not.toBeVisible();
+    await expect(page.getByTestId("theme-picker-trigger")).not.toBeVisible();
   });
 
   test("Try a sample loads the demo dataset", async ({ page }) => {
@@ -78,6 +78,6 @@ test.describe("upload", () => {
     await page.evaluate(() => localStorage.clear());
     await page.reload();
     await page.getByRole("button", { name: /try a sample/i }).click();
-    await expect(page.getByText(/FILE LOADED/i)).toBeVisible();
+    await expect(page.getByTestId("theme-picker-trigger")).toBeVisible();
   });
 });
