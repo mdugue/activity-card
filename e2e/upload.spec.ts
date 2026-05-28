@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { SINGLE_RUN_GPX, TRIATHLON_FILES } from "./fixtures";
+import { selectTheme } from "./helpers";
 
 test.describe("upload", () => {
   test("single file → edit state with parsed activity", async ({ page }) => {
@@ -49,7 +50,7 @@ test.describe("upload", () => {
     await expect(page.getByText(/3 files · assembled/i)).toBeVisible();
 
     // Switch to the triathlon theme — segments should appear with transitions.
-    await page.getByRole("button", { name: /^TRIATHLON$/i }).click();
+    await selectTheme(page, "TRIATHLON");
     // The page mounts the theme twice (visible preview + off-screen export
     // mount); .first() targets the visible preview.
     await expect(page.getByText(/EFFORT TIMELINE/i).first()).toBeVisible();

@@ -2,24 +2,23 @@
 
 import { ArrowRight } from "lucide-react";
 import { useId, useRef, useState } from "react";
+import { THEME_META } from "@/components/themes/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { defaultFilename, exportCard } from "@/lib/export-card";
 import type { Visibility } from "@/lib/visibility";
 import { RenderTheme, type ThemeId } from "./render-theme";
 import type { ActivityData } from "./sample-data";
-
-const THEMES: { id: ThemeId; label: string; sub: string }[] = [
-  { id: "path", label: "PATH", sub: "route is the hero" },
-  { id: "altitude", label: "ALTITUDE", sub: "profile portrait" },
-  { id: "photo", label: "PHOTO", sub: "magazine cover" },
-  { id: "data", label: "DATA", sub: "dashboard poster" },
-  { id: "editorial", label: "EDITORIAL", sub: "typography led" },
-  { id: "triathlon", label: "TRIATHLON", sub: "multi-sport" },
-];
+import { ThemeCarousel } from "./theme-carousel";
 
 const ACCENTS = [
   "#c45a2c",
@@ -30,18 +29,32 @@ const ACCENTS = [
   "#a98352",
 ];
 
-const VISIBILITY_TOGGLES: { key: keyof Visibility; label: string }[] = [
-  { key: "athleteName", label: "Athlete name" },
-  { key: "location", label: "Location" },
-  { key: "heartRate", label: "Heart rate" },
-  { key: "splits", label: "Splits" },
+interface VisibilityToggleDef {
+  capability:
+    | "usesHeartRate"
+    | "usesSplits"
+    | "usesAthleteName"
+    | "usesLocation";
+  key: keyof Visibility;
+  label: string;
+}
+
+const VISIBILITY_TOGGLES: VisibilityToggleDef[] = [
+  { key: "athleteName", label: "Athlete name", capability: "usesAthleteName" },
+  { key: "location", label: "Location", capability: "usesLocation" },
+  { key: "heartRate", label: "Heart rate", capability: "usesHeartRate" },
+  { key: "splits", label: "Splits", capability: "usesSplits" },
 ];
 
 interface EditStateProps {
   accent: string;
+  athleteName: string;
   data: ActivityData;
+  location: string;
   onAccentChange: (accent: string) => void;
+  onAthleteNameChange: (name: string) => void;
   onDownload: () => void;
+  onLocationChange: (location: string) => void;
   onPhotoChange: (file: File | null) => void;
   onThemeChange: (theme: ThemeId) => void;
   onTitleChange: (title: string) => void;
@@ -52,7 +65,8 @@ interface EditStateProps {
 }
 
 export function EditState(props: EditStateProps) {
-  const { data, theme, photoUrl, onDownload } = props;
+  const { data, theme, photoUrl, onDownload, onThemeChange, visibility } =
+    props;
   const cardRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -72,57 +86,44 @@ export function EditState(props: EditStateProps) {
   };
 
   return (
-    <div className="grid flex-1 grid-cols-1 gap-8 px-6 pt-20 pb-8 md:px-10 lg:grid-cols-[1fr_400px] lg:gap-0 lg:px-0 lg:pt-24">
-      <PreviewPane data={data} photoUrl={photoUrl} theme={theme} />
-      <ControlsPane
-        {...props}
-        isExporting={isExporting}
-        onDownload={handleDownload}
-      />
-      {/* Native-size mount used by html-to-image. Off-screen via translate
-          (which html-to-image strips when capturing) but laid out at full
-          1080×1350 so the flex columns reflow correctly inside the clone. */}
-      <div
-        aria-hidden
-        className="pointer-events-none fixed top-0 left-0 -z-10"
-        ref={cardRef}
-        style={{
-          width: 1080,
-          height: 1350,
-          transform: "translateX(-200%)",
-        }}
-      >
-        <RenderTheme data={data} photoUrl={photoUrl} theme={theme} />
-      </div>
-    </div>
-  );
-}
-
-function PreviewPane({
-  data,
-  theme,
-  photoUrl,
-}: {
-  data: ActivityData;
-  theme: ThemeId;
-  photoUrl: string | null;
-}) {
-  return (
-    <div className="relative flex flex-col items-center justify-start lg:px-10">
-      <div className="mb-4 self-start font-medium font-mono text-xs tracking-[0.28em] opacity-55 lg:ml-14">
-        LIVE PREVIEW · 1080 × 1350
-      </div>
-      <div className="relative aspect-[1080/1350] w-[280px] overflow-hidden bg-white shadow-[0_30px_60px_rgba(26,23,20,0.18),_0_8px_20px_rgba(26,23,20,0.08)] sm:w-[380px] lg:w-[540px]">
-        <div className="absolute inset-0">
-          <div
-            className="origin-top-left scale-[0.26] sm:scale-[0.352] lg:scale-[0.5]"
-            style={{ width: 1080, height: 1350 }}
-          >
-            <RenderTheme data={data} photoUrl={photoUrl} theme={theme} />
-          </div>
+    <TooltipProvider delay={200}>
+      <div className="grid flex-1 grid-cols-1 gap-8 px-6 pt-20 pb-8 md:px-10 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-0 lg:px-0 lg:pt-24">
+        <div className="min-w-0 lg:px-10">
+          <ThemeCarousel
+            data={data}
+            onThemeChange={onThemeChange}
+            photoBackdropEnabled={visibility.photoBackdrop}
+            photoUrl={photoUrl}
+            theme={theme}
+          />
+        </div>
+        <ControlsPane
+          {...props}
+          isExporting={isExporting}
+          onDownload={handleDownload}
+        />
+        {/* Native-size mount used by html-to-image. Off-screen via translate
+            (which html-to-image strips when capturing) but laid out at full
+            1080×1350 so the flex columns reflow correctly inside the clone. */}
+        <div
+          aria-hidden
+          className="pointer-events-none fixed top-0 left-0 -z-10"
+          ref={cardRef}
+          style={{
+            width: 1080,
+            height: 1350,
+            transform: "translateX(-200%)",
+          }}
+        >
+          <RenderTheme
+            data={data}
+            photoBackdropEnabled={visibility.photoBackdrop}
+            photoUrl={photoUrl}
+            theme={theme}
+          />
         </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
 
@@ -133,7 +134,6 @@ interface ControlsPaneProps extends EditStateProps {
 function ControlsPane({
   data,
   theme,
-  onThemeChange,
   onTitleChange,
   photoUrl,
   onPhotoChange,
@@ -143,8 +143,18 @@ function ControlsPane({
   visibility,
   onVisibilityChange,
   isExporting,
+  athleteName,
+  location,
+  onAthleteNameChange,
+  onLocationChange,
 }: ControlsPaneProps) {
   const titleId = useId();
+  const athleteId = useId();
+  const locationId = useId();
+  const meta = THEME_META[theme];
+  const photoSupported = meta.photoMode !== "none";
+  const showBackdropSwitch = meta.photoMode === "supports";
+
   return (
     <div className="flex flex-col gap-7 pr-2 lg:pr-10">
       <FileLoadedRow data={data} />
@@ -161,53 +171,80 @@ function ControlsPane({
         />
       </ControlBlock>
 
-      <ControlBlock label="THEME">
-        <ToggleGroup
-          aria-label="Theme"
-          className="mt-2 grid w-full grid-cols-2 gap-2"
-          onValueChange={(values) => {
-            if (values[0]) {
-              onThemeChange(values[0] as ThemeId);
-            }
-          }}
-          spacing={2}
-          value={[theme]}
-          variant="outline"
-        >
-          {THEMES.map((t) => (
-            <ToggleGroupItem
-              aria-label={t.label}
-              className="flex h-auto flex-col items-start justify-start px-3 py-3 text-left"
-              key={t.id}
-              value={t.id}
-            >
-              <div className="font-heading text-xl uppercase leading-none">
-                {t.label}
-              </div>
-              <div className="mt-1.5 font-medium font-mono text-[10px] uppercase tracking-[0.16em] opacity-65">
-                {t.sub}
-              </div>
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+      <ControlBlock label="DETAILS">
+        <div className="mt-2 flex flex-col gap-4">
+          <DetailField
+            disabled={!meta.usesAthleteName}
+            disabledReason={`${meta.label} theme doesn't show athlete name`}
+            hint="Saved on this device"
+            id={athleteId}
+            label="Athlete name"
+            onChange={onAthleteNameChange}
+            placeholder="Add your name"
+            value={athleteName}
+          />
+          <DetailField
+            disabled={!meta.usesLocation}
+            disabledReason={`${meta.label} theme doesn't show location`}
+            id={locationId}
+            label="Location"
+            onChange={onLocationChange}
+            placeholder="Where was this?"
+            value={location}
+          />
+        </div>
       </ControlBlock>
 
       <ControlBlock label="BACKGROUND PHOTO">
-        <PhotoControl onChange={onPhotoChange} photoUrl={photoUrl} />
+        <PhotoControl
+          disabled={!photoSupported}
+          onChange={onPhotoChange}
+          photoUrl={photoUrl}
+        />
+        {!photoSupported && (
+          <p className="mt-2 font-medium font-mono text-[10px] uppercase tracking-[0.18em] opacity-55">
+            {meta.label} theme has no room for a photo
+          </p>
+        )}
+        {showBackdropSwitch && photoUrl ? (
+          <div className="mt-3 flex items-center justify-between border border-foreground/15 border-dashed px-3 py-2.5">
+            <Label
+              className="font-medium text-sm"
+              htmlFor="photo-backdrop-switch"
+            >
+              Use as background
+            </Label>
+            <Switch
+              checked={visibility.photoBackdrop}
+              id="photo-backdrop-switch"
+              onCheckedChange={(checked) =>
+                onVisibilityChange({
+                  ...visibility,
+                  photoBackdrop: checked,
+                })
+              }
+            />
+          </div>
+        ) : null}
       </ControlBlock>
 
       <ControlBlock label="SHOW ON CARD">
         <div className="mt-3 flex flex-col gap-2.5">
-          {VISIBILITY_TOGGLES.map((t) => (
-            <ToggleRow
-              checked={visibility[t.key]}
-              key={t.key}
-              label={t.label}
-              onCheckedChange={(checked) =>
-                onVisibilityChange({ ...visibility, [t.key]: checked })
-              }
-            />
-          ))}
+          {VISIBILITY_TOGGLES.map((t) => {
+            const supported = meta[t.capability];
+            return (
+              <ToggleRow
+                checked={visibility[t.key]}
+                disabled={!supported}
+                disabledReason={`${meta.label} theme doesn't use ${t.label.toLowerCase()}`}
+                key={t.key}
+                label={t.label}
+                onCheckedChange={(checked) =>
+                  onVisibilityChange({ ...visibility, [t.key]: checked })
+                }
+              />
+            );
+          })}
         </div>
       </ControlBlock>
 
@@ -250,19 +287,82 @@ function ControlsPane({
   );
 }
 
+function DetailField({
+  id,
+  label,
+  value,
+  onChange,
+  placeholder,
+  hint,
+  disabled,
+  disabledReason,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  hint?: string;
+  disabled?: boolean;
+  disabledReason?: string;
+}) {
+  const labelEl = (
+    <Label
+      className="font-medium font-mono text-[11px] uppercase tracking-[0.22em] opacity-65"
+      htmlFor={id}
+    >
+      {label}
+    </Label>
+  );
+  return (
+    <div className={disabled ? "opacity-45" : undefined}>
+      <div className="flex items-center justify-between">
+        {disabled && disabledReason ? (
+          <Tooltip>
+            <TooltipTrigger render={<span>{labelEl}</span>} />
+            <TooltipContent>{disabledReason}</TooltipContent>
+          </Tooltip>
+        ) : (
+          labelEl
+        )}
+        {hint ? (
+          <span className="font-medium font-mono text-[9px] uppercase tracking-[0.18em] opacity-50">
+            {hint}
+          </span>
+        ) : null}
+      </div>
+      <Input
+        className="mt-1 h-auto border-0 border-foreground border-b-2 px-0 py-1.5 font-heading text-lg uppercase tracking-tight focus-visible:ring-0"
+        disabled={disabled}
+        id={id}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        value={value}
+      />
+    </div>
+  );
+}
+
 function PhotoControl({
   photoUrl,
   onChange,
+  disabled,
 }: {
   photoUrl: string | null;
   onChange: (file: File | null) => void;
+  disabled?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   return (
-    <div className="mt-2 flex items-center gap-3 border border-foreground/35 border-dashed p-3">
+    <div
+      className={`mt-2 flex items-center gap-3 border border-foreground/35 border-dashed p-3 ${
+        disabled ? "opacity-45" : ""
+      }`}
+    >
       <input
         accept="image/*"
         className="hidden"
+        disabled={disabled}
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) {
@@ -285,11 +385,17 @@ function PhotoControl({
         {photoUrl ? "Photo loaded" : "NO PHOTO · TAP TO ADD"}
       </div>
       {photoUrl ? (
-        <Button onClick={() => onChange(null)} size="sm" variant="ghost">
+        <Button
+          disabled={disabled}
+          onClick={() => onChange(null)}
+          size="sm"
+          variant="ghost"
+        >
           Remove
         </Button>
       ) : null}
       <Button
+        disabled={disabled}
         onClick={() => inputRef.current?.click()}
         size="sm"
         variant={photoUrl ? "ghost" : "default"}
@@ -347,18 +453,44 @@ function ToggleRow({
   label,
   checked,
   onCheckedChange,
+  disabled,
+  disabledReason,
 }: {
   label: string;
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
+  disabled?: boolean;
+  disabledReason?: string;
 }) {
   const id = useId();
+  const labelEl = (
+    <Label
+      className={`font-medium text-sm ${disabled ? "opacity-50" : ""}`}
+      htmlFor={id}
+    >
+      {label}
+    </Label>
+  );
   return (
-    <div className="flex items-center justify-between">
-      <Label className="font-medium text-sm" htmlFor={id}>
-        {label}
-      </Label>
-      <Switch checked={checked} id={id} onCheckedChange={onCheckedChange} />
+    <div
+      className={`flex items-center justify-between ${
+        disabled ? "opacity-60" : ""
+      }`}
+    >
+      {disabled && disabledReason ? (
+        <Tooltip>
+          <TooltipTrigger render={<span>{labelEl}</span>} />
+          <TooltipContent>{disabledReason}</TooltipContent>
+        </Tooltip>
+      ) : (
+        labelEl
+      )}
+      <Switch
+        checked={checked}
+        disabled={disabled}
+        id={id}
+        onCheckedChange={onCheckedChange}
+      />
     </div>
   );
 }
