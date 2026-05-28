@@ -16,10 +16,8 @@ test.describe("themes", () => {
     await page.evaluate(() => localStorage.clear());
     await page.reload();
     await page.getByRole("button", { name: /try a sample/i }).click();
-    // Wait for the FILE LOADED chip so we know we're in edit state.
-    await expect(
-      page.getByText(/FILE LOADED|MULTI-SPORT LOADED/i)
-    ).toBeVisible();
+    // Wait for the theme picker so we know we're in edit state.
+    await expect(page.getByTestId("theme-picker-trigger")).toBeVisible();
   });
 
   for (const theme of THEMES) {

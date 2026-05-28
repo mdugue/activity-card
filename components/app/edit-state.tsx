@@ -30,18 +30,15 @@ const ACCENTS = [
 ];
 
 interface VisibilityToggleDef {
-  capability:
-    | "usesHeartRate"
-    | "usesSplits"
-    | "usesAthleteName"
-    | "usesLocation";
+  capability: "usesHeartRate" | "usesSplits";
   key: keyof Visibility;
   label: string;
 }
 
+// Toggles for fields that have no inline input — athleteName and location
+// each ride alongside their input via DetailField's `toggle` prop, so they
+// don't belong here.
 const VISIBILITY_TOGGLES: VisibilityToggleDef[] = [
-  { key: "athleteName", label: "Athlete name", capability: "usesAthleteName" },
-  { key: "location", label: "Location", capability: "usesLocation" },
   { key: "heartRate", label: "Heart rate", capability: "usesHeartRate" },
   { key: "splits", label: "Splits", capability: "usesSplits" },
 ];
@@ -164,7 +161,7 @@ function ControlsPane({
           Activity title
         </Label>
         <Input
-          className="h-auto border-foreground border-b-2 py-2 font-heading text-2xl uppercase tracking-tight md:text-2xl"
+          className="h-auto border-foreground border-b-2 py-2 font-heading text-2xl tracking-tight md:text-2xl"
           id={titleId}
           onChange={(e) => onTitleChange(e.target.value)}
           value={data.ride_name}
@@ -181,6 +178,11 @@ function ControlsPane({
             label="Athlete name"
             onChange={onAthleteNameChange}
             placeholder="Add your name"
+            toggle={{
+              checked: visibility.athleteName,
+              onChange: (checked) =>
+                onVisibilityChange({ ...visibility, athleteName: checked }),
+            }}
             value={athleteName}
           />
           <DetailField
@@ -190,6 +192,11 @@ function ControlsPane({
             label="Location"
             onChange={onLocationChange}
             placeholder="Where was this?"
+            toggle={{
+              checked: visibility.location,
+              onChange: (checked) =>
+                onVisibilityChange({ ...visibility, location: checked }),
+            }}
             value={location}
           />
         </div>
@@ -228,7 +235,7 @@ function ControlsPane({
         ) : null}
       </ControlBlock>
 
-      <ControlBlock label="SHOW ON CARD">
+      <ControlBlock label="EXTRA METRICS">
         <div className="mt-3 flex flex-col gap-2.5">
           {VISIBILITY_TOGGLES.map((t) => {
             const supported = meta[t.capability];
@@ -296,6 +303,7 @@ function DetailField({
   hint,
   disabled,
   disabledReason,
+  toggle,
 }: {
   id: string;
   label: string;
@@ -305,6 +313,10 @@ function DetailField({
   hint?: string;
   disabled?: boolean;
   disabledReason?: string;
+  toggle?: {
+    checked: boolean;
+    onChange: (checked: boolean) => void;
+  };
 }) {
   const labelEl = (
     <Label
@@ -316,23 +328,33 @@ function DetailField({
   );
   return (
     <div className={disabled ? "opacity-45" : undefined}>
-      <div className="flex items-center justify-between">
-        {disabled && disabledReason ? (
-          <Tooltip>
-            <TooltipTrigger render={<span>{labelEl}</span>} />
-            <TooltipContent>{disabledReason}</TooltipContent>
-          </Tooltip>
-        ) : (
-          labelEl
-        )}
-        {hint ? (
-          <span className="font-medium font-mono text-[9px] uppercase tracking-[0.18em] opacity-50">
-            {hint}
-          </span>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-baseline gap-3">
+          {disabled && disabledReason ? (
+            <Tooltip>
+              <TooltipTrigger render={<span>{labelEl}</span>} />
+              <TooltipContent>{disabledReason}</TooltipContent>
+            </Tooltip>
+          ) : (
+            labelEl
+          )}
+          {hint ? (
+            <span className="font-medium font-mono text-[9px] uppercase tracking-[0.18em] opacity-50">
+              {hint}
+            </span>
+          ) : null}
+        </div>
+        {toggle ? (
+          <Switch
+            aria-label={`Show ${label.toLowerCase()} on card`}
+            checked={toggle.checked}
+            disabled={disabled}
+            onCheckedChange={toggle.onChange}
+          />
         ) : null}
       </div>
       <Input
-        className="mt-1 h-auto border-0 border-foreground border-b-2 px-0 py-1.5 font-heading text-lg uppercase tracking-tight focus-visible:ring-0"
+        className="mt-1 h-auto border-0 border-foreground border-b-2 px-0 py-1.5 font-heading text-lg tracking-tight focus-visible:ring-0"
         disabled={disabled}
         id={id}
         onChange={(e) => onChange(e.target.value)}
@@ -413,20 +435,15 @@ function FileLoadedRow({ data }: { data: ActivityData }) {
     ? `${segCount} files · assembled`
     : `${data.sport}_${data.date.replace(/\s|,/g, "").toLowerCase()}.fit`;
   return (
-    <div className="flex items-center gap-3 bg-foreground p-4 text-background">
-      <div aria-hidden className="size-2 bg-primary" />
-      <div className="flex-1">
-        <div className="font-medium font-mono text-[10px] tracking-[0.22em] opacity-60">
-          {isMulti ? "MULTI-SPORT LOADED" : "FILE LOADED"}
-        </div>
-        <div className="mt-1 font-medium font-mono text-sm">{label}</div>
-      </div>
+    <div className="flex items-center gap-2 font-medium font-mono text-[11px] opacity-60">
+      <div aria-hidden className="size-1.5 rounded-full bg-primary" />
+      <span className="truncate">{label}</span>
       <button
-        className="flex items-center gap-1 font-medium font-mono text-[11px] tracking-[0.18em] opacity-70 hover:opacity-100"
+        className="ml-auto flex items-center gap-1 text-[10px] uppercase tracking-[0.18em] underline-offset-4 hover:underline"
         type="button"
       >
-        SWAP
-        <ArrowRight aria-hidden className="size-3" />
+        Swap
+        <ArrowRight aria-hidden className="size-2.5" />
       </button>
     </div>
   );
