@@ -3,6 +3,7 @@
 // Parameterized by `mood`: night | dawn | day | heat | rain | snow
 
 import { elevationPath, pacePath } from "@/lib/chart-helpers";
+import { PhotoBackdrop } from "./photo-backdrop";
 import type { ActivityCardProps } from "./types";
 
 export type AltitudeMood = "night" | "dawn" | "day" | "heat" | "rain" | "snow";
@@ -197,7 +198,11 @@ interface ThemeAltitudeProps extends ActivityCardProps {
 
 type StatTuple = [string, string | number, string];
 
-export function ThemeAltitude({ data, mood = "night" }: ThemeAltitudeProps) {
+export function ThemeAltitude({
+  data,
+  mood = "night",
+  photoUrl,
+}: ThemeAltitudeProps) {
   const M = ALTITUDE_MOODS[mood] || ALTITUDE_MOODS.night;
   const sport = data.sport;
 
@@ -272,6 +277,9 @@ export function ThemeAltitude({ data, mood = "night" }: ThemeAltitudeProps) {
         flexDirection: "column",
       }}
     >
+      {photoUrl ? (
+        <PhotoBackdrop photoUrl={photoUrl} treatment="altitude" />
+      ) : null}
       {/* Disk — sun / moon / cloud */}
       <div
         style={{
