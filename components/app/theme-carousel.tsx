@@ -118,15 +118,17 @@ export function ThemeCarousel({
 
   return (
     <div className="relative flex flex-col items-stretch justify-start">
-      <div className="mb-3 self-start px-6 font-medium font-mono text-xs tracking-[0.28em] opacity-55 md:px-10 lg:ml-14 lg:px-0">
-        LIVE PREVIEW · 1080 × 1350
-      </div>
+      {/* The carousel viewport clips overflow (needed for the horizontal swipe),
+          so the inner `py-16` reserves room for the active card's soft shadow to
+          render without being cut. The outer `-my-8` then reclaims most of that
+          space so the layout stays compact — the shadow simply bleeds under the
+          header above and the theme picker below rather than forcing whitespace. */}
       <Carousel
-        className="-mx-6 w-auto md:-mx-10 lg:mx-0 lg:w-full"
+        className="-mx-6 -my-8 w-auto md:-mx-10 lg:mx-0 lg:w-full"
         opts={{ align: "center", loop: true, containScroll: false }}
         setApi={setApi}
       >
-        <CarouselContent className="-ml-4 py-20">
+        <CarouselContent className="-ml-4 py-16">
           {THEME_ORDER.map((id) => {
             const isActive = id === theme;
             return (
@@ -137,7 +139,7 @@ export function ThemeCarousel({
                 <div
                   className={`@container relative aspect-[1080/1350] w-full overflow-hidden bg-white transition-shadow duration-300 ${
                     isActive
-                      ? "shadow-[0_40px_80px_-12px_rgba(26,23,20,0.32),_0_18px_36px_-8px_rgba(26,23,20,0.18)]"
+                      ? "shadow-[0_24px_50px_-14px_rgba(26,23,20,0.30),_0_10px_22px_-8px_rgba(26,23,20,0.16)]"
                       : "shadow-[0_2px_6px_rgba(26,23,20,0.08)]"
                   }`}
                 >
@@ -168,7 +170,7 @@ export function ThemeCarousel({
       </Carousel>
 
       {/* Theme name — interactive, opens picker popover/drawer */}
-      <div className="mt-6 flex flex-col items-center">
+      <div className="mt-2 flex flex-col items-center">
         {isMobile ? (
           <Drawer onOpenChange={setPickerOpen} open={pickerOpen}>
             <DrawerTrigger asChild>
