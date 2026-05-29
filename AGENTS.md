@@ -15,6 +15,11 @@ Single-page, fully client-side, no backend, no auth (for MVP). The card is a Rea
    - `activity-card-spec/` — quick reference to scope and phases
    - `card-rendering/` — `html-to-image` gotchas, route SVG math, theme component contract
    - `sport-data/` — sport-specific metrics, units, parsing normalisation
+3. Topic-specific docs under `docs/`:
+   - [`docs/strava.md`](./docs/strava.md) — Strava OAuth + picker
+     integration, local dev against the real API or the bundled mock,
+     and brand-compliance constraints. Read before touching anything
+     under `app/api/strava/`, `lib/strava-*.ts`, or `components/app/strava-*.tsx`.
 
 If a decision is in SPEC.md, follow it. If you want to deviate, raise it and ask.
 
