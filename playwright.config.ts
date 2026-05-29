@@ -1,6 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const PORT = 3100;
+const STRAVA_MOCK_PORT = 3101;
+const STRAVA_MOCK_BASE = `http://localhost:${STRAVA_MOCK_PORT}`;
 
 /**
  * Effort E2E config.
@@ -35,12 +37,41 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-  webServer: {
-    command: `bun run build && bun run start -- --port ${PORT}`,
-    url: `http://localhost:${PORT}`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 180_000,
-    stdout: "pipe",
-    stderr: "pipe",
-  },
+  webServer: [
+    {
+      // Strava API mock. Boots first so the Next.js server can talk to it
+      // during route-handler requests. The mock is stateless — no per-test
+      // reset needed, all tests pull the same fixture activities.
+      command: "bun e2e/strava-mock.ts",
+      url: `${STRAVA_MOCK_BASE}/health`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+      stdout: "pipe",
+      stderr: "pipe",
+      env: {
+        STRAVA_MOCK_PORT: String(STRAVA_MOCK_PORT),
+      },
+    },
+    {
+      command: `bun run build && bun run start -- --port ${PORT}`,
+      url: `http://localhost:${PORT}`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 180_000,
+      stdout: "pipe",
+      stderr: "pipe",
+      env: {
+        // Fake creds — the mock doesn't validate them, but the route
+        // handlers refuse to start the flow without them set.
+        STRAVA_CLIENT_ID: "mock-client-id",
+        STRAVA_CLIENT_SECRET: "mock-client-secret",
+        STRAVA_REDIRECT_URI: `http://localhost:${PORT}/api/strava/callback`,
+        STRAVA_OAUTH_URL: `${STRAVA_MOCK_BASE}/oauth/authorize`,
+        STRAVA_TOKEN_URL: `${STRAVA_MOCK_BASE}/oauth/token`,
+        STRAVA_API_BASE: `${STRAVA_MOCK_BASE}/api/v3`,
+        // Tests run over plain http; without this opt-out the Secure
+        // cookie flag would prevent any Strava cookie from being set.
+        STRAVA_INSECURE_COOKIES: "1",
+      },
+    },
+  ],
 });

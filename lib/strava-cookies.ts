@@ -1,10 +1,11 @@
 import { cookies } from "next/headers";
 
-// Strava API constants. `STRAVA_API_BASE` is overridable so dev fixtures can
-// point at a local mock without touching call sites.
+// Strava API endpoints. All three are overridable via env so E2E tests can
+// point the app at a local mock without monkey-patching `fetch`.
 export const STRAVA_API_BASE =
   process.env.STRAVA_API_BASE || "https://www.strava.com/api/v3";
-export const STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token";
+export const STRAVA_TOKEN_URL =
+  process.env.STRAVA_TOKEN_URL || "https://www.strava.com/oauth/token";
 
 const ACCESS = "strava_access";
 const REFRESH = "strava_refresh";
@@ -12,9 +13,17 @@ const EXPIRES = "strava_expires_at";
 const ATHLETE = "strava_athlete";
 const STATE = "strava_oauth_state";
 
+// `Secure` would block cookies over plain http (E2E runs on localhost). Test
+// runners flip STRAVA_INSECURE_COOKIES=1 to opt out; production still gets
+// the secure flag automatically.
+const COOKIE_SECURE =
+  process.env.STRAVA_INSECURE_COOKIES === "1"
+    ? false
+    : process.env.NODE_ENV === "production";
+
 const COOKIE_BASE = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
+  secure: COOKIE_SECURE,
   sameSite: "lax",
   path: "/",
 } as const;

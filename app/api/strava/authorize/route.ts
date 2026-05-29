@@ -19,7 +19,9 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const returnTo = url.searchParams.get("return_to") || "/?strava=connected";
 
-  const authorize = new URL("https://www.strava.com/oauth/authorize");
+  const authorize = new URL(
+    process.env.STRAVA_OAUTH_URL || "https://www.strava.com/oauth/authorize"
+  );
   authorize.searchParams.set("client_id", clientId);
   authorize.searchParams.set("redirect_uri", redirectUri);
   authorize.searchParams.set("response_type", "code");
