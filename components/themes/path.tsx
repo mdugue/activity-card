@@ -2,6 +2,7 @@
 // Type: Cormorant Garamond (display) + Manrope (body)
 // Palette: warm off-white paper, deep ink, single rust accent
 
+import { StravaAttribution } from "@/components/app/strava-attribution";
 import { abstractLanes, routePath } from "@/lib/chart-helpers";
 import {
   formatDateUpper,
@@ -239,6 +240,7 @@ export function ThemePath({ data, photoUrl }: ActivityCardProps) {
               marginTop: 32,
               display: "flex",
               justifyContent: "space-between",
+              alignItems: "center",
               fontSize: 24,
               letterSpacing: "0.2em",
               opacity: 0.55,
@@ -250,6 +252,11 @@ export function ThemePath({ data, photoUrl }: ActivityCardProps) {
               {data.athleteName ? `— ${data.athleteName.toUpperCase()}` : ""}
             </span>
           </div>
+          {data.source === "strava" ? (
+            <div style={{ marginTop: 18, display: "flex" }}>
+              <StravaAttribution variant="brand" width={130} />
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { DownloadState } from "@/components/app/download-state";
 import { EditState } from "@/components/app/edit-state";
 import { EffortWordmark } from "@/components/app/effort-wordmark";
@@ -8,11 +9,14 @@ import { EmptyState } from "@/components/app/empty-state";
 import type { ThemeId } from "@/components/app/render-theme";
 import {
   type ActivityData,
+  type ActivitySource,
   SAMPLE_RIDE,
   SAMPLE_RUN,
   SAMPLE_TRI,
   type Sport,
 } from "@/components/app/sample-data";
+
+import { StravaPicker } from "@/components/app/strava-picker";
 import type { AltitudeMood } from "@/components/themes/altitude";
 import { useImagePalette } from "@/hooks/use-image-palette";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
@@ -26,7 +30,7 @@ import {
   type Visibility,
 } from "@/lib/visibility";
 
-type AppState = "empty" | "edit" | "download";
+type AppState = "empty" | "picking-strava" | "edit" | "download";
 const STORAGE_KEY = "effort:ui:v1";
 
 interface PersistedUi {
@@ -50,7 +54,8 @@ function sampleForTheme(theme: ThemeId): ActivityData {
 
 function adoptParsed(
   parsed: ParsedActivity,
-  persistedAthleteName?: string
+  persistedAthleteName?: string,
+  source: ActivitySource = "upload"
 ): ActivityData {
   // Parsed files give us universals + whichever sport-specific stats we can
   // compute; merge over a sport-appropriate sample so themes that lean on
@@ -62,6 +67,7 @@ function adoptParsed(
     location: parsed.location || base.location,
     athleteName: parsed.athleteName || persistedAthleteName || base.athleteName,
     splits: parsed.splits ?? base.splits,
+    source,
   };
 }
 
@@ -165,6 +171,35 @@ export default function Home() {
     return () => URL.revokeObjectURL(photoUrl);
   }, [photoUrl]);
 
+  // After the Strava OAuth round-trip we land on `/?strava=...`. This is a
+  // one-shot cold-start read of an external system (URL) — the same
+  // pattern as the localStorage hydration above, hence the same disable.
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    const flag = params.get("strava");
+    if (!flag) {
+      return;
+    }
+    /* eslint-disable react-hooks/set-state-in-effect */
+    if (flag === "connected") {
+      toast.success("Connected to Strava");
+      setState((prev) => (prev === "empty" ? "picking-strava" : prev));
+    } else if (flag === "denied") {
+      toast.error("Strava access was denied");
+    } else {
+      toast.error(`Couldn't connect to Strava (${flag})`);
+    }
+    /* eslint-enable react-hooks/set-state-in-effect */
+    // Strip the param so a reload doesn't re-fire the toast.
+    const url = new URL(window.location.href);
+    url.searchParams.delete("strava");
+    url.searchParams.delete("reason");
+    window.history.replaceState({}, "", url.toString());
+  }, []);
+
   const handleLoadSample = () => {
     // Pick a sample that matches the persisted theme so the user sees
     // something representative of what they last chose.
@@ -174,20 +209,46 @@ export default function Home() {
     setState("edit");
   };
 
-  const handleFilesLoaded = (parts: ParsedActivity[]) => {
+  const adoptParts = (
+    parts: ParsedActivity[],
+    source: ActivitySource
+  ): ActivityData => {
     if (parts.length === 1) {
-      setData(adoptParsed(parts[0], persistedAthleteNameRef.current));
-    } else {
-      const tri = assembleTriathlon(parts);
-      // Seed athlete name on assembled triathlons too, since assembleTriathlon
-      // pulls from the first parsed file which may be blank.
-      setData({
-        ...tri,
-        athleteName:
-          tri.athleteName || persistedAthleteNameRef.current || tri.athleteName,
-      });
+      return adoptParsed(parts[0], persistedAthleteNameRef.current, source);
     }
+    const tri = assembleTriathlon(parts);
+    // Seed athlete name on assembled triathlons too, since assembleTriathlon
+    // pulls from the first parsed file which may be blank.
+    return {
+      ...tri,
+      athleteName:
+        tri.athleteName || persistedAthleteNameRef.current || tri.athleteName,
+      source,
+    };
+  };
+
+  const handleFilesLoaded = (parts: ParsedActivity[]) => {
+    setData(adoptParts(parts, "upload"));
     setState("edit");
+  };
+
+  const handleStravaActivityLoaded = (parts: ParsedActivity[]) => {
+    setData(adoptParts(parts, "strava"));
+    setState("edit");
+  };
+
+  const handleConnectStrava = () => {
+    if (typeof window !== "undefined") {
+      window.location.href = "/api/strava/authorize";
+    }
+  };
+
+  const handleOpenStravaPicker = () => {
+    setState("picking-strava");
+  };
+
+  const handleCancelStravaPicker = () => {
+    setState("empty");
   };
 
   const handleTitleChange = (title: string) => {
@@ -243,8 +304,17 @@ export default function Home() {
       <Header date={data?.date} />
       {state === "empty" ? (
         <EmptyState
+          onConnectStrava={handleConnectStrava}
           onFilesLoaded={handleFilesLoaded}
           onLoadSample={handleLoadSample}
+          onOpenStravaPicker={handleOpenStravaPicker}
+        />
+      ) : null}
+      {state === "picking-strava" ? (
+        <StravaPicker
+          onActivityLoaded={handleStravaActivityLoaded}
+          onCancel={handleCancelStravaPicker}
+          onReauth={handleConnectStrava}
         />
       ) : null}
       {state === "edit" && visibleData && data ? (

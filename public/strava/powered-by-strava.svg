@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 56" role="img" aria-label="Powered by Strava">
+  <title>Powered by Strava</title>
+  <!--
+    Interim attribution lockup. Replace with the official "Powered by Strava"
+    asset from https://developers.strava.com/guidelines/ before going public.
+    The official asset is a registered trademark and must be used unmodified.
+  -->
+  <rect width="200" height="56" fill="none" />
+  <g transform="translate(8 6)">
+    <!-- Strava-style chevron mark, brand orange #FC4C02 -->
+    <g fill="#FC4C02">
+      <path d="M16 0 L24 16 L18.4 16 L16 11.2 L13.6 16 L8 16 Z" />
+      <path d="M18 16 L22 16 L20 20 Z" />
+      <path d="M20 20 L24 20 L22 24 Z" />
+    </g>
+  </g>
+  <g transform="translate(44 0)" fill="#FC4C02" font-family="Helvetica, Arial, sans-serif">
+    <text x="0" y="20" font-size="10" font-weight="500" letter-spacing="1.2" fill="currentColor" opacity="0.85">POWERED BY</text>
+    <text x="0" y="42" font-size="22" font-weight="800" letter-spacing="1.6">STRAVA</text>
+  </g>
+</svg>

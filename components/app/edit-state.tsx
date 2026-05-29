@@ -25,7 +25,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
 import type { PaletteStatus } from "@/hooks/use-image-palette";
+import { useStravaConnection } from "@/hooks/use-strava-connection";
 import { defaultFilename, exportCard } from "@/lib/export-card";
 import { formatDate } from "@/lib/format";
 import type { ImageTransform } from "@/lib/image-transform";
@@ -237,6 +239,7 @@ function ControlsPane({
   return (
     <div className="flex flex-col gap-7 pr-2 lg:pr-10">
       <FileLoadedRow data={data} onFilesLoaded={onFilesLoaded} />
+      <StravaConnectionRow source={data.source} />
 
       <ControlBlock label="TITLE">
         <Label className="sr-only" htmlFor={titleId}>
@@ -599,6 +602,37 @@ function PhotoControl({
       >
         {photoUrl ? "Replace" : "Upload"}
       </Button>
+    </div>
+  );
+}
+
+function StravaConnectionRow({ source }: { source: ActivityData["source"] }) {
+  const strava = useStravaConnection();
+  if (!strava.connected) {
+    return null;
+  }
+  const fromStrava = source === "strava";
+  return (
+    <div className="-mt-3 flex items-center gap-2 border-foreground/10 border-b pb-3 font-mono text-[10px] uppercase tracking-[0.18em] opacity-70">
+      <span
+        aria-hidden
+        className="size-1.5 rounded-full"
+        style={{ background: "#FC4C02" }}
+      />
+      <span>
+        STRAVA
+        {strava.athlete?.firstname ? ` · ${strava.athlete.firstname}` : ""}
+      </span>
+      {fromStrava ? <span className="opacity-70">· this activity</span> : null}
+      <button
+        className="ml-auto underline-offset-4 hover:underline"
+        onClick={() => {
+          strava.disconnect();
+        }}
+        type="button"
+      >
+        Disconnect
+      </button>
     </div>
   );
 }

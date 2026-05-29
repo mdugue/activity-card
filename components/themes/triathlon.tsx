@@ -3,6 +3,7 @@
 // Three vertical bands w/ shared identity; transitions as design beats.
 
 import type { TriSegment } from "@/components/app/sample-data";
+import { StravaAttribution } from "@/components/app/strava-attribution";
 import { elevationPath, routePath } from "@/lib/chart-helpers";
 import {
   formatClock,
@@ -521,6 +522,7 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
           borderTop: "1px solid rgba(17,21,26,0.4)",
           display: "flex",
           justifyContent: "space-between",
+          alignItems: "center",
           fontSize: 24,
           letterSpacing: "0.24em",
           opacity: 0.75,
@@ -528,7 +530,12 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
         }}
       >
         <span>EFFORT · TRIATHLON CARD</span>
-        <span>{data.athleteName ? data.athleteName.toUpperCase() : "—"}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+          {data.source === "strava" ? (
+            <StravaAttribution variant="brand" width={110} />
+          ) : null}
+          <span>{data.athleteName ? data.athleteName.toUpperCase() : "—"}</span>
+        </div>
       </div>
     </div>
   );

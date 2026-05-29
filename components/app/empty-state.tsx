@@ -2,16 +2,25 @@
 
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useStravaConnection } from "@/hooks/use-strava-connection";
 import { type ParsedActivity, parseActivityFile } from "@/lib/parse-activity";
 
 const ACTIVITY_FILE_RE = /\.(gpx|fit)$/i;
 
 interface EmptyStateProps {
+  onConnectStrava: () => void;
   onFilesLoaded: (parts: ParsedActivity[]) => void;
   onLoadSample: () => void;
+  onOpenStravaPicker: () => void;
 }
 
-export function EmptyState({ onLoadSample, onFilesLoaded }: EmptyStateProps) {
+export function EmptyState({
+  onLoadSample,
+  onFilesLoaded,
+  onConnectStrava,
+  onOpenStravaPicker,
+}: EmptyStateProps) {
+  const strava = useStravaConnection();
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-8 py-24">
       <div className="font-medium font-mono text-xs tracking-[0.32em] opacity-55">
@@ -39,6 +48,25 @@ export function EmptyState({ onLoadSample, onFilesLoaded }: EmptyStateProps) {
 
       <DropZone onFilesLoaded={onFilesLoaded} onLoadSample={onLoadSample} />
 
+      <div className="mt-6 flex items-center gap-3 font-mono text-[10px] tracking-[0.22em] opacity-55">
+        <span aria-hidden className="h-px w-10 bg-foreground/30" />
+        <span>OR</span>
+        <span aria-hidden className="h-px w-10 bg-foreground/30" />
+      </div>
+
+      <Button
+        className="mt-4 gap-2"
+        disabled={strava.loading}
+        onClick={strava.connected ? onOpenStravaPicker : onConnectStrava}
+        size="lg"
+        variant="outline"
+      >
+        <StravaIcon />
+        {strava.connected
+          ? `Pick from Strava${strava.athlete?.firstname ? ` · ${strava.athlete.firstname}` : ""}`
+          : "Connect Strava"}
+      </Button>
+
       <div className="mt-9 flex flex-wrap justify-center gap-3">
         {(["RIDE", "RUN", "SWIM", "TRIATHLON"] as const).map((s) => (
           <span
@@ -50,6 +78,24 @@ export function EmptyState({ onLoadSample, onFilesLoaded }: EmptyStateProps) {
         ))}
       </div>
     </div>
+  );
+}
+
+function StravaIcon() {
+  return (
+    <svg
+      aria-hidden
+      fill="#FC4C02"
+      height="18"
+      viewBox="0 0 24 24"
+      width="18"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <title>Strava</title>
+      <path d="M12 0 L20 16 L14.4 16 L12 11.2 L9.6 16 L4 16 Z" />
+      <path d="M14 16 L18 16 L16 20 Z" />
+      <path d="M16 20 L20 20 L18 24 Z" />
+    </svg>
   );
 }
 

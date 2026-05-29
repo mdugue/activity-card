@@ -41,6 +41,8 @@ export interface Transition {
   name: string; // "T1", "T2", …
 }
 
+export type ActivitySource = "upload" | "strava";
+
 export interface ActivityData {
   athleteName: string;
   avgCadence?: number;
@@ -66,6 +68,9 @@ export interface ActivityData {
   routeCoordinates?: Coord[];
 
   segments?: TriSegment[];
+  /** Where this activity came from. Drives provider attribution on the card
+   * (Strava requires a "Powered by Strava" mark whenever their data is shown). */
+  source?: ActivitySource;
   splits?: Split[];
   sport: Sport;
   strokeCountAvg?: number; // swim
