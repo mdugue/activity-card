@@ -46,5 +46,10 @@ export function transformToCss(t: ImageTransform): string {
 }
 
 export function isIdentityTransform(t: ImageTransform): boolean {
-  return t.scale === 1 && t.x === 0 && t.y === 0;
+  // Pointer/wheel gestures leave tiny floating-point residuals, so compare with
+  // small epsilons — sub-pixel translation and a <0.1% scale delta read as
+  // "effectively reset" (e.g. keeps the Reset button disabled).
+  return (
+    Math.abs(t.scale - 1) < 1e-3 && Math.abs(t.x) < 0.5 && Math.abs(t.y) < 0.5
+  );
 }

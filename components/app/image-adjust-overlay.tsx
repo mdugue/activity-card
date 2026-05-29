@@ -31,12 +31,15 @@ export function ImageAdjustOverlay({
 
   return (
     <div className="absolute inset-0 z-20">
-      {/* Gesture surface — drag to pan, pinch/scroll to zoom, double-tap reset */}
+      {/* Gesture surface — drag to pan, pinch/scroll to zoom, double-tap reset.
+          Pointer-only and hidden from assistive tech: it carries no semantics
+          of its own, and the keyboard/SR path is the labelled Reset/Done
+          buttons below. (`role="application"` would wrongly flip SRs into
+          application mode.) */}
       <div
-        aria-label="Drag to reposition, pinch or scroll to zoom, double-tap to reset"
+        aria-hidden
         className="absolute inset-0 z-[1] cursor-grab touch-none select-none active:cursor-grabbing"
         ref={ref}
-        role="application"
       />
 
       {/* Frame + corner ticks (decorative) */}

@@ -5,6 +5,7 @@ const THEMES = [
   "PATH",
   "ALTITUDE",
   "PHOTO",
+  "MINIMAL",
   "DATA",
   "EDITORIAL",
   "TRIATHLON",
