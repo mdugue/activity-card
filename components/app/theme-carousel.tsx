@@ -144,7 +144,15 @@ export function ThemeCarousel({
           header above and the theme picker below rather than forcing whitespace. */}
       <Carousel
         className="-mx-6 -my-8 w-auto md:-mx-10 lg:mx-0 lg:w-full"
-        opts={{ align: "center", loop: true, containScroll: false }}
+        opts={{
+          align: "center",
+          loop: true,
+          containScroll: false,
+          // Lock the swipe-to-switch gesture while the user repositions the
+          // photo, so a one-finger drag pans the image instead of flipping
+          // themes. Embla re-reads this on reInit when `adjusting` changes.
+          watchDrag: !adjusting,
+        }}
         setApi={setApi}
       >
         <CarouselContent className="-ml-4 py-16">
