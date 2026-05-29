@@ -15,10 +15,13 @@ import {
   formatPaceMin,
   formatPaceSec,
 } from "@/lib/format";
+import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme } from "@/lib/palette";
+import { PhotoLayer } from "./photo-layer";
 import type { ActivityCardProps } from "./types";
 
 interface ThemePhotoProps extends ActivityCardProps {
+  imageTransform?: ImageTransform | null;
   paletteTheme?: PaletteTheme | null;
 }
 
@@ -69,7 +72,12 @@ function fallbackVars(palette: StaticPalette): React.CSSProperties {
   } as React.CSSProperties;
 }
 
-export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
+export function ThemePhoto({
+  data,
+  photoUrl,
+  paletteTheme,
+  imageTransform,
+}: ThemePhotoProps) {
   const sport = data.sport;
   const isPool = sport === "swim";
 
@@ -129,13 +137,16 @@ export function ThemePhoto({ data, photoUrl, paletteTheme }: ThemePhotoProps) {
         ...cssVars,
         width: 1080,
         height: 1350,
-        background: photoUrl ? `url(${photoUrl}) center/cover` : placeholderBg,
+        background: placeholderBg,
         fontFamily: "var(--font-dm-sans), sans-serif",
         color: "var(--headline)",
         position: "relative",
         overflow: "hidden",
       }}
     >
+      {photoUrl ? (
+        <PhotoLayer imageTransform={imageTransform} photoUrl={photoUrl} />
+      ) : null}
       {!photoUrl && (
         <svg
           aria-hidden="true"

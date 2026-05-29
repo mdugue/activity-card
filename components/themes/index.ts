@@ -4,6 +4,7 @@ import {
 } from "./altitude";
 import { ThemeData } from "./data";
 import { ThemeEditorial } from "./editorial";
+import { ThemeMinimal } from "./minimal";
 import { ThemePath } from "./path";
 import { ThemePhoto } from "./photo";
 import { ThemeTriathlon } from "./triathlon";
@@ -12,6 +13,7 @@ export const THEMES = {
   path: ThemePath,
   altitude: ThemeAltitude,
   photo: ThemePhoto,
+  minimal: ThemeMinimal,
   data: ThemeData,
   editorial: ThemeEditorial,
   triathlon: ThemeTriathlon,
@@ -71,6 +73,16 @@ export const THEME_META: Record<ThemeId, ThemeMeta> = {
     usesHeartRate: false,
     usesSplits: false,
   },
+  minimal: {
+    id: "minimal",
+    label: "MINIMAL",
+    tagline: "photo, pure",
+    photoMode: "hero",
+    usesAthleteName: false,
+    usesLocation: false,
+    usesHeartRate: false,
+    usesSplits: false,
+  },
   data: {
     id: "data",
     label: "DATA",
@@ -107,6 +119,7 @@ export const THEME_ORDER: ThemeId[] = [
   "path",
   "altitude",
   "photo",
+  "minimal",
   "data",
   "editorial",
   "triathlon",

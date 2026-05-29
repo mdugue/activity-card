@@ -1,7 +1,8 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Move } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { ImageAdjustOverlay } from "@/components/app/image-adjust-overlay";
 import { RenderTheme, type ThemeId } from "@/components/app/render-theme";
 import type { ActivityData } from "@/components/app/sample-data";
 import type { AltitudeMood } from "@/components/themes/altitude";
@@ -27,11 +28,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme } from "@/lib/palette";
 
 interface ThemeCarouselProps {
   altitudeMood: AltitudeMood;
   data: ActivityData;
+  imageTransform: ImageTransform;
+  onImageTransformChange: (next: ImageTransform) => void;
   onThemeChange: (theme: ThemeId) => void;
   photoBackdropEnabled: boolean;
   photoPaletteTheme: PaletteTheme | null;
@@ -47,10 +51,25 @@ export function ThemeCarousel({
   theme,
   altitudeMood,
   photoPaletteTheme,
+  imageTransform,
+  onImageTransformChange,
 }: ThemeCarouselProps) {
   const [api, setApi] = useState<CarouselApi | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [adjusting, setAdjusting] = useState(false);
   const isMobile = useIsMobile();
+
+  // Repositioning is only meaningful when the active theme shows the photo as
+  // its hero. If the user removes the photo or switches to a non-hero theme,
+  // drop out of adjust mode so the locked carousel doesn't get stranded.
+  const adjustAvailable =
+    photoUrl !== null && THEME_META[theme].photoMode === "hero";
+  useEffect(() => {
+    if (adjusting && !adjustAvailable) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAdjusting(false);
+    }
+  }, [adjusting, adjustAvailable]);
 
   // Forward swipe selections to parent state.
   useEffect(() => {
@@ -154,19 +173,43 @@ export function ThemeCarousel({
                     <RenderTheme
                       altitudeMood={altitudeMood}
                       data={data}
+                      imageTransform={imageTransform}
                       photoBackdropEnabled={photoBackdropEnabled}
                       photoPaletteTheme={photoPaletteTheme}
                       photoUrl={photoUrl}
                       theme={id}
                     />
                   </div>
+
+                  {isActive && adjustAvailable && !adjusting ? (
+                    <button
+                      className="absolute top-3 right-3 z-10 flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 font-medium font-mono text-[10px] text-white uppercase tracking-[0.16em] backdrop-blur-sm transition-colors hover:bg-black/75"
+                      onClick={() => setAdjusting(true)}
+                      type="button"
+                    >
+                      <Move aria-hidden className="size-3" />
+                      Adjust
+                    </button>
+                  ) : null}
+
+                  {isActive && adjusting ? (
+                    <ImageAdjustOverlay
+                      onChange={onImageTransformChange}
+                      onDone={() => setAdjusting(false)}
+                      transform={imageTransform}
+                    />
+                  ) : null}
                 </div>
               </CarouselItem>
             );
           })}
         </CarouselContent>
-        <CarouselPrevious className="hidden lg:flex" />
-        <CarouselNext className="hidden lg:flex" />
+        {adjusting ? null : (
+          <>
+            <CarouselPrevious className="hidden lg:flex" />
+            <CarouselNext className="hidden lg:flex" />
+          </>
+        )}
       </Carousel>
 
       {/* Theme name — interactive, opens picker popover/drawer */}

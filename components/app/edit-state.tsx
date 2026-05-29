@@ -28,6 +28,7 @@ import {
 import type { PaletteStatus } from "@/hooks/use-image-palette";
 import { defaultFilename, exportCard } from "@/lib/export-card";
 import { formatDate } from "@/lib/format";
+import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme, PhotoMood } from "@/lib/palette";
 import { type ParsedActivity, parseActivityFile } from "@/lib/parse-activity";
 import type { Visibility } from "@/lib/visibility";
@@ -91,12 +92,14 @@ interface EditStateProps {
   altitudeMood: AltitudeMood;
   athleteName: string;
   data: ActivityData;
+  imageTransform: ImageTransform;
   location: string;
   onAccentChange: (accent: string) => void;
   onAltitudeMoodChange: (mood: AltitudeMood) => void;
   onAthleteNameChange: (name: string) => void;
   onDownload: () => void;
   onFilesLoaded: (parts: ParsedActivity[]) => void;
+  onImageTransformChange: (next: ImageTransform) => void;
   onLocationChange: (location: string) => void;
   onPhotoChange: (file: File | null) => void;
   onPhotoMoodChange: (mood: PhotoMood) => void;
@@ -122,6 +125,8 @@ export function EditState(props: EditStateProps) {
     onDownload,
     onThemeChange,
     visibility,
+    imageTransform,
+    onImageTransformChange,
   } = props;
   const cardRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -148,6 +153,8 @@ export function EditState(props: EditStateProps) {
           <ThemeCarousel
             altitudeMood={altitudeMood}
             data={data}
+            imageTransform={imageTransform}
+            onImageTransformChange={onImageTransformChange}
             onThemeChange={onThemeChange}
             photoBackdropEnabled={visibility.photoBackdrop}
             photoPaletteTheme={photoPaletteTheme}
@@ -176,6 +183,7 @@ export function EditState(props: EditStateProps) {
           <RenderTheme
             altitudeMood={altitudeMood}
             data={data}
+            imageTransform={imageTransform}
             photoBackdropEnabled={visibility.photoBackdrop}
             photoPaletteTheme={photoPaletteTheme}
             photoUrl={photoUrl}
@@ -221,6 +229,7 @@ function ControlsPane({
   const meta = THEME_META[theme];
   const photoSupported = meta.photoMode !== "none";
   const showBackdropSwitch = meta.photoMode === "supports";
+  const showRepositionHint = meta.photoMode === "hero" && photoUrl !== null;
   const showAltitudeMood = theme === "altitude";
   const showPhotoMood = theme === "photo" && photoUrl !== null;
 
@@ -303,6 +312,11 @@ function ControlsPane({
             {meta.label} theme has no room for a photo
           </p>
         )}
+        {showRepositionHint ? (
+          <p className="mt-2 font-medium font-mono text-[10px] uppercase tracking-[0.18em] opacity-55">
+            Tap “Adjust” on the preview to move &amp; zoom
+          </p>
+        ) : null}
         {showBackdropSwitch && photoUrl ? (
           <div className="mt-3 flex items-center justify-between border border-foreground/15 border-dashed px-3 py-2.5">
             <Label
