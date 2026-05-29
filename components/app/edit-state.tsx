@@ -143,7 +143,7 @@ export function EditState(props: EditStateProps) {
 
   return (
     <TooltipProvider delay={200}>
-      <div className="mx-auto grid w-full max-w-[1180px] flex-1 grid-cols-1 gap-8 px-6 pt-20 pb-8 md:px-10 lg:grid-cols-[minmax(0,640px)_400px] lg:gap-12 lg:px-10 lg:pt-24">
+      <div className="mx-auto grid w-full max-w-[1180px] flex-1 grid-cols-1 gap-8 px-6 pt-14 pb-8 md:px-10 lg:grid-cols-[minmax(0,640px)_400px] lg:gap-12 lg:px-10 lg:pt-16">
         <div className="min-w-0">
           <ThemeCarousel
             altitudeMood={altitudeMood}
