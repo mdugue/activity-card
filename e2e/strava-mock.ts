@@ -138,6 +138,7 @@ function makeStreams(count: number) {
 
 const DETAIL_RE = /^\/api\/v3\/activities\/(\d+)$/;
 const STREAMS_RE = /^\/api\/v3\/activities\/(\d+)\/streams$/;
+const STATS_RE = /^\/api\/v3\/athletes\/(\d+)\/stats$/;
 
 function handle(req: Request): Response | Promise<Response> {
   const url = new URL(req.url);
@@ -204,6 +205,25 @@ function handle(req: Request): Response | Promise<Response> {
 
   if (url.pathname.match(STREAMS_RE)) {
     return Response.json(makeStreams(60));
+  }
+
+  if (url.pathname.match(STATS_RE)) {
+    // Split the 53 fixture activities by sport so the picker's "Page X of Y"
+    // matches the actual pageable content.
+    const rideCount = ACTIVITIES.filter((a) =>
+      a.sport_type.toLowerCase().includes("ride")
+    ).length;
+    const runCount = ACTIVITIES.filter((a) =>
+      a.sport_type.toLowerCase().includes("run")
+    ).length;
+    const swimCount = ACTIVITIES.filter((a) =>
+      a.sport_type.toLowerCase().includes("swim")
+    ).length;
+    return Response.json({
+      all_ride_totals: { count: rideCount },
+      all_run_totals: { count: runCount },
+      all_swim_totals: { count: swimCount },
+    });
   }
 
   return new Response("not found", { status: 404 });

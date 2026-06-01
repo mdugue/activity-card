@@ -80,6 +80,7 @@ All Strava traffic is server→server; the browser never holds tokens.
 | `app/api/strava/callback/route.ts` | Validates `state`, exchanges `code` for tokens, sets cookies, redirects back. |
 | `app/api/strava/me/route.ts` | Reads the athlete cookie. The only endpoint the client polls. |
 | `app/api/strava/activities/route.ts` | Lists activities for the requested `?page=N&per_page=M` (defaults: 30, 1). |
+| `app/api/strava/stats/route.ts` | Returns `{ totalCount, totalPages }` from Strava's `/athletes/{id}/stats`. Only counts ride / run / swim — the picker treats it as a hint and still trusts `canGoNext` (full page) for the actual end of the list. |
 | `app/api/strava/activity/[id]/route.ts` | Detail + streams → `ParsedActivity[]`. |
 | `app/api/strava/disconnect/route.ts` | Clears all four cookies. |
 | `lib/strava-cookies.ts` | `readTokens`, `writeTokens`, `clearTokens`, `ensureFreshToken`, OAuth state. Single source of truth for the cookie flow. |

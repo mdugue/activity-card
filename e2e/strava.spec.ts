@@ -126,14 +126,18 @@ test.describe("strava OAuth + picker", () => {
     ).toBeVisible();
   });
 
-  test("pagination advances to the next page", async ({ page }) => {
+  test("pagination shows total page count and advances", async ({ page }) => {
     await page.getByRole("button", { name: /connect strava/i }).click();
     await page.waitForURL(/\/$/);
     await expect(
       page.getByRole("heading", { name: /your recent/i })
     ).toBeVisible();
 
-    // Page 1 indicator visible; the named ride is in this slice.
+    // The mock has 53 fixture activities (all ride/run/swim), per_page is
+    // 30 → ceil(53/30) === 2 pages. The label should reflect that.
+    await expect(page.getByText(/^1 of 2$/)).toBeVisible();
+
+    // Page 1: named ride is in this slice.
     await expect(
       page.getByRole("button", { name: /saturday in the elbsandstein/i })
     ).toBeVisible();
@@ -146,10 +150,39 @@ test.describe("strava OAuth + picker", () => {
     await expect(
       page.getByRole("button", { name: /mock ride #28/i })
     ).toBeVisible();
-    // And the named first-page activity is no longer in the DOM.
+    await expect(page.getByText(/^2 of 2$/)).toBeVisible();
+    // Named first-page activity is no longer in the DOM.
     await expect(
       page.getByRole("button", { name: /saturday in the elbsandstein/i })
     ).toHaveCount(0);
+  });
+
+  test("multi-select shows sport icons + checkboxes; clicking the row toggles", async ({
+    page,
+  }) => {
+    await page.getByRole("button", { name: /connect strava/i }).click();
+    await page.waitForURL(/\/$/);
+    await expect(
+      page.getByRole("heading", { name: /your recent/i })
+    ).toBeVisible();
+
+    await page.getByRole("switch", { name: /multi-select/i }).click();
+
+    const row = page.getByRole("button", {
+      name: /saturday in the elbsandstein/i,
+    });
+    // Sport icon (lucide Bike, tagged with data-sport for the test) is
+    // still in the row in multi mode — alongside the checkbox, not
+    // replaced by it.
+    await expect(row.locator('[data-sport="ride"]')).toBeVisible();
+
+    // The checkbox itself is non-interactive — clicking the row (anywhere,
+    // including where the checkbox visually sits) toggles selection
+    // exactly once. Click → selected, click again → deselected.
+    await row.click();
+    await expect(page.getByText(/1 selected/i)).toBeVisible();
+    await row.click();
+    await expect(page.getByText(/0 selected/i)).toBeVisible();
   });
 
   test("Swap on a Strava activity reopens the picker, not the file dialog", async ({

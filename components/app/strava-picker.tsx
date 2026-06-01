@@ -94,6 +94,19 @@ async function fetchDetail(
   return data.parts;
 }
 
+async function fetchTotalPages(): Promise<number | null> {
+  try {
+    const res = await fetch("/api/strava/stats", { cache: "no-store" });
+    if (!res.ok) {
+      return null;
+    }
+    const data = (await res.json()) as { totalPages?: number };
+    return typeof data.totalPages === "number" ? data.totalPages : null;
+  } catch {
+    return null;
+  }
+}
+
 type LoadState =
   | { kind: "loading" }
   | { kind: "ready"; activities: StravaSummaryActivity[] }
@@ -109,12 +122,27 @@ export function StravaPicker({
 }: StravaPickerProps) {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState<number | null>(null);
   const [multiSelect, setMultiSelect] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(() => new Set());
   const [pickingId, setPickingId] = useState<number | null>(null);
   const [isCombining, setIsCombining] = useState(false);
   const [pickError, setPickError] = useState<string | null>(null);
   const multiId = useId();
+
+  // One-shot fetch for the lifetime activity count. Best-effort: if it
+  // fails we just hide the "of Y" suffix and fall back to canGoNext.
+  useEffect(() => {
+    let cancelled = false;
+    fetchTotalPages().then((tp) => {
+      if (!cancelled) {
+        setTotalPages(tp);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // The effect syncs UI state to the result of an external request keyed by
   // `page`. setState-in-effect is the right tool here — same pattern as the
@@ -209,7 +237,11 @@ export function StravaPicker({
   };
 
   const activities = state.kind === "ready" ? state.activities : [];
-  const canGoNext = activities.length === PER_PAGE;
+  // Strava's stats endpoint only counts ride/run/swim, so totalPages can
+  // undercount. Trust totalPages when known AND it would block paging,
+  // otherwise fall back to the page-is-full heuristic.
+  const reachedEndByCount = totalPages !== null && page >= totalPages;
+  const canGoNext = activities.length === PER_PAGE && !reachedEndByCount;
   const canGoPrev = page > 1;
   const selectedCount = selected.size;
 
@@ -263,29 +295,14 @@ export function StravaPicker({
         </Alert>
       ) : null}
 
-      {state.kind === "ready" || (state.kind === "empty" && page > 1) ? (
-        <Pagination className="mt-8">
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                aria-disabled={!canGoPrev}
-                className={canGoPrev ? "" : "pointer-events-none opacity-40"}
-                onClick={() => canGoPrev && setPage((p) => p - 1)}
-              />
-            </PaginationItem>
-            <PaginationItem>
-              <PaginationLink isActive>{page}</PaginationLink>
-            </PaginationItem>
-            <PaginationItem>
-              <PaginationNext
-                aria-disabled={!canGoNext}
-                className={canGoNext ? "" : "pointer-events-none opacity-40"}
-                onClick={() => canGoNext && setPage((p) => p + 1)}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      ) : null}
+      <PickerPagination
+        canGoNext={canGoNext}
+        canGoPrev={canGoPrev}
+        onPageChange={setPage}
+        page={page}
+        show={state.kind === "ready" || (state.kind === "empty" && page > 1)}
+        totalPages={totalPages}
+      />
 
       <div className="mt-8 flex justify-between border-foreground/15 border-t pt-6">
         <Button onClick={onCancel} variant="ghost">
@@ -314,6 +331,53 @@ export function StravaPicker({
         </div>
       ) : null}
     </div>
+  );
+}
+
+interface PickerPaginationProps {
+  canGoNext: boolean;
+  canGoPrev: boolean;
+  onPageChange: (updater: (p: number) => number) => void;
+  page: number;
+  show: boolean;
+  totalPages: number | null;
+}
+
+function PickerPagination({
+  canGoNext,
+  canGoPrev,
+  onPageChange,
+  page,
+  show,
+  totalPages,
+}: PickerPaginationProps) {
+  if (!show) {
+    return null;
+  }
+  return (
+    <Pagination className="mt-8">
+      <PaginationContent>
+        <PaginationItem>
+          <PaginationPrevious
+            aria-disabled={!canGoPrev}
+            className={canGoPrev ? "" : "pointer-events-none opacity-40"}
+            onClick={() => canGoPrev && onPageChange((p) => p - 1)}
+          />
+        </PaginationItem>
+        <PaginationItem>
+          <PaginationLink className="px-3" isActive>
+            {totalPages === null ? page : `${page} of ${totalPages}`}
+          </PaginationLink>
+        </PaginationItem>
+        <PaginationItem>
+          <PaginationNext
+            aria-disabled={!canGoNext}
+            className={canGoNext ? "" : "pointer-events-none opacity-40"}
+            onClick={() => canGoNext && onPageChange((p) => p + 1)}
+          />
+        </PaginationItem>
+      </PaginationContent>
+    </Pagination>
   );
 }
 
@@ -451,16 +515,20 @@ function ActivityItem({
       variant="outline"
     >
       <ItemMedia>
-        {multiSelect ? (
-          <Checkbox
-            aria-label={`Select ${activity.name}`}
-            checked={isSelected}
-            onCheckedChange={onToggleSelect}
-            onClick={(e) => e.stopPropagation()}
-          />
-        ) : (
+        <div className="flex items-center gap-3">
+          {multiSelect ? (
+            // Click on the checkbox bubbles to the outer <button> which
+            // toggles the row — make the checkbox itself non-interactive
+            // so we don't double-fire and so focus stays on the row.
+            <Checkbox
+              aria-hidden
+              checked={isSelected}
+              className="pointer-events-none"
+              tabIndex={-1}
+            />
+          ) : null}
           <SportIcon sportType={activity.sport_type} />
-        )}
+        </div>
       </ItemMedia>
       <ItemContent>
         <ItemTitle>{activity.name}</ItemTitle>
@@ -494,15 +562,15 @@ function SportIcon({ sportType }: { sportType: string }) {
   const s = sportType.toLowerCase();
   const cls = "size-5 shrink-0 opacity-70";
   if (s.includes("swim")) {
-    return <Waves aria-hidden className={cls} />;
+    return <Waves aria-hidden className={cls} data-sport="swim" />;
   }
   if (s.includes("ride") || s.includes("bike") || s.includes("cycl")) {
-    return <Bike aria-hidden className={cls} />;
+    return <Bike aria-hidden className={cls} data-sport="ride" />;
   }
   if (s.includes("run")) {
-    return <Footprints aria-hidden className={cls} />;
+    return <Footprints aria-hidden className={cls} data-sport="run" />;
   }
-  return <MapPin aria-hidden className={cls} />;
+  return <MapPin aria-hidden className={cls} data-sport="other" />;
 }
 
 function formatDate(iso: string): string {
