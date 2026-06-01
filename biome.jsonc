@@ -8,6 +8,13 @@
   ],
   "overrides": [
     {
+      // Auto-generated from Strava's OpenAPI spec (`bun run strava:types`).
+      // Machine output — don't lint or format it; regenerate instead.
+      "includes": ["lib/strava-api.generated.ts"],
+      "linter": { "enabled": false },
+      "formatter": { "enabled": false }
+    },
+    {
       // Theme cards are faithful ports of design prototypes; loosen the
       // rules that punish their seeded arrays, sport-branch density,
       // and 1080×1350 inline layout styles.

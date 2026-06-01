@@ -4,35 +4,11 @@ import {
   type ParsedActivity,
   type TrackPoint,
 } from "./parse-shared";
-
-export interface StravaActivityDetail {
-  athlete?: { firstname?: string; lastname?: string };
-  average_cadence?: number;
-  average_heartrate?: number;
-  average_speed?: number; // m/s
-  distance?: number; // meters
-  elapsed_time?: number; // seconds
-  id: number;
-  location_city?: string;
-  location_country?: string;
-  max_speed?: number; // m/s
-  moving_time?: number; // seconds
-  name: string;
-  sport_type?: string;
-  start_date?: string; // ISO
-  total_elevation_gain?: number; // meters
-  type?: string;
-}
-
-interface StravaStream<T> {
-  data: T[];
-  original_size?: number;
-  resolution?: string;
-  series_type?: string;
-  type: string;
-}
-
-export type StravaStreams = Record<string, StravaStream<unknown>>;
+import type {
+  StravaActivityDetail,
+  StravaStream,
+  StravaStreams,
+} from "./strava-types";
 
 const MPS_TO_KMH = 3.6;
 
@@ -47,8 +23,11 @@ export function stravaToParsed(
   detail: StravaActivityDetail,
   streams: StravaStreams
 ): ParsedActivity[] {
+  // The generated spec types mark these optional; the live API always sends
+  // them, but coalesce so we stay type-safe and never pass `undefined` on.
+  const name = detail.name ?? "";
   const sportRaw = detail.sport_type || detail.type;
-  const sport = detectSport(sportRaw, detail.name);
+  const sport = detectSport(sportRaw, name);
 
   const latlng = pickArray<[number, number]>(streams.latlng);
   const altitude = pickArray<number>(streams.altitude);
@@ -95,7 +74,7 @@ export function stravaToParsed(
   const parsed = finalise({
     points,
     sport,
-    name: detail.name,
+    name,
     isoDate: detail.start_date,
     sessionDistanceKm:
       detail.distance === undefined ? undefined : detail.distance / 1000,

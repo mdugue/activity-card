@@ -70,7 +70,9 @@ of a file dialog) when the loaded activity came from Strava.
 
 All Strava traffic is server→server; the browser never holds tokens.
 `ensureFreshToken()` refreshes silently when the access token has under
-60s left, so the picker and detail handlers don't need refresh logic.
+60s left; `stravaFetch()` additionally force-refreshes and retries once
+if Strava rejects a token it believed was fresh (revoked grant / clock
+skew), so the picker and detail handlers don't need refresh logic.
 
 ## File map
 
@@ -83,7 +85,10 @@ All Strava traffic is server→server; the browser never holds tokens.
 | `app/api/strava/stats/route.ts` | Returns `{ totalCount, totalPages }` from Strava's `/athletes/{id}/stats`. Only counts ride / run / swim — the picker treats it as a hint and still trusts `canGoNext` (full page) for the actual end of the list. |
 | `app/api/strava/activity/[id]/route.ts` | Detail + streams → `ParsedActivity[]`. |
 | `app/api/strava/disconnect/route.ts` | Clears all four cookies. |
-| `lib/strava-cookies.ts` | `readTokens`, `writeTokens`, `clearTokens`, `ensureFreshToken`, OAuth state. Single source of truth for the cookie flow. |
+| `lib/strava-cookies.ts` | `readTokens`, `writeTokens`, `clearTokens`, `ensureFreshToken`, `forceRefreshToken`, OAuth state. Single source of truth for the cookie flow. |
+| `lib/strava-client.ts` | `stravaFetch` / `stravaFetchOptional` — the only way handlers talk to Strava. Handles 401-retry, 429, and upstream errors; `stravaErrorResponse` maps thrown errors to HTTP responses. |
+| `lib/strava-types.ts` | Strava model types. Base shapes derive from the generated spec; the `ActivityExtras` layer adds fields the spec omits. |
+| `lib/strava-api.generated.ts` | Auto-generated from Strava's OpenAPI spec via `bun run strava:types`. Do not edit — regenerate. Lint/format/eslint skip it. |
 | `lib/strava-to-parsed.ts` | Maps Strava streams + detail into the same `TrackPoint`/`ParsedActivity` shape the GPX/.fit parsers produce. Reuses `finalise()` and `detectSport()` from `lib/parse-shared.ts`. |
 | `components/app/strava-picker.tsx` | Activity-list screen (`AppState === "picking-strava"`) — shadcn `Item`/`Pagination`/`Switch`/`Checkbox`. Owns single-pick, multi-select, and pagination state. |
 | `components/app/strava-attribution.tsx` | "Powered by Strava" SVG mark, rendered by themes when `data.source === 'strava'`. |
@@ -199,14 +204,24 @@ If you need to expose another Strava endpoint (e.g. `/athletes/{id}` for
 profile data), the pattern is:
 
 1. Create `app/api/strava/<name>/route.ts`.
-2. Call `ensureFreshToken()` from `lib/strava-cookies.ts` — it handles
-   the "no token" and "needs refresh" cases.
-3. `fetch` against `STRAVA_API_BASE` (imported from
-   `lib/strava-cookies.ts`) so the mock override still works in tests.
-4. On a `401` from Strava, treat tokens as invalid — call
-   `clearTokens()` and return 401 to the client.
-5. Add a mock handler in `e2e/strava-mock.ts` for the same URL pattern
-   if you want E2E coverage.
+2. Call `stravaFetch<T>(path)` from `lib/strava-client.ts` and wrap the
+   handler body in `try { … } catch (err) { return stravaErrorResponse(err); }`.
+   `stravaFetch` mints/refreshes the token, retries once on a `401`
+   (force-refresh, then clear + `not_connected` if it still fails),
+   raises `StravaRateLimitError` on `429`, and `StravaUpstreamError`
+   otherwise — `stravaErrorResponse` maps all three to the right status
+   (401 / 429 / 502). For optional data that may legitimately be missing,
+   use `stravaFetchOptional<T>` (returns `null` instead of throwing).
+3. Firing several calls in parallel? Mint once with `ensureFreshToken()`
+   and pass `{ token }` to each `stravaFetch` so they don't each refresh
+   (see `app/api/strava/activity/[id]/route.ts`).
+4. Add the response shape to `lib/strava-types.ts` — derive it from the
+   generated `components["schemas"][…]`, layering on any field the spec
+   omits (see `ActivityExtras`). Run `bun run strava:types` to refresh
+   the generated file if you touch a new schema.
+5. Paths are relative to `STRAVA_API_BASE`, so the mock override still
+   works in tests. Add a mock handler in `e2e/strava-mock.ts` for the
+   same URL pattern if you want E2E coverage.
 
 ## Troubleshooting
 

@@ -126,6 +126,23 @@ export async function ensureFreshToken(): Promise<string> {
   if (tokens.expiresAt - nowSec > 60) {
     return tokens.access;
   }
+  return refreshStoredTokens(tokens);
+}
+
+/**
+ * Force a token refresh regardless of the stored expiry. Used when Strava
+ * rejects a token we believed was fresh (revoked grant or clock skew) — we
+ * mint a new one and let the caller retry once before giving up.
+ */
+export async function forceRefreshToken(): Promise<string> {
+  const tokens = await readTokens();
+  if (!tokens) {
+    throw new StravaNotConnectedError();
+  }
+  return refreshStoredTokens(tokens);
+}
+
+async function refreshStoredTokens(tokens: StoredTokens): Promise<string> {
   const clientId = process.env.STRAVA_CLIENT_ID;
   const clientSecret = process.env.STRAVA_CLIENT_SECRET;
   if (!(clientId && clientSecret)) {

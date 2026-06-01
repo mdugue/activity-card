@@ -39,6 +39,7 @@
     "babel-plugin-react-compiler": "^1.0.0",
     "eslint": "^9.39.4",
     "eslint-config-next": "16.2.7",
+    "openapi-typescript": "^7.13.0",
     "tailwindcss": "^4.3.0",
     "typescript": "^6.0.3",
     "ultracite": "7.8.1"
@@ -52,7 +53,8 @@
     "typecheck": "tsgo --noEmit",
     "check": "ultracite check",
     "fix": "ultracite fix",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "strava:types": "bunx --bun swagger2openapi https://developers.strava.com/swagger/swagger.json --outfile strava-oas3.tmp.json && openapi-typescript strava-oas3.tmp.json -o lib/strava-api.generated.ts && rm -f strava-oas3.tmp.json"
   },
   "version": "0.1.0",
   "private": true,
