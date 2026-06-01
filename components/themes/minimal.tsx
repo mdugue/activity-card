@@ -5,6 +5,7 @@
 // When no photo is loaded we fall back to a deep neutral gradient so the route
 // and elevation still read while the user is choosing an image.
 
+import { StravaAttribution } from "@/components/app/strava-attribution";
 import { routePath } from "@/lib/chart-helpers";
 import type { ImageTransform } from "@/lib/image-transform";
 import { PhotoLayer } from "./photo-layer";
@@ -269,6 +270,19 @@ export function ThemeMinimal({
               background: "rgba(255,255,255,0.28)",
             }}
           />
+        </div>
+      ) : null}
+
+      {data.source === "strava" ? (
+        <div
+          style={{
+            position: "absolute",
+            left: 70,
+            bottom: 24,
+            opacity: 0.9,
+          }}
+        >
+          <StravaAttribution variant="light" width={110} />
         </div>
       ) : null}
     </div>
