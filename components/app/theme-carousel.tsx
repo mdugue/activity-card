@@ -1,11 +1,13 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Move } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { ImageAdjustOverlay } from "@/components/app/image-adjust-overlay";
 import { RenderTheme, type ThemeId } from "@/components/app/render-theme";
 import type { ActivityData } from "@/components/app/sample-data";
 import type { AltitudeMood } from "@/components/themes/altitude";
 import { THEME_META, THEME_ORDER } from "@/components/themes/index";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Carousel,
@@ -27,11 +29,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme } from "@/lib/palette";
 
 interface ThemeCarouselProps {
   altitudeMood: AltitudeMood;
   data: ActivityData;
+  imageTransform: ImageTransform;
+  onImageTransformChange: (next: ImageTransform) => void;
   onThemeChange: (theme: ThemeId) => void;
   photoBackdropEnabled: boolean;
   photoPaletteTheme: PaletteTheme | null;
@@ -47,10 +52,25 @@ export function ThemeCarousel({
   theme,
   altitudeMood,
   photoPaletteTheme,
+  imageTransform,
+  onImageTransformChange,
 }: ThemeCarouselProps) {
   const [api, setApi] = useState<CarouselApi | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [adjusting, setAdjusting] = useState(false);
   const isMobile = useIsMobile();
+
+  // Repositioning is only meaningful when the active theme shows the photo as
+  // its hero. If the user removes the photo or switches to a non-hero theme,
+  // drop out of adjust mode so the locked carousel doesn't get stranded.
+  const adjustAvailable =
+    photoUrl !== null && THEME_META[theme].photoMode === "hero";
+  useEffect(() => {
+    if (adjusting && !adjustAvailable) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAdjusting(false);
+    }
+  }, [adjusting, adjustAvailable]);
 
   // Forward swipe selections to parent state.
   useEffect(() => {
@@ -125,7 +145,15 @@ export function ThemeCarousel({
           header above and the theme picker below rather than forcing whitespace. */}
       <Carousel
         className="-mx-6 -my-8 w-auto md:-mx-10 lg:mx-0 lg:w-full"
-        opts={{ align: "center", loop: true, containScroll: false }}
+        opts={{
+          align: "center",
+          loop: true,
+          containScroll: false,
+          // Lock the swipe-to-switch gesture while the user repositions the
+          // photo, so a one-finger drag pans the image instead of flipping
+          // themes. Embla re-reads this on reInit when `adjusting` changes.
+          watchDrag: !adjusting,
+        }}
         setApi={setApi}
       >
         <CarouselContent className="-ml-4 py-16">
@@ -154,19 +182,47 @@ export function ThemeCarousel({
                     <RenderTheme
                       altitudeMood={altitudeMood}
                       data={data}
+                      imageTransform={imageTransform}
                       photoBackdropEnabled={photoBackdropEnabled}
                       photoPaletteTheme={photoPaletteTheme}
                       photoUrl={photoUrl}
                       theme={id}
                     />
                   </div>
+
+                  {isActive && adjustAvailable && !adjusting ? (
+                    <Badge
+                      className="absolute top-3 right-3 z-10 rounded-full bg-black/55 px-3 py-1.5 font-mono text-[10px] text-white backdrop-blur-sm transition-colors hover:bg-black/75"
+                      render={
+                        <button
+                          onClick={() => setAdjusting(true)}
+                          type="button"
+                        />
+                      }
+                    >
+                      <Move aria-hidden className="size-3" />
+                      Adjust
+                    </Badge>
+                  ) : null}
+
+                  {isActive && adjusting ? (
+                    <ImageAdjustOverlay
+                      onChange={onImageTransformChange}
+                      onDone={() => setAdjusting(false)}
+                      transform={imageTransform}
+                    />
+                  ) : null}
                 </div>
               </CarouselItem>
             );
           })}
         </CarouselContent>
-        <CarouselPrevious className="hidden lg:flex" />
-        <CarouselNext className="hidden lg:flex" />
+        {adjusting ? null : (
+          <>
+            <CarouselPrevious className="hidden lg:flex" />
+            <CarouselNext className="hidden lg:flex" />
+          </>
+        )}
       </Carousel>
 
       {/* Theme name — interactive, opens picker popover/drawer */}

@@ -6,6 +6,7 @@ import type { AltitudeMood } from "@/components/themes/altitude";
 import { Button } from "@/components/ui/button";
 import { defaultFilename, exportCard } from "@/lib/export-card";
 import { formatDateUpper } from "@/lib/format";
+import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme } from "@/lib/palette";
 import { RenderTheme, type ThemeId } from "./render-theme";
 import type { ActivityData } from "./sample-data";
@@ -15,6 +16,7 @@ const CONFETTI_COLORS = ["#c45a2c", "#1d3a2e", "#1a1714", "#a98352"];
 interface DownloadStateProps {
   altitudeMood: AltitudeMood;
   data: ActivityData;
+  imageTransform: ImageTransform;
   onKeepEditing: () => void;
   onNew: () => void;
   photoPaletteTheme: PaletteTheme | null;
@@ -28,6 +30,7 @@ export function DownloadState({
   photoUrl,
   altitudeMood,
   photoPaletteTheme,
+  imageTransform,
   onKeepEditing,
   onNew,
 }: DownloadStateProps) {
@@ -69,6 +72,7 @@ export function DownloadState({
                 <RenderTheme
                   altitudeMood={altitudeMood}
                   data={data}
+                  imageTransform={imageTransform}
                   photoPaletteTheme={photoPaletteTheme}
                   photoUrl={photoUrl}
                   theme={theme}
@@ -123,6 +127,7 @@ export function DownloadState({
         <RenderTheme
           altitudeMood={altitudeMood}
           data={data}
+          imageTransform={imageTransform}
           photoPaletteTheme={photoPaletteTheme}
           photoUrl={photoUrl}
           theme={theme}

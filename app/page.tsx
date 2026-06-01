@@ -17,6 +17,7 @@ import type { AltitudeMood } from "@/components/themes/altitude";
 import { useImagePalette } from "@/hooks/use-image-palette";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
 import { formatDateUpper } from "@/lib/format";
+import { IDENTITY_TRANSFORM, type ImageTransform } from "@/lib/image-transform";
 import type { PhotoMood } from "@/lib/palette";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import {
@@ -91,6 +92,10 @@ export default function Home() {
   const [data, setData] = useState<ActivityData | null>(null);
   const [theme, setTheme] = useState<ThemeId>("path");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  // Pan/zoom for the background photo in hero themes. Tied to the current
+  // photo, so it resets whenever the photo is swapped or removed.
+  const [imageTransform, setImageTransform] =
+    useState<ImageTransform>(IDENTITY_TRANSFORM);
   const [accent, setAccent] = useState<string>("#c45a2c");
   const [visibility, setVisibility] = useState<Visibility>(DEFAULT_VISIBILITY);
   const [altitudeMood, setAltitudeMood] = useState<AltitudeMood>("night");
@@ -209,6 +214,8 @@ export default function Home() {
       }
       return file ? URL.createObjectURL(file) : null;
     });
+    // A new (or removed) photo invalidates any previous pan/zoom.
+    setImageTransform(IDENTITY_TRANSFORM);
   };
 
   const handleDownload = () => {
@@ -225,6 +232,7 @@ export default function Home() {
       URL.revokeObjectURL(photoUrl);
     }
     setPhotoUrl(null);
+    setImageTransform(IDENTITY_TRANSFORM);
     setState("empty");
   };
 
@@ -245,12 +253,14 @@ export default function Home() {
           altitudeMood={altitudeMood}
           athleteName={data.athleteName}
           data={visibleData}
+          imageTransform={imageTransform}
           location={data.location}
           onAccentChange={setAccent}
           onAltitudeMoodChange={setAltitudeMood}
           onAthleteNameChange={handleAthleteNameChange}
           onDownload={handleDownload}
           onFilesLoaded={handleFilesLoaded}
+          onImageTransformChange={setImageTransform}
           onLocationChange={handleLocationChange}
           onPhotoChange={handlePhotoChange}
           onPhotoMoodChange={setPhotoMood}
@@ -270,6 +280,7 @@ export default function Home() {
         <DownloadState
           altitudeMood={altitudeMood}
           data={visibleData}
+          imageTransform={imageTransform}
           onKeepEditing={handleKeepEditing}
           onNew={handleNew}
           photoPaletteTheme={photoPalette.theme}
