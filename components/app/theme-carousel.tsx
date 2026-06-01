@@ -127,9 +127,7 @@ export function ThemeCarousel({
             <span className="font-heading text-xl uppercase leading-none">
               {meta.label}
             </span>
-            <span className="font-medium font-mono text-[10px] uppercase tracking-[0.16em] opacity-65">
-              {meta.tagline}
-            </span>
+            <span className="caption-micro">{meta.tagline}</span>
           </button>
         );
       })}
@@ -248,14 +246,12 @@ export function ThemeCarousel({
               render={<ThemeNameButton meta={currentMeta} />}
             />
             <PopoverContent align="center" className="w-[420px] p-3">
-              <div className="mb-2 font-mono text-[11px] uppercase tracking-[0.28em] opacity-60">
-                Themes
-              </div>
+              <div className="caption-label mb-2">Themes</div>
               {themeList}
             </PopoverContent>
           </Popover>
         )}
-        <div className="mt-2 flex items-center gap-2 font-medium font-mono text-[10px] tracking-[0.22em] opacity-55">
+        <div className="caption-micro mt-2 flex items-center gap-2">
           <span>{THEME_ORDER.indexOf(theme) + 1}</span>
           <span aria-hidden>/</span>
           <span>{THEME_ORDER.length}</span>
@@ -288,9 +284,7 @@ const ThemeNameButton = ({
       <span className="block font-heading text-2xl uppercase leading-none">
         {meta.label}
       </span>
-      <span className="mt-1 block font-medium font-mono text-[10px] uppercase tracking-[0.18em] opacity-60">
-        {meta.tagline}
-      </span>
+      <span className="caption-micro mt-1 block">{meta.tagline}</span>
     </span>
     <ChevronDown
       aria-hidden

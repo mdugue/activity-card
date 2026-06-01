@@ -308,12 +308,12 @@ function ControlsPane({
           photoUrl={photoUrl}
         />
         {photoSupported ? null : (
-          <p className="mt-2 font-medium font-mono text-[10px] uppercase tracking-[0.18em] opacity-55">
+          <p className="caption-micro mt-2">
             {meta.label} theme has no room for a photo
           </p>
         )}
         {showRepositionHint ? (
-          <p className="mt-2 font-medium font-mono text-[10px] uppercase tracking-[0.18em] opacity-55">
+          <p className="caption-micro mt-2">
             Tap “Adjust” on the preview to move &amp; zoom
           </p>
         ) : null}
@@ -393,19 +393,15 @@ function ControlsPane({
                 <div className="font-heading text-base uppercase leading-none">
                   {m.label}
                 </div>
-                <div className="mt-1 font-medium font-mono text-[10px] uppercase tracking-[0.16em] opacity-65">
-                  {m.sub}
-                </div>
+                <div className="caption-micro mt-1">{m.sub}</div>
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
           {photoPaletteStatus === "loading" ? (
-            <div className="mt-2 font-medium font-mono text-[10px] tracking-[0.16em] opacity-55">
-              READING COLOURS…
-            </div>
+            <div className="caption-micro mt-2">READING COLOURS…</div>
           ) : null}
           {photoPaletteStatus === "error" ? (
-            <div className="mt-2 font-medium font-mono text-[10px] tracking-[0.16em] opacity-65">
+            <div className="caption-micro mt-2">
               COULDN&apos;T READ COLOURS · PURE STILL WORKS
             </div>
           ) : null}
@@ -689,9 +685,7 @@ function ControlBlock({
 }) {
   return (
     <div>
-      <div className="font-mono font-semibold text-[11px] tracking-[0.28em] opacity-60">
-        {label}
-      </div>
+      <div className="caption-label">{label}</div>
       {children}
     </div>
   );
