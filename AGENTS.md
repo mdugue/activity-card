@@ -97,17 +97,23 @@ is additionally excluded from `bun typecheck` (see `tsconfig.json`) — it ships
 `react-day-picker` v9 but v10 is installed. Don't restyle vendor files; if a primitive
 doesn't fit, wrap it in `components/app/`.
 
-## Non-goals (MVP)
+## Non-goals (still out of scope)
 
 To keep the agent focused, these are explicitly out of scope right now:
 
-- Strava / komoot OAuth integration
+- **komoot OAuth integration** (no public OAuth — partner-only)
 - User accounts, persistence, saved cards
+- "Update Strava activity description with link to card" (depends on saved cards)
 - Event organiser / B2B verification flow
 - PDF export
 - Email delivery
 - Server-side rendering of cards
 - Map tiles (route is always rendered as an abstract SVG silhouette)
+
+Note: **Strava OAuth (Phase 2A) is live** — see [`docs/strava.md`](./docs/strava.md).
+The original MVP "no backend" constraint was relaxed for the token-exchange
+Route Handlers; everything else above remains off-limits without explicit
+sign-off.
 
 If you find yourself reaching for any of these, stop and confirm.
 

@@ -21,11 +21,20 @@ const COOKIE_SECURE =
     ? false
     : process.env.NODE_ENV === "production";
 
+// Strava refresh tokens are long-lived (revoked on disconnect, not on a
+// timer), so give every cookie a long maxAge — the actual access-token
+// expiry lives in the `strava_expires_at` cookie value and drives
+// `ensureFreshToken`, not in the cookies' own browser lifetimes. Without
+// this, cookies are session-scoped and disappear when the browser closes,
+// forcing the user to reconnect even though their refresh token is fine.
+const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
+
 const COOKIE_BASE = {
   httpOnly: true,
   secure: COOKIE_SECURE,
   sameSite: "lax",
   path: "/",
+  maxAge: ONE_YEAR_SECONDS,
 } as const;
 
 export interface StravaAthlete {
@@ -76,7 +85,17 @@ export async function readTokens(): Promise<StoredTokens | null> {
   return { access, refresh, expiresAt, athlete };
 }
 
-export async function writeTokens(payload: StravaTokenResponse): Promise<void> {
+/**
+ * Persist the four Strava cookies. Pass `athlete` from the freshly stored
+ * `StoredTokens` shape when refreshing so we don't accidentally mangle the
+ * `profile_medium` ↔ `avatar` mapping — Strava's refresh response often
+ * omits the athlete entirely, in which case we keep the existing cookie
+ * value rather than overwriting with stale stored data.
+ */
+export async function writeTokens(
+  payload: StravaTokenResponse,
+  options?: { athleteOverride?: StravaAthlete }
+): Promise<void> {
   const store = await cookies();
   store.set(ACCESS, payload.access_token, COOKIE_BASE);
   store.set(REFRESH, payload.refresh_token, COOKIE_BASE);
@@ -88,6 +107,10 @@ export async function writeTokens(payload: StravaTokenResponse): Promise<void> {
       avatar: payload.athlete.profile_medium,
     };
     store.set(ATHLETE, JSON.stringify(athlete), COOKIE_BASE);
+  } else if (options?.athleteOverride) {
+    // Refresh didn't include athlete data — carry the previously stored
+    // athlete forward so we don't drop firstname / avatar on token refresh.
+    store.set(ATHLETE, JSON.stringify(options.athleteOverride), COOKIE_BASE);
   }
 }
 
@@ -163,7 +186,7 @@ async function refreshStoredTokens(tokens: StoredTokens): Promise<string> {
     throw new StravaNotConnectedError();
   }
   const payload = (await res.json()) as StravaTokenResponse;
-  await writeTokens({ ...payload, athlete: payload.athlete ?? tokens.athlete });
+  await writeTokens(payload, { athleteOverride: tokens.athlete });
   return payload.access_token;
 }
 

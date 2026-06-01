@@ -119,9 +119,12 @@ export async function stravaFetch<T>(
 }
 
 /**
- * Like `stravaFetch`, but returns `null` instead of throwing on any upstream
- * failure. For optional data (e.g. streams for an activity with no GPS) where
- * a missing payload is acceptable and shouldn't fail the whole request.
+ * Like `stravaFetch`, but returns `null` instead of throwing when Strava
+ * itself returns an upstream error (404, 5xx) — for optional data like the
+ * streams of an activity with no GPS. Auth and rate-limit errors still
+ * throw: silently dropping a 401 would let a revoked grant produce a
+ * "successful" but data-poor response; dropping a 429 would burn the next
+ * call against the limit anyway.
  */
 export async function stravaFetchOptional<T>(
   path: string,
@@ -129,8 +132,11 @@ export async function stravaFetchOptional<T>(
 ): Promise<T | null> {
   try {
     return await stravaFetch<T>(path, opts);
-  } catch {
-    return null;
+  } catch (err) {
+    if (err instanceof StravaUpstreamError) {
+      return null;
+    }
+    throw err;
   }
 }
 

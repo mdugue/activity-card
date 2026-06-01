@@ -12,10 +12,14 @@ const COLORS = {
 } as const;
 
 /**
- * "Powered by Strava" mark. Required by Strava's brand guidelines on any
- * surface that displays data fetched from their API. The asset itself lives
- * in `public/strava/powered-by-strava.svg`; this component just renders it
- * inline so the colour can be themed and so html-to-image picks it up.
+ * "Powered by Strava" mark. Single source of truth for the attribution —
+ * drawn inline so it can be themed via the `variant` prop and so
+ * html-to-image rasterises it cleanly into the exported PNG.
+ *
+ * TODO: replace the path data and text with the official "Powered by
+ * Strava" asset from https://developers.strava.com/guidelines/ before
+ * public launch — the current shapes approximate the lockup but aren't
+ * the registered mark and don't satisfy brand compliance.
  */
 export function StravaAttribution({
   variant = "brand",

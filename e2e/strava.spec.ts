@@ -223,6 +223,27 @@ test.describe("strava OAuth + picker", () => {
     ).toBeVisible();
   });
 
+  test("callback ignores a malicious `return_to` and lands on /", async ({
+    page,
+  }) => {
+    // Drive the OAuth flow manually so we can inject a `return_to` that
+    // points off-origin. A correctly-hardened callback redirects to the
+    // safe default instead of the attacker's URL.
+    await page.goto(
+      "/api/strava/authorize?return_to=https%3A%2F%2Fattacker.example%2Fphish"
+    );
+    // After the mock approves + callback exchanges, we should land on /,
+    // NOT on the attacker host. waitForURL throws if the URL is wrong.
+    await page.waitForURL(/^http:\/\/localhost:3100\/(\?.*)?$/, {
+      timeout: 10_000,
+    });
+    // The picker opens because the flow still completes; the only thing
+    // the attacker controls (the post-auth destination) was overridden.
+    await expect(
+      page.getByRole("heading", { name: /your recent/i })
+    ).toBeVisible();
+  });
+
   test("502 from Strava on a picked activity surfaces an inline error", async ({
     page,
   }) => {

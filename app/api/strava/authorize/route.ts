@@ -16,8 +16,12 @@ export async function GET(request: Request) {
 
   // Carry through any `?return_to` so the callback can bounce the user back
   // where they started. Defaults to `/` with a `strava=connected` flag.
+  // SECURITY: only accept same-origin relative paths to prevent the OAuth
+  // flow from being abused as an open redirect into a phishing domain. The
+  // callback validates again as defense-in-depth.
   const url = new URL(request.url);
-  const returnTo = url.searchParams.get("return_to") || "/?strava=connected";
+  const returnTo =
+    safeRelativePath(url.searchParams.get("return_to")) ?? "/?strava=connected";
 
   const authorize = new URL(
     process.env.STRAVA_OAUTH_URL || "https://www.strava.com/oauth/authorize"
@@ -33,4 +37,19 @@ export async function GET(request: Request) {
   );
 
   return NextResponse.redirect(authorize);
+}
+
+/** Accept only path-relative URLs anchored at `/`. Rejects absolute URLs
+ * (`https://evil.example`) and protocol-relative ones (`//evil.example`). */
+function safeRelativePath(value: string | null): string | null {
+  if (!value) {
+    return null;
+  }
+  if (!value.startsWith("/")) {
+    return null;
+  }
+  if (value.startsWith("//")) {
+    return null;
+  }
+  return value;
 }

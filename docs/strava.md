@@ -189,10 +189,11 @@ These are non-negotiable per Strava's developer agreement:
 2. **Don't derive product names from "Strava"** or imply endorsement.
 3. **Provide a working Disconnect**. The edit-state corner exposes one;
    it POSTs to `/api/strava/disconnect` which clears all four cookies.
-4. **Replace the placeholder SVG** at `public/strava/powered-by-strava.svg`
-   with the official asset from
+4. **Replace the placeholder mark** in `components/app/strava-attribution.tsx`
+   with the official "Powered by Strava" asset from
    https://developers.strava.com/guidelines/ before going public. The
-   current file is a working approximation marked with a TODO comment.
+   inline SVG there is the single source of truth — a working
+   approximation marked with a TODO comment.
 
 Strava revokes API access for violations — this is the most common
 cause of integrations being shut down, so treat the attribution as
