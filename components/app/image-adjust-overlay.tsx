@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, RotateCcw } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useImageAdjust } from "@/hooks/use-image-adjust";
 import {
@@ -63,9 +64,9 @@ export function ImageAdjustOverlay({
       </div>
 
       {/* Hint chip */}
-      <div className="pointer-events-none absolute top-5 left-1/2 z-[3] -translate-x-1/2 whitespace-nowrap rounded-full bg-black/55 px-3 py-1.5 font-medium font-mono text-[10px] text-white uppercase tracking-[0.16em] backdrop-blur-sm">
+      <Badge className="pointer-events-none absolute top-5 left-1/2 z-[3] -translate-x-1/2 rounded-full bg-black/55 px-3 py-1.5 font-mono text-[10px] text-white backdrop-blur-sm">
         Drag · pinch or scroll to zoom
-      </div>
+      </Badge>
 
       {/* Controls */}
       <div className="absolute bottom-4 left-1/2 z-[3] flex -translate-x-1/2 items-center gap-2">

@@ -7,6 +7,7 @@ import { RenderTheme, type ThemeId } from "@/components/app/render-theme";
 import type { ActivityData } from "@/components/app/sample-data";
 import type { AltitudeMood } from "@/components/themes/altitude";
 import { THEME_META, THEME_ORDER } from "@/components/themes/index";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Carousel,
@@ -190,14 +191,18 @@ export function ThemeCarousel({
                   </div>
 
                   {isActive && adjustAvailable && !adjusting ? (
-                    <button
-                      className="absolute top-3 right-3 z-10 flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 font-medium font-mono text-[10px] text-white uppercase tracking-[0.16em] backdrop-blur-sm transition-colors hover:bg-black/75"
-                      onClick={() => setAdjusting(true)}
-                      type="button"
+                    <Badge
+                      className="absolute top-3 right-3 z-10 rounded-full bg-black/55 px-3 py-1.5 font-mono text-[10px] text-white backdrop-blur-sm transition-colors hover:bg-black/75"
+                      render={
+                        <button
+                          onClick={() => setAdjusting(true)}
+                          type="button"
+                        />
+                      }
                     >
                       <Move aria-hidden className="size-3" />
                       Adjust
-                    </button>
+                    </Badge>
                   ) : null}
 
                   {isActive && adjusting ? (
