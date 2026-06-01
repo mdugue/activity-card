@@ -5,14 +5,25 @@ locally against the real Strava API or the bundled mock.
 
 ## What it does
 
-A signed-in Strava user can click **Connect Strava** on the empty state,
-land on Strava's consent screen, return to the app, and pick from their
-30 most recent activities. The chosen activity flows through the same
-parsing pipeline as a GPX/.fit upload (`lib/parse-shared.ts` →
-`ParsedActivity` → `app/page.tsx` `adoptParsed` → `ActivityData`), so
-themes, controls, and the PNG exporter do not branch on source. The only
-visible difference: `data.source === 'strava'` triggers a "Powered by
-Strava" mark on the card per Strava's brand terms.
+**Connect Strava** is the primary CTA on the empty state. Clicking it
+sends the user to Strava's consent screen, then back to the app's
+picker — a paginated, shadcn-based list of recent activities. The user
+either:
+
+- **Single-picks** one activity (one click → one card), or
+- Flips the **Multi-select** switch, checks 2+ activities, and clicks
+  **Combine N activities** — the parts run through the same
+  `assembleTriathlon()` path GPX/.fit uploads use, producing a
+  multi-sport card.
+
+In either case the chosen activity (or assembled triathlon) flows
+through the same parsing pipeline as a GPX/.fit upload
+(`lib/parse-shared.ts` → `ParsedActivity` → `app/page.tsx` `adoptParsed`
+→ `ActivityData`), so themes, controls, and the PNG exporter do not
+branch on source. The only visible difference: `data.source === 'strava'`
+triggers a "Powered by Strava" mark on the card per Strava's brand
+terms, and the edit-state **Swap** button reopens the picker (instead
+of a file dialog) when the loaded activity came from Strava.
 
 ## Architecture in one diagram
 
@@ -68,12 +79,12 @@ All Strava traffic is server→server; the browser never holds tokens.
 | `app/api/strava/authorize/route.ts` | Builds the Strava authorize URL + state cookie, 302 redirect. |
 | `app/api/strava/callback/route.ts` | Validates `state`, exchanges `code` for tokens, sets cookies, redirects back. |
 | `app/api/strava/me/route.ts` | Reads the athlete cookie. The only endpoint the client polls. |
-| `app/api/strava/activities/route.ts` | Lists 30 recent activities (proxied through `ensureFreshToken`). |
+| `app/api/strava/activities/route.ts` | Lists activities for the requested `?page=N&per_page=M` (defaults: 30, 1). |
 | `app/api/strava/activity/[id]/route.ts` | Detail + streams → `ParsedActivity[]`. |
 | `app/api/strava/disconnect/route.ts` | Clears all four cookies. |
 | `lib/strava-cookies.ts` | `readTokens`, `writeTokens`, `clearTokens`, `ensureFreshToken`, OAuth state. Single source of truth for the cookie flow. |
 | `lib/strava-to-parsed.ts` | Maps Strava streams + detail into the same `TrackPoint`/`ParsedActivity` shape the GPX/.fit parsers produce. Reuses `finalise()` and `detectSport()` from `lib/parse-shared.ts`. |
-| `components/app/strava-picker.tsx` | Activity-list screen (`AppState === "picking-strava"`). |
+| `components/app/strava-picker.tsx` | Activity-list screen (`AppState === "picking-strava"`) — shadcn `Item`/`Pagination`/`Switch`/`Checkbox`. Owns single-pick, multi-select, and pagination state. |
 | `components/app/strava-attribution.tsx` | "Powered by Strava" SVG mark, rendered by themes when `data.source === 'strava'`. |
 | `hooks/use-strava-connection.ts` | `useStravaConnection()` — wraps `/api/strava/me`. Only way the client UI knows whether it's connected. |
 | `e2e/strava-mock.ts` | Bun.serve mock server used by Playwright tests. |

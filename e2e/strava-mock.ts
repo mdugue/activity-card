@@ -45,7 +45,7 @@ interface ActivityFixture {
   total_elevation_gain?: number;
 }
 
-const ACTIVITIES: ActivityFixture[] = [
+const NAMED_ACTIVITIES: ActivityFixture[] = [
   {
     id: 1001,
     name: "Saturday in the Elbsandstein",
@@ -72,6 +72,35 @@ const ACTIVITIES: ActivityFixture[] = [
     distance: 2000,
     moving_time: 2700,
   },
+];
+
+const SYNTH_COUNT = 50;
+const SYNTH_SPORTS = ["Ride", "Run", "Swim"] as const;
+
+// Synthesised filler activities so pagination tests have real content past
+// the first page. Deterministic by id so other tests can target them too.
+const SYNTH_ACTIVITIES: ActivityFixture[] = Array.from(
+  { length: SYNTH_COUNT },
+  (_, i) => {
+    const sport = SYNTH_SPORTS[i % SYNTH_SPORTS.length];
+    const id = 2000 + i;
+    const dayOffset = i + 4; // pushed back past the three named activities
+    const start = new Date(Date.UTC(2026, 4, 16 - dayOffset, 7, 0, 0));
+    return {
+      id,
+      name: `Mock ${sport} #${i + 1}`,
+      sport_type: sport,
+      start_date: start.toISOString(),
+      distance: 5000 + i * 500,
+      moving_time: 1800 + i * 60,
+      total_elevation_gain: sport === "Ride" ? 200 + i * 5 : 20 + i,
+    };
+  }
+);
+
+const ACTIVITIES: ActivityFixture[] = [
+  ...NAMED_ACTIVITIES,
+  ...SYNTH_ACTIVITIES,
 ];
 
 function makeStreams(count: number) {
@@ -143,7 +172,13 @@ function handle(req: Request): Response | Promise<Response> {
   }
 
   if (url.pathname === "/api/v3/athlete/activities" && req.method === "GET") {
-    return Response.json(ACTIVITIES);
+    const page = Math.max(1, Number(url.searchParams.get("page") || "1"));
+    const perPage = Math.max(
+      1,
+      Number(url.searchParams.get("per_page") || "30")
+    );
+    const start = (page - 1) * perPage;
+    return Response.json(ACTIVITIES.slice(start, start + perPage));
   }
 
   const detailMatch = url.pathname.match(DETAIL_RE);

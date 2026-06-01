@@ -104,6 +104,7 @@ interface EditStateProps {
   onFilesLoaded: (parts: ParsedActivity[]) => void;
   onImageTransformChange: (next: ImageTransform) => void;
   onLocationChange: (location: string) => void;
+  onOpenStravaPicker: () => void;
   onPhotoChange: (file: File | null) => void;
   onPhotoMoodChange: (mood: PhotoMood) => void;
   onSportChange: (sport: Sport) => void;
@@ -213,6 +214,7 @@ function ControlsPane({
   onAccentChange,
   onDownload,
   onFilesLoaded,
+  onOpenStravaPicker,
   visibility,
   onVisibilityChange,
   isExporting,
@@ -238,7 +240,11 @@ function ControlsPane({
 
   return (
     <div className="flex flex-col gap-7 pr-2 lg:pr-10">
-      <FileLoadedRow data={data} onFilesLoaded={onFilesLoaded} />
+      <FileLoadedRow
+        data={data}
+        onFilesLoaded={onFilesLoaded}
+        onOpenStravaPicker={onOpenStravaPicker}
+      />
       <StravaConnectionRow source={data.source} />
 
       <ControlBlock label="TITLE">
@@ -640,17 +646,30 @@ function StravaConnectionRow({ source }: { source: ActivityData["source"] }) {
 function FileLoadedRow({
   data,
   onFilesLoaded,
+  onOpenStravaPicker,
 }: {
   data: ActivityData;
   onFilesLoaded: (parts: ParsedActivity[]) => void;
+  onOpenStravaPicker: () => void;
 }) {
+  const fromStrava = data.source === "strava";
   const segCount = data.segments?.length ?? 0;
   const isMulti = data.sport === "triathlon" && segCount >= 2;
   const friendlyDate = formatDate(data.date);
   const slug = friendlyDate.replace(/\s|,/g, "").toLowerCase() || "activity";
-  const label = isMulti
-    ? `${segCount} files · assembled`
-    : `${data.sport}_${slug}.fit`;
+  // Strava users never see a `.fit` filename, so don't pretend. For
+  // uploads we keep the file-like label that mirrors what the user
+  // dropped in.
+  let label: string;
+  if (fromStrava) {
+    label = isMulti
+      ? `Strava · ${segCount} activities combined`
+      : `Strava · ${data.title || data.sport}`;
+  } else if (isMulti) {
+    label = `${segCount} files · assembled`;
+  } else {
+    label = `${data.sport}_${slug}.fit`;
+  }
 
   const inputRef = useRef<HTMLInputElement>(null);
   const [isSwapping, setIsSwapping] = useState(false);
@@ -679,6 +698,14 @@ function FileLoadedRow({
     }
   };
 
+  const handleSwap = () => {
+    if (fromStrava) {
+      onOpenStravaPicker();
+    } else {
+      inputRef.current?.click();
+    }
+  };
+
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2 font-medium font-mono text-[11px] opacity-60">
@@ -698,7 +725,7 @@ function FileLoadedRow({
         <button
           className="ml-auto flex items-center gap-1 text-[10px] uppercase tracking-[0.18em] underline-offset-4 hover:underline disabled:no-underline disabled:opacity-50"
           disabled={isSwapping}
-          onClick={() => inputRef.current?.click()}
+          onClick={handleSwap}
           type="button"
         >
           Swap

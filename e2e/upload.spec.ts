@@ -72,12 +72,4 @@ test.describe("upload", () => {
     // Should NOT have advanced to the edit state.
     await expect(page.getByTestId("theme-picker-trigger")).not.toBeVisible();
   });
-
-  test("Try a sample loads the demo dataset", async ({ page }) => {
-    await page.goto("/");
-    await page.evaluate(() => localStorage.clear());
-    await page.reload();
-    await page.getByRole("button", { name: /try a sample/i }).click();
-    await expect(page.getByTestId("theme-picker-trigger")).toBeVisible();
-  });
 });

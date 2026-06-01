@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { uploadActivity } from "./helpers";
 
 /**
  * E2E coverage for the Strava OAuth + activity-picker flow.
@@ -17,12 +18,14 @@ test.describe("strava OAuth + picker", () => {
     await page.reload();
   });
 
-  test("empty state shows Connect Strava when not connected", async ({
+  test("empty state shows Connect Strava as the primary CTA", async ({
     page,
   }) => {
-    await expect(
-      page.getByRole("button", { name: /connect strava/i })
-    ).toBeVisible();
+    const connect = page.getByRole("button", { name: /connect strava/i });
+    await expect(connect).toBeVisible();
+    // Should be focused on mount so Enter activates the OAuth flow without
+    // requiring a mouse click — the user's "Strava is first-class" ask.
+    await expect(connect).toBeFocused();
   });
 
   test("OAuth round-trip lands on the picker", async ({ page }) => {
@@ -34,7 +37,7 @@ test.describe("strava OAuth + picker", () => {
     await expect(
       page.getByRole("heading", { name: /your recent/i })
     ).toBeVisible();
-    // The mock returns 3 fixed activities; just check one is visible.
+    // The first page should include the named ride at the top.
     await expect(
       page.getByRole("button", { name: /saturday in the elbsandstein/i })
     ).toBeVisible();
@@ -78,7 +81,7 @@ test.describe("strava OAuth + picker", () => {
 
     // The card itself (PATH theme is default) carries the "Powered by Strava"
     // attribution because source === 'strava'. Cards are rendered twice
-    // (visible preview + off-screen export mount), so two marks is fine.
+    // (visible preview + off-screen export mount), so .first() is sufficient.
     const marks = page.getByRole("img", { name: /powered by strava/i });
     await expect(marks.first()).toBeVisible();
   });
@@ -86,12 +89,88 @@ test.describe("strava OAuth + picker", () => {
   test("uploaded files do NOT show the Strava attribution", async ({
     page,
   }) => {
-    // Sample data is shipped as `source: undefined` (treated as upload).
-    await page.getByRole("button", { name: /try a sample/i }).click();
-    await expect(page.getByTestId("theme-picker-trigger")).toBeVisible();
+    await uploadActivity(page);
 
     const marks = page.getByRole("img", { name: /powered by strava/i });
     await expect(marks).toHaveCount(0);
+  });
+
+  test("multi-select combines two activities into a triathlon-shape card", async ({
+    page,
+  }) => {
+    await page.getByRole("button", { name: /connect strava/i }).click();
+    await page.waitForURL(/\/$/);
+    await expect(
+      page.getByRole("heading", { name: /your recent/i })
+    ).toBeVisible();
+
+    // Flip multi-select on, pick two named activities (Ride + Run).
+    await page.getByRole("switch", { name: /multi-select/i }).click();
+    await page
+      .getByRole("button", { name: /saturday in the elbsandstein/i })
+      .click();
+    await page.getByRole("button", { name: /föhrer westwind/i }).click();
+
+    // Sticky bottom CTA appears once 2 are selected.
+    const combine = page.getByRole("button", {
+      name: /^combine 2 activities$/i,
+    });
+    await expect(combine).toBeEnabled();
+    await combine.click();
+
+    // Editor opens — assembled triathlon by `assembleTriathlon`.
+    await expect(page.getByTestId("theme-picker-trigger")).toBeVisible();
+    // FileLoadedRow indicates a combined Strava activity.
+    await expect(
+      page.getByText(/Strava · 2 activities combined/i)
+    ).toBeVisible();
+  });
+
+  test("pagination advances to the next page", async ({ page }) => {
+    await page.getByRole("button", { name: /connect strava/i }).click();
+    await page.waitForURL(/\/$/);
+    await expect(
+      page.getByRole("heading", { name: /your recent/i })
+    ).toBeVisible();
+
+    // Page 1 indicator visible; the named ride is in this slice.
+    await expect(
+      page.getByRole("button", { name: /saturday in the elbsandstein/i })
+    ).toBeVisible();
+
+    // shadcn pagination renders <a> without an `href`, so it has no
+    // accessible "link" role. Target by aria-label instead.
+    await page.getByLabel(/go to next page/i).click();
+
+    // Synthesised activities start at id 2000 — the first Page-2 item is "Mock Ride #28".
+    await expect(
+      page.getByRole("button", { name: /mock ride #28/i })
+    ).toBeVisible();
+    // And the named first-page activity is no longer in the DOM.
+    await expect(
+      page.getByRole("button", { name: /saturday in the elbsandstein/i })
+    ).toHaveCount(0);
+  });
+
+  test("Swap on a Strava activity reopens the picker, not the file dialog", async ({
+    page,
+  }) => {
+    await page.getByRole("button", { name: /connect strava/i }).click();
+    await page.waitForURL(/\/$/);
+    await page
+      .getByRole("button", { name: /saturday in the elbsandstein/i })
+      .click();
+    await expect(page.getByTestId("theme-picker-trigger")).toBeVisible();
+
+    // The file-loaded row reads "Strava · …" and the Swap button takes us
+    // back to the picker instead of opening a file dialog.
+    await expect(
+      page.getByText(/Strava · Saturday in the Elbsandstein/i)
+    ).toBeVisible();
+    await page.getByRole("button", { name: /^swap$/i }).click();
+    await expect(
+      page.getByRole("heading", { name: /your recent/i })
+    ).toBeVisible();
   });
 
   test("disconnect clears the connection state", async ({ page }) => {
@@ -111,7 +190,7 @@ test.describe("strava OAuth + picker", () => {
     ).toBeVisible();
   });
 
-  test("404 from Strava on a picked activity surfaces an inline error", async ({
+  test("502 from Strava on a picked activity surfaces an inline error", async ({
     page,
   }) => {
     // Manually open the picker route, then force the detail endpoint to fail

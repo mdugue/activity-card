@@ -12,7 +12,6 @@ import {
   type ActivitySource,
   SAMPLE_RIDE,
   SAMPLE_RUN,
-  SAMPLE_TRI,
   type Sport,
 } from "@/components/app/sample-data";
 
@@ -40,16 +39,6 @@ interface PersistedUi {
   photoMood: PhotoMood;
   theme: ThemeId;
   visibility: Visibility;
-}
-
-function sampleForTheme(theme: ThemeId): ActivityData {
-  if (theme === "triathlon") {
-    return SAMPLE_TRI;
-  }
-  if (theme === "photo" || theme === "editorial") {
-    return SAMPLE_RUN;
-  }
-  return SAMPLE_RIDE;
 }
 
 function adoptParsed(
@@ -200,15 +189,6 @@ export default function Home() {
     window.history.replaceState({}, "", url.toString());
   }, []);
 
-  const handleLoadSample = () => {
-    // Pick a sample that matches the persisted theme so the user sees
-    // something representative of what they last chose.
-    const sample = sampleForTheme(theme);
-    const athleteName = persistedAthleteNameRef.current ?? sample.athleteName;
-    setData({ ...sample, athleteName });
-    setState("edit");
-  };
-
   const adoptParts = (
     parts: ParsedActivity[],
     source: ActivitySource
@@ -306,7 +286,6 @@ export default function Home() {
         <EmptyState
           onConnectStrava={handleConnectStrava}
           onFilesLoaded={handleFilesLoaded}
-          onLoadSample={handleLoadSample}
           onOpenStravaPicker={handleOpenStravaPicker}
         />
       ) : null}
@@ -332,6 +311,7 @@ export default function Home() {
           onFilesLoaded={handleFilesLoaded}
           onImageTransformChange={setImageTransform}
           onLocationChange={handleLocationChange}
+          onOpenStravaPicker={handleOpenStravaPicker}
           onPhotoChange={handlePhotoChange}
           onPhotoMoodChange={setPhotoMood}
           onSportChange={handleSportChange}

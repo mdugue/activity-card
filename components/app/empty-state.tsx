@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useStravaConnection } from "@/hooks/use-strava-connection";
 import { type ParsedActivity, parseActivityFile } from "@/lib/parse-activity";
@@ -10,17 +10,29 @@ const ACTIVITY_FILE_RE = /\.(gpx|fit)$/i;
 interface EmptyStateProps {
   onConnectStrava: () => void;
   onFilesLoaded: (parts: ParsedActivity[]) => void;
-  onLoadSample: () => void;
   onOpenStravaPicker: () => void;
 }
 
 export function EmptyState({
-  onLoadSample,
   onFilesLoaded,
   onConnectStrava,
   onOpenStravaPicker,
 }: EmptyStateProps) {
   const strava = useStravaConnection();
+  const stravaBtnRef = useRef<HTMLButtonElement>(null);
+  // `autoFocus` only fires on mount, but the button is disabled while we
+  // poll /api/strava/me. Focus it once we know the connection state so
+  // pressing Enter from the landing page triggers Strava.
+  useEffect(() => {
+    if (!strava.loading) {
+      stravaBtnRef.current?.focus();
+    }
+  }, [strava.loading]);
+
+  const stravaLabel = strava.connected
+    ? `Pick from Strava${strava.athlete?.firstname ? ` · ${strava.athlete.firstname}` : ""}`
+    : "Connect Strava";
+
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-8 py-24">
       <div className="font-medium font-mono text-xs tracking-[0.32em] opacity-55">
@@ -28,44 +40,41 @@ export function EmptyState({
       </div>
 
       <h1 className="mt-7 text-center font-heading text-7xl uppercase leading-[0.88] tracking-tight sm:text-8xl md:text-[10rem] lg:text-[11rem]">
-        DROP YOUR
+        BRING YOUR
         <br />
         <span className="text-primary">EFFORT.</span>
       </h1>
 
       <p className="mt-6 max-w-xl text-center text-base leading-relaxed opacity-65 sm:text-lg">
-        One{" "}
+        Pull your last ride, run, or swim straight from Strava — or drop a{" "}
         <code className="bg-foreground px-2 py-1 font-mono text-background text-sm">
           .gpx
         </code>{" "}
-        or{" "}
+        /{" "}
         <code className="bg-foreground px-2 py-1 font-mono text-background text-sm">
           .fit
-        </code>
-        , or drop two-plus together for a triathlon / brick. We&apos;ll make
-        something worth keeping.
+        </code>{" "}
+        file. We&apos;ll make something worth keeping.
       </p>
 
-      <DropZone onFilesLoaded={onFilesLoaded} onLoadSample={onLoadSample} />
+      <Button
+        className="mt-10 h-14 gap-3 px-8 text-base"
+        disabled={strava.loading}
+        onClick={strava.connected ? onOpenStravaPicker : onConnectStrava}
+        ref={stravaBtnRef}
+        size="lg"
+      >
+        <StravaIcon />
+        {stravaLabel}
+      </Button>
 
-      <div className="mt-6 flex items-center gap-3 font-mono text-[10px] tracking-[0.22em] opacity-55">
+      <div className="mt-8 flex items-center gap-3 font-mono text-[10px] tracking-[0.22em] opacity-55">
         <span aria-hidden className="h-px w-10 bg-foreground/30" />
-        <span>OR</span>
+        <span>OR DROP A FILE</span>
         <span aria-hidden className="h-px w-10 bg-foreground/30" />
       </div>
 
-      <Button
-        className="mt-4 gap-2"
-        disabled={strava.loading}
-        onClick={strava.connected ? onOpenStravaPicker : onConnectStrava}
-        size="lg"
-        variant="outline"
-      >
-        <StravaIcon />
-        {strava.connected
-          ? `Pick from Strava${strava.athlete?.firstname ? ` · ${strava.athlete.firstname}` : ""}`
-          : "Connect Strava"}
-      </Button>
+      <DropZone onFilesLoaded={onFilesLoaded} />
 
       <div className="mt-9 flex flex-wrap justify-center gap-3">
         {(["RIDE", "RUN", "SWIM", "TRIATHLON"] as const).map((s) => (
@@ -86,9 +95,9 @@ function StravaIcon() {
     <svg
       aria-hidden
       fill="#FC4C02"
-      height="18"
+      height="20"
       viewBox="0 0 24 24"
-      width="18"
+      width="20"
       xmlns="http://www.w3.org/2000/svg"
     >
       <title>Strava</title>
@@ -100,10 +109,8 @@ function StravaIcon() {
 }
 
 function DropZone({
-  onLoadSample,
   onFilesLoaded,
 }: {
-  onLoadSample: () => void;
   onFilesLoaded: (parts: ParsedActivity[]) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -144,8 +151,8 @@ function DropZone({
       aria-label="File drop zone"
       className={
         isDragging
-          ? "relative mt-12 flex h-72 w-full max-w-2xl flex-col items-center justify-center border-2 border-primary border-dashed bg-primary/5"
-          : "relative mt-12 flex h-72 w-full max-w-2xl flex-col items-center justify-center border-2 border-foreground border-dashed bg-background/45"
+          ? "relative mt-4 flex h-44 w-full max-w-2xl flex-col items-center justify-center border-2 border-primary border-dashed bg-primary/5"
+          : "relative mt-4 flex h-44 w-full max-w-2xl flex-col items-center justify-center border border-foreground/30 border-dashed bg-background/30 opacity-90"
       }
       onClick={(e) => {
         if (e.target === e.currentTarget) {
@@ -176,12 +183,6 @@ function DropZone({
       role="button"
       tabIndex={0}
     >
-      {/* corner brackets */}
-      <div className="absolute -top-1 -left-1 size-5 bg-primary" />
-      <div className="absolute -top-1 -right-1 size-5 bg-primary" />
-      <div className="absolute -bottom-1 -left-1 size-5 bg-primary" />
-      <div className="absolute -right-1 -bottom-1 size-5 bg-primary" />
-
       <input
         accept=".gpx,.fit"
         className="hidden"
@@ -195,56 +196,20 @@ function DropZone({
         type="file"
       />
 
-      <svg
-        aria-hidden
-        className="mb-4"
-        fill="none"
-        height="64"
-        viewBox="0 0 64 64"
-        width="64"
+      <div className="text-center font-medium font-mono text-xs tracking-[0.22em] opacity-65">
+        {progress ?? (idle ? "DROP A FILE OR" : "DROP TO READ")}
+      </div>
+      <Button
+        className="mt-3"
+        disabled={isParsing}
+        onClick={() => inputRef.current?.click()}
+        size="sm"
+        variant="outline"
       >
-        <title>route mark</title>
-        <path
-          d="M14 44 Q24 18, 32 32 T54 22"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeWidth={3}
-        />
-        <circle
-          className="text-primary"
-          cx={14}
-          cy={44}
-          fill="currentColor"
-          r={4}
-        />
-        <circle cx={54} cy={22} fill="currentColor" r={4} />
-      </svg>
-
-      <div className="text-center font-heading text-4xl uppercase leading-none tracking-tight sm:text-5xl">
-        {progress ?? (idle ? "DROP A FILE HERE" : "DROP TO READ")}
-      </div>
-      <div className="mt-3 font-medium font-mono text-xs tracking-[0.16em] opacity-55">
-        {idle ? "ONE FILE OR MANY · OR" : ""}
-      </div>
-      <div className="mt-3 flex gap-2">
-        <Button
-          disabled={isParsing}
-          onClick={() => inputRef.current?.click()}
-          size="lg"
-        >
-          Browse files
-        </Button>
-        <Button
-          disabled={isParsing}
-          onClick={onLoadSample}
-          size="lg"
-          variant="outline"
-        >
-          Try a sample
-        </Button>
-      </div>
+        Browse files
+      </Button>
       {error ? (
-        <div className="mt-4 font-mono text-destructive text-xs">{error}</div>
+        <div className="mt-3 font-mono text-destructive text-xs">{error}</div>
       ) : null}
     </div>
   );
