@@ -71,20 +71,15 @@ export function ImageAdjustOverlay({
       {/* Controls */}
       <div className="absolute bottom-4 left-1/2 z-[3] flex -translate-x-1/2 items-center gap-2">
         <Button
-          className="bg-white/90 text-black hover:bg-white disabled:opacity-40"
+          className="bg-white/90 text-black hover:bg-white"
           disabled={!canReset}
           onClick={() => onChange(IDENTITY_TRANSFORM)}
           size="sm"
-          variant="secondary"
         >
           <RotateCcw aria-hidden className="size-3.5" />
           Reset
         </Button>
-        <Button
-          className="bg-primary text-primary-foreground hover:bg-primary/90"
-          onClick={onDone}
-          size="sm"
-        >
+        <Button onClick={onDone} size="sm">
           <Check aria-hidden className="size-3.5" />
           Done
         </Button>

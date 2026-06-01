@@ -282,7 +282,6 @@ const ThemeNameButton = ({
     data-testid="theme-picker-trigger"
     ref={ref}
     type="button"
-    variant="ghost"
     {...props}
   >
     <span className="text-left">

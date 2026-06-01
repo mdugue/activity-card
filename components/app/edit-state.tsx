@@ -457,7 +457,7 @@ function ControlsPane({
       </ControlBlock>
 
       <Button
-        className="mt-4 h-auto justify-between bg-primary py-4 font-heading text-lg text-primary-foreground hover:bg-primary/90"
+        className="mt-4 h-auto justify-between py-4 font-heading text-lg"
         disabled={isExporting}
         onClick={onDownload}
         size="lg"
