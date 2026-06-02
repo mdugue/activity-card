@@ -2,36 +2,18 @@
 
 export type Coord = [number, number];
 
+/**
+ * Aspect-preserving route path string fitted into a w×h box. Thin wrapper over
+ * `projectRoute` (which also returns the projected points / start / end); use
+ * this when only the `d` string is needed.
+ */
 export function routePath(
   coords: Coord[] | undefined,
   w: number,
   h: number,
   pad = 0
 ): string {
-  if (!coords || coords.length === 0) {
-    return "";
-  }
-  const xs = coords.map((c) => c[0]);
-  const ys = coords.map((c) => c[1]);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
-  const dx = maxX - minX || 1;
-  const dy = maxY - minY || 1;
-  // preserve aspect — fit
-  const innerW = w - pad * 2;
-  const innerH = h - pad * 2;
-  const scale = Math.min(innerW / dx, innerH / dy);
-  const offsetX = pad + (innerW - dx * scale) / 2;
-  const offsetY = pad + (innerH - dy * scale) / 2;
-  return coords
-    .map((c, i) => {
-      const x = offsetX + (c[0] - minX) * scale;
-      const y = offsetY + (c[1] - minY) * scale;
-      return `${i === 0 ? "M" : "L"}${x.toFixed(2)} ${y.toFixed(2)}`;
-    })
-    .join(" ");
+  return projectRoute(coords, w, h, pad).d;
 }
 
 export function elevationPath(
@@ -128,4 +110,62 @@ export function fmtSec(s: number): string {
   const m = Math.floor(s / 60);
   const r = s % 60;
   return `${m}:${r < 10 ? "0" : ""}${r}`;
+}
+
+export interface ProjectedRoute {
+  d: string;
+  end: Coord | null;
+  /** every coordinate projected into the w×h box, in order */
+  points: Coord[];
+  start: Coord | null;
+}
+
+/**
+ * Project a route into a w×h box and return the path string plus the projected
+ * points (needed for start/end markers and gradient stops). Aspect-preserving
+ * by default (same maths as `routePath`); pass `stretch` to map each axis
+ * independently and fill the box — so a wide seamless strip's line visibly
+ * crosses every slide edge regardless of the route's native aspect.
+ */
+export function projectRoute(
+  coords: Coord[] | undefined,
+  w: number,
+  h: number,
+  pad = 0,
+  stretch = false
+): ProjectedRoute {
+  if (!coords || coords.length === 0) {
+    return { d: "", points: [], start: null, end: null };
+  }
+  const xs = coords.map((c) => c[0]);
+  const ys = coords.map((c) => c[1]);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  const dx = Math.max(...xs) - minX || 1;
+  const dy = Math.max(...ys) - minY || 1;
+  const innerW = w - pad * 2;
+  const innerH = h - pad * 2;
+
+  let points: Coord[];
+  if (stretch) {
+    points = coords.map((c) => [
+      pad + ((c[0] - minX) / dx) * innerW,
+      pad + ((c[1] - minY) / dy) * innerH,
+    ]);
+  } else {
+    const scale = Math.min(innerW / dx, innerH / dy);
+    const offsetX = pad + (innerW - dx * scale) / 2;
+    const offsetY = pad + (innerH - dy * scale) / 2;
+    points = coords.map((c) => [
+      offsetX + (c[0] - minX) * scale,
+      offsetY + (c[1] - minY) * scale,
+    ]);
+  }
+
+  const d = points
+    .map(
+      (p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(2)} ${p[1].toFixed(2)}`
+    )
+    .join(" ");
+  return { d, points, start: points[0], end: points.at(-1) ?? null };
 }

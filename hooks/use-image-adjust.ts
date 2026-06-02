@@ -22,6 +22,9 @@ interface GestureSnapshot {
 }
 
 interface UseImageAdjustArgs {
+  /** Override the clamp (e.g. carousel cover-overflow); defaults to the
+   *  single-card 1080×1350 cover clamp. */
+  clamp?: (t: ImageTransform) => ImageTransform;
   enabled: boolean;
   onChange: (next: ImageTransform) => void;
   transform: ImageTransform;
@@ -56,6 +59,7 @@ export function useImageAdjust({
   enabled,
   transform,
   onChange,
+  clamp,
 }: UseImageAdjustArgs) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -63,9 +67,12 @@ export function useImageAdjust({
   // toggle) always read current values without rebinding every transform tick.
   const transformRef = useRef(transform);
   const onChangeRef = useRef(onChange);
+  const clampRef =
+    useRef<(t: ImageTransform) => ImageTransform>(clampTransform);
   useEffect(() => {
     transformRef.current = transform;
     onChangeRef.current = onChange;
+    clampRef.current = clamp ?? clampTransform;
   });
 
   const pointersRef = useRef<Map<number, PointerPos>>(new Map());
@@ -121,7 +128,7 @@ export function useImageAdjust({
       const scaleFactor =
         pts.length >= 2 && g.distance > 0 ? distance / g.distance : 1;
       onChangeRef.current(
-        clampTransform({
+        clampRef.current({
           scale: g.transform.scale * scaleFactor,
           x: g.transform.x + (centroid.x - g.centroid.x) / g.previewScale,
           y: g.transform.y + (centroid.y - g.centroid.y) / g.previewScale,
@@ -147,7 +154,7 @@ export function useImageAdjust({
       const factor = Math.exp(-e.deltaY * 0.0015);
       const current = transformRef.current;
       onChangeRef.current(
-        clampTransform({
+        clampRef.current({
           scale: current.scale * factor,
           x: current.x,
           y: current.y,

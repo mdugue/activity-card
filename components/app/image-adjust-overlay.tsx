@@ -12,6 +12,8 @@ import {
 import { cn } from "@/lib/utils";
 
 interface ImageAdjustOverlayProps {
+  /** Optional clamp override (carousel uses the cover-overflow clamp). */
+  clamp?: (t: ImageTransform) => ImageTransform;
   onChange: (next: ImageTransform) => void;
   onDone: () => void;
   transform: ImageTransform;
@@ -27,8 +29,9 @@ export function ImageAdjustOverlay({
   transform,
   onChange,
   onDone,
+  clamp,
 }: ImageAdjustOverlayProps) {
-  const { ref } = useImageAdjust({ enabled: true, transform, onChange });
+  const { ref } = useImageAdjust({ enabled: true, transform, onChange, clamp });
   const canReset = !isIdentityTransform(transform);
 
   return (

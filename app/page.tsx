@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { CarouselEditState } from "@/components/app/carousel-edit-state";
 import { DownloadState } from "@/components/app/download-state";
 import { EditState } from "@/components/app/edit-state";
 import { EffortWordmark } from "@/components/app/effort-wordmark";
 import { EmptyState } from "@/components/app/empty-state";
+import { type CardMode, ModeToggle } from "@/components/app/mode-toggle";
 import type { ThemeId } from "@/components/app/render-theme";
 import {
   type ActivityData,
@@ -14,15 +16,16 @@ import {
   SAMPLE_RUN,
   type Sport,
 } from "@/components/app/sample-data";
-
 import { StravaPicker } from "@/components/app/strava-picker";
 import type { AltitudeMood } from "@/components/themes/altitude";
+import { useCarousel } from "@/hooks/use-carousel";
 import { useImagePalette } from "@/hooks/use-image-palette";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
 import { formatDateUpper } from "@/lib/format";
 import { IDENTITY_TRANSFORM, type ImageTransform } from "@/lib/image-transform";
 import type { PhotoMood } from "@/lib/palette";
 import type { ParsedActivity } from "@/lib/parse-activity";
+import { NO_EFFECTS, type PhotoEffects } from "@/lib/photo-effects";
 import {
   applyVisibility,
   DEFAULT_VISIBILITY,
@@ -36,6 +39,7 @@ interface PersistedUi {
   accent: string;
   altitudeMood: AltitudeMood;
   athleteName?: string;
+  mode: CardMode;
   photoMood: PhotoMood;
   theme: ThemeId;
   visibility: Visibility;
@@ -91,10 +95,15 @@ export default function Home() {
   // photo, so it resets whenever the photo is swapped or removed.
   const [imageTransform, setImageTransform] =
     useState<ImageTransform>(IDENTITY_TRANSFORM);
+  // Rotate / mirror / filter for the photo. Like the transform, tied to the
+  // current photo and reset when it's swapped or removed.
+  const [photoEffects, setPhotoEffects] = useState<PhotoEffects>(NO_EFFECTS);
   const [accent, setAccent] = useState<string>("#c45a2c");
   const [visibility, setVisibility] = useState<Visibility>(DEFAULT_VISIBILITY);
   const [altitudeMood, setAltitudeMood] = useState<AltitudeMood>("night");
   const [photoMood, setPhotoMood] = useState<PhotoMood>("vibrant");
+  const [mode, setMode] = useState<CardMode>("single");
+  const carousel = useCarousel();
   // Held outside `data` so it survives between activities and can seed
   // `adoptParsed` when the parsed file lacks an athlete name.
   const persistedAthleteNameRef = useRef<string | undefined>(undefined);
@@ -125,6 +134,9 @@ export default function Home() {
     if (persisted.photoMood) {
       setPhotoMood(persisted.photoMood);
     }
+    if (persisted.mode) {
+      setMode(persisted.mode);
+    }
     if (persisted.athleteName) {
       persistedAthleteNameRef.current = persisted.athleteName;
     }
@@ -143,6 +155,7 @@ export default function Home() {
       visibility,
       altitudeMood,
       photoMood,
+      mode,
       athleteName: data?.athleteName || persistedAthleteNameRef.current,
     };
     try {
@@ -150,7 +163,15 @@ export default function Home() {
     } catch {
       // localStorage may be unavailable (private mode, quota); soft-fail.
     }
-  }, [theme, accent, visibility, altitudeMood, photoMood, data?.athleteName]);
+  }, [
+    theme,
+    accent,
+    visibility,
+    altitudeMood,
+    photoMood,
+    mode,
+    data?.athleteName,
+  ]);
 
   // Object URLs need cleanup or they leak into memory.
   useEffect(() => {
@@ -226,11 +247,13 @@ export default function Home() {
 
   const handleFilesLoaded = (parts: ParsedActivity[]) => {
     setData(adoptParts(parts, "upload"));
+    carousel.regenerate();
     setState("edit");
   };
 
   const handleStravaActivityLoaded = (parts: ParsedActivity[]) => {
     setData(adoptParts(parts, "strava"));
+    carousel.regenerate();
     setState("edit");
   };
 
@@ -272,8 +295,9 @@ export default function Home() {
       }
       return file ? URL.createObjectURL(file) : null;
     });
-    // A new (or removed) photo invalidates any previous pan/zoom.
+    // A new (or removed) photo invalidates any previous pan/zoom + effects.
     setImageTransform(IDENTITY_TRANSFORM);
+    setPhotoEffects(NO_EFFECTS);
   };
 
   const handleDownload = () => {
@@ -291,6 +315,7 @@ export default function Home() {
     }
     setPhotoUrl(null);
     setImageTransform(IDENTITY_TRANSFORM);
+    setPhotoEffects(NO_EFFECTS);
     setState("empty");
   };
 
@@ -313,34 +338,67 @@ export default function Home() {
         />
       ) : null}
       {state === "edit" && visibleData && data ? (
-        <EditState
-          accent={accent}
-          altitudeMood={altitudeMood}
-          athleteName={data.athleteName}
-          data={visibleData}
-          imageTransform={imageTransform}
-          location={data.location}
-          onAccentChange={setAccent}
-          onAltitudeMoodChange={setAltitudeMood}
-          onAthleteNameChange={handleAthleteNameChange}
-          onDownload={handleDownload}
-          onFilesLoaded={handleFilesLoaded}
-          onImageTransformChange={setImageTransform}
-          onLocationChange={handleLocationChange}
-          onOpenStravaPicker={handleOpenStravaPicker}
-          onPhotoChange={handlePhotoChange}
-          onPhotoMoodChange={setPhotoMood}
-          onSportChange={handleSportChange}
-          onThemeChange={setTheme}
-          onTitleChange={handleTitleChange}
-          onVisibilityChange={setVisibility}
-          photoMood={photoMood}
-          photoPaletteStatus={photoPalette.status}
-          photoPaletteTheme={photoPalette.theme}
-          photoUrl={photoUrl}
-          theme={theme}
-          visibility={visibility}
-        />
+        <div className="flex flex-1 flex-col">
+          <div className="mx-auto w-full max-w-[1180px] px-6 pt-14 md:px-10 lg:pt-16">
+            <ModeToggle mode={mode} onModeChange={setMode} />
+          </div>
+          {mode === "carousel" ? (
+            <CarouselEditState
+              accent={accent}
+              athleteName={data.athleteName}
+              carousel={carousel}
+              data={visibleData}
+              imageTransform={imageTransform}
+              location={data.location}
+              onAccentChange={setAccent}
+              onAthleteNameChange={handleAthleteNameChange}
+              onFilesLoaded={handleFilesLoaded}
+              onImageTransformChange={setImageTransform}
+              onLocationChange={handleLocationChange}
+              onOpenStravaPicker={handleOpenStravaPicker}
+              onPhotoChange={handlePhotoChange}
+              onPhotoEffectsChange={setPhotoEffects}
+              onSportChange={handleSportChange}
+              onThemeChange={setTheme}
+              onTitleChange={handleTitleChange}
+              onVisibilityChange={setVisibility}
+              photoEffects={photoEffects}
+              photoPaletteTheme={photoPalette.theme}
+              photoUrl={photoUrl}
+              theme={theme}
+              visibility={visibility}
+            />
+          ) : (
+            <EditState
+              accent={accent}
+              altitudeMood={altitudeMood}
+              athleteName={data.athleteName}
+              data={visibleData}
+              imageTransform={imageTransform}
+              location={data.location}
+              onAccentChange={setAccent}
+              onAltitudeMoodChange={setAltitudeMood}
+              onAthleteNameChange={handleAthleteNameChange}
+              onDownload={handleDownload}
+              onFilesLoaded={handleFilesLoaded}
+              onImageTransformChange={setImageTransform}
+              onLocationChange={handleLocationChange}
+              onOpenStravaPicker={handleOpenStravaPicker}
+              onPhotoChange={handlePhotoChange}
+              onPhotoMoodChange={setPhotoMood}
+              onSportChange={handleSportChange}
+              onThemeChange={setTheme}
+              onTitleChange={handleTitleChange}
+              onVisibilityChange={setVisibility}
+              photoMood={photoMood}
+              photoPaletteStatus={photoPalette.status}
+              photoPaletteTheme={photoPalette.theme}
+              photoUrl={photoUrl}
+              theme={theme}
+              visibility={visibility}
+            />
+          )}
+        </div>
       ) : null}
       {state === "download" && visibleData ? (
         <DownloadState
