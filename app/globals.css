@@ -59,7 +59,11 @@
 }
 
 :root {
-  --background: oklch(0.945 0.012 75);
+  /* Very light, barely-warm off-white. Sits just below pure white so elevated
+     surfaces (--card / --popover at L=1) read as raised, while muted/secondary
+     fills recede a touch below the page. Keep the warmth a whisper (low chroma)
+     so it reads as paper, not cream. */
+  --background: oklch(0.98 0.004 75);
   --foreground: oklch(0.22 0.012 50);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
