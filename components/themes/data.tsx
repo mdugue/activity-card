@@ -622,6 +622,7 @@ export function ThemeData({ data }: ActivityCardProps) {
           opacity: 0.7,
           display: "flex",
           justifyContent: "space-between",
+          alignItems: "center",
           fontWeight: 600,
         }}
       >

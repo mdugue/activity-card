@@ -8,6 +8,13 @@
   ],
   "overrides": [
     {
+      // Auto-generated from Strava's OpenAPI spec (`bun run strava:types`).
+      // Machine output — don't lint or format it; regenerate instead.
+      "includes": ["lib/strava-api.generated.ts"],
+      "linter": { "enabled": false },
+      "formatter": { "enabled": false }
+    },
+    {
       // Theme cards are faithful ports of design prototypes; loosen the
       // rules that punish their seeded arrays, sport-branch density,
       // and 1080×1350 inline layout styles.
@@ -34,6 +41,11 @@
       // E2E specs read more clearly with inline regex assertions; the
       // perf gain from hoisting them is irrelevant in a test process.
       "includes": ["e2e/**", "playwright.config.ts"],
+      "javascript": {
+        // `Bun` is used by the test mock server (e2e/strava-mock.ts);
+        // declared inline in the file for TS, declared here for biome.
+        "globals": ["Bun"]
+      },
       "linter": {
         "rules": {
           "performance": {

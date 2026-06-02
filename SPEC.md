@@ -20,17 +20,22 @@ Reward someone who did a beautiful workout with something beautiful in return. T
 - GPX + .fit upload
 - Six themes (see below), sport-aware stat rendering
 - Optional background photo upload
-- Live preview, theme picker, minimal customisation (accent colour, stat visibility toggles)
+- Live preview, theme picker, minimal customisation (accent colour, stat visibility toggles — heart-rate visibility defaults to **on** as of Phase 2A so Strava-sourced cards show HR without an extra click; the toggle can hide it for privacy)
 - Download PNG (1080×1350, Instagram portrait)
 - Native share sheet on mobile (Web Share API with image file)
 - Deploy as static site (Cloudflare Pages)
 
-### Step 2 (later — do not implement yet)
+### Step 2 (in progress)
 
-- Strava OAuth so users can pick recent activities without manual upload
-- komoot integration
-- Account + persistence (saved cards)
-- "Update Strava activity description with link to card"
+- **Strava OAuth so users can pick recent activities without manual upload** —
+  shipped (Phase 2A). Browser → Next.js Route Handlers exchange the code,
+  cookies hold the tokens, the same parsing pipeline normalises Strava
+  streams into `ParsedActivity`. Cards built from Strava data carry a
+  "Powered by Strava" mark per Strava's brand terms.
+- komoot integration — not started; no public OAuth, partner-only.
+- Account + persistence (saved cards) — not started; requires DB.
+- "Update Strava activity description with link to card" — depends on
+  saved cards (needs a permanent hosted URL).
 
 ### Step 3 (later — do not implement yet)
 
@@ -48,8 +53,12 @@ Reward someone who did a beautiful workout with something beautiful in return. T
 - **html-to-image** for DOM-to-PNG rasterisation
 - **fast-xml-parser** for GPX
 - **fit-file-parser** for .fit (Garmin / Wahoo binary)
-- No database, no API routes with state, no auth
-- Static export, deploys to Cloudflare Pages
+- No database, no auth (MVP). Phase 2A adds Route Handlers for the Strava
+  OAuth dance — token cookies, no persisted user state.
+- Deploys to Vercel (Node runtime). The original "static export to
+  Cloudflare Pages" plan was invalidated when Phase 2 introduced the
+  Strava OAuth backend; CF Pages would also work via Pages Functions but
+  needlessly splits the runtime story.
 
 ### Why html-to-image and not Satori
 

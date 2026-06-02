@@ -11,7 +11,7 @@ export interface Visibility {
 export const DEFAULT_VISIBILITY: Visibility = {
   athleteName: true,
   location: true,
-  heartRate: false,
+  heartRate: true,
   splits: true,
   photoBackdrop: true,
 };

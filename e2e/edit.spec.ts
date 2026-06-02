@@ -1,14 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { TINY_PNG_BASE64 } from "./fixtures";
-import { selectTheme } from "./helpers";
+import { enterEditViaUpload, selectTheme, uploadActivity } from "./helpers";
 
 test.describe("edit controls", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/");
-    await page.evaluate(() => localStorage.clear());
-    await page.reload();
-    await page.getByRole("button", { name: /try a sample/i }).click();
-    await expect(page.getByTestId("theme-picker-trigger")).toBeVisible();
+    await enterEditViaUpload(page);
   });
 
   test("title editor updates the card preview live", async ({ page }) => {
@@ -24,10 +20,9 @@ test.describe("edit controls", () => {
     await selectTheme(page, "DATA");
     const hrSwitch = page.getByRole("switch", { name: /heart rate/i });
 
-    // Sample ride's avg_heart_rate is 142. With HR on the value renders in
-    // the Data theme's AVG HR cell; with HR off the Cell falls back to the
-    // bare label and the bpm value disappears from the document.
-    const hrValue = page.locator("text=/142\\s*bpm/i");
+    // SINGLE_RUN_GPX emits a constant HR of 150, so the computed mean is
+    // exactly 150 — stable for the visibility-toggle round trip.
+    const hrValue = page.locator("text=/150\\s*bpm/i");
 
     if (!(await hrSwitch.isChecked())) {
       await hrSwitch.click();
@@ -57,8 +52,9 @@ test.describe("edit controls", () => {
   test("athlete name input persists across reload", async ({ page }) => {
     const nameInput = page.getByRole("textbox", { name: /athlete name/i });
     await nameInput.fill("RIVER STONE");
+    // Reload without clearing localStorage; re-upload to re-enter edit.
     await page.reload();
-    await page.getByRole("button", { name: /try a sample/i }).click();
+    await uploadActivity(page);
     await expect(
       page.getByRole("textbox", { name: /athlete name/i })
     ).toHaveValue("RIVER STONE");
@@ -67,25 +63,27 @@ test.describe("edit controls", () => {
 
 test.describe("persistence", () => {
   test("theme + accent + visibility survive a reload", async ({ page }) => {
-    await page.goto("/");
-    await page.evaluate(() => localStorage.clear());
-    await page.reload();
-    await page.getByRole("button", { name: /try a sample/i }).click();
-    await expect(page.getByTestId("theme-picker-trigger")).toBeVisible();
+    await enterEditViaUpload(page);
 
     await selectTheme(page, "EDITORIAL");
     const hrSwitch = page.getByRole("switch", { name: /heart rate/i });
-    await hrSwitch.click(); // turn HR on
+    // Default is now `heartRate: true`. Toggle off so we can verify the
+    // change survives a reload — picking a non-default value is the only
+    // way this test exercises real persistence.
+    if (await hrSwitch.isChecked()) {
+      await hrSwitch.click();
+    }
 
     await page.reload();
     // Empty state after reload (data isn't persisted) — but UI prefs should
-    // come back when we load a sample again.
-    await page.getByRole("button", { name: /try a sample/i }).click();
+    // come back when we re-enter the edit state. Keep localStorage so the
+    // theme / visibility we just set is still there.
+    await uploadActivity(page);
     await expect(page.getByTestId("theme-picker-trigger")).toContainText(
       "EDITORIAL"
     );
     await expect(
       page.getByRole("switch", { name: /heart rate/i })
-    ).toBeChecked();
+    ).not.toBeChecked();
   });
 });

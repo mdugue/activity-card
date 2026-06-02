@@ -25,7 +25,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
 import type { PaletteStatus } from "@/hooks/use-image-palette";
+import { useStravaConnection } from "@/hooks/use-strava-connection";
 import { defaultFilename, exportCard } from "@/lib/export-card";
 import { formatDate } from "@/lib/format";
 import type { ImageTransform } from "@/lib/image-transform";
@@ -102,6 +104,7 @@ interface EditStateProps {
   onFilesLoaded: (parts: ParsedActivity[]) => void;
   onImageTransformChange: (next: ImageTransform) => void;
   onLocationChange: (location: string) => void;
+  onOpenStravaPicker: () => void;
   onPhotoChange: (file: File | null) => void;
   onPhotoMoodChange: (mood: PhotoMood) => void;
   onSportChange: (sport: Sport) => void;
@@ -211,6 +214,7 @@ function ControlsPane({
   onAccentChange,
   onDownload,
   onFilesLoaded,
+  onOpenStravaPicker,
   visibility,
   onVisibilityChange,
   isExporting,
@@ -236,7 +240,12 @@ function ControlsPane({
 
   return (
     <div className="flex flex-col gap-7 pr-2 lg:pr-10">
-      <FileLoadedRow data={data} onFilesLoaded={onFilesLoaded} />
+      <FileLoadedRow
+        data={data}
+        onFilesLoaded={onFilesLoaded}
+        onOpenStravaPicker={onOpenStravaPicker}
+      />
+      <StravaConnectionRow data={data} />
 
       <ControlBlock label="TITLE">
         <Label className="sr-only" htmlFor={titleId}>
@@ -603,20 +612,117 @@ function PhotoControl({
   );
 }
 
+function StravaConnectionRow({ data }: { data: ActivityData }) {
+  const strava = useStravaConnection();
+  // Disconnect itself lives in the app-wide footer (single source of truth);
+  // this row exists only when the loaded activity came from Strava and
+  // needs the "View on Strava" link(s). Hide otherwise.
+  if (!strava.connected || data.source !== "strava") {
+    return null;
+  }
+  return (
+    <div className="-mt-3 flex flex-col gap-1.5 border-foreground/10 border-b pb-3 font-mono text-[10px] uppercase tracking-[0.18em] opacity-70">
+      <div className="flex items-center gap-2">
+        <span
+          aria-hidden
+          className="size-1.5 rounded-full"
+          style={{ background: "#FC5200" }}
+        />
+        <span>
+          STRAVA
+          {strava.athlete?.firstname ? ` · ${strava.athlete.firstname}` : ""}
+          <span className="ml-1 opacity-70">· this activity</span>
+        </span>
+      </div>
+      <ViewOnStravaLinks data={data} />
+    </div>
+  );
+}
+
+/**
+ * Renders one or more "View on Strava" anchors per Strava brand guidelines
+ * §3 (font-weight 700, underline, brand orange `#FC5200`). Single Strava
+ * activity → one link. Combined triathlon with segment-aligned ids →
+ * one link per Strava-sourced segment, labelled by sport. Mixed-source
+ * triathlons render only the Strava-backed segments. Renders nothing if
+ * `stravaActivityIds` is absent.
+ */
+function ViewOnStravaLinks({ data }: { data: ActivityData }) {
+  const ids = data.stravaActivityIds;
+  if (!ids?.length) {
+    return null;
+  }
+  if (ids.length === 1 && ids[0] !== null) {
+    return (
+      <a
+        className="font-bold text-[#FC5200] underline-offset-4 hover:underline"
+        href={`https://www.strava.com/activities/${ids[0]}/overview`}
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        View on Strava ↗
+      </a>
+    );
+  }
+  // Triathlon — pair ids with segments by index so we can label per sport.
+  // `null` slots are file-sourced segments; they're skipped silently.
+  const segments = data.segments ?? [];
+  const links = ids
+    .map((id, i) => ({ id, sport: segments[i]?.sport }))
+    .filter(
+      (x): x is { id: number; sport: NonNullable<typeof x.sport> } =>
+        x.id !== null && x.sport !== undefined
+    );
+  if (links.length === 0) {
+    return null;
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <span>View on Strava:</span>
+      {links.map(({ id, sport }, i) => (
+        <span key={id}>
+          <a
+            className="font-bold text-[#FC5200] underline-offset-4 hover:underline"
+            href={`https://www.strava.com/activities/${id}/overview`}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            {sport.toUpperCase()}
+          </a>
+          {i < links.length - 1 ? <span aria-hidden> ·</span> : null}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function FileLoadedRow({
   data,
   onFilesLoaded,
+  onOpenStravaPicker,
 }: {
   data: ActivityData;
   onFilesLoaded: (parts: ParsedActivity[]) => void;
+  onOpenStravaPicker: () => void;
 }) {
+  const fromStrava = data.source === "strava";
   const segCount = data.segments?.length ?? 0;
   const isMulti = data.sport === "triathlon" && segCount >= 2;
   const friendlyDate = formatDate(data.date);
   const slug = friendlyDate.replace(/\s|,/g, "").toLowerCase() || "activity";
-  const label = isMulti
-    ? `${segCount} files · assembled`
-    : `${data.sport}_${slug}.fit`;
+  // Strava users never see a `.fit` filename, so don't pretend. For
+  // uploads we keep the file-like label that mirrors what the user
+  // dropped in.
+  let label: string;
+  if (fromStrava) {
+    label = isMulti
+      ? `Strava · ${segCount} activities combined`
+      : `Strava · ${data.title || data.sport}`;
+  } else if (isMulti) {
+    label = `${segCount} files · assembled`;
+  } else {
+    label = `${data.sport}_${slug}.fit`;
+  }
 
   const inputRef = useRef<HTMLInputElement>(null);
   const [isSwapping, setIsSwapping] = useState(false);
@@ -645,6 +751,14 @@ function FileLoadedRow({
     }
   };
 
+  const handleSwap = () => {
+    if (fromStrava) {
+      onOpenStravaPicker();
+    } else {
+      inputRef.current?.click();
+    }
+  };
+
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2 font-medium font-mono text-[11px] opacity-60">
@@ -664,7 +778,7 @@ function FileLoadedRow({
         <button
           className="ml-auto flex items-center gap-1 text-[10px] uppercase tracking-[0.18em] underline-offset-4 hover:underline disabled:no-underline disabled:opacity-50"
           disabled={isSwapping}
-          onClick={() => inputRef.current?.click()}
+          onClick={handleSwap}
           type="button"
         >
           Swap

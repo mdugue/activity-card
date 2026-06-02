@@ -320,6 +320,7 @@ export function ThemeEditorial({ data, photoUrl }: ActivityCardProps) {
             opacity: 0.85,
             display: "flex",
             justifyContent: "space-between",
+            alignItems: "center",
             fontSize: 24,
             letterSpacing: "0.28em",
             fontWeight: 600,

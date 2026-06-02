@@ -239,6 +239,7 @@ export function ThemePath({ data, photoUrl }: ActivityCardProps) {
               marginTop: 32,
               display: "flex",
               justifyContent: "space-between",
+              alignItems: "center",
               fontSize: 24,
               letterSpacing: "0.2em",
               opacity: 0.55,

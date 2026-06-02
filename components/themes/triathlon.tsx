@@ -521,6 +521,7 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
           borderTop: "1px solid rgba(17,21,26,0.4)",
           display: "flex",
           justifyContent: "space-between",
+          alignItems: "center",
           fontSize: 24,
           letterSpacing: "0.24em",
           opacity: 0.75,

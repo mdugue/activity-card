@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { selectTheme } from "./helpers";
+import { enterEditViaUpload, selectTheme } from "./helpers";
 
 const THEMES = [
   "PATH",
@@ -13,12 +13,7 @@ const THEMES = [
 
 test.describe("themes", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/");
-    await page.evaluate(() => localStorage.clear());
-    await page.reload();
-    await page.getByRole("button", { name: /try a sample/i }).click();
-    // Wait for the theme picker so we know we're in edit state.
-    await expect(page.getByTestId("theme-picker-trigger")).toBeVisible();
+    await enterEditViaUpload(page);
   });
 
   for (const theme of THEMES) {

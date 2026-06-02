@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { DownloadState } from "@/components/app/download-state";
 import { EditState } from "@/components/app/edit-state";
 import { EffortWordmark } from "@/components/app/effort-wordmark";
@@ -8,11 +9,13 @@ import { EmptyState } from "@/components/app/empty-state";
 import type { ThemeId } from "@/components/app/render-theme";
 import {
   type ActivityData,
+  type ActivitySource,
   SAMPLE_RIDE,
   SAMPLE_RUN,
-  SAMPLE_TRI,
   type Sport,
 } from "@/components/app/sample-data";
+
+import { StravaPicker } from "@/components/app/strava-picker";
 import type { AltitudeMood } from "@/components/themes/altitude";
 import { useImagePalette } from "@/hooks/use-image-palette";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
@@ -26,7 +29,7 @@ import {
   type Visibility,
 } from "@/lib/visibility";
 
-type AppState = "empty" | "edit" | "download";
+type AppState = "empty" | "picking-strava" | "edit" | "download";
 const STORAGE_KEY = "effort:ui:v1";
 
 interface PersistedUi {
@@ -38,19 +41,10 @@ interface PersistedUi {
   visibility: Visibility;
 }
 
-function sampleForTheme(theme: ThemeId): ActivityData {
-  if (theme === "triathlon") {
-    return SAMPLE_TRI;
-  }
-  if (theme === "photo" || theme === "editorial") {
-    return SAMPLE_RUN;
-  }
-  return SAMPLE_RIDE;
-}
-
 function adoptParsed(
   parsed: ParsedActivity,
-  persistedAthleteName?: string
+  persistedAthleteName?: string,
+  source: ActivitySource = "upload"
 ): ActivityData {
   // Parsed files give us universals + whichever sport-specific stats we can
   // compute; merge over a sport-appropriate sample so themes that lean on
@@ -62,6 +56,7 @@ function adoptParsed(
     location: parsed.location || base.location,
     athleteName: parsed.athleteName || persistedAthleteName || base.athleteName,
     splits: parsed.splits ?? base.splits,
+    source,
   };
 }
 
@@ -165,29 +160,92 @@ export default function Home() {
     return () => URL.revokeObjectURL(photoUrl);
   }, [photoUrl]);
 
-  const handleLoadSample = () => {
-    // Pick a sample that matches the persisted theme so the user sees
-    // something representative of what they last chose.
-    const sample = sampleForTheme(theme);
-    const athleteName = persistedAthleteNameRef.current ?? sample.athleteName;
-    setData({ ...sample, athleteName });
-    setState("edit");
+  // After the Strava OAuth round-trip we land on `/?strava=...`. This is a
+  // one-shot cold-start read of an external system (URL) — the same
+  // pattern as the localStorage hydration above, hence the same disable.
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    const flag = params.get("strava");
+    if (!flag) {
+      return;
+    }
+    /* eslint-disable react-hooks/set-state-in-effect */
+    switch (flag) {
+      case "connected":
+        toast.success("Connected to Strava");
+        setState((prev) => (prev === "empty" ? "picking-strava" : prev));
+        break;
+      case "denied":
+        toast.error("You declined to connect Strava. You can try again.");
+        break;
+      case "state_mismatch":
+        toast.error("Couldn't verify the Strava sign-in. Please try again.");
+        break;
+      case "token_exchange":
+        toast.error("Strava rejected the sign-in. Try again in a moment.");
+        break;
+      case "failed":
+        toast.error("Couldn't start the Strava sign-in. Try again.");
+        break;
+      case "bounce_rejected":
+        toast.error(
+          "The Strava sign-in was redirected to an unrecognised host. Aborted."
+        );
+        break;
+      default:
+        toast.error(`Couldn't connect to Strava (${flag})`);
+    }
+    /* eslint-enable react-hooks/set-state-in-effect */
+    // Strip the param so a reload doesn't re-fire the toast.
+    const url = new URL(window.location.href);
+    url.searchParams.delete("strava");
+    url.searchParams.delete("reason");
+    window.history.replaceState({}, "", url.toString());
+  }, []);
+
+  const adoptParts = (
+    parts: ParsedActivity[],
+    source: ActivitySource
+  ): ActivityData => {
+    if (parts.length === 1) {
+      return adoptParsed(parts[0], persistedAthleteNameRef.current, source);
+    }
+    const tri = assembleTriathlon(parts);
+    // Seed athlete name on assembled triathlons too, since assembleTriathlon
+    // pulls from the first parsed file which may be blank.
+    return {
+      ...tri,
+      athleteName:
+        tri.athleteName || persistedAthleteNameRef.current || tri.athleteName,
+      source,
+    };
   };
 
   const handleFilesLoaded = (parts: ParsedActivity[]) => {
-    if (parts.length === 1) {
-      setData(adoptParsed(parts[0], persistedAthleteNameRef.current));
-    } else {
-      const tri = assembleTriathlon(parts);
-      // Seed athlete name on assembled triathlons too, since assembleTriathlon
-      // pulls from the first parsed file which may be blank.
-      setData({
-        ...tri,
-        athleteName:
-          tri.athleteName || persistedAthleteNameRef.current || tri.athleteName,
-      });
-    }
+    setData(adoptParts(parts, "upload"));
     setState("edit");
+  };
+
+  const handleStravaActivityLoaded = (parts: ParsedActivity[]) => {
+    setData(adoptParts(parts, "strava"));
+    setState("edit");
+  };
+
+  const handleConnectStrava = () => {
+    if (typeof window !== "undefined") {
+      window.location.href = "/api/strava/authorize";
+    }
+  };
+
+  const handleOpenStravaPicker = () => {
+    setState("picking-strava");
+  };
+
+  const handleCancelStravaPicker = () => {
+    setState("empty");
   };
 
   const handleTitleChange = (title: string) => {
@@ -244,7 +302,14 @@ export default function Home() {
       {state === "empty" ? (
         <EmptyState
           onFilesLoaded={handleFilesLoaded}
-          onLoadSample={handleLoadSample}
+          onOpenStravaPicker={handleOpenStravaPicker}
+        />
+      ) : null}
+      {state === "picking-strava" ? (
+        <StravaPicker
+          onActivityLoaded={handleStravaActivityLoaded}
+          onCancel={handleCancelStravaPicker}
+          onReauth={handleConnectStrava}
         />
       ) : null}
       {state === "edit" && visibleData && data ? (
@@ -262,6 +327,7 @@ export default function Home() {
           onFilesLoaded={handleFilesLoaded}
           onImageTransformChange={setImageTransform}
           onLocationChange={handleLocationChange}
+          onOpenStravaPicker={handleOpenStravaPicker}
           onPhotoChange={handlePhotoChange}
           onPhotoMoodChange={setPhotoMood}
           onSportChange={handleSportChange}

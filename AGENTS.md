@@ -15,6 +15,11 @@ Single-page, fully client-side, no backend, no auth (for MVP). The card is a Rea
    - `activity-card-spec/` — quick reference to scope and phases
    - `card-rendering/` — `html-to-image` gotchas, route SVG math, theme component contract
    - `sport-data/` — sport-specific metrics, units, parsing normalisation
+3. Topic-specific docs under `docs/`:
+   - [`docs/strava.md`](./docs/strava.md) — Strava OAuth + picker
+     integration, local dev against the real API or the bundled mock,
+     and brand-compliance constraints. Read before touching anything
+     under `app/api/strava/`, `lib/strava-*.ts`, or `components/app/strava-*.tsx`.
 
 If a decision is in SPEC.md, follow it. If you want to deviate, raise it and ask.
 
@@ -92,17 +97,23 @@ is additionally excluded from `bun typecheck` (see `tsconfig.json`) — it ships
 `react-day-picker` v9 but v10 is installed. Don't restyle vendor files; if a primitive
 doesn't fit, wrap it in `components/app/`.
 
-## Non-goals (MVP)
+## Non-goals (still out of scope)
 
 To keep the agent focused, these are explicitly out of scope right now:
 
-- Strava / komoot OAuth integration
+- **komoot OAuth integration** (no public OAuth — partner-only)
 - User accounts, persistence, saved cards
+- "Update Strava activity description with link to card" (depends on saved cards)
 - Event organiser / B2B verification flow
 - PDF export
 - Email delivery
 - Server-side rendering of cards
 - Map tiles (route is always rendered as an abstract SVG silhouette)
+
+Note: **Strava OAuth (Phase 2A) is live** — see [`docs/strava.md`](./docs/strava.md).
+The original MVP "no backend" constraint was relaxed for the token-exchange
+Route Handlers; everything else above remains off-limits without explicit
+sign-off.
 
 If you find yourself reaching for any of these, stop and confirm.
 

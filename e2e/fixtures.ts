@@ -4,6 +4,10 @@
  */
 export interface SyntheticGpx {
   durationSec: number;
+  /** Optional constant HR in bpm. Emitted via the standard
+   * `gpxtpx:TrackPointExtension` block; the parser picks it up and the
+   * mean comes out exactly equal to `hr` (stable for assertions). */
+  hr?: number;
   latStart: number;
   latStep: number;
   lngStart: number;
@@ -23,6 +27,7 @@ export function makeGpx(opts: SyntheticGpx): string {
     lngStart,
     lngStep,
     points = 60,
+    hr,
   } = opts;
   const startMs = Date.parse(startIso);
   const trkpts: string[] = [];
@@ -37,8 +42,12 @@ export function makeGpx(opts: SyntheticGpx): string {
         : sport === "running"
           ? 5 + 5 * Math.sin(t * 4)
           : 0;
+    const extensions =
+      hr === undefined
+        ? ""
+        : `<extensions><gpxtpx:TrackPointExtension><gpxtpx:hr>${hr}</gpxtpx:hr></gpxtpx:TrackPointExtension></extensions>`;
     trkpts.push(
-      `<trkpt lat="${lat.toFixed(6)}" lon="${lng.toFixed(6)}"><ele>${elev.toFixed(1)}</ele><time>${time}</time></trkpt>`
+      `<trkpt lat="${lat.toFixed(6)}" lon="${lng.toFixed(6)}"><ele>${elev.toFixed(1)}</ele><time>${time}</time>${extensions}</trkpt>`
     );
   }
   return `<?xml version="1.0"?>
@@ -81,7 +90,8 @@ export const TRIATHLON_FILES = {
   }),
 };
 
-/** Single 5km run for single-file upload tests. */
+/** Single 5km run for single-file upload tests. HR is constant so the
+ * computed mean is stable for assertions. */
 export const SINGLE_RUN_GPX = makeGpx({
   sport: "running",
   startIso: "2026-05-18T07:00:00Z",
@@ -91,6 +101,7 @@ export const SINGLE_RUN_GPX = makeGpx({
   lngStart: 14.0,
   lngStep: 0.04,
   points: 100,
+  hr: 150,
 });
 
 /** A 1×1 transparent PNG for photo-upload tests. */
