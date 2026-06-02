@@ -126,7 +126,7 @@ test.describe("strava OAuth + picker", () => {
     ).toBeVisible();
   });
 
-  test("pagination shows total page count and advances", async ({ page }) => {
+  test("pagination renders page numbers and advances", async ({ page }) => {
     await page.getByRole("button", { name: /connect strava/i }).click();
     await page.waitForURL(/\/$/);
     await expect(
@@ -134,23 +134,28 @@ test.describe("strava OAuth + picker", () => {
     ).toBeVisible();
 
     // The mock has 53 fixture activities (all ride/run/swim), per_page is
-    // 30 → ceil(53/30) === 2 pages. The label should reflect that.
-    await expect(page.getByText(/^1 of 2$/)).toBeVisible();
+    // 30 → ceil(53/30) === 2 pages. The list should render "1" and "2" as
+    // individual page links with "1" active.
+    const pagination = page.locator("nav[aria-label='pagination']");
+    const page1 = pagination.getByRole("button", { name: /^1$/ });
+    const page2 = pagination.getByRole("button", { name: /^2$/ });
+    await expect(page1).toBeVisible();
+    await expect(page2).toBeVisible();
+    await expect(page1).toHaveAttribute("aria-current", "page");
 
     // Page 1: named ride is in this slice.
     await expect(
       page.getByRole("button", { name: /saturday in the elbsandstein/i })
     ).toBeVisible();
 
-    // shadcn pagination renders <a> without an `href`, so it has no
-    // accessible "link" role. Target by aria-label instead.
-    await page.getByLabel(/go to next page/i).click();
+    // Click the "2" link directly to jump pages.
+    await page2.click();
 
     // Synthesised activities start at id 2000 — the first Page-2 item is "Mock Ride #28".
     await expect(
       page.getByRole("button", { name: /mock ride #28/i })
     ).toBeVisible();
-    await expect(page.getByText(/^2 of 2$/)).toBeVisible();
+    await expect(page2).toHaveAttribute("aria-current", "page");
     // Named first-page activity is no longer in the DOM.
     await expect(
       page.getByRole("button", { name: /saturday in the elbsandstein/i })

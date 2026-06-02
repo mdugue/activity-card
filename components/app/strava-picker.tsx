@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import {
   Pagination,
   PaginationContent,
+  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
@@ -343,6 +344,49 @@ interface PickerPaginationProps {
   totalPages: number | null;
 }
 
+type RangeItem =
+  | { kind: "page"; n: number }
+  | { kind: "ellipsis"; side: "left" | "right" };
+
+/**
+ * Build the page-number sequence following the shadcn pattern: always pin
+ * page 1 and the last page, show three numbers around the current page,
+ * and collapse anything else into ellipses. Short ranges (≤ 7 pages)
+ * render every number so the UI doesn't show useless ellipses.
+ */
+function paginationRange(page: number, total: number): RangeItem[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => ({
+      kind: "page" as const,
+      n: i + 1,
+    }));
+  }
+  const items: RangeItem[] = [{ kind: "page", n: 1 }];
+  let start: number;
+  let end: number;
+  if (page <= 3) {
+    start = 2;
+    end = 4;
+  } else if (page >= total - 2) {
+    start = total - 3;
+    end = total - 1;
+  } else {
+    start = page - 1;
+    end = page + 1;
+  }
+  if (start > 2) {
+    items.push({ kind: "ellipsis", side: "left" });
+  }
+  for (let p = start; p <= end; p++) {
+    items.push({ kind: "page", n: p });
+  }
+  if (end < total - 1) {
+    items.push({ kind: "ellipsis", side: "right" });
+  }
+  items.push({ kind: "page", n: total });
+  return items;
+}
+
 function PickerPagination({
   canGoNext,
   canGoPrev,
@@ -354,8 +398,12 @@ function PickerPagination({
   if (!show) {
     return null;
   }
+  // Until we know the total page count we can't render a meaningful list —
+  // fall back to Prev / current / Next so the user can still page forward.
+  const range: RangeItem[] | null =
+    totalPages === null ? null : paginationRange(page, totalPages);
   return (
-    <Pagination className="mt-8">
+    <Pagination className="mt-8 font-mono text-[11px] uppercase tracking-[0.18em]">
       <PaginationContent>
         <PaginationItem>
           <PaginationPrevious
@@ -364,11 +412,28 @@ function PickerPagination({
             onClick={() => canGoPrev && onPageChange((p) => p - 1)}
           />
         </PaginationItem>
-        <PaginationItem>
-          <PaginationLink className="px-3" isActive>
-            {totalPages === null ? page : `${page} of ${totalPages}`}
-          </PaginationLink>
-        </PaginationItem>
+        {range ? (
+          range.map((item) =>
+            item.kind === "ellipsis" ? (
+              <PaginationItem key={`ellipsis-${item.side}`}>
+                <PaginationEllipsis />
+              </PaginationItem>
+            ) : (
+              <PaginationItem key={`page-${item.n}`}>
+                <PaginationLink
+                  isActive={item.n === page}
+                  onClick={() => onPageChange(() => item.n)}
+                >
+                  {item.n}
+                </PaginationLink>
+              </PaginationItem>
+            )
+          )
+        ) : (
+          <PaginationItem>
+            <PaginationLink isActive>{page}</PaginationLink>
+          </PaginationItem>
+        )}
         <PaginationItem>
           <PaginationNext
             aria-disabled={!canGoNext}
