@@ -16,7 +16,7 @@ import type { ActivityCardProps } from "./types";
 
 const ACCENT = "#1d3a2e";
 const INK = "#1a1816";
-const PAPER = "#efe9dc";
+const PAPER = "#ffffff";
 
 interface RowProps {
   k: string;

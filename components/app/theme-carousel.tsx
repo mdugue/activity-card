@@ -165,8 +165,8 @@ export function ThemeCarousel({
                 <div
                   className={`@container relative aspect-[1080/1350] w-full overflow-hidden bg-white transition-shadow duration-300 ${
                     isActive
-                      ? "shadow-[0_24px_50px_-14px_rgba(26,23,20,0.30),_0_10px_22px_-8px_rgba(26,23,20,0.16)]"
-                      : "shadow-[0_2px_6px_rgba(26,23,20,0.08)]"
+                      ? "shadow-[0_24px_50px_-14px_rgba(20,20,22,0.30),_0_10px_22px_-8px_rgba(20,20,22,0.16)]"
+                      : "shadow-[0_2px_6px_rgba(20,20,22,0.08)]"
                   }`}
                 >
                   <div

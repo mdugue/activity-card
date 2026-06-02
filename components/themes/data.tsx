@@ -22,8 +22,8 @@ import type { ActivityCardProps } from "./types";
 
 const INK = "#0e0e0e";
 const ACCENT = "#d23f1d";
-const BG = "#ece8df";
-const PANEL = "#f4f1e8";
+const BG = "#ffffff";
+const PANEL = "#ffffff";
 const GRID = "rgba(14, 14, 14, 0.1)";
 
 interface CellProps {

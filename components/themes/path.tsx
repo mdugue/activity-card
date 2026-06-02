@@ -58,7 +58,7 @@ export function ThemePath({ data, photoUrl }: ActivityCardProps) {
       style={{
         width: 1080,
         height: 1350,
-        background: "#f3ede2",
+        background: "#ffffff",
         color: "#1a1714",
         fontFamily: "var(--font-manrope), sans-serif",
         position: "relative",

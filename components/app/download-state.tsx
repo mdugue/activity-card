@@ -63,7 +63,7 @@ export function DownloadState({
                 "radial-gradient(circle, oklch(0.555 0.163 48.998 / 0.4), transparent 70%)",
             }}
           />
-          <div className="relative aspect-[1080/1350] w-[240px] overflow-hidden bg-white shadow-[0_30px_80px_rgba(26,23,20,0.25),_0_10px_30px_rgba(26,23,20,0.12)] sm:w-[320px] lg:w-[450px]">
+          <div className="relative aspect-[1080/1350] w-[240px] overflow-hidden bg-white shadow-[0_30px_80px_rgba(20,20,22,0.25),_0_10px_30px_rgba(20,20,22,0.12)] sm:w-[320px] lg:w-[450px]">
             <div className="absolute inset-0">
               <div
                 className="origin-top-left scale-[0.222] sm:scale-[0.296] lg:scale-[0.4166]"
