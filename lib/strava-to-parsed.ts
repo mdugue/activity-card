@@ -41,13 +41,18 @@ export function stravaToParsed(
     ? new Date(detail.start_date).getTime()
     : undefined;
 
-  const length = Math.max(
-    latlng?.length ?? 0,
-    altitude?.length ?? 0,
-    heartrate?.length ?? 0,
-    cadence?.length ?? 0,
-    time?.length ?? 0
-  );
+  // Strava normally returns equally-sized streams, but we defensively
+  // take the smallest non-zero length so a partial stream doesn't
+  // produce phantom points (undefined lat/lng with defined elevation,
+  // etc.) that skew downstream averages.
+  const lengths = [
+    latlng?.length,
+    altitude?.length,
+    heartrate?.length,
+    cadence?.length,
+    time?.length,
+  ].filter((n): n is number => typeof n === "number" && n > 0);
+  const length = lengths.length === 0 ? 0 : Math.min(...lengths);
 
   const points: TrackPoint[] = [];
   for (let i = 0; i < length; i++) {

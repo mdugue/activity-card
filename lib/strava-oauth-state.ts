@@ -50,12 +50,20 @@ export function decodeOAuthState(raw: string): OAuthStatePayload | null {
 
 /**
  * Domains accepted as bounce targets when the production callback relays
- * a code back to a preview deployment. Without this allowlist a crafted
- * `state.b` could exfiltrate the code to an attacker's domain.
+ * a code back to a preview deployment.
  *
- *   - same host as `registeredCallbackHost` (production bouncing to itself
- *     would be a no-op, but accept it for completeness)
- *   - any `*.vercel.app` subdomain (Vercel preview deploys)
+ * Threat model: anyone can deploy `evil.vercel.app` and craft a state
+ * directly with Strava (`?state=base64({b:"https://evil.vercel.app",…})`),
+ * tricking the production callback into relaying the user's OAuth code
+ * to their domain. Without `client_secret` they can't exchange the code,
+ * but leaking it is still a confidentiality break.
+ *
+ * Defence: the allowlist is **explicit, env-driven** — operators set
+ * `STRAVA_BOUNCE_ALLOWED_HOST_SUFFIX` to the project-specific Vercel
+ * pattern (e.g. `manuel-dugues-projects.vercel.app`) and only hosts
+ * matching that suffix are accepted. The registered callback host is
+ * always accepted. With no suffix configured, *no* cross-origin bounce
+ * is permitted (single-deploy mode).
  *
  * Allows http only when `STRAVA_ALLOW_HTTP_BOUNCE=1` (E2E / dev where
  * preview-style origins run over plain http on `localhost`).
@@ -81,8 +89,16 @@ export function isAllowedBounceOrigin(
   if (host === registeredCallbackHost) {
     return true;
   }
-  if (host === "vercel.app" || host.endsWith(".vercel.app")) {
-    return true;
+  // Operator-supplied allowlist: comma-separated host suffixes. A host
+  // matches when it equals an entry exactly or ends with `.entry`.
+  const suffixes = (process.env.STRAVA_BOUNCE_ALLOWED_HOST_SUFFIX ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  for (const suffix of suffixes) {
+    if (host === suffix || host.endsWith(`.${suffix}`)) {
+      return true;
+    }
   }
   if (allowHttp && (host === "localhost" || host === "127.0.0.1")) {
     return true;
@@ -90,13 +106,27 @@ export function isAllowedBounceOrigin(
   return false;
 }
 
+const DEL_CHARCODE = 0x7f;
+const SPACE_CHARCODE = 0x20;
+
 /** Accept only path-relative URLs anchored at `/`. Rejects absolute
- * (`https://evil.example`) and protocol-relative (`//evil.example`)
- * forms — used both in the authorize route (before stuffing into state)
- * and the callback route (defense-in-depth). */
+ * (`https://evil.example`), protocol-relative (`//evil.example`), and
+ * any value containing CR/LF/null/other control characters
+ * (defence-in-depth against `Location:`-header injection on hosts that
+ * fail to encode redirect targets). Used by both the authorize route
+ * (before stuffing into state) and the callback route. */
 export function safeRelativePath(value: string | null): string | null {
   if (!value?.startsWith("/") || value.startsWith("//")) {
     return null;
+  }
+  // Reject any C0 control byte (0x00–0x1F) or DEL (0x7F). CR/LF in
+  // particular would allow header smuggling if a downstream redirect
+  // handler ever forwarded the raw value without re-encoding.
+  for (let i = 0; i < value.length; i++) {
+    const code = value.charCodeAt(i);
+    if (code < SPACE_CHARCODE || code === DEL_CHARCODE) {
+      return null;
+    }
   }
   return value;
 }

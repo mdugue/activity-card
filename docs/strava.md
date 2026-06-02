@@ -205,9 +205,26 @@ The flow:
    token cookies on the preview origin, and redirects to `state.p`
    (or `/?strava=connected`).
 
-Open-redirect defence: the bounce allowlist is hard-coded in
-`lib/strava-oauth-state.ts` (`isAllowedBounceOrigin`). Anything else
-short-circuits to `/?strava=bounce_rejected`, surfacing a toast.
+Open-redirect defence: the bounce allowlist is **explicit and
+env-driven**. Set `STRAVA_BOUNCE_ALLOWED_HOST_SUFFIX` to your project's
+Vercel namespace — only hosts ending with that suffix (or matching the
+registered callback host) get the relay. Anything else short-circuits
+to `/?strava=bounce_rejected`, surfacing a toast. With no suffix set,
+*no* cross-origin bounce is permitted, which is the safe default for
+single-deploy or non-Vercel setups.
+
+Example:
+
+```bash
+# Vercel project URL pattern: effort-git-*-manuel-dugues-projects.vercel.app
+STRAVA_BOUNCE_ALLOWED_HOST_SUFFIX=manuel-dugues-projects.vercel.app
+```
+
+Why this matters: anyone can deploy `evil.vercel.app` and craft a state
+payload directly with Strava (`?state=base64({b:"https://evil.vercel.app",…})`).
+Without `client_secret` they can't exchange the leaked code for tokens,
+but the code is still confidential data — the suffix-based allowlist
+keeps the relay scoped to *your* previews.
 
 For local dev / E2E where preview-style origins run over `http://`
 (localhost), set `STRAVA_ALLOW_HTTP_BOUNCE=1` to relax the protocol

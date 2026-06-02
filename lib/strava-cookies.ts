@@ -77,7 +77,19 @@ export async function readTokens(): Promise<StoredTokens | null> {
   let athlete: StravaAthlete | undefined;
   if (athleteRaw) {
     try {
-      athlete = JSON.parse(athleteRaw) as StravaAthlete;
+      const parsed = JSON.parse(athleteRaw) as unknown;
+      // Validate the shape — cookie value is user-controllable (httpOnly
+      // protects against JS read, but a server-side tamper could put
+      // anything here). `id` flows into `/athletes/${id}/stats`, so
+      // require it to be a finite number; rest of the shape is best-effort.
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        typeof (parsed as { id?: unknown }).id === "number" &&
+        Number.isFinite((parsed as { id: number }).id)
+      ) {
+        athlete = parsed as StravaAthlete;
+      }
     } catch {
       // Corrupt cookie — ignore, athlete display is non-critical.
     }
@@ -101,15 +113,20 @@ export async function writeTokens(
   store.set(REFRESH, payload.refresh_token, COOKIE_BASE);
   store.set(EXPIRES, String(payload.expires_at), COOKIE_BASE);
   if (payload.athlete?.id !== undefined) {
+    // Merge fields rather than overwrite: Strava's refresh response often
+    // includes `athlete.id` but omits `firstname` / `profile_medium`, and
+    // we don't want a refresh to wipe display data we already had. Prefer
+    // the new value when present, fall back to the previously stored one.
+    const fallback = options?.athleteOverride;
     const athlete: StravaAthlete = {
       id: payload.athlete.id,
-      firstname: payload.athlete.firstname,
-      avatar: payload.athlete.profile_medium,
+      firstname: payload.athlete.firstname ?? fallback?.firstname,
+      avatar: payload.athlete.profile_medium ?? fallback?.avatar,
     };
     store.set(ATHLETE, JSON.stringify(athlete), COOKIE_BASE);
   } else if (options?.athleteOverride) {
-    // Refresh didn't include athlete data — carry the previously stored
-    // athlete forward so we don't drop firstname / avatar on token refresh.
+    // Refresh didn't include athlete data at all — carry the previously
+    // stored athlete forward unchanged.
     store.set(ATHLETE, JSON.stringify(options.athleteOverride), COOKIE_BASE);
   }
 }
@@ -133,6 +150,22 @@ export async function consumeOAuthState(): Promise<string | null> {
     store.delete(STATE);
   }
   return value;
+}
+
+/** Read the OAuth state cookie WITHOUT deleting it. Use this when you
+ * need to validate state before a fallible operation (e.g. token
+ * exchange) so the cookie survives for a retry attempt if the operation
+ * fails. Pair with `clearOAuthState()` on success. */
+export async function peekOAuthState(): Promise<string | null> {
+  const store = await cookies();
+  return store.get(STATE)?.value ?? null;
+}
+
+/** Delete the OAuth state cookie. Idempotent; safe to call when the
+ * cookie is already absent. */
+export async function clearOAuthState(): Promise<void> {
+  const store = await cookies();
+  store.delete(STATE);
 }
 
 /**
@@ -182,7 +215,13 @@ async function refreshStoredTokens(tokens: StoredTokens): Promise<string> {
     }),
   });
   if (!res.ok) {
-    await clearTokens();
+    // 4xx means the refresh grant is dead (revoked, expired, invalid) —
+    // clear cookies so the user has to reconnect. 5xx is a Strava-side
+    // hiccup; leave the cookies alone so a transient outage doesn't
+    // log everyone out.
+    if (res.status >= 400 && res.status < 500) {
+      await clearTokens();
+    }
     throw new StravaNotConnectedError();
   }
   const payload = (await res.json()) as StravaTokenResponse;

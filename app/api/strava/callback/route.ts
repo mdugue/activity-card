@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
-  consumeOAuthState,
+  clearOAuthState,
+  peekOAuthState,
   STRAVA_TOKEN_URL,
   writeTokens,
 } from "@/lib/strava-cookies";
@@ -58,8 +59,10 @@ export async function GET(request: Request) {
   // ── Normal flow ────────────────────────────────────────────────────
   // We're either the original initiator (single-deploy case) or the
   // preview that just received a production bounce. Either way, the
-  // state cookie belongs to us — validate it before exchanging the code.
-  const expected = await consumeOAuthState();
+  // state cookie belongs to us — peek (don't consume) so a failed token
+  // exchange leaves the cookie intact for a retry; we only clear after
+  // the exchange succeeds.
+  const expected = await peekOAuthState();
   if (!expected || expected !== payload.r) {
     return NextResponse.redirect(new URL("/?strava=state_mismatch", url));
   }
@@ -81,6 +84,10 @@ export async function GET(request: Request) {
   }
   const tokenPayload = await res.json();
   await writeTokens(tokenPayload);
+  // Code redeemed successfully — invalidate the state cookie so a stale
+  // refresh of the callback URL doesn't try to re-redeem (codes are
+  // single-use; Strava would 4xx).
+  await clearOAuthState();
 
   return NextResponse.redirect(new URL(finalReturnTo, url));
 }
