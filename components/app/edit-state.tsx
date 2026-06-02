@@ -31,6 +31,7 @@ import { formatDate } from "@/lib/format";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme, PhotoMood } from "@/lib/palette";
 import { type ParsedActivity, parseActivityFile } from "@/lib/parse-activity";
+import { cn } from "@/lib/utils";
 import type { Visibility } from "@/lib/visibility";
 import { RenderTheme, type ThemeId } from "./render-theme";
 import type { ActivityData, Sport } from "./sample-data";
@@ -550,9 +551,10 @@ function PhotoControl({
   const inputRef = useRef<HTMLInputElement>(null);
   return (
     <div
-      className={`mt-2 flex items-center gap-3 border border-foreground/35 border-dashed p-3 ${
-        disabled ? "opacity-45" : ""
-      }`}
+      className={cn(
+        "mt-2 flex items-center gap-3 border border-foreground/35 border-dashed p-3",
+        disabled && "opacity-45"
+      )}
     >
       <input
         accept="image/*"
@@ -707,7 +709,7 @@ function ToggleRow({
   const id = useId();
   const labelEl = (
     <Label
-      className={`font-medium text-sm ${disabled ? "opacity-50" : ""}`}
+      className={cn("font-medium text-sm", disabled && "opacity-50")}
       htmlFor={id}
     >
       {label}
@@ -715,9 +717,10 @@ function ToggleRow({
   );
   return (
     <div
-      className={`flex items-center justify-between ${
-        disabled ? "opacity-60" : ""
-      }`}
+      className={cn(
+        "flex items-center justify-between",
+        disabled && "opacity-60"
+      )}
     >
       {disabled && disabledReason ? (
         <Tooltip>

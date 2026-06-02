@@ -16,7 +16,10 @@ import type { ActivityCardProps } from "./types";
 
 const ACCENT = "#1d3a2e";
 const INK = "#1a1816";
-const PAPER = "#efe9dc";
+// Soft warm paper — a gentle, low-chroma off-white so the editorial layout
+// reads as printed on a sheet, lifted off the lighter page. Much cleaner than
+// the original cream; see the white-canvas siblings (path/data/triathlon).
+const PAPER = "#f9f4ee";
 
 interface RowProps {
   k: string;

@@ -15,7 +15,7 @@ import {
 import type { ActivityCardProps } from "./types";
 
 const INK = "#11151a";
-const PAPER = "#f4eee2";
+const PAPER = "#ffffff";
 
 interface StatProps {
   label: string;
@@ -297,7 +297,7 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
                 flex: 1,
                 position: "relative",
                 border: `1px solid ${INK}`,
-                background: "#faf6ec",
+                background: "#ffffff",
                 padding: "18px 22px",
                 display: "grid",
                 gridTemplateColumns: "0.55fr 1fr 0.5fr",
