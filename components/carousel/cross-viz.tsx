@@ -3,6 +3,7 @@
 // glyph (Ascent / Exposure). Just enough to nod at the other dimension.
 
 import type { ActivityData } from "@/components/app/sample-data";
+import { pickProfile } from "@/lib/carousel/profile";
 import type {
   CrossViz as CrossVizKind,
   FontPair,
@@ -30,7 +31,7 @@ export function CrossViz({
   accent,
   fonts,
 }: CrossVizProps) {
-  const profile = data.elevationProfile ?? data.paceProfile;
+  const { profile, mode } = pickProfile(data);
   const hasRoute = (data.routeCoordinates?.length ?? 0) > 1;
   const hasProfile = (profile?.length ?? 0) > 1;
   if (kind === "elevation" ? !hasProfile : !hasRoute) {
@@ -56,6 +57,7 @@ export function CrossViz({
             colors={{ line: color, fillFrom: color, fillTo: "transparent" }}
             exaggeration={1.2}
             h={BOX_H}
+            mode={mode}
             profile={profile}
             w={BOX_W}
           />

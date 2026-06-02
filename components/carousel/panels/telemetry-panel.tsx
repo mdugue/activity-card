@@ -191,8 +191,11 @@ export function TelemetryPanel(props: TemplateProps) {
   const c = slideText(style, hasPhoto);
   const cells = buildStats(data);
   const zones = data.powerZones ?? data.hrZones;
-  const isLast = index === total - 1;
-  const isZonePage = !isLast && index === 1 && (zones?.length ?? 0) > 0;
+  const lastIndex = total - 1;
+  const hasZones = (zones?.length ?? 0) > 0;
+  const isLast = index === lastIndex;
+  // The zone page (when zones exist) sits at slide 1.
+  const isZonePage = !isLast && index === 1 && hasZones;
 
   const body = () => {
     if (isLast) {
@@ -260,9 +263,16 @@ export function TelemetryPanel(props: TemplateProps) {
         </>
       );
     }
+    // Metric slides page through the full stat set, distributed evenly across
+    // the metric slots (the zone page and the final summary slide don't count),
+    // so no two slides repeat the same cells and every stat is shown once.
+    const metricSlots = Math.max(1, lastIndex - (hasZones ? 1 : 0));
+    const ord = hasZones && index > 1 ? index - 1 : index;
+    const from = Math.floor((ord * cells.length) / metricSlots);
+    const to = Math.floor(((ord + 1) * cells.length) / metricSlots);
     return (
       <MetricGrid
-        cells={cells.slice(index === 0 ? 0 : 4, index === 0 ? 4 : 8)}
+        cells={cells.slice(from, to)}
         ink={c.fg}
         muted={c.muted}
         style={style}

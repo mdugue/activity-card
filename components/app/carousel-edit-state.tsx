@@ -110,8 +110,11 @@ export function CarouselEditState(props: CarouselEditStateProps) {
         )
     : undefined;
 
-  // Adjust only makes sense when the theme actually renders the photo.
-  const adjustAvailable = photoUrl !== null && photoSupported;
+  // Adjust only makes sense when the theme renders the photo AND we know its
+  // natural size — the pan/zoom clamp (coverClamp) is derived from imageSize,
+  // so offering Adjust before it resolves would pan against the wrong bounds.
+  const adjustAvailable =
+    photoUrl !== null && photoSupported && imageSize !== null;
   useEffect(() => {
     if (adjusting && !adjustAvailable) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -338,7 +341,8 @@ export function CarouselEditState(props: CarouselEditStateProps) {
             usesAthleteName: true,
             usesLocation: true,
             usesHeartRate: true,
-            usesSplits: true,
+            // No carousel theme renders splits, so don't offer a dead toggle.
+            usesSplits: false,
             photoSupported,
           }}
           data={data}

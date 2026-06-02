@@ -29,14 +29,14 @@ function distance(data: ActivityData): StatItem {
     return {
       key: "distance",
       label: "DISTANCE",
-      value: (data.distanceKm * 1000).toFixed(0),
+      value: formatNumber(data.distanceKm * 1000, 0),
       unit: "m",
     };
   }
   return {
     key: "distance",
     label: "DISTANCE",
-    value: data.distanceKm.toFixed(1),
+    value: formatNumber(data.distanceKm, 1),
     unit: "km",
   };
 }

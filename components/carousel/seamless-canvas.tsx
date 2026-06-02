@@ -10,8 +10,8 @@
 
 import type { ActivityData } from "@/components/app/sample-data";
 import type { ThemeId } from "@/components/themes";
-import { PhotoLayer } from "@/components/themes/photo-layer";
 import type { ImageSize } from "@/hooks/use-image-natural-size";
+import { pickProfile } from "@/lib/carousel/profile";
 import type { EffectiveStyle } from "@/lib/carousel/resolve";
 import { resolveDeckStyle } from "@/lib/carousel/resolve";
 import type { PanelKind } from "@/lib/carousel/theme-tokens";
@@ -85,9 +85,7 @@ export function SeamlessCanvas({
   const desaturate = photoForeground && style.routeStyle === "desaturated";
   const photoFilter = filterCss(photoEffects.filter);
 
-  const profile = data.elevationProfile ?? data.paceProfile;
-  const profileMode =
-    (data.elevationProfile?.length ?? 0) > 1 ? "elevation" : "pace";
+  const { profile, mode: profileMode } = pickProfile(data);
   const hasSegments = (data.segments?.length ?? 0) >= 2;
 
   const showElevationHero =
@@ -113,38 +111,27 @@ export function SeamlessCanvas({
       }}
     >
       {(() => {
-        if (!(showPhoto && photoUrl)) {
+        // Draw the photo only once its natural size is known — the panorama is
+        // sized/clamped against it. Rendering a cover fallback before then (or
+        // on decode failure) would drop the rotate/flip/filter effects and use
+        // different geometry than the export, so preview and output diverge.
+        if (!(showPhoto && photoUrl && imageSize)) {
           return null;
         }
-        if (imageSize) {
-          return (
-            <CarouselPhoto
-              desaturate={desaturate}
-              filter={photoFilter}
-              flipH={photoEffects.flipH}
-              flipV={photoEffects.flipV}
-              imageSize={imageSize}
-              opacity={photoForeground ? 1 : 0.16}
-              photoUrl={photoUrl}
-              rotate={photoEffects.rotate}
-              stripH={SLIDE_H}
-              stripW={width}
-              transform={imageTransform}
-            />
-          );
-        }
         return (
-          <div
-            aria-hidden
-            style={{
-              position: "absolute",
-              inset: 0,
-              opacity: photoForeground ? 1 : 0.16,
-              filter: desaturate ? "saturate(0.6) brightness(1.05)" : undefined,
-            }}
-          >
-            <PhotoLayer imageTransform={imageTransform} photoUrl={photoUrl} />
-          </div>
+          <CarouselPhoto
+            desaturate={desaturate}
+            filter={photoFilter}
+            flipH={photoEffects.flipH}
+            flipV={photoEffects.flipV}
+            imageSize={imageSize}
+            opacity={photoForeground ? 1 : 0.16}
+            photoUrl={photoUrl}
+            rotate={photoEffects.rotate}
+            stripH={SLIDE_H}
+            stripW={width}
+            transform={imageTransform}
+          />
         );
       })()}
 
@@ -238,7 +225,11 @@ export function SeamlessCanvas({
               style={style}
               total={total}
             />
-            {style.panelKind === "standard" && style.microGraphic ? (
+            {/* The cross-viz owns the top-right corner on the wrap-up slide, so
+                drop the micro-graphic there to avoid overlapping the two. */}
+            {style.panelKind === "standard" &&
+            style.microGraphic &&
+            !(isLast && style.crossViz) ? (
               <MicroGraphicLayer
                 color={heroInk}
                 corner="tr"
