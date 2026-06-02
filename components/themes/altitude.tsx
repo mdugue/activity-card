@@ -2,7 +2,6 @@
 // Type: Space Grotesk (display) + JetBrains Mono (data)
 // Parameterized by `mood`: night | dawn | day | heat | rain | snow
 
-import { StravaAttribution } from "@/components/app/strava-attribution";
 import { elevationPath, pacePath } from "@/lib/chart-helpers";
 import {
   formatDateUpper,
@@ -623,24 +622,6 @@ export function ThemeAltitude({
           </div>
         )}
       </div>
-
-      {data.source === "strava" ? (
-        <div
-          style={{
-            position: "absolute",
-            top: 28,
-            right: 60,
-            zIndex: 3,
-            opacity: 0.85,
-            color: M.text,
-          }}
-        >
-          <StravaAttribution
-            variant={M.inkOnStat ? "dark" : "brand"}
-            width={120}
-          />
-        </div>
-      ) : null}
 
       {/* Stat strip at bottom */}
       <div

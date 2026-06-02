@@ -173,13 +173,25 @@ export default function Home() {
       return;
     }
     /* eslint-disable react-hooks/set-state-in-effect */
-    if (flag === "connected") {
-      toast.success("Connected to Strava");
-      setState((prev) => (prev === "empty" ? "picking-strava" : prev));
-    } else if (flag === "denied") {
-      toast.error("Strava access was denied");
-    } else {
-      toast.error(`Couldn't connect to Strava (${flag})`);
+    switch (flag) {
+      case "connected":
+        toast.success("Connected to Strava");
+        setState((prev) => (prev === "empty" ? "picking-strava" : prev));
+        break;
+      case "denied":
+        toast.error("You declined to connect Strava. You can try again.");
+        break;
+      case "state_mismatch":
+        toast.error("Couldn't verify the Strava sign-in. Please try again.");
+        break;
+      case "token_exchange":
+        toast.error("Strava rejected the sign-in. Try again in a moment.");
+        break;
+      case "failed":
+        toast.error("Couldn't start the Strava sign-in. Try again.");
+        break;
+      default:
+        toast.error(`Couldn't connect to Strava (${flag})`);
     }
     /* eslint-enable react-hooks/set-state-in-effect */
     // Strip the param so a reload doesn't re-fire the toast.
@@ -284,7 +296,6 @@ export default function Home() {
       <Header date={data?.date} />
       {state === "empty" ? (
         <EmptyState
-          onConnectStrava={handleConnectStrava}
           onFilesLoaded={handleFilesLoaded}
           onOpenStravaPicker={handleOpenStravaPicker}
         />

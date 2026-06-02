@@ -46,10 +46,55 @@ interface StravaPickerProps {
 
 const PER_PAGE = 30;
 
+/** Discriminated error shape mirrored from `stravaErrorResponse` on the
+ * server. Lets the picker show actionable per-kind copy instead of a
+ * generic "couldn't reach Strava (NNN)". */
+export type StravaFetchError =
+  | { kind: "reauth" }
+  | { kind: "rate_limited"; retryAfter: number }
+  | { kind: "upstream"; status: number }
+  | { kind: "network"; message: string }
+  | { kind: "empty_activity" };
+
 type LoadResult =
   | { kind: "ok"; activities: StravaSummaryActivity[] }
-  | { kind: "reauth" }
-  | { kind: "error"; message: string };
+  | { kind: "err"; error: StravaFetchError };
+
+interface ServerErrorEnvelope {
+  error?: string;
+  retryAfter?: number;
+  status?: number;
+}
+
+async function readErrorEnvelope(res: Response): Promise<ServerErrorEnvelope> {
+  try {
+    return (await res.json()) as ServerErrorEnvelope;
+  } catch {
+    return {};
+  }
+}
+
+function toFetchError(
+  res: Response,
+  envelope: ServerErrorEnvelope
+): StravaFetchError {
+  if (res.status === 401 || envelope.error === "not_connected") {
+    return { kind: "reauth" };
+  }
+  if (res.status === 429 || envelope.error === "rate_limited") {
+    return {
+      kind: "rate_limited",
+      // Server may compute a fresh retryAfter; fall back to the response
+      // header if it didn't set one.
+      retryAfter:
+        envelope.retryAfter ?? Number(res.headers.get("retry-after")) ?? 60,
+    };
+  }
+  return {
+    kind: "upstream",
+    status: envelope.status ?? res.status,
+  };
+}
 
 async function fetchActivities(page: number): Promise<LoadResult> {
   try {
@@ -57,13 +102,10 @@ async function fetchActivities(page: number): Promise<LoadResult> {
       `/api/strava/activities?page=${page}&per_page=${PER_PAGE}`,
       { cache: "no-store" }
     );
-    if (res.status === 401) {
-      return { kind: "reauth" };
-    }
     if (!res.ok) {
       return {
-        kind: "error",
-        message: `Couldn't reach Strava (${res.status}).`,
+        kind: "err",
+        error: toFetchError(res, await readErrorEnvelope(res)),
       };
     }
     const data = (await res.json()) as {
@@ -72,30 +114,49 @@ async function fetchActivities(page: number): Promise<LoadResult> {
     return { kind: "ok", activities: data.activities };
   } catch (err) {
     return {
-      kind: "error",
-      message: err instanceof Error ? err.message : "Network error.",
+      kind: "err",
+      error: {
+        kind: "network",
+        message: err instanceof Error ? err.message : "Network error.",
+      },
     };
   }
 }
 
-async function fetchDetail(
-  id: number
-): Promise<ParsedActivity[] | { error: string } | "reauth"> {
-  const res = await fetch(`/api/strava/activity/${id}`, { cache: "no-store" });
-  if (res.status === 401) {
-    return "reauth";
+type DetailResult =
+  | { kind: "ok"; parts: ParsedActivity[] }
+  | { kind: "err"; error: StravaFetchError };
+
+async function fetchDetail(id: number): Promise<DetailResult> {
+  try {
+    const res = await fetch(`/api/strava/activity/${id}`, {
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      return {
+        kind: "err",
+        error: toFetchError(res, await readErrorEnvelope(res)),
+      };
+    }
+    const data = (await res.json()) as { parts: ParsedActivity[] };
+    if (!data.parts?.length) {
+      return { kind: "err", error: { kind: "empty_activity" } };
+    }
+    return { kind: "ok", parts: data.parts };
+  } catch (err) {
+    return {
+      kind: "err",
+      error: {
+        kind: "network",
+        message: err instanceof Error ? err.message : "Network error.",
+      },
+    };
   }
-  if (!res.ok) {
-    return { error: `Strava returned ${res.status}.` };
-  }
-  const data = (await res.json()) as { parts: ParsedActivity[] };
-  if (!data.parts?.length) {
-    return { error: "This activity has no data we can use." };
-  }
-  return data.parts;
 }
 
 async function fetchTotalPages(): Promise<number | null> {
+  // Stats is a hint, not load-bearing — silently fall back to the
+  // page-is-full heuristic when it fails (rate-limit or upstream).
   try {
     const res = await fetch("/api/strava/stats", { cache: "no-store" });
     if (!res.ok) {
@@ -112,7 +173,7 @@ type LoadState =
   | { kind: "loading" }
   | { kind: "ready"; activities: StravaSummaryActivity[] }
   | { kind: "empty" }
-  | { kind: "error"; message: string };
+  | { kind: "error"; error: StravaFetchError };
 
 const SKELETON_KEYS = ["a", "b", "c", "d", "e", "f"] as const;
 
@@ -128,7 +189,7 @@ export function StravaPicker({
   const [selected, setSelected] = useState<Set<number>>(() => new Set());
   const [pickingId, setPickingId] = useState<number | null>(null);
   const [isCombining, setIsCombining] = useState(false);
-  const [pickError, setPickError] = useState<string | null>(null);
+  const [pickError, setPickError] = useState<StravaFetchError | null>(null);
   const multiId = useId();
 
   // One-shot fetch for the lifetime activity count. Best-effort: if it
@@ -156,12 +217,12 @@ export function StravaPicker({
       if (cancelled) {
         return;
       }
-      if (result.kind === "reauth") {
-        onReauth();
-        return;
-      }
-      if (result.kind === "error") {
-        setState({ kind: "error", message: result.message });
+      if (result.kind === "err") {
+        if (result.error.kind === "reauth") {
+          onReauth();
+          return;
+        }
+        setState({ kind: "error", error: result.error });
         return;
       }
       setState(
@@ -199,15 +260,15 @@ export function StravaPicker({
     setPickError(null);
     const result = await fetchDetail(id);
     setPickingId(null);
-    if (result === "reauth") {
-      onReauth();
-      return;
-    }
-    if ("error" in result) {
+    if (result.kind === "err") {
+      if (result.error.kind === "reauth") {
+        onReauth();
+        return;
+      }
       setPickError(result.error);
       return;
     }
-    onActivityLoaded(result);
+    onActivityLoaded(result.parts);
   };
 
   const handleCombine = async () => {
@@ -219,21 +280,20 @@ export function StravaPicker({
     setPickError(null);
     const results = await Promise.all(ids.map((id) => fetchDetail(id)));
     setIsCombining(false);
-    if (results.includes("reauth")) {
+    // If any of the parallel fetches expired the grant, jump to reauth so
+    // the user doesn't see a confusing per-error message.
+    if (results.some((r) => r.kind === "err" && r.error.kind === "reauth")) {
       onReauth();
       return;
     }
-    const errored = results.find(
-      (r): r is { error: string } =>
-        r !== "reauth" && !Array.isArray(r) && "error" in r
+    const firstError = results.find(
+      (r): r is { kind: "err"; error: StravaFetchError } => r.kind === "err"
     );
-    if (errored) {
-      setPickError(errored.error);
+    if (firstError) {
+      setPickError(firstError.error);
       return;
     }
-    const allParts = results.flatMap((r) =>
-      Array.isArray(r) ? r : []
-    ) as ParsedActivity[];
+    const allParts = results.flatMap((r) => (r.kind === "ok" ? r.parts : []));
     onActivityLoaded(allParts);
   };
 
@@ -291,9 +351,11 @@ export function StravaPicker({
       </div>
 
       {pickError ? (
-        <Alert className="mt-4" variant="destructive">
-          <AlertDescription>{pickError}</AlertDescription>
-        </Alert>
+        <StravaErrorAlert
+          className="mt-4"
+          error={pickError}
+          onReauth={onReauth}
+        />
       ) : null}
 
       <PickerPagination
@@ -493,22 +555,7 @@ function ActivityList({
     );
   }
   if (state.kind === "error") {
-    return (
-      <Alert variant="destructive">
-        <AlertTitle>Couldn&apos;t load activities</AlertTitle>
-        <AlertDescription>
-          <p>{state.message}</p>
-          <Button
-            className="mt-3"
-            onClick={onReauth}
-            size="sm"
-            variant="outline"
-          >
-            Reconnect Strava
-          </Button>
-        </AlertDescription>
-      </Alert>
-    );
+    return <StravaErrorAlert error={state.error} onReauth={onReauth} />;
   }
   return (
     <ItemGroup>
@@ -657,4 +704,131 @@ function formatDuration(sec: number): string {
     return `${h}h ${m}m`;
   }
   return `${m}m`;
+}
+
+interface StravaErrorAlertProps {
+  className?: string;
+  error: StravaFetchError;
+  onReauth: () => void;
+}
+
+/**
+ * One Alert component for every Strava failure mode. Each kind gets
+ * specific copy + an actionable next step (Retry / Reconnect / Wait)
+ * instead of a generic "couldn't reach Strava (NNN)". Rate-limit shows
+ * a live countdown so the user knows when Retry will work.
+ */
+function StravaErrorAlert({
+  className,
+  error,
+  onReauth,
+}: StravaErrorAlertProps) {
+  if (error.kind === "reauth") {
+    return (
+      <Alert className={className} variant="destructive">
+        <AlertTitle>Your Strava sign-in expired</AlertTitle>
+        <AlertDescription>
+          <p>Reconnect to keep browsing your activities.</p>
+          <Button
+            className="mt-3"
+            onClick={onReauth}
+            size="sm"
+            variant="outline"
+          >
+            Reconnect Strava
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+  if (error.kind === "rate_limited") {
+    return (
+      <RateLimitAlert className={className} retryAfter={error.retryAfter} />
+    );
+  }
+  if (error.kind === "upstream") {
+    return (
+      <Alert className={className} variant="destructive">
+        <AlertTitle>Strava had a hiccup</AlertTitle>
+        <AlertDescription>
+          <p>HTTP {error.status} from Strava. Try again in a moment.</p>
+          <Button
+            className="mt-3"
+            onClick={() => window.location.reload()}
+            size="sm"
+            variant="outline"
+          >
+            Retry
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+  if (error.kind === "empty_activity") {
+    return (
+      <Alert className={className} variant="destructive">
+        <AlertTitle>Nothing to render here</AlertTitle>
+        <AlertDescription>
+          This Strava activity has no data we can turn into a card (no GPS and
+          no session summary).
+        </AlertDescription>
+      </Alert>
+    );
+  }
+  return (
+    <Alert className={className} variant="destructive">
+      <AlertTitle>Can&apos;t reach the server</AlertTitle>
+      <AlertDescription>
+        <p>{error.message}</p>
+        <Button
+          className="mt-3"
+          onClick={() => window.location.reload()}
+          size="sm"
+          variant="outline"
+        >
+          Retry
+        </Button>
+      </AlertDescription>
+    </Alert>
+  );
+}
+
+function RateLimitAlert({
+  className,
+  retryAfter,
+}: {
+  className?: string;
+  retryAfter: number;
+}) {
+  const [seconds, setSeconds] = useState(retryAfter);
+  // Reset + tick the countdown whenever the parent hands us a fresh
+  // retryAfter (legit external-prop sync).
+  useEffect(() => {
+    /* eslint-disable-next-line react-hooks/set-state-in-effect */
+    setSeconds(retryAfter);
+    const id = window.setInterval(() => {
+      setSeconds((s) => (s > 0 ? s - 1 : 0));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [retryAfter]);
+  return (
+    <Alert className={className} variant="destructive">
+      <AlertTitle>Strava is rate-limiting us</AlertTitle>
+      <AlertDescription>
+        <p>
+          We hit Strava&apos;s 15-minute request quota. Try again in{" "}
+          <span className="font-mono">{seconds}s</span>.
+        </p>
+        <Button
+          className="mt-3"
+          disabled={seconds > 0}
+          onClick={() => window.location.reload()}
+          size="sm"
+          variant="outline"
+        >
+          Retry
+        </Button>
+      </AlertDescription>
+    </Alert>
+  );
 }

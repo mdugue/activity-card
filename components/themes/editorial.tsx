@@ -2,7 +2,6 @@
 // Type: Instrument Serif (display) + Geist Mono (small caps)
 // Cream paper, soft black, single deep-forest accent
 
-import { StravaAttribution } from "@/components/app/strava-attribution";
 import { routePath } from "@/lib/chart-helpers";
 import {
   formatDate,
@@ -328,11 +327,7 @@ export function ThemeEditorial({ data, photoUrl }: ActivityCardProps) {
           }}
         >
           <span>— FIN —</span>
-          {data.source === "strava" ? (
-            <StravaAttribution variant="brand" width={120} />
-          ) : (
-            <span style={{ color: ACCENT }}>EFFORT · PRINTED MMXXVI</span>
-          )}
+          <span style={{ color: ACCENT }}>EFFORT · PRINTED MMXXVI</span>
         </div>
       </div>
     </div>

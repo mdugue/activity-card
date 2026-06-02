@@ -11,6 +11,11 @@ export interface StravaAthleteInfo {
 interface State {
   athlete: StravaAthleteInfo | null;
   connected: boolean;
+  /** Non-null when `/api/strava/me` itself failed (network down, server
+   * 5xx). Distinct from `connected: false`, which is the legitimate
+   * "user hasn't OAuthed yet" state. UI surfaces this as a destructive
+   * Alert so the user knows the server is broken, not their grant. */
+  error: "fetch_failed" | null;
   loading: boolean;
 }
 
@@ -34,13 +39,19 @@ export function useStravaConnection(): UseStravaConnection {
     connected: false,
     athlete: null,
     loading: true,
+    error: null,
   });
 
   const refresh = useCallback(async () => {
     try {
       const res = await fetch("/api/strava/me", { cache: "no-store" });
       if (!res.ok) {
-        setState({ connected: false, athlete: null, loading: false });
+        setState({
+          connected: false,
+          athlete: null,
+          loading: false,
+          error: "fetch_failed",
+        });
         return;
       }
       const data = (await res.json()) as MeResponse;
@@ -48,15 +59,26 @@ export function useStravaConnection(): UseStravaConnection {
         connected: data.connected,
         athlete: data.athlete ?? null,
         loading: false,
+        error: null,
       });
     } catch {
-      setState({ connected: false, athlete: null, loading: false });
+      setState({
+        connected: false,
+        athlete: null,
+        loading: false,
+        error: "fetch_failed",
+      });
     }
   }, []);
 
   const disconnect = useCallback(async () => {
     await fetch("/api/strava/disconnect", { method: "POST" });
-    setState({ connected: false, athlete: null, loading: false });
+    setState({
+      connected: false,
+      athlete: null,
+      loading: false,
+      error: null,
+    });
   }, []);
 
   // One-shot read of an external system (the cookie store, via the API).

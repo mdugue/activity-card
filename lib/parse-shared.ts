@@ -35,6 +35,10 @@ export interface ParsedActivity {
   sport: ParsedSport;
 
   startTimeMs?: number;
+  /** Strava activity ids for "View on Strava" linking. Single Strava
+   * activity → `[id]`. Combined triathlon → segment-aligned with `null`
+   * entries for file-sourced parts. Unset for pure GPX/.fit uploads. */
+  stravaActivityIds?: (number | null)[];
   title: string;
 }
 

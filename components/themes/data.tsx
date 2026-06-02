@@ -4,7 +4,6 @@
 // IG-safe: all text >= 24px on the 1080-wide canvas.
 
 import type { ReactNode } from "react";
-import { StravaAttribution } from "@/components/app/strava-attribution";
 import {
   abstractLanes,
   elevationPath,
@@ -628,11 +627,7 @@ export function ThemeData({ data }: ActivityCardProps) {
         }}
       >
         <span>EFF/2026/{sport.toUpperCase().slice(0, 3)}-04</span>
-        {data.source === "strava" ? (
-          <StravaAttribution variant="brand" width={120} />
-        ) : (
-          <span style={{ color: ACCENT }}>● DATA</span>
-        )}
+        <span style={{ color: ACCENT }}>● DATA</span>
       </div>
     </div>
   );

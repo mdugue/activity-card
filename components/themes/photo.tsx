@@ -6,7 +6,6 @@
 // fallback palette is applied inline so the card stays legible while
 // extraction is in flight or when no photo is loaded.
 
-import { StravaAttribution } from "@/components/app/strava-attribution";
 import { paletteToCssVars } from "@/hooks/use-image-palette";
 import { routePath } from "@/lib/chart-helpers";
 import {
@@ -376,19 +375,6 @@ export function ThemePhoto({
           </div>
         )}
       </div>
-      {data.source === "strava" ? (
-        <div
-          style={{
-            position: "absolute",
-            bottom: 22,
-            left: 80,
-            zIndex: 2,
-            opacity: 0.95,
-          }}
-        >
-          <StravaAttribution variant="light" width={120} />
-        </div>
-      ) : null}
     </div>
   );
 }

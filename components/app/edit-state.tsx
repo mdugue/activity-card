@@ -245,7 +245,7 @@ function ControlsPane({
         onFilesLoaded={onFilesLoaded}
         onOpenStravaPicker={onOpenStravaPicker}
       />
-      <StravaConnectionRow source={data.source} />
+      <StravaConnectionRow data={data} />
 
       <ControlBlock label="TITLE">
         <Label className="sr-only" htmlFor={titleId}>
@@ -612,33 +612,95 @@ function PhotoControl({
   );
 }
 
-function StravaConnectionRow({ source }: { source: ActivityData["source"] }) {
+function StravaConnectionRow({ data }: { data: ActivityData }) {
   const strava = useStravaConnection();
   if (!strava.connected) {
     return null;
   }
-  const fromStrava = source === "strava";
+  const fromStrava = data.source === "strava";
   return (
-    <div className="-mt-3 flex items-center gap-2 border-foreground/10 border-b pb-3 font-mono text-[10px] uppercase tracking-[0.18em] opacity-70">
-      <span
-        aria-hidden
-        className="size-1.5 rounded-full"
-        style={{ background: "#FC4C02" }}
-      />
-      <span>
-        STRAVA
-        {strava.athlete?.firstname ? ` · ${strava.athlete.firstname}` : ""}
-      </span>
-      {fromStrava ? <span className="opacity-70">· this activity</span> : null}
-      <button
-        className="ml-auto underline-offset-4 hover:underline"
-        onClick={() => {
-          strava.disconnect();
-        }}
-        type="button"
+    <div className="-mt-3 flex flex-col gap-1.5 border-foreground/10 border-b pb-3 font-mono text-[10px] uppercase tracking-[0.18em] opacity-70">
+      <div className="flex items-center gap-2">
+        <span
+          aria-hidden
+          className="size-1.5 rounded-full"
+          style={{ background: "#FC5200" }}
+        />
+        <span>
+          STRAVA
+          {strava.athlete?.firstname ? ` · ${strava.athlete.firstname}` : ""}
+        </span>
+        {fromStrava ? (
+          <span className="opacity-70">· this activity</span>
+        ) : null}
+        <button
+          className="ml-auto underline-offset-4 hover:underline"
+          onClick={() => {
+            strava.disconnect();
+          }}
+          type="button"
+        >
+          Disconnect
+        </button>
+      </div>
+      {fromStrava ? <ViewOnStravaLinks data={data} /> : null}
+    </div>
+  );
+}
+
+/**
+ * Renders one or more "View on Strava" anchors per Strava brand guidelines
+ * §3 (font-weight 700, underline, brand orange `#FC5200`). Single Strava
+ * activity → one link. Combined triathlon with segment-aligned ids →
+ * one link per Strava-sourced segment, labelled by sport. Mixed-source
+ * triathlons render only the Strava-backed segments. Renders nothing if
+ * `stravaActivityIds` is absent.
+ */
+function ViewOnStravaLinks({ data }: { data: ActivityData }) {
+  const ids = data.stravaActivityIds;
+  if (!ids?.length) {
+    return null;
+  }
+  if (ids.length === 1 && ids[0] !== null) {
+    return (
+      <a
+        className="font-bold text-[#FC5200] underline-offset-4 hover:underline"
+        href={`https://www.strava.com/activities/${ids[0]}`}
+        rel="noopener noreferrer"
+        target="_blank"
       >
-        Disconnect
-      </button>
+        View on Strava ↗
+      </a>
+    );
+  }
+  // Triathlon — pair ids with segments by index so we can label per sport.
+  // `null` slots are file-sourced segments; they're skipped silently.
+  const segments = data.segments ?? [];
+  const links = ids
+    .map((id, i) => ({ id, sport: segments[i]?.sport }))
+    .filter(
+      (x): x is { id: number; sport: NonNullable<typeof x.sport> } =>
+        x.id !== null && x.sport !== undefined
+    );
+  if (links.length === 0) {
+    return null;
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <span>View on Strava:</span>
+      {links.map(({ id, sport }, i) => (
+        <span key={id}>
+          <a
+            className="font-bold text-[#FC5200] underline-offset-4 hover:underline"
+            href={`https://www.strava.com/activities/${id}`}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            {sport.toUpperCase()}
+          </a>
+          {i < links.length - 1 ? <span aria-hidden> ·</span> : null}
+        </span>
+      ))}
     </div>
   );
 }

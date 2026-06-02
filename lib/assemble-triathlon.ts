@@ -63,6 +63,13 @@ export function assembleTriathlon(parts: ParsedActivity[]): ActivityData {
     ? Math.round(avgHrs.reduce((a, b) => a + b, 0) / avgHrs.length)
     : undefined;
 
+  // Segment-aligned array of Strava ids, `null` for file-sourced parts.
+  // Length always matches `segments.length` so the UI can map ids → sports
+  // without needing a separate "which segments are Strava" lookup. If no
+  // part carries an id, leave the field undefined (pure-upload triathlon).
+  const stravaActivityIds = sorted.map((p) => p.stravaActivityIds?.[0] ?? null);
+  const anyStrava = stravaActivityIds.some((id) => id !== null);
+
   return {
     sport: "triathlon",
     title: deriveTriName(sorted),
@@ -75,6 +82,7 @@ export function assembleTriathlon(parts: ParsedActivity[]): ActivityData {
     avgHeartRate,
     segments,
     transitions: transitions.length ? transitions : undefined,
+    stravaActivityIds: anyStrava ? stravaActivityIds : undefined,
   };
 }
 

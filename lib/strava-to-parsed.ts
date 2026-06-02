@@ -102,6 +102,11 @@ export function stravaToParsed(
   if (location) {
     parsed.location = location;
   }
+  // Carry the Strava activity id forward so the UI can render a
+  // "View on Strava" link (§3 of the brand guidelines).
+  if (detail.id !== undefined) {
+    parsed.stravaActivityIds = [detail.id];
+  }
 
   return [parsed];
 }

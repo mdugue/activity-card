@@ -20,10 +20,22 @@ In either case the chosen activity (or assembled triathlon) flows
 through the same parsing pipeline as a GPX/.fit upload
 (`lib/parse-shared.ts` → `ParsedActivity` → `app/page.tsx` `adoptParsed`
 → `ActivityData`), so themes, controls, and the PNG exporter do not
-branch on source. The only visible difference: `data.source === 'strava'`
-triggers a "Powered by Strava" mark on the card per Strava's brand
-terms, and the edit-state **Swap** button reopens the picker (instead
-of a file dialog) when the loaded activity came from Strava.
+branch on source.
+
+Visible differences when an activity comes from Strava (`data.source === 'strava'`):
+
+- The edit-state **Swap** button reopens the picker instead of a file dialog.
+- The connection-status row renders one or more **"View on Strava"** links
+  (orange `#FC5200`, bold, underlined per §3 of the brand guidelines).
+  Single Strava activity → one link. Combined triathlon → one link per
+  Strava-sourced segment, labelled by sport (`SWIM · BIKE · RUN`).
+  `stravaActivityIds` on `ActivityData` is segment-aligned, with `null`
+  slots for file-sourced parts in mixed-source triathlons.
+
+App-wide attribution sits in the footer (`components/app/strava-footer.tsx`)
+as plain text "Compatible with Strava" — Strava's guidelines (§1.2, §4)
+treat the API logos as optional and accept text references using one of
+the approved phrases. No in-card mark; the downloaded PNG stays clean.
 
 ## Architecture in one diagram
 
@@ -90,9 +102,10 @@ skew), so the picker and detail handlers don't need refresh logic.
 | `lib/strava-types.ts` | Strava model types. Base shapes derive from the generated spec; the `ActivityExtras` layer adds fields the spec omits. |
 | `lib/strava-api.generated.ts` | Auto-generated from Strava's OpenAPI spec via `bun run strava:types`. Do not edit — regenerate. Lint/format/eslint skip it. |
 | `lib/strava-to-parsed.ts` | Maps Strava streams + detail into the same `TrackPoint`/`ParsedActivity` shape the GPX/.fit parsers produce. Reuses `finalise()` and `detectSport()` from `lib/parse-shared.ts`. |
-| `components/app/strava-picker.tsx` | Activity-list screen (`AppState === "picking-strava"`) — shadcn `Item`/`Pagination`/`Switch`/`Checkbox`. Owns single-pick, multi-select, and pagination state. |
-| `components/app/strava-attribution.tsx` | "Powered by Strava" SVG mark, rendered by themes when `data.source === 'strava'`. |
-| `hooks/use-strava-connection.ts` | `useStravaConnection()` — wraps `/api/strava/me`. Only way the client UI knows whether it's connected. |
+| `components/app/strava-picker.tsx` | Activity-list screen (`AppState === "picking-strava"`) — shadcn `Item`/`Pagination`/`Switch`/`Checkbox`. Owns single-pick, multi-select, pagination, and the per-error-kind `<StravaErrorAlert>` rendering. |
+| `components/app/strava-connect-button.tsx` | Official 237×48 "Connect with Strava" SVG (per §1.1) wrapped in an anchor → `/api/strava/authorize`. The asset is at `public/strava/btn-connect-with-strava-orange.svg` and must not be modified. |
+| `components/app/strava-footer.tsx` | App-wide footer with the plain-text "Compatible with Strava" reference. Mounted in `app/layout.tsx`. |
+| `hooks/use-strava-connection.ts` | `useStravaConnection()` — wraps `/api/strava/me`. Exposes `{ connected, athlete, loading, error }` so the empty state can distinguish "you're not signed in" (`connected:false`) from "the server is broken" (`error:'fetch_failed'`). |
 | `e2e/strava-mock.ts` | Bun.serve mock server used by Playwright tests. |
 | `e2e/strava.spec.ts` | End-to-end coverage of the full flow. |
 
@@ -180,24 +193,33 @@ to reconnect.
 
 ## Strava brand requirements
 
-These are non-negotiable per Strava's developer agreement:
+How we satisfy each clause of Strava's brand guidelines
+(https://developers.strava.com/guidelines/):
 
-1. **Display the "Powered by Strava" mark** on any surface that shows
-   data fetched from their API. The card itself shows it via
-   `<StravaAttribution>` when `data.source === 'strava'`; uploaded
-   files (GPX/.fit) stay unmarked.
-2. **Don't derive product names from "Strava"** or imply endorsement.
-3. **Provide a working Disconnect**. The edit-state corner exposes one;
-   it POSTs to `/api/strava/disconnect` which clears all four cookies.
-4. **Replace the placeholder mark** in `components/app/strava-attribution.tsx`
-   with the official "Powered by Strava" asset from
-   https://developers.strava.com/guidelines/ before going public. The
-   inline SVG there is the single source of truth — a working
-   approximation marked with a TODO comment.
+1. **§1.1 Connect with Strava button.** We use the official 237×48
+   orange SVG (`public/strava/btn-connect-with-strava-orange.svg`)
+   unmodified, wrapped in `<StravaConnectButton>`. The anchor points
+   at `/api/strava/authorize` which 302s to
+   `https://www.strava.com/oauth/authorize` as required.
+2. **§1.2 API Logos.** Optional. We don't use a logo; the footer
+   carries the approved phrase as plain text instead.
+3. **§2 Rules around logo use.** N/A — we don't use Strava logos
+   anywhere except the official Connect button.
+4. **§3 Linking to Strava data.** "View on Strava" anchors render in
+   the edit-state connection row when `source === 'strava'`. Styled
+   per the guideline (font-weight 700, underline, brand orange
+   `#FC5200`), point at `https://www.strava.com/activities/{id}`, open
+   in a new tab. Combined triathlons render one per Strava-sourced
+   segment.
+5. **§4 Use of the Strava name + interoperability.** Footer carries
+   "Compatible with Strava" verbatim. "Effort" is the app name
+   throughout; no derivation from "Strava".
+6. **Working Disconnect.** Edit-state row exposes one; it POSTs to
+   `/api/strava/disconnect` which clears all four cookies.
 
-Strava revokes API access for violations — this is the most common
-cause of integrations being shut down, so treat the attribution as
-load-bearing, not decorative.
+Strava revokes API access for violations — treat compliance as
+load-bearing, not decorative. If you add a new surface that talks
+about Strava, run it past §4 first.
 
 ## Adding a new endpoint
 
@@ -237,11 +259,26 @@ caused by a browser blocking cookies or by the redirect crossing a
 different origin than expected. Confirm `STRAVA_REDIRECT_URI` points
 at the same origin the app is running on.
 
-**"Couldn't reach Strava (401)" in the picker.**
-The access token was rejected — usually because the user revoked the
-app's access from their Strava settings, or because Strava's clock
-disagrees with yours. The picker offers a "Reconnect Strava" button
-that walks the OAuth flow again.
+**"Your Strava sign-in expired" alert in the picker.**
+The access token was rejected (and refresh also failed) — usually
+because the user revoked the app's access from their Strava settings,
+or because Strava's clock disagrees with yours. The Alert offers a
+"Reconnect Strava" button that walks the OAuth flow again.
+
+**"Strava is rate-limiting us" alert with a countdown.**
+We hit Strava's 15-minute / 200-request quota. The Retry button is
+disabled until the countdown finishes; the countdown comes from the
+server-computed `retryAfter` (seconds-until-next-quarter-hour) which
+the route handler returns via `stravaErrorResponse`.
+
+**"Strava had a hiccup" alert with an HTTP status.**
+Any non-2xx from Strava that isn't 401 or 429 surfaces as a generic
+upstream error with the actual status code. Usually transient.
+
+**"We can't reach the Effort server" alert in the empty state.**
+The connection probe `/api/strava/me` itself failed — distinct from
+"you haven't OAuthed yet". Means the app's API route is down or
+unreachable, not a Strava issue.
 
 **Cookies don't stick in dev.**
 You're running over `http` against an origin that browsers don't treat

@@ -68,11 +68,15 @@ export interface ActivityData {
   routeCoordinates?: Coord[];
 
   segments?: TriSegment[];
-  /** Where this activity came from. Drives provider attribution on the card
-   * (Strava requires a "Powered by Strava" mark whenever their data is shown). */
+  /** Where this activity came from. Drives provider attribution (the
+   * app-wide footer) and conditional UI like "View on Strava" links. */
   source?: ActivitySource;
   splits?: Split[];
   sport: Sport;
+  /** Strava activity ids for "View on Strava" linking. Single Strava
+   * activity → `[id]`. Combined triathlon → segment-aligned with `null`
+   * entries for file-sourced parts. Unset for pure GPX/.fit uploads. */
+  stravaActivityIds?: (number | null)[];
   strokeCountAvg?: number; // swim
   swolf?: number; // swim
   title: string;

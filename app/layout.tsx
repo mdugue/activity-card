@@ -15,6 +15,7 @@ import {
   Space_Grotesk,
 } from "next/font/google";
 import "./globals.css";
+import { StravaFooter } from "@/components/app/strava-footer";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -124,6 +125,7 @@ export default function RootLayout({
     >
       <body className="flex min-h-full flex-col">
         <TooltipProvider>{children}</TooltipProvider>
+        <StravaFooter />
         <Toaster />
       </body>
     </html>

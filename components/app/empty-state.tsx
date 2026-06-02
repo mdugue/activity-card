@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { StravaConnectButton } from "@/components/app/strava-connect-button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useStravaConnection } from "@/hooks/use-strava-connection";
 import { type ParsedActivity, parseActivityFile } from "@/lib/parse-activity";
@@ -8,30 +10,30 @@ import { type ParsedActivity, parseActivityFile } from "@/lib/parse-activity";
 const ACTIVITY_FILE_RE = /\.(gpx|fit)$/i;
 
 interface EmptyStateProps {
-  onConnectStrava: () => void;
   onFilesLoaded: (parts: ParsedActivity[]) => void;
   onOpenStravaPicker: () => void;
 }
 
 export function EmptyState({
   onFilesLoaded,
-  onConnectStrava,
   onOpenStravaPicker,
 }: EmptyStateProps) {
   const strava = useStravaConnection();
-  const stravaBtnRef = useRef<HTMLButtonElement>(null);
-  // `autoFocus` only fires on mount, but the button is disabled while we
-  // poll /api/strava/me. Focus it once we know the connection state so
-  // pressing Enter from the landing page triggers Strava.
+  const connectBtnRef = useRef<HTMLAnchorElement>(null);
+  const pickerBtnRef = useRef<HTMLButtonElement>(null);
+  // `autoFocus` only fires on mount, but neither CTA renders until the
+  // connection probe resolves. Focus whichever just became visible so
+  // pressing Enter from the landing page triggers the right action.
   useEffect(() => {
-    if (!strava.loading) {
-      stravaBtnRef.current?.focus();
+    if (strava.loading) {
+      return;
     }
-  }, [strava.loading]);
-
-  const stravaLabel = strava.connected
-    ? `Pick from Strava${strava.athlete?.firstname ? ` · ${strava.athlete.firstname}` : ""}`
-    : "Connect Strava";
+    if (strava.connected) {
+      pickerBtnRef.current?.focus();
+    } else {
+      connectBtnRef.current?.focus();
+    }
+  }, [strava.loading, strava.connected]);
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-8 py-24">
@@ -57,16 +59,37 @@ export function EmptyState({
         file. We&apos;ll make something worth keeping.
       </p>
 
-      <Button
-        className="mt-10 h-14 gap-3 px-8 text-base"
-        disabled={strava.loading}
-        onClick={strava.connected ? onOpenStravaPicker : onConnectStrava}
-        ref={stravaBtnRef}
-        size="lg"
-      >
-        <StravaIcon />
-        {stravaLabel}
-      </Button>
+      {strava.error === "fetch_failed" ? (
+        <Alert
+          className="mt-8 max-w-md text-left"
+          role="status"
+          variant="destructive"
+        >
+          <AlertTitle>We can&apos;t reach the Effort server.</AlertTitle>
+          <AlertDescription>
+            Strava sign-in is unavailable right now. Refresh in a moment, or
+            drop a file below in the meantime.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      <div className="mt-10 min-h-[48px]">
+        {!strava.loading && strava.connected ? (
+          <Button
+            className="h-12 gap-3 px-6 text-base"
+            onClick={onOpenStravaPicker}
+            ref={pickerBtnRef}
+            size="lg"
+            variant="outline"
+          >
+            Pick from Strava
+            {strava.athlete?.firstname ? ` · ${strava.athlete.firstname}` : ""}
+          </Button>
+        ) : null}
+        {strava.loading || strava.connected ? null : (
+          <StravaConnectButton ref={connectBtnRef} />
+        )}
+      </div>
 
       <div className="mt-8 flex items-center gap-3 font-mono text-[10px] tracking-[0.22em] opacity-55">
         <span aria-hidden className="h-px w-10 bg-foreground/30" />
@@ -87,24 +110,6 @@ export function EmptyState({
         ))}
       </div>
     </div>
-  );
-}
-
-function StravaIcon() {
-  return (
-    <svg
-      aria-hidden
-      fill="#FC4C02"
-      height="20"
-      viewBox="0 0 24 24"
-      width="20"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <title>Strava</title>
-      <path d="M12 0 L20 16 L14.4 16 L12 11.2 L9.6 16 L4 16 Z" />
-      <path d="M14 16 L18 16 L16 20 Z" />
-      <path d="M16 20 L20 20 L18 24 Z" />
-    </svg>
   );
 }
 
