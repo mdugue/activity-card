@@ -614,10 +614,12 @@ function PhotoControl({
 
 function StravaConnectionRow({ data }: { data: ActivityData }) {
   const strava = useStravaConnection();
-  if (!strava.connected) {
+  // Disconnect itself lives in the app-wide footer (single source of truth);
+  // this row exists only when the loaded activity came from Strava and
+  // needs the "View on Strava" link(s). Hide otherwise.
+  if (!strava.connected || data.source !== "strava") {
     return null;
   }
-  const fromStrava = data.source === "strava";
   return (
     <div className="-mt-3 flex flex-col gap-1.5 border-foreground/10 border-b pb-3 font-mono text-[10px] uppercase tracking-[0.18em] opacity-70">
       <div className="flex items-center gap-2">
@@ -629,21 +631,10 @@ function StravaConnectionRow({ data }: { data: ActivityData }) {
         <span>
           STRAVA
           {strava.athlete?.firstname ? ` · ${strava.athlete.firstname}` : ""}
+          <span className="ml-1 opacity-70">· this activity</span>
         </span>
-        {fromStrava ? (
-          <span className="opacity-70">· this activity</span>
-        ) : null}
-        <button
-          className="ml-auto underline-offset-4 hover:underline"
-          onClick={() => {
-            strava.disconnect();
-          }}
-          type="button"
-        >
-          Disconnect
-        </button>
       </div>
-      {fromStrava ? <ViewOnStravaLinks data={data} /> : null}
+      <ViewOnStravaLinks data={data} />
     </div>
   );
 }
@@ -665,7 +656,7 @@ function ViewOnStravaLinks({ data }: { data: ActivityData }) {
     return (
       <a
         className="font-bold text-[#FC5200] underline-offset-4 hover:underline"
-        href={`https://www.strava.com/activities/${ids[0]}`}
+        href={`https://www.strava.com/activities/${ids[0]}/overview`}
         rel="noopener noreferrer"
         target="_blank"
       >
@@ -692,7 +683,7 @@ function ViewOnStravaLinks({ data }: { data: ActivityData }) {
         <span key={id}>
           <a
             className="font-bold text-[#FC5200] underline-offset-4 hover:underline"
-            href={`https://www.strava.com/activities/${id}`}
+            href={`https://www.strava.com/activities/${id}/overview`}
             rel="noopener noreferrer"
             target="_blank"
           >

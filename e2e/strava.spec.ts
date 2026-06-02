@@ -94,7 +94,7 @@ test.describe("strava OAuth + picker", () => {
     await expect(link).toBeVisible();
     await expect(link).toHaveAttribute(
       "href",
-      "https://www.strava.com/activities/1001"
+      "https://www.strava.com/activities/1001/overview"
     );
   });
 
@@ -141,8 +141,8 @@ test.describe("strava OAuth + picker", () => {
     const hrefs = await links.evaluateAll((els) =>
       (els as HTMLAnchorElement[]).map((a) => a.href)
     );
-    expect(hrefs).toContain("https://www.strava.com/activities/1001");
-    expect(hrefs).toContain("https://www.strava.com/activities/1002");
+    expect(hrefs).toContain("https://www.strava.com/activities/1001/overview");
+    expect(hrefs).toContain("https://www.strava.com/activities/1002/overview");
   });
 
   test("pagination renders page numbers and advances", async ({ page }) => {
@@ -215,17 +215,29 @@ test.describe("strava OAuth + picker", () => {
     ).toBeVisible();
   });
 
-  test("disconnect clears the connection state", async ({ page }) => {
+  test("Disconnect lives in the footer and is reachable from any state", async ({
+    page,
+  }) => {
     await page.getByRole("link", CONNECT_BUTTON).click();
     await page.waitForURL(/\/$/);
+    // Verify footer carries the Disconnect after connecting — picker state.
+    const footer = page.locator("footer");
+    await expect(footer.getByText(/connected as alex/i)).toBeVisible();
+    await expect(
+      footer.getByRole("button", { name: /^disconnect$/i })
+    ).toBeVisible();
+
+    // And it's still there from the edit state.
     await page
       .getByRole("button", { name: /saturday in the elbsandstein/i })
       .click();
     await expect(page.getByTestId("theme-picker-trigger")).toBeVisible();
+    await footer.getByRole("button", { name: /^disconnect$/i }).click();
 
-    await page.getByRole("button", { name: /^disconnect$/i }).click();
+    // Connection cleared → Disconnect / "Connected as" disappear.
+    await expect(footer.getByText(/connected as/i)).toHaveCount(0);
 
-    // Re-open the empty state — the official Connect button is back.
+    // Reload to confirm the cookies are actually gone.
     await page.reload();
     await expect(page.getByRole("link", CONNECT_BUTTON)).toBeVisible();
   });
