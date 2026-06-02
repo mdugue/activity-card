@@ -63,7 +63,7 @@ export function DownloadState({
                 "radial-gradient(circle, oklch(0.555 0.163 48.998 / 0.4), transparent 70%)",
             }}
           />
-          <div className="relative aspect-[1080/1350] w-[240px] overflow-hidden bg-white shadow-[0_30px_80px_rgba(20,20,22,0.25),_0_10px_30px_rgba(20,20,22,0.12)] sm:w-[320px] lg:w-[450px]">
+          <div className="relative aspect-[1080/1350] w-[240px] overflow-hidden bg-white shadow-2xl sm:w-[320px] lg:w-[450px]">
             <div className="absolute inset-0">
               <div
                 className="origin-top-left scale-[0.222] sm:scale-[0.296] lg:scale-[0.4166]"
@@ -80,7 +80,7 @@ export function DownloadState({
               </div>
             </div>
           </div>
-          <div className="absolute -right-3 -bottom-3 flex size-14 items-center justify-center bg-primary text-primary-foreground shadow-[0_6px_20px_rgba(196,90,44,0.5)]">
+          <div className="absolute -right-3 -bottom-3 flex size-14 items-center justify-center bg-primary text-primary-foreground shadow-lg shadow-primary/50">
             <Check aria-hidden className="size-6" strokeWidth={3} />
           </div>
         </div>

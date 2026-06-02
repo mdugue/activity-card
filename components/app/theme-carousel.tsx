@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/popover";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme } from "@/lib/palette";
+import { cn } from "@/lib/utils";
 
 interface ThemeCarouselProps {
   altitudeMood: AltitudeMood;
@@ -112,11 +113,12 @@ export function ThemeCarousel({
         const active = id === theme;
         return (
           <button
-            className={`group flex flex-col items-start gap-1 border-2 px-4 py-3 text-left transition-colors ${
+            className={cn(
+              "group flex flex-col items-start gap-1 border-2 px-4 py-3 text-left transition-colors",
               active
                 ? "border-foreground bg-foreground text-background"
                 : "border-foreground/15 hover:border-foreground/45"
-            }`}
+            )}
             key={id}
             onClick={() => {
               onThemeChange(id);
@@ -163,11 +165,10 @@ export function ThemeCarousel({
                 key={id}
               >
                 <div
-                  className={`@container relative aspect-[1080/1350] w-full overflow-hidden bg-white transition-shadow duration-300 ${
-                    isActive
-                      ? "shadow-[0_24px_50px_-14px_rgba(20,20,22,0.30),_0_10px_22px_-8px_rgba(20,20,22,0.16)]"
-                      : "shadow-[0_2px_6px_rgba(20,20,22,0.08)]"
-                  }`}
+                  className={cn(
+                    "@container relative aspect-[1080/1350] w-full overflow-hidden bg-white transition-shadow duration-300",
+                    isActive ? "shadow-2xl" : "shadow-md"
+                  )}
                 >
                   <div
                     className="absolute inset-0 origin-top-left"

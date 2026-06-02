@@ -9,6 +9,7 @@ import {
   type ImageTransform,
   isIdentityTransform,
 } from "@/lib/image-transform";
+import { cn } from "@/lib/utils";
 
 interface ImageAdjustOverlayProps {
   onChange: (next: ImageTransform) => void;
@@ -43,7 +44,9 @@ export function ImageAdjustOverlay({
         ref={ref}
       />
 
-      {/* Frame + corner ticks (decorative) */}
+      {/* Frame + corner ticks (decorative). The huge-spread shadow is a scrim,
+          not an elevation — it dims the card *outside* the crop frame, so it
+          stays an arbitrary value rather than a Tailwind shadow-* class. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-3 z-[2] border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.18)]"
@@ -57,7 +60,10 @@ export function ImageAdjustOverlay({
           ] as const
         ).map((pos) => (
           <span
-            className={`absolute size-4 border-white border-t-2 border-l-2 ${pos}`}
+            className={cn(
+              "absolute size-4 border-white border-t-2 border-l-2",
+              pos
+            )}
             key={pos}
           />
         ))}
