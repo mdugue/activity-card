@@ -1,7 +1,23 @@
 import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { setOAuthState } from "@/lib/strava-cookies";
+import {
+  encodeOAuthState,
+  type OAuthStatePayload,
+  safeRelativePath,
+} from "@/lib/strava-oauth-state";
 
+/**
+ * Kick off the Strava OAuth round-trip.
+ *
+ * Production-bounce shape: Strava only accepts one registered callback
+ * domain per app, but our Vercel preview deploys each have their own
+ * origin. We solve this by always sending Strava the stable production
+ * `redirect_uri` (from `STRAVA_REDIRECT_URI`), and stuffing the actual
+ * initiating origin into `state.b`. The production callback notices the
+ * mismatch and 302s back to the preview, which then runs the normal
+ * token exchange against its own cookie store.
+ */
 export async function GET(request: Request) {
   const clientId = process.env.STRAVA_CLIENT_ID;
   const redirectUri = process.env.STRAVA_REDIRECT_URI;
@@ -11,17 +27,27 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
-  const state = randomBytes(24).toString("hex");
-  await setOAuthState(state);
 
-  // Carry through any `?return_to` so the callback can bounce the user back
-  // where they started. Defaults to `/` with a `strava=connected` flag.
-  // SECURITY: only accept same-origin relative paths to prevent the OAuth
-  // flow from being abused as an open redirect into a phishing domain. The
-  // callback validates again as defense-in-depth.
+  const nonce = randomBytes(24).toString("hex");
+  await setOAuthState(nonce);
+
   const url = new URL(request.url);
-  const returnTo =
-    safeRelativePath(url.searchParams.get("return_to")) ?? "/?strava=connected";
+  const currentOrigin = url.origin;
+  const redirectOrigin = new URL(redirectUri).origin;
+
+  const payload: OAuthStatePayload = { r: nonce };
+  // Bounce field: present only when this deploy isn't the registered
+  // callback host. Production reads it to relay the code back to us.
+  if (currentOrigin !== redirectOrigin) {
+    payload.b = currentOrigin;
+  }
+  // Optional same-origin path the user wanted to land on (e.g. a deep
+  // link). Anything cross-origin is dropped here AND re-validated in
+  // the callback as defense-in-depth.
+  const returnPath = safeRelativePath(url.searchParams.get("return_to"));
+  if (returnPath) {
+    payload.p = returnPath;
+  }
 
   const authorize = new URL(
     process.env.STRAVA_OAUTH_URL || "https://www.strava.com/oauth/authorize"
@@ -31,25 +57,7 @@ export async function GET(request: Request) {
   authorize.searchParams.set("response_type", "code");
   authorize.searchParams.set("approval_prompt", "auto");
   authorize.searchParams.set("scope", "read,activity:read");
-  authorize.searchParams.set(
-    "state",
-    `${state}|${encodeURIComponent(returnTo)}`
-  );
+  authorize.searchParams.set("state", encodeOAuthState(payload));
 
   return NextResponse.redirect(authorize);
-}
-
-/** Accept only path-relative URLs anchored at `/`. Rejects absolute URLs
- * (`https://evil.example`) and protocol-relative ones (`//evil.example`). */
-function safeRelativePath(value: string | null): string | null {
-  if (!value) {
-    return null;
-  }
-  if (!value.startsWith("/")) {
-    return null;
-  }
-  if (value.startsWith("//")) {
-    return null;
-  }
-  return value;
 }

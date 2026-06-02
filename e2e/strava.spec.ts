@@ -256,6 +256,24 @@ test.describe("strava OAuth + picker", () => {
     ).toBeVisible();
   });
 
+  test("callback rejects a crafted bounce origin (open-redirect defence)", async ({
+    page,
+  }) => {
+    // Mint a state payload claiming to come from `attacker.example`. Since
+    // the bounce-origin allowlist only accepts the registered prod host or
+    // `*.vercel.app`, the callback should redirect to /?strava=bounce_rejected
+    // rather than relaying the code to the attacker.
+    const payload = JSON.stringify({
+      r: "x".repeat(48),
+      b: "https://attacker.example",
+    });
+    const state = Buffer.from(payload).toString("base64url");
+    await page.goto(
+      `/api/strava/callback?code=intercepted&state=${encodeURIComponent(state)}`
+    );
+    await page.waitForURL(/strava=bounce_rejected/, { timeout: 5000 });
+  });
+
   test("502 from /api/strava/activity surfaces an upstream alert", async ({
     page,
   }) => {

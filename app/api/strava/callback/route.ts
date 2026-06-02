@@ -4,11 +4,16 @@ import {
   STRAVA_TOKEN_URL,
   writeTokens,
 } from "@/lib/strava-cookies";
+import {
+  decodeOAuthState,
+  isAllowedBounceOrigin,
+} from "@/lib/strava-oauth-state";
 
 export async function GET(request: Request) {
   const clientId = process.env.STRAVA_CLIENT_ID;
   const clientSecret = process.env.STRAVA_CLIENT_SECRET;
-  if (!(clientId && clientSecret)) {
+  const redirectUri = process.env.STRAVA_REDIRECT_URI;
+  if (!(clientId && clientSecret && redirectUri)) {
     return NextResponse.json(
       { error: "Strava is not configured on this server" },
       { status: 500 }
@@ -28,18 +33,38 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/?strava=failed", url));
   }
 
-  const [stateToken, returnEncoded] = stateParam.split("|");
-  const expected = await consumeOAuthState();
-  if (!expected || expected !== stateToken) {
+  const payload = decodeOAuthState(stateParam);
+  if (!payload) {
     return NextResponse.redirect(new URL("/?strava=state_mismatch", url));
   }
 
-  // Compute the post-callback destination BEFORE doing the token exchange,
-  // so a malicious `return_to` is rejected without burning a code.
-  // The state param is `${random}|${encodeURIComponent(returnTo)}`; we
-  // accept only same-origin, path-relative targets so the OAuth flow can't
-  // be used as an open-redirect into a phishing domain.
-  const safeReturnTo = resolveSafeReturnTo(returnEncoded, url);
+  // ── Production bounce ──────────────────────────────────────────────
+  // If the initiator advertised a bounce origin different from ours,
+  // we're the production callback acting as a relay. Validate the
+  // target host (open-redirect defence) and 302 the user back to the
+  // preview deploy with the original `code` + `state` intact — the
+  // preview will read its own state cookie and do the real exchange.
+  if (payload.b && payload.b !== url.origin) {
+    const registeredHost = new URL(redirectUri).hostname;
+    if (!isAllowedBounceOrigin(payload.b, registeredHost)) {
+      return NextResponse.redirect(new URL("/?strava=bounce_rejected", url));
+    }
+    const bounce = new URL("/api/strava/callback", payload.b);
+    bounce.searchParams.set("code", code);
+    bounce.searchParams.set("state", stateParam);
+    return NextResponse.redirect(bounce);
+  }
+
+  // ── Normal flow ────────────────────────────────────────────────────
+  // We're either the original initiator (single-deploy case) or the
+  // preview that just received a production bounce. Either way, the
+  // state cookie belongs to us — validate it before exchanging the code.
+  const expected = await consumeOAuthState();
+  if (!expected || expected !== payload.r) {
+    return NextResponse.redirect(new URL("/?strava=state_mismatch", url));
+  }
+
+  const finalReturnTo = resolveSafeReturnTo(payload.p, url);
 
   const res = await fetch(STRAVA_TOKEN_URL, {
     method: "POST",
@@ -54,28 +79,22 @@ export async function GET(request: Request) {
   if (!res.ok) {
     return NextResponse.redirect(new URL("/?strava=token_exchange", url));
   }
-  const payload = await res.json();
-  await writeTokens(payload);
+  const tokenPayload = await res.json();
+  await writeTokens(tokenPayload);
 
-  return NextResponse.redirect(new URL(safeReturnTo, url));
+  return NextResponse.redirect(new URL(finalReturnTo, url));
 }
 
-function resolveSafeReturnTo(encoded: string | undefined, base: URL): string {
-  if (!encoded) {
+/** `payload.p` should already be a safe relative path (validated in the
+ * authorize route), but re-validate here so a forged state with an
+ * absolute URL can never escape the origin. */
+function resolveSafeReturnTo(path: string | undefined, base: URL): string {
+  if (!path) {
     return "/?strava=connected";
   }
-  let decoded: string;
-  try {
-    decoded = decodeURIComponent(encoded);
-  } catch {
-    return "/?strava=connected";
-  }
-  // Resolve against the request origin and reject anything that lands
-  // elsewhere — protocol-relative URLs ("//evil.example") and absolute
-  // URLs ("https://evil.example") both fail this check.
   let resolved: URL;
   try {
-    resolved = new URL(decoded, base);
+    resolved = new URL(path, base);
   } catch {
     return "/?strava=connected";
   }

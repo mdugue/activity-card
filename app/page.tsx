@@ -190,6 +190,11 @@ export default function Home() {
       case "failed":
         toast.error("Couldn't start the Strava sign-in. Try again.");
         break;
+      case "bounce_rejected":
+        toast.error(
+          "The Strava sign-in was redirected to an unrecognised host. Aborted."
+        );
+        break;
       default:
         toast.error(`Couldn't connect to Strava (${flag})`);
     }

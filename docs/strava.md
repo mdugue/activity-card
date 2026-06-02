@@ -172,6 +172,47 @@ activity, append to `ACTIVITIES` there.
 `playwright.config.ts` as the first entry in `webServer[]`. Tests don't
 need any extra setup.
 
+## Preview deploys: the production-bounce mechanism
+
+Strava only accepts a single Authorization Callback Domain per app, so
+Vercel preview deploys can't each register their own URL. We solve this
+by sending Strava the stable production `redirect_uri` regardless of
+which deploy initiated the flow, and stuffing the actual initiating
+origin into a structured `state` payload:
+
+```
+state = base64url(JSON.stringify({
+  r: random_nonce,         // CSRF — must match the strava_oauth_state cookie
+  b?: initiator_origin,    // set only when current origin ≠ registered host
+  p?: same_origin_path     // optional landing path after success
+}))
+```
+
+The flow:
+
+1. **Preview-XYZ.vercel.app** sets a `strava_oauth_state` cookie on its
+   own origin, builds `state.b = "https://preview-XYZ.vercel.app"`, and
+   redirects to Strava with `redirect_uri = production_url`.
+2. **Strava** redirects to the production callback (which it has on
+   file).
+3. **Production callback** decodes `state`, sees `b !== own origin`,
+   validates `b` is in the bounce allowlist (production host **or**
+   `*.vercel.app`), and 302s to
+   `${b}/api/strava/callback?code=...&state=...`. Production does NOT
+   exchange the code or read the state cookie — it has neither.
+4. **Preview's callback** reads its own `strava_oauth_state` cookie,
+   matches it against `state.r`, exchanges the code, sets the four
+   token cookies on the preview origin, and redirects to `state.p`
+   (or `/?strava=connected`).
+
+Open-redirect defence: the bounce allowlist is hard-coded in
+`lib/strava-oauth-state.ts` (`isAllowedBounceOrigin`). Anything else
+short-circuits to `/?strava=bounce_rejected`, surfacing a toast.
+
+For local dev / E2E where preview-style origins run over `http://`
+(localhost), set `STRAVA_ALLOW_HTTP_BOUNCE=1` to relax the protocol
+check. Never set in production.
+
 ## Tokens and cookies
 
 The browser never sees Strava tokens. All four cookies are `httpOnly`,
