@@ -146,6 +146,25 @@ Sport-specific stat rendering rules live in the `sport-data` skill.
 - iOS Safari: rasterise twice and discard the first result (known library quirk)
 - Trigger Web Share API on mobile with the resulting `File`, fall back to direct download
 
+## Carousel Post mode
+
+An additive second mode alongside the single card (top-level **Single Card ↔ Carousel** toggle in `components/app/mode-toggle.tsx`). Single Card is untouched. A carousel is always one **seamless** continuous canvas (n×1080 × 1350) sliced into n frames on export, so the photo and route bleed across slide edges. Styling is **deck-wide** (driven by the chosen theme + the shared accent) — there are no per-slide overrides.
+
+- **One renderer** — `components/carousel/seamless-canvas.tsx` is the single source of truth: photo panorama + spanning route + per-panel type. The editor previews it through a horizontally scroll-snapped window (one slide at a time, swipe for neighbours, IG/Strava-style); the slide strip windows onto the same canvas (thumbnails are slices); the export slices it. Preview, thumbnails and output therefore always match.
+- **State** — `hooks/use-carousel.ts` owns the chosen **deck** + selection; the user picks a deck (3 or 4 slides — Intro · details · Wrap-up) rather than adding/removing single slides (`DECKS` in `lib/carousel/types.ts`). A slide is just `{ id, template }`.
+- **Distinct themes** — the carousel has its own seven hand-tuned themes (names differ from Single Card; the ThemeId still keys both), each a different *layout*, driven by three levers in `lib/carousel/theme-tokens.ts`: `heroLayer` (the signature element spanning the strip), `panelKind` (how each slide is laid out), and an optional `crossViz` (a small wrap-up glyph):
+  - **Trace** (path) — route silhouette on paper + elevation sparkline.
+  - **Ascent** (altitude) — elevation mountain-range (dark) + route glyph.
+  - **Exposure** (photo) — full-bleed photo panorama, magazine masthead.
+  - **Frame** (minimal) — one huge datum per slide, hairline rules (`panels/frame-panel.tsx`).
+  - **Telemetry** (data) — dense metric grid + HR/power zone bars + micro-graphic (`panels/telemetry-panel.tsx`).
+  - **Press** (editorial) — newspaper: masthead, drop cap, pull-quotes (`panels/press-panel.tsx`).
+  - **Relay** (triathlon) — swim→T1→bike→T2→run timeline spanning the strip (`segments-timeline.tsx`).
+- **Standard panels** — `components/carousel/templates/` (Hero, StatRow, StatGrid, Editorial) for the route/elevation/photo/segments themes; the signature layer threads through them.
+- **Shared sidebar** — both editors render `components/app/activity-controls.tsx` (from `control-primitives.tsx`). The theme picker (`theme-picker.tsx`) is shared, shown below the preview in both modes (carousel labels via `CAROUSEL_THEME_LABELS`). Photo crop/zoom/rotate/mirror/filter reuse `image-adjust-overlay.tsx` + `photo-effects-controls.tsx`, applied deck-wide.
+- **Route & spanning layers** — `route-line.tsx` (rounded caps, start-green/end-red markers, poster / desaturated / highlighter, full-width stretch), `elevation-band.tsx` (mountain range), `segments-timeline.tsx` (triathlon legs), `cross-viz.tsx` (wrap-up secondary).
+- **Export** — `lib/export-carousel.ts` rasterises the wide strip once (`toCanvas`, dimension-capped pixel ratio) and slices it into ordered frames — shared together on mobile, downloaded sequentially on desktop. Same `pixelRatio: 2`, `fonts.ready`, and iOS double-call contract as the single card.
+
 ## Non-goals
 
 See AGENTS.md for the binding list. The short version: no backend, no OAuth, no accounts, no maps, no PDF, no event mode — yet.

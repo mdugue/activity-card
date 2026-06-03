@@ -1,14 +1,14 @@
 "use client";
 
-import { ChevronDown, Move } from "lucide-react";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { Move } from "lucide-react";
+import { useEffect, useState } from "react";
 import { ImageAdjustOverlay } from "@/components/app/image-adjust-overlay";
 import { RenderTheme, type ThemeId } from "@/components/app/render-theme";
 import type { ActivityData } from "@/components/app/sample-data";
+import { ThemePicker } from "@/components/app/theme-picker";
 import type { AltitudeMood } from "@/components/themes/altitude";
 import { THEME_META, THEME_ORDER } from "@/components/themes/index";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Carousel,
   type CarouselApi,
@@ -17,18 +17,6 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme } from "@/lib/palette";
 import { cn } from "@/lib/utils";
@@ -57,9 +45,7 @@ export function ThemeCarousel({
   onImageTransformChange,
 }: ThemeCarouselProps) {
   const [api, setApi] = useState<CarouselApi | null>(null);
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [adjusting, setAdjusting] = useState(false);
-  const isMobile = useIsMobile();
 
   // Repositioning is only meaningful when the active theme shows the photo as
   // its hero. If the user removes the photo or switches to a non-hero theme,
@@ -103,38 +89,6 @@ export function ThemeCarousel({
       api.scrollTo(target);
     }
   }, [api, theme]);
-
-  const currentMeta = THEME_META[theme];
-
-  const themeList = (
-    <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-      {THEME_ORDER.map((id) => {
-        const meta = THEME_META[id];
-        const active = id === theme;
-        return (
-          <button
-            className={cn(
-              "group flex flex-col items-start gap-1 border-2 px-4 py-3 text-left transition-colors",
-              active
-                ? "border-foreground bg-foreground text-background"
-                : "border-foreground/15 hover:border-foreground/45"
-            )}
-            key={id}
-            onClick={() => {
-              onThemeChange(id);
-              setPickerOpen(false);
-            }}
-            type="button"
-          >
-            <span className="font-heading text-xl uppercase leading-none">
-              {meta.label}
-            </span>
-            <span className="caption-micro">{meta.tagline}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
 
   return (
     <div className="relative flex flex-col items-stretch justify-start">
@@ -226,32 +180,7 @@ export function ThemeCarousel({
 
       {/* Theme name — interactive, opens picker popover/drawer */}
       <div className="mt-2 flex flex-col items-center">
-        {isMobile ? (
-          <Drawer onOpenChange={setPickerOpen} open={pickerOpen}>
-            <DrawerTrigger asChild>
-              <ThemeNameButton meta={currentMeta} />
-            </DrawerTrigger>
-            <DrawerContent>
-              <DrawerHeader>
-                <DrawerTitle className="font-mono text-[11px] uppercase tracking-[0.28em] opacity-60">
-                  Choose a theme
-                </DrawerTitle>
-              </DrawerHeader>
-              <div className="px-4 pb-6">{themeList}</div>
-            </DrawerContent>
-          </Drawer>
-        ) : (
-          <Popover onOpenChange={setPickerOpen} open={pickerOpen}>
-            <PopoverTrigger
-              nativeButton={false}
-              render={<ThemeNameButton meta={currentMeta} />}
-            />
-            <PopoverContent align="center" className="w-[420px] p-3">
-              <div className="caption-label mb-2">Themes</div>
-              {themeList}
-            </PopoverContent>
-          </Popover>
-        )}
+        <ThemePicker onThemeChange={onThemeChange} theme={theme} />
         <div className="caption-micro mt-2 flex items-center gap-2">
           <span>{THEME_ORDER.indexOf(theme) + 1}</span>
           <span aria-hidden>/</span>
@@ -264,53 +193,4 @@ export function ThemeCarousel({
       </div>
     </div>
   );
-}
-
-const ThemeNameButton = ({
-  meta,
-  ref,
-  ...props
-}: React.ComponentProps<typeof Button> & {
-  meta: { label: string; tagline: string };
-}) => (
-  <Button
-    aria-label={`Change theme · current: ${meta.label}`}
-    className="group flex h-auto items-center gap-3 border-foreground/0 border-b-2 bg-transparent px-2 py-1.5 text-foreground transition-colors hover:border-foreground/40 hover:bg-transparent data-[state=open]:border-foreground"
-    data-testid="theme-picker-trigger"
-    ref={ref}
-    type="button"
-    {...props}
-  >
-    <span className="text-left">
-      <span className="block font-heading text-2xl uppercase leading-none">
-        {meta.label}
-      </span>
-      <span className="caption-micro mt-1 block">{meta.tagline}</span>
-    </span>
-    <ChevronDown
-      aria-hidden
-      className="size-4 opacity-60 transition-transform group-data-[state=open]:rotate-180"
-    />
-  </Button>
-);
-ThemeNameButton.displayName = "ThemeNameButton";
-
-const MOBILE_QUERY = "(max-width: 639px)";
-
-function subscribeMobile(callback: () => void): () => void {
-  if (typeof window === "undefined") {
-    return () => undefined;
-  }
-  const mql = window.matchMedia(MOBILE_QUERY);
-  mql.addEventListener("change", callback);
-  return () => mql.removeEventListener("change", callback);
-}
-
-function getMobileSnapshot(): boolean {
-  return window.matchMedia(MOBILE_QUERY).matches;
-}
-
-function useIsMobile(): boolean {
-  // SSR returns false; client snapshot reflects the actual viewport.
-  return useSyncExternalStore(subscribeMobile, getMobileSnapshot, () => false);
 }

@@ -107,3 +107,12 @@ export const SINGLE_RUN_GPX = makeGpx({
 /** A 1×1 transparent PNG for photo-upload tests. */
 export const TINY_PNG_BASE64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+
+/**
+ * A solid magenta 64×64 PNG (rgb 255,0,255). Unlike the transparent 1×1 above,
+ * its distinctive colour lets a test decode a rasterised export and assert the
+ * uploaded background photo actually made it in — the regression guard for the
+ * `cacheBust` blob-URL bug that silently dropped photos from exports.
+ */
+export const SOLID_MAGENTA_PNG_BASE64 =
+  "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAlElEQVR4nO3QMREAMBDDsOdPOoWhoR60+3y77WenA7QG6ACtATpAa4AO0BqgA7QG6ACtATpAa4AO0BqgA7QG6ACtATpAa4AO0BqgA7QG6ACtATpAa4AO0BqgA7QG6ACtATpAa4AO0BqgA7QG6ACtATpAa4AO0BqgA7QG6ACtATpAa4AO0BqgA7QG6ACtATpAa4AO0B5MtNLCmn7KywAAAABJRU5ErkJggg==";

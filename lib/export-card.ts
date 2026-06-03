@@ -1,4 +1,5 @@
 import { toPng } from "html-to-image";
+import { effortDateSlug, isIos, waitForFonts } from "./export-shared";
 
 export interface ExportOptions {
   filename?: string;
@@ -6,8 +7,6 @@ export interface ExportOptions {
   pixelRatio?: number;
   width?: number;
 }
-
-const IOS_USER_AGENT_RE = /iPad|iPhone|iPod/;
 
 /**
  * Rasterize a DOM node to PNG at the given intrinsic size, then either
@@ -24,16 +23,16 @@ export async function exportCard(
     filename = "effort-card.png",
   } = opts;
 
-  // Fonts must be ready before rasterisation or html-to-image swallows them.
-  if (typeof document !== "undefined" && document.fonts?.ready) {
-    await document.fonts.ready;
-  }
+  await waitForFonts();
 
+  // No `cacheBust`: html-to-image appends `?cache-bust=<time>` to every fetched
+  // resource URL, which turns the photo's `blob:` object URL into an
+  // unresolvable one — the fetch fails and the background silently drops from
+  // the PNG. We have no cross-origin images that would need busting.
   const renderOptions = {
     width,
     height,
     pixelRatio,
-    cacheBust: true,
     style: {
       transform: "none",
       transformOrigin: "top left",
@@ -68,13 +67,6 @@ export async function exportCard(
   triggerDownload(dataUrl, filename);
 }
 
-function isIos(): boolean {
-  if (typeof navigator === "undefined") {
-    return false;
-  }
-  return IOS_USER_AGENT_RE.test(navigator.userAgent);
-}
-
 function triggerDownload(dataUrl: string, filename: string) {
   const a = document.createElement("a");
   a.href = dataUrl;
@@ -85,7 +77,5 @@ function triggerDownload(dataUrl: string, filename: string) {
 }
 
 export function defaultFilename(sport: string, date: string): string {
-  // `date` is an ISO yyyy-mm-dd string; render it into the filename as-is.
-  const slug = date.replace(/[^0-9-]/g, "") || "undated";
-  return `effort_${sport}_${slug}.png`;
+  return `effort_${sport}_${effortDateSlug(date)}.png`;
 }

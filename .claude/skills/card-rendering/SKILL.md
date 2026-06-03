@@ -19,8 +19,8 @@ export async function rasteriseCard(node: HTMLElement): Promise<Blob> {
   await document.fonts.ready
 
   // iOS Safari: first call sometimes returns blank. Discard and retry.
-  await toPng(node, { pixelRatio: 2, cacheBust: true })
-  const dataUrl = await toPng(node, { pixelRatio: 2, cacheBust: true })
+  await toPng(node, { pixelRatio: 2 })
+  const dataUrl = await toPng(node, { pixelRatio: 2 })
 
   const res = await fetch(dataUrl)
   return res.blob()
@@ -30,7 +30,7 @@ export async function rasteriseCard(node: HTMLElement): Promise<Blob> {
 ### Why these specific options
 
 - **`pixelRatio: 2`** — DOM renders at 540×675; output is crisp 1080×1350. Lay the card out at the smaller size and let pixelRatio do the upscale; trying to render the DOM at 1080×1350 directly causes Tailwind sizing and font rendering to look heavy.
-- **`cacheBust: true`** — forces fonts and background images to be re-fetched so they actually inline into the PNG.
+- **No `cacheBust`** — it appends `?cache-bust=<time>` to every fetched resource URL. The uploaded photo is a `blob:` object URL, and a busted blob URL (`blob:…?cache-bust=…`) doesn't resolve, so the fetch fails and the background **silently drops from the export**. `cacheBust` only helps cross-origin remote images (forcing a fresh CORS fetch) — which we never use (the photo is always an object URL, see below), so leave it off.
 - **`await document.fonts.ready`** — without this, fallback fonts sneak into the export even though the preview looks correct.
 - **The double call** — iOS Safari quirk in html-to-image. The first call warms the canvas; the second produces real output. Don't remove this.
 
