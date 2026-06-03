@@ -96,7 +96,11 @@ export function isAllowedBounceOrigin(
     .map((s) => s.trim())
     .filter(Boolean);
   for (const suffix of suffixes) {
-    if (host === suffix || host.endsWith(`.${suffix}`)) {
+    if (
+      host === suffix ||
+      host.endsWith(`.${suffix}`) ||
+      host.endsWith(`-${suffix}`)
+    ) {
       return true;
     }
   }
