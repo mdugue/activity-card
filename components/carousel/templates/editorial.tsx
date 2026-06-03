@@ -1,9 +1,9 @@
-// Editorial — typography-led closing/signature slide (Tracksmith/Rapha feel).
-// Magazine headline treatment of the title + a one-line stat summary, athlete
-// signature, and a quiet CTA. The route silhouette is drawn globally across the
-// strip, so this slide adds no route of its own.
+// Editorial — typography-led wrap-up slide. Magazine headline treatment of the
+// title + a one-line stat summary, the headline number, and an opt-in signature
+// (the "made with effort" mark + athlete name). The route/elevation cross-viz is
+// drawn by the seamless canvas in the corner, so this slide adds no chart.
 
-import { buildStats, heroStat } from "@/lib/carousel/stats";
+import { buildStats } from "@/lib/carousel/stats";
 import { MetaBand } from "./parts";
 import { SLIDE_PAD, slideText, type TemplateProps } from "./shared";
 
@@ -13,11 +13,12 @@ export function EditorialSlide({
   hasPhoto,
   index,
   total,
+  hero,
+  showEffort,
+  showPageNumber,
 }: TemplateProps) {
   const colors = slideText(style, hasPhoto);
-  const stats = buildStats(data);
-  const hero = heroStat(data);
-  const summary = stats
+  const summary = buildStats(data)
     .slice(0, 3)
     .map((s) => `${s.value}${s.unit ? ` ${s.unit}` : ""}`)
     .join("  ·  ");
@@ -37,6 +38,7 @@ export function EditorialSlide({
         data={data}
         fonts={style.fonts}
         index={index}
+        showPageNumber={showPageNumber}
         total={total}
       />
 
@@ -53,6 +55,7 @@ export function EditorialSlide({
         <h1
           style={{
             fontFamily: style.fonts.display,
+            fontWeight: style.fonts.displayWeight,
             fontStyle: "italic",
             fontSize: 96,
             lineHeight: 0.92,
@@ -61,6 +64,7 @@ export function EditorialSlide({
             color: colors.fg,
             textWrap: "balance",
             maxWidth: "95%",
+            textShadow: colors.shadow || undefined,
           }}
         >
           {data.title}
@@ -72,6 +76,7 @@ export function EditorialSlide({
             fontSize: 26,
             letterSpacing: "0.12em",
             color: colors.muted,
+            textShadow: colors.shadow || undefined,
           }}
         >
           {summary}
@@ -87,24 +92,29 @@ export function EditorialSlide({
         }}
       >
         <div>
-          <div
-            style={{
-              fontFamily: style.fonts.mono,
-              fontSize: 18,
-              letterSpacing: "0.24em",
-              color: colors.faint,
-            }}
-          >
-            MADE WITH EFFORT
-          </div>
+          {showEffort ? (
+            <div
+              style={{
+                fontFamily: style.fonts.mono,
+                fontSize: 18,
+                letterSpacing: "0.24em",
+                color: colors.faint,
+                textShadow: colors.shadow || undefined,
+              }}
+            >
+              MADE WITH EFFORT
+            </div>
+          ) : null}
           {data.athleteName ? (
             <div
               style={{
                 fontFamily: style.fonts.display,
+                fontWeight: style.fonts.displayWeight,
                 fontStyle: "italic",
                 fontSize: 52,
                 color: style.accent,
-                marginTop: 8,
+                marginTop: showEffort ? 8 : 0,
+                textShadow: colors.shadow || undefined,
               }}
             >
               {data.athleteName}
@@ -114,9 +124,11 @@ export function EditorialSlide({
         <div
           style={{
             fontFamily: style.fonts.numeral,
+            fontWeight: style.fonts.numeralWeight,
             fontSize: 64,
             color: colors.fg,
             fontVariantNumeric: "tabular-nums",
+            textShadow: colors.shadow || undefined,
           }}
         >
           {hero.value}

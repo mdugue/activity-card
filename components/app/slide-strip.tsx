@@ -8,8 +8,8 @@
 import type { ActivityData } from "@/components/app/sample-data";
 import { SeamlessCanvas } from "@/components/carousel/seamless-canvas";
 import { TEMPLATE_META } from "@/components/carousel/templates";
-import type { ThemeId } from "@/components/themes";
 import type { ImageSize } from "@/hooks/use-image-natural-size";
+import type { CarouselThemeId } from "@/lib/carousel/theme-tokens";
 import type { Slide } from "@/lib/carousel/types";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme } from "@/lib/palette";
@@ -30,8 +30,10 @@ interface SlideStripProps {
   photoTheme?: PaletteTheme | null;
   photoUrl?: string | null;
   selectedId: string | null;
+  showEffort?: boolean;
+  showPageNumber?: boolean;
   slides: Slide[];
-  theme: ThemeId;
+  theme: CarouselThemeId;
 }
 
 export function SlideStrip(props: SlideStripProps) {
@@ -48,6 +50,8 @@ export function SlideStrip(props: SlideStripProps) {
       photoEffects={props.photoEffects}
       photoTheme={props.photoTheme}
       photoUrl={props.photoUrl}
+      showEffort={props.showEffort}
+      showPageNumber={props.showPageNumber}
       slides={slides}
       theme={props.theme}
     />

@@ -13,20 +13,11 @@
  *  type/stats layout the route threads through. */
 export type SlideTemplate = "hero" | "statRow" | "statGrid" | "editorial";
 
-/** Legibility treatment behind text over a photo — chosen per theme. */
-export type OverlayStyle =
-  | "scrim"
-  | "tint"
-  | "brand"
-  | "strip"
-  | "blur"
-  | "none";
-
 /** How the route polyline is drawn — chosen per theme. */
 export type RouteStyle = "poster" | "desaturated" | "highlighter";
 
 /** Display/label font pairing — chosen per theme. */
-export type FontPairId = "condensed" | "editorial" | "magazine" | "grotesk";
+export type FontPairId = "bold" | "grotesk" | "magazine" | "serif";
 
 export interface Slide {
   id: string;

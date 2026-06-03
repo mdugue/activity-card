@@ -1,7 +1,13 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
 import { SAMPLE_RIDE, SAMPLE_RUN } from "@/components/app/sample-data";
-import { buildStats, heroStat } from "@/lib/carousel/stats";
+import {
+  buildStats,
+  frameStats,
+  heroStat,
+  planStandardStats,
+} from "@/lib/carousel/stats";
+import { buildDeck } from "@/lib/carousel/types";
 
 describe("buildStats", () => {
   test("leads with distance and includes core ride metrics", () => {
@@ -42,5 +48,45 @@ describe("buildStats", () => {
 
   test("heroStat is the leading (distance) stat", () => {
     expect(heroStat(SAMPLE_RIDE).key).toBe("distance");
+  });
+
+  test("heroStat headlines elevation when the theme asks for it", () => {
+    expect(heroStat(SAMPLE_RIDE, "elevation").key).toBe("elevation");
+  });
+
+  test("heroStat falls back to distance when elevation is missing", () => {
+    const noElevation = { ...SAMPLE_RIDE, elevationGainM: undefined };
+    expect(heroStat(noElevation, "elevation").key).toBe("distance");
+  });
+
+  test("frameStats surfaces power (watts) for a ride", () => {
+    const keys = frameStats(SAMPLE_RIDE).map((s) => s.key);
+    expect(keys).toContain("power");
+    // and it lands in the first three slots so the default 4-deck shows it
+    expect(keys.slice(0, 3)).toContain("power");
+  });
+});
+
+describe("planStandardStats", () => {
+  test("intro headlines the hero; detail slides never repeat it", () => {
+    const slides = buildDeck("4");
+    const plan = planStandardStats(SAMPLE_RIDE, slides, "distance");
+    expect(plan).toHaveLength(slides.length);
+    // intro slide → only the hero stat
+    expect(plan[0].map((s) => s.key)).toEqual(["distance"]);
+    // wrap-up slide → no grid stats (it draws its own summary)
+    expect(plan.at(-1)).toEqual([]);
+    // no detail slide repeats the hero, and none repeat each other
+    const detail = plan.slice(1, -1).flat();
+    expect(detail.some((s) => s.key === "distance")).toBe(false);
+    const keys = detail.map((s) => s.key);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  test("a ride's detail slides include power (watts)", () => {
+    const slides = buildDeck("4");
+    const plan = planStandardStats(SAMPLE_RIDE, slides, "distance");
+    const keys = plan.flat().map((s) => s.key);
+    expect(keys).toContain("power");
   });
 });

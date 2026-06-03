@@ -63,6 +63,7 @@ export interface ActivityData {
   maxSpeedKmh?: number; // ride
   normalizedPowerW?: number; // ride
   paceProfile?: number[]; // run, sec/km
+  powerProfile?: number[]; // ride, watts sampled over the activity
   powerZones?: Zone[];
 
   routeCoordinates?: Coord[];
@@ -71,6 +72,7 @@ export interface ActivityData {
   /** Where this activity came from. Drives provider attribution (the
    * app-wide footer) and conditional UI like "View on Strava" links. */
   source?: ActivitySource;
+  speedProfile?: number[]; // ride, km/h sampled over the activity
   splits?: Split[];
   sport: Sport;
   /** Strava activity ids for "View on Strava" linking. Single Strava
@@ -164,6 +166,44 @@ export function genSwimLaps(n: number, basePaceSec = 108, drift = 6): number[] {
   return out;
 }
 
+export function genPower(
+  seed: number,
+  n: number,
+  baseW = 215,
+  range = 130
+): number[] {
+  const out: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    const v =
+      baseW +
+      range * 0.5 * Math.sin(t * 6 + seed) +
+      range * 0.32 * Math.sin(t * 17 + seed * 2) +
+      range * 0.2 * Math.sin(t * 41 + seed * 4);
+    out.push(Math.max(0, Math.round(v)));
+  }
+  return out;
+}
+
+export function genSpeed(
+  seed: number,
+  n: number,
+  baseKmh = 24,
+  range = 18
+): number[] {
+  const out: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    const v =
+      baseKmh +
+      range * 0.42 * Math.sin(t * 5 + seed) +
+      range * 0.3 * Math.sin(t * 13 + seed * 3) +
+      range * 0.16 * Math.sin(t * 37 + seed * 6);
+    out.push(Math.max(0, Math.round(v * 10) / 10));
+  }
+  return out;
+}
+
 const swimRouteCoords = ((): Coord[] => {
   const out: Coord[] = [];
   for (let i = 0; i < 120; i++) {
@@ -219,6 +259,8 @@ export const SAMPLE_RIDE: ActivityData = {
   normalizedPowerW: 215,
   routeCoordinates: genLoop(1.7, 180),
   elevationProfile: genElevation(2.3, 180, 180, 980),
+  powerProfile: genPower(1.3, 120, 215, 150),
+  speedProfile: genSpeed(2.7, 120, 23.6, 22),
   splits: [
     { km: 10, durationSec: 24 * 60 + 18, avgSpeedKmh: 24.7 },
     { km: 20, durationSec: 50 * 60 + 2, avgSpeedKmh: 23.3 },

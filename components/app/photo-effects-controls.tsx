@@ -8,6 +8,7 @@ import {
   ArrowClockwiseIcon,
   CircleHalfIcon,
   CloudFogIcon,
+  DotsNineIcon,
   FilmStripIcon,
   FlipHorizontalIcon,
   FlipVerticalIcon,
@@ -18,6 +19,7 @@ import {
   SparkleIcon,
   SunIcon,
 } from "@phosphor-icons/react";
+
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -121,6 +123,17 @@ export function PhotoEffectsControls({
         >
           <FlipVerticalIcon className="size-3.5" weight="duotone" />
           Flip
+        </Button>
+        <Button
+          aria-pressed={effects.grain}
+          className={effects.grain ? "border-foreground" : ""}
+          onClick={() => onChange({ ...effects, grain: !effects.grain })}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          <DotsNineIcon className="size-3.5" weight="duotone" />
+          Grain
         </Button>
       </div>
     </div>

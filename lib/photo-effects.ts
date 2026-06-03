@@ -11,6 +11,8 @@ export interface PhotoEffects {
   filter: string;
   flipH: boolean;
   flipV: boolean;
+  /** analogue film grain overlaid on the photo (art-print / newsprint feel) */
+  grain: boolean;
   rotate: RotateDeg;
 }
 
@@ -19,6 +21,7 @@ export const NO_EFFECTS: PhotoEffects = {
   flipH: false,
   flipV: false,
   filter: "none",
+  grain: false,
 };
 
 export interface FilterPreset {
@@ -61,6 +64,21 @@ export const FILTER_PRESETS: FilterPreset[] = [
 export function filterCss(id: string): string {
   return FILTER_PRESETS.find((p) => p.id === id)?.css ?? "";
 }
+
+/**
+ * Film-grain texture as an inline SVG `feTurbulence`, served as a data-URI
+ * `background-image`. A live DOM `<filter>` rasterises unreliably through
+ * html-to-image, but an SVG *image* is decoded by the browser like any other
+ * bitmap, so the grain survives export. Tiled (`background-repeat`) and laid
+ * over the photo with a blend mode by the consumer.
+ */
+function grainDataUri(baseFrequency: number): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180"><filter id="g"><feTurbulence type="fractalNoise" baseFrequency="${baseFrequency}" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="100%" height="100%" filter="url(#g)"/></svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
+/** Default grain texture (medium size). */
+export const GRAIN_BG = grainDataUri(0.82);
 
 export function nextRotation(deg: RotateDeg): RotateDeg {
   return ((deg + 90) % 360) as RotateDeg;

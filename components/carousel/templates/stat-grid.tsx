@@ -1,5 +1,4 @@
-// StatGrid (2×2) — four equal metrics, dashboard-balanced (e.g. Distance,
-// Elevation, Avg Pace, Avg HR). The "detail stats" slide in the storyboard.
+// StatGrid (2×2) — up to four equal metrics, dashboard-balanced.
 
 import type { TemplateProps } from "./shared";
 import { StatLayout } from "./stat-layout";
@@ -9,12 +8,9 @@ export function StatGridSlide(props: TemplateProps) {
     <StatLayout
       {...props}
       columns="1fr 1fr"
-      count={4}
-      gridMarginTop={24}
-      numeralSize={108}
-      rows="1fr 1fr"
-      titleMargin="30px 0 0 0"
-      titleSize={60}
+      numeralSize={100}
+      rows="auto auto"
+      titleSize={52}
     />
   );
 }

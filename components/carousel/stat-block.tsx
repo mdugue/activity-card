@@ -1,6 +1,6 @@
-// Stat primitive shared by the carousel templates. Condensed display numerals
-// + monospace label/unit with tabular figures (section 4) so numbers line up
-// in rows and columns.
+// Stat primitive shared by the carousel templates. Display numerals + monospace
+// label/unit with tabular figures so numbers line up in rows and columns.
+// Carries an optional text-shadow for legibility over a photo.
 
 import type { StatItem } from "@/lib/carousel/stats";
 import type { FontPair } from "@/lib/carousel/theme-tokens";
@@ -16,9 +16,17 @@ interface StatProps {
   item: StatItem;
   muted: string;
   numeralSize: number;
+  shadow?: string;
 }
 
-export function Stat({ item, fonts, ink, muted, numeralSize }: StatProps) {
+export function Stat({
+  item,
+  fonts,
+  ink,
+  muted,
+  numeralSize,
+  shadow,
+}: StatProps) {
   return (
     <div>
       <div
@@ -29,6 +37,7 @@ export function Stat({ item, fonts, ink, muted, numeralSize }: StatProps) {
           letterSpacing: "0.18em",
           color: muted,
           textTransform: "uppercase",
+          textShadow: shadow || undefined,
         }}
       >
         {item.label}
@@ -45,10 +54,12 @@ export function Stat({ item, fonts, ink, muted, numeralSize }: StatProps) {
           style={{
             ...TABULAR,
             fontFamily: fonts.numeral,
+            fontWeight: fonts.numeralWeight,
             fontSize: numeralSize,
             lineHeight: 0.86,
             letterSpacing: "-0.01em",
             color: ink,
+            textShadow: shadow || undefined,
           }}
         >
           {item.value}
@@ -61,6 +72,7 @@ export function Stat({ item, fonts, ink, muted, numeralSize }: StatProps) {
               fontWeight: 500,
               letterSpacing: "0.04em",
               color: muted,
+              textShadow: shadow || undefined,
             }}
           >
             {item.unit}

@@ -11,14 +11,15 @@
 import { ArrowsOutCardinalIcon, ImagesIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { SeamlessCanvas } from "@/components/carousel/seamless-canvas";
-import type { ThemeId } from "@/components/themes";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { CarouselController } from "@/hooks/use-carousel";
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
 import {
   CAROUSEL_THEME_LABELS,
+  CAROUSEL_THEME_ORDER,
   CAROUSEL_THEME_TOKENS,
+  type CarouselThemeId,
 } from "@/lib/carousel/theme-tokens";
 import { DECK_META, DECK_ORDER, type DeckId } from "@/lib/carousel/types";
 import { carouselBaseName, exportCarousel } from "@/lib/export-carousel";
@@ -31,6 +32,7 @@ import type { ParsedActivity } from "@/lib/parse-activity";
 import { isQuarterTurn, type PhotoEffects } from "@/lib/photo-effects";
 import type { Visibility } from "@/lib/visibility";
 import { ActivityControls } from "./activity-controls";
+import { ControlBlock, ToggleRow } from "./control-primitives";
 import { EditSidebar } from "./edit-sidebar";
 import { ImageAdjustOverlay } from "./image-adjust-overlay";
 import { PhotoEffectsControls } from "./photo-effects-controls";
@@ -54,13 +56,13 @@ interface CarouselEditStateProps {
   onPhotoChange: (file: File | null) => void;
   onPhotoEffectsChange: (next: PhotoEffects) => void;
   onSportChange: (sport: Sport) => void;
-  onThemeChange: (theme: ThemeId) => void;
+  onThemeChange: (theme: CarouselThemeId) => void;
   onTitleChange: (title: string) => void;
   onVisibilityChange: (visibility: Visibility) => void;
   photoEffects: PhotoEffects;
   photoPaletteTheme: PaletteTheme | null;
   photoUrl: string | null;
-  theme: ThemeId;
+  theme: CarouselThemeId;
   visibility: Visibility;
 }
 
@@ -76,11 +78,10 @@ export function CarouselEditState(props: CarouselEditStateProps) {
   } = props;
   const { slides, selectedId, selectedIndex } = carousel;
 
-  // Only the photo-capable (standard panel) themes render the photo; the
-  // type-led themes (Frame/Telemetry/Press) drop it in the canvas, so mirror
-  // that here and disable the uploader + effects rather than showing dead
-  // controls — same contract the single-card editor derives from theme meta.
-  const photoSupported = CAROUSEL_THEME_TOKENS[theme].panelKind === "standard";
+  // Photo support is per-theme: every carousel theme now renders a background
+  // photo (the type-led Frame/Press keep it clean via shadows / opaque boxes),
+  // so derive it from the theme token rather than the panel kind.
+  const photoSupported = CAROUSEL_THEME_TOKENS[theme].photoSupported;
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const wideRef = useRef<HTMLDivElement>(null);
@@ -193,6 +194,8 @@ export function CarouselEditState(props: CarouselEditStateProps) {
     photoEffects,
     photoTheme: photoPaletteTheme,
     photoUrl,
+    showEffort: props.visibility.showEffort,
+    showPageNumber: props.visibility.showPageNumber,
     slides,
     theme,
   };
@@ -285,6 +288,8 @@ export function CarouselEditState(props: CarouselEditStateProps) {
           photoTheme={photoPaletteTheme}
           photoUrl={photoUrl}
           selectedId={selectedId}
+          showEffort={props.visibility.showEffort}
+          showPageNumber={props.visibility.showPageNumber}
           slides={slides}
           theme={theme}
         />
@@ -323,6 +328,7 @@ export function CarouselEditState(props: CarouselEditStateProps) {
           <ThemePicker
             labels={CAROUSEL_THEME_LABELS}
             onThemeChange={props.onThemeChange}
+            order={CAROUSEL_THEME_ORDER}
             theme={theme}
           />
           <div className="caption-micro mt-2">TAP TO CHANGE THEME</div>
@@ -353,6 +359,32 @@ export function CarouselEditState(props: CarouselEditStateProps) {
             photoSupported,
           }}
           data={data}
+          displayToggles={
+            <ControlBlock label="CAROUSEL">
+              <div className="mt-3 flex flex-col gap-2.5">
+                <ToggleRow
+                  checked={props.visibility.showEffort}
+                  label="Made with Effort"
+                  onCheckedChange={(checked) =>
+                    props.onVisibilityChange({
+                      ...props.visibility,
+                      showEffort: checked,
+                    })
+                  }
+                />
+                <ToggleRow
+                  checked={props.visibility.showPageNumber}
+                  label="Page numbers"
+                  onCheckedChange={(checked) =>
+                    props.onVisibilityChange({
+                      ...props.visibility,
+                      showPageNumber: checked,
+                    })
+                  }
+                />
+              </div>
+            </ControlBlock>
+          }
           location={props.location}
           onAccentChange={props.onAccentChange}
           onAthleteNameChange={props.onAthleteNameChange}

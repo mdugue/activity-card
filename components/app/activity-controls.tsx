@@ -65,6 +65,9 @@ interface ActivityControlsProps {
   athleteName: string;
   caps: ControlCapabilities;
   data: ActivityData;
+  /** carousel-only display toggles (Effort mark, page numbers) rendered as
+   *  their own block after Extra Metrics */
+  displayToggles?: React.ReactNode;
   location: string;
   onAccentChange: (accent: string) => void;
   onAthleteNameChange: (name: string) => void;
@@ -101,6 +104,7 @@ export function ActivityControls({
   onPhotoChange,
   photoExtras,
   slotAfterPhoto,
+  displayToggles,
 }: ActivityControlsProps) {
   const titleId = useId();
   const athleteId = useId();
@@ -207,6 +211,8 @@ export function ActivityControls({
           })}
         </div>
       </ControlBlock>
+
+      {displayToggles}
 
       <ControlBlock label="ACCENT">
         <ToggleGroup

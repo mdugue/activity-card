@@ -1,17 +1,14 @@
-// Carousel route layer (section 5). Rounded caps/joins, subtle drop-shadow,
-// start-green / end-red white-ringed markers. Three styles: poster (silhouette
-// in theme ink), desaturated (saturated accent line meant to sit over a
-// desaturated photo), highlighter (accent→accent2 gradient along the line).
-// Fills whatever box it's given, so the seamless canvas can hand it a wide
-// viewBox and the line bleeds across slide edges.
+// Carousel route layer. Rounded caps/joins, a subtle drop-shadow, and a single
+// graphic finish marker — a checkered flag at the end of the line (no coloured
+// start/end dots; they read as generic GPS pins). Three styles: poster
+// (silhouette in theme ink), desaturated (accent line over a desaturated photo),
+// highlighter (accent→accent2 gradient). Fills whatever box it's given, so the
+// seamless canvas can hand it a wide viewBox and the line bleeds across edges.
 
 import { useId } from "react";
 import type { Coord } from "@/components/app/sample-data";
 import type { RouteStyle } from "@/lib/carousel/types";
 import { projectRoute } from "@/lib/chart-helpers";
-
-const START = "#1f9d57";
-const END = "#e23b2e";
 
 interface RouteLineProps {
   accent: string;
@@ -19,7 +16,7 @@ interface RouteLineProps {
   coords: Coord[] | undefined;
   h: number;
   ink: string;
-  /** stronger shadow + white markers for legibility over a photo */
+  /** stronger shadow for legibility over a photo */
   overPhoto?: boolean;
   pad?: number;
   showMarkers?: boolean;
@@ -28,6 +25,66 @@ interface RouteLineProps {
   strokeWidth?: number;
   style: RouteStyle;
   w: number;
+}
+
+/** A small checkered finish flag anchored at the end point. Monochrome (filled
+ *  squares in `color`, gaps transparent) so it reads as a checker on any
+ *  background and matches the theme ink. */
+function FinishFlag({
+  x,
+  y,
+  unit,
+  color,
+}: {
+  color: string;
+  unit: number;
+  x: number;
+  y: number;
+}) {
+  const cols = 3;
+  const rows = 2;
+  const flagW = cols * unit;
+  const flagH = rows * unit;
+  const poleH = flagH + unit * 1.6;
+  const top = y - poleH;
+  const squares: React.ReactNode[] = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if ((r + c) % 2 === 0) {
+        squares.push(
+          <rect
+            height={unit}
+            key={`${r}-${c}`}
+            width={unit}
+            x={x + c * unit}
+            y={top + r * unit}
+          />
+        );
+      }
+    }
+  }
+  return (
+    <g fill={color} stroke="none">
+      {/* pole */}
+      <rect
+        height={poleH}
+        width={Math.max(2, unit * 0.32)}
+        x={x - Math.max(2, unit * 0.32)}
+        y={top}
+      />
+      {/* checker field outline keeps the empty squares legible */}
+      <rect
+        fill="none"
+        height={flagH}
+        stroke={color}
+        strokeWidth={Math.max(1, unit * 0.18)}
+        width={flagW}
+        x={x}
+        y={top}
+      />
+      {squares}
+    </g>
+  );
 }
 
 export function RouteLine({
@@ -45,7 +102,7 @@ export function RouteLine({
   stretch = false,
 }: RouteLineProps) {
   const gradId = useId();
-  const { d, start, end } = projectRoute(coords, w, h, pad, stretch);
+  const { d, end } = projectRoute(coords, w, h, pad, stretch);
   if (!d) {
     return null;
   }
@@ -61,7 +118,7 @@ export function RouteLine({
     ? "drop-shadow(0 2px 12px rgba(0,0,0,0.55))"
     : "drop-shadow(0 3px 8px rgba(0,0,0,0.18))";
 
-  const markerR = Math.max(7, strokeWidth * 1.6);
+  const flagUnit = Math.max(6, strokeWidth * 1.5);
 
   return (
     <svg
@@ -103,24 +160,9 @@ export function RouteLine({
         style={{ filter: shadow }}
       />
 
-      {showMarkers && start && end ? (
-        <g>
-          <circle
-            cx={start[0]}
-            cy={start[1]}
-            fill={START}
-            r={markerR}
-            stroke="#ffffff"
-            strokeWidth={markerR * 0.45}
-          />
-          <circle
-            cx={end[0]}
-            cy={end[1]}
-            fill={END}
-            r={markerR}
-            stroke="#ffffff"
-            strokeWidth={markerR * 0.45}
-          />
+      {showMarkers && end ? (
+        <g style={{ filter: shadow }}>
+          <FinishFlag color={ink} unit={flagUnit} x={end[0]} y={end[1]} />
         </g>
       ) : null}
     </svg>

@@ -1,70 +1,117 @@
-// Press — editorial broadsheet. Masthead + serif headline with a drop cap,
-// stat pull-quotes set in columns, a closing byline. No photo-forward; type
-// carries it.
+// Press — editorial broadsheet. Masthead + serif headline with a drop cap, stat
+// pull-quotes, a closing byline. Supports a background photo with a print
+// sensibility: text sits in fully-opaque "clipping" boxes (a paper slab, an ink
+// nameplate) rather than a soft scrim, so it reads like a pasted-up poster.
 
-import { buildStats, heroStat } from "@/lib/carousel/stats";
+import type { ActivityData } from "@/components/app/sample-data";
+import type { EffectiveStyle } from "@/lib/carousel/resolve";
 import { formatDateUpper } from "@/lib/format";
 import {
   SLIDE_PAD,
-  slideText,
-  sportWord,
+  slideNumber,
   type TemplateProps,
 } from "../templates/shared";
 
-function Masthead({
-  data,
-  style,
-  muted,
-  ink,
+const SLAB_SHADOW = "0 10px 34px rgba(0,0,0,0.3)";
+
+/** An opaque paper (or inverted ink) block. Over a photo it gives the text a
+ *  hard-edged print surface; on the paper background it's just transparent. */
+function Slab({
+  children,
+  onPhoto,
+  bg,
+  fg,
+  extra,
 }: {
-  data: TemplateProps["data"];
-  ink: string;
-  muted: string;
-  style: TemplateProps["style"];
+  bg: string;
+  children: React.ReactNode;
+  extra?: React.CSSProperties;
+  fg: string;
+  onPhoto: boolean;
 }) {
   return (
-    <div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "baseline",
-          borderBottom: `3px double ${ink}`,
-          paddingBottom: 14,
-        }}
-      >
-        <span
-          style={{
-            fontFamily: style.fonts.display,
-            fontStyle: "italic",
-            fontSize: 46,
-            color: ink,
-          }}
-        >
-          The Effort
-        </span>
-        <span
-          style={{
-            fontFamily: style.fonts.mono,
-            fontSize: 17,
-            letterSpacing: "0.18em",
-            color: muted,
-          }}
-        >
-          {sportWord(data.sport)} · {formatDateUpper(data.date)}
-        </span>
-      </div>
+    <div
+      style={{
+        background: onPhoto ? bg : "transparent",
+        color: fg,
+        padding: onPhoto ? "26px 30px" : 0,
+        boxShadow: onPhoto ? SLAB_SHADOW : undefined,
+        ...extra,
+      }}
+    >
+      {children}
     </div>
   );
 }
 
+function Masthead({
+  data,
+  style,
+  onPhoto,
+  paper,
+  ink,
+  showPageNumber,
+  index,
+  total,
+}: {
+  data: ActivityData;
+  index: number;
+  ink: string;
+  onPhoto: boolean;
+  paper: string;
+  showPageNumber: boolean;
+  style: EffectiveStyle;
+  total: number;
+}) {
+  const right = `${formatDateUpper(data.date)}${
+    showPageNumber ? ` · ${slideNumber(index, total)}` : ""
+  }`;
+  return (
+    <Slab
+      bg={ink}
+      extra={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "baseline",
+        borderBottom: onPhoto ? undefined : `3px double ${ink}`,
+        paddingBottom: onPhoto ? undefined : 14,
+        padding: onPhoto ? "16px 24px" : undefined,
+      }}
+      fg={onPhoto ? paper : ink}
+      onPhoto={onPhoto}
+    >
+      <span
+        style={{
+          fontFamily: style.fonts.display,
+          fontWeight: style.fonts.displayWeight,
+          fontStyle: "italic",
+          fontSize: 46,
+        }}
+      >
+        The Effort
+      </span>
+      <span
+        style={{
+          fontFamily: style.fonts.mono,
+          fontSize: 17,
+          letterSpacing: "0.18em",
+          opacity: onPhoto ? 0.9 : 0.62,
+        }}
+      >
+        {right}
+      </span>
+    </Slab>
+  );
+}
+
 export function PressPanel(props: TemplateProps) {
-  const { data, style, hasPhoto, index, total } = props;
-  const c = slideText(style, hasPhoto);
-  const stats = buildStats(data);
+  const { data, style, hasPhoto, index, total, stats, showEffort } = props;
   const isFirst = index === 0;
   const isLast = index === total - 1;
-  const hero = heroStat(data);
+  const paper = style.background;
+  const ink = style.ink;
+  const muted = style.mutedInk;
+  const lead = stats[0];
 
   return (
     <div
@@ -74,20 +121,36 @@ export function PressPanel(props: TemplateProps) {
         padding: SLIDE_PAD,
         display: "flex",
         flexDirection: "column",
+        gap: hasPhoto ? 28 : 0,
       }}
     >
-      <Masthead data={data} ink={c.fg} muted={c.muted} style={style} />
+      <Masthead
+        data={data}
+        index={index}
+        ink={ink}
+        onPhoto={hasPhoto}
+        paper={paper}
+        showPageNumber={props.showPageNumber}
+        style={style}
+        total={total}
+      />
 
       {isFirst ? (
-        <div style={{ marginTop: 40 }}>
+        <Slab
+          bg={paper}
+          extra={{ marginTop: hasPhoto ? 0 : 40 }}
+          fg={ink}
+          onPhoto={hasPhoto}
+        >
           <h1
             style={{
               fontFamily: style.fonts.display,
+              fontWeight: style.fonts.displayWeight,
               fontSize: 104,
               lineHeight: 0.92,
               letterSpacing: "-0.02em",
               margin: 0,
-              color: c.fg,
+              color: ink,
               textWrap: "balance",
             }}
           >
@@ -110,13 +173,15 @@ export function PressPanel(props: TemplateProps) {
             style={{
               marginTop: 30,
               fontFamily: style.fonts.display,
+              fontWeight: style.fonts.displayWeight,
               fontSize: 40,
               lineHeight: 1.28,
-              color: c.fg,
+              color: ink,
               columnCount: 2,
               columnGap: 44,
-              columnRule: `1px solid ${c.muted}`,
+              columnRule: `1px solid ${muted}`,
               textIndent: 0,
+              margin: "30px 0 0 0",
             }}
           >
             <span
@@ -129,20 +194,23 @@ export function PressPanel(props: TemplateProps) {
                 fontFamily: style.fonts.display,
               }}
             >
-              {hero.value.charAt(0)}
+              {lead?.value.charAt(0)}
             </span>
-            {`${hero.value} ${hero.unit} logged — ${stats
+            {`${lead?.value} ${lead?.unit} logged — ${stats
               .slice(1, 3)
-              .map((s) => `${s.value} ${s.unit}`)
-              .join(
-                ", "
-              )}. A ${sportWord(data.sport).toLowerCase()} worth printing.`}
+              .map((s) => `${s.value}${s.unit ? ` ${s.unit}` : ""}`)
+              .join(", ")}. A ${data.sport} worth printing.`}
           </p>
-        </div>
+        </Slab>
       ) : null}
 
       {isFirst || isLast ? null : (
-        <div style={{ marginTop: "auto", marginBottom: "auto" }}>
+        <Slab
+          bg={paper}
+          extra={{ marginTop: "auto", marginBottom: "auto" }}
+          fg={ink}
+          onPhoto={hasPhoto}
+        >
           <div
             style={{
               fontFamily: style.fonts.mono,
@@ -151,19 +219,20 @@ export function PressPanel(props: TemplateProps) {
               color: style.accent,
             }}
           >
-            {(stats[index] ?? hero).label}
+            {lead?.label}
           </div>
           <div
             style={{
               fontFamily: style.fonts.numeral,
+              fontWeight: style.fonts.numeralWeight,
               fontSize: 240,
               lineHeight: 0.8,
-              color: c.fg,
+              color: ink,
               fontVariantNumeric: "tabular-nums",
               marginTop: 16,
             }}
           >
-            {(stats[index] ?? hero).value}
+            {lead?.value}
             <span
               style={{
                 fontFamily: style.fonts.display,
@@ -171,44 +240,51 @@ export function PressPanel(props: TemplateProps) {
                 fontStyle: "italic",
               }}
             >
-              {(stats[index] ?? hero).unit
-                ? ` ${(stats[index] ?? hero).unit}`
-                : ""}
+              {lead?.unit ? ` ${lead.unit}` : ""}
             </span>
           </div>
           <div
             aria-hidden
-            style={{ height: 3, background: c.fg, marginTop: 28, width: "60%" }}
+            style={{ height: 3, background: ink, marginTop: 28, width: "60%" }}
           />
-        </div>
+        </Slab>
       )}
 
       {isLast ? (
-        <div style={{ marginTop: "auto" }}>
+        <Slab
+          bg={paper}
+          extra={{ marginTop: "auto" }}
+          fg={ink}
+          onPhoto={hasPhoto}
+        >
+          {data.athleteName ? (
+            <div
+              style={{
+                fontFamily: style.fonts.display,
+                fontWeight: style.fonts.displayWeight,
+                fontStyle: "italic",
+                fontSize: 64,
+                color: ink,
+              }}
+            >
+              — {data.athleteName}
+            </div>
+          ) : null}
           <div
             style={{
-              fontFamily: style.fonts.display,
-              fontStyle: "italic",
-              fontSize: 64,
-              color: c.fg,
-            }}
-          >
-            — {data.athleteName || "Anonymous"}
-          </div>
-          <div
-            style={{
-              marginTop: 18,
+              marginTop: data.athleteName ? 18 : 0,
               fontFamily: style.fonts.mono,
               fontSize: 19,
               letterSpacing: "0.22em",
-              color: c.muted,
-              borderTop: `1px solid ${c.muted}`,
+              color: muted,
+              borderTop: `1px solid ${muted}`,
               paddingTop: 18,
             }}
           >
-            PRINTED WITH EFFORT · {formatDateUpper(data.date)}
+            {showEffort ? "PRINTED WITH EFFORT · " : ""}
+            {formatDateUpper(data.date)}
           </div>
-        </div>
+        </Slab>
       ) : null}
     </div>
   );

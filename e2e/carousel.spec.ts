@@ -46,12 +46,12 @@ test.describe("carousel mode", () => {
   test("theme switches via the shared picker below the preview", async ({
     page,
   }) => {
-    // Carousel uses its own theme names (Trace, Telemetry, …).
+    // Carousel uses its own theme names (Trace Dawn/Dusk, Ascent, Press, …).
     const trigger = page.getByTestId("theme-picker-trigger");
     await expect(trigger).toContainText(/TRACE/i);
     await trigger.click();
-    await page.getByRole("button", { name: /^TELEMETRY/i }).click();
-    await expect(trigger).toContainText(/TELEMETRY/i);
+    await page.getByRole("button", { name: /^PRESS/i }).click();
+    await expect(trigger).toContainText(/PRESS/i);
   });
 
   test("uploading a photo reveals the deck-wide adjust control", async ({
@@ -68,12 +68,18 @@ test.describe("carousel mode", () => {
     ).toBeVisible();
   });
 
-  test("type-led themes disable the photo control", async ({ page }) => {
-    // Frame/Telemetry/Press themes don't render the photo, so the uploader is
-    // disabled with an explanatory note rather than offering a dead control.
+  test("type-led themes still accept a background photo", async ({ page }) => {
+    // Frame and Press now render a background photo (kept clean via shadows /
+    // opaque print boxes), so the uploader stays enabled — no "no room" note.
     await page.getByTestId("theme-picker-trigger").click();
-    await page.getByRole("button", { name: /^TELEMETRY/i }).click();
-    await expect(page.getByText(/no room for a photo/i)).toBeVisible();
+    await page.getByRole("button", { name: /^FRAME/i }).click();
+    await expect(page.getByText(/no room for a photo/i)).toHaveCount(0);
+    await page.locator('input[type="file"][accept="image/*"]').setInputFiles({
+      name: "photo.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(TINY_PNG_BASE64, "base64"),
+    });
+    await expect(page.getByText(/Photo loaded/i)).toBeVisible();
   });
 
   test("export downloads an ordered PNG set", async ({ page }) => {

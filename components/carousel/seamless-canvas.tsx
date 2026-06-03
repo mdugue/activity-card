@@ -1,20 +1,19 @@
-// The carousel renderer — the single source of truth. One continuous wide
-// strip (n×1080 × 1350): a theme-specific signature layer spans the full width
-// and bleeds across every slide edge, with per-panel content on top. The editor
+// The carousel renderer — the single source of truth. One continuous wide strip
+// (n×1080 × 1350): a theme-specific signature layer spans the full width and
+// bleeds across every slide edge, with per-panel content on top. The editor
 // windows onto it (one slide at a time) and the export slices it — both use this
 // exact component, so preview, thumbnails and output always agree.
 //
-// Each theme picks its own signature (heroLayer), panel layout (panelKind) and
-// an optional wrap-up cross-viz — so the themes read as genuinely different
-// designs, not colour swaps.
+// Each theme picks its own signature (heroLayer), panel layout (panelKind), hero
+// metric and an optional wrap-up cross-viz — so the themes read as genuinely
+// different designs, not colour swaps.
 
 import type { ActivityData } from "@/components/app/sample-data";
-import type { ThemeId } from "@/components/themes";
 import type { ImageSize } from "@/hooks/use-image-natural-size";
 import { pickProfile } from "@/lib/carousel/profile";
-import type { EffectiveStyle } from "@/lib/carousel/resolve";
-import { resolveDeckStyle } from "@/lib/carousel/resolve";
-import type { PanelKind } from "@/lib/carousel/theme-tokens";
+import { type EffectiveStyle, resolveDeckStyle } from "@/lib/carousel/resolve";
+import { heroStat, planSlideStats } from "@/lib/carousel/stats";
+import type { CarouselThemeId, PanelKind } from "@/lib/carousel/theme-tokens";
 import { SLIDE_H, SLIDE_W, type Slide } from "@/lib/carousel/types";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme } from "@/lib/palette";
@@ -22,11 +21,8 @@ import { filterCss, NO_EFFECTS, type PhotoEffects } from "@/lib/photo-effects";
 import { CarouselPhoto } from "./carousel-photo";
 import { CrossViz } from "./cross-viz";
 import { ElevationBand } from "./elevation-band";
-import { MicroGraphicLayer } from "./micro-graphic-layer";
-import { Overlay } from "./overlay";
 import { FramePanel } from "./panels/frame-panel";
 import { PressPanel } from "./panels/press-panel";
-import { TelemetryPanel } from "./panels/telemetry-panel";
 import { RouteLine } from "./route-line";
 import { SegmentsTimeline } from "./segments-timeline";
 import { TEMPLATES } from "./templates";
@@ -38,9 +34,6 @@ function panelFor(
 ): (props: TemplateProps) => React.JSX.Element {
   if (kind === "frame") {
     return FramePanel;
-  }
-  if (kind === "telemetry") {
-    return TelemetryPanel;
   }
   if (kind === "press") {
     return PressPanel;
@@ -57,8 +50,12 @@ interface SeamlessCanvasProps {
   photoEffects?: PhotoEffects;
   photoTheme?: PaletteTheme | null;
   photoUrl?: string | null;
+  /** print the "made with effort" mark on the wrap-up slide */
+  showEffort?: boolean;
+  /** print the "01 / 04" slide index on every slide */
+  showPageNumber?: boolean;
   slides: Slide[];
-  theme: ThemeId;
+  theme: CarouselThemeId;
 }
 
 export function SeamlessCanvas({
@@ -71,18 +68,20 @@ export function SeamlessCanvas({
   imageSize = null,
   photoEffects = NO_EFFECTS,
   photoTheme = null,
+  showEffort = false,
+  showPageNumber = false,
 }: SeamlessCanvasProps) {
   const total = slides.length;
   const width = total * SLIDE_W;
   const style: EffectiveStyle = resolveDeckStyle(theme, accent, photoTheme);
   const hasPhoto = Boolean(photoUrl);
 
-  // Only photo-capable (standard) themes show the photo; Frame/Telemetry/Press
-  // are type-led and stay clean. Dark standard themes are photo-forward
-  // (full-bleed + white type + scrim); light ones keep it a faint texture.
-  const showPhoto = hasPhoto && style.panelKind === "standard";
-  const photoForeground = showPhoto && style.dark;
-  const desaturate = photoForeground && style.routeStyle === "desaturated";
+  // Every photo-capable theme now shows the photo full-bleed (no faint-texture
+  // mode); legibility comes from the per-theme default filter + text shadows,
+  // with only a light veil on the standard photo themes.
+  const showPhoto = hasPhoto && style.photoSupported;
+  const isStandard = style.panelKind === "standard";
+  const desaturate = showPhoto && style.routeStyle === "desaturated";
   const photoFilter = filterCss(photoEffects.filter);
 
   const { profile, mode: profileMode } = pickProfile(data);
@@ -97,7 +96,10 @@ export function SeamlessCanvas({
     style.heroLayer === "route" ||
     (style.heroLayer === "segments" && !hasSegments);
 
-  const heroInk = photoForeground ? "#ffffff" : style.ink;
+  const heroInk = showPhoto && style.dark ? "#ffffff" : style.ink;
+
+  const slidePlan = planSlideStats(data, slides, style);
+  const hero = heroStat(data, style.heroMetric);
 
   return (
     <div
@@ -124,8 +126,8 @@ export function SeamlessCanvas({
             filter={photoFilter}
             flipH={photoEffects.flipH}
             flipV={photoEffects.flipV}
+            grain={photoEffects.grain}
             imageSize={imageSize}
-            opacity={photoForeground ? 1 : 0.16}
             photoUrl={photoUrl}
             rotate={photoEffects.rotate}
             stripH={SLIDE_H}
@@ -135,11 +137,19 @@ export function SeamlessCanvas({
         );
       })()}
 
-      {photoForeground ? (
-        <Overlay
-          accent={style.accent}
-          opacity={0.5}
-          style={style.overlayStyle}
+      {/* Light veil so text reads over a photo — dark for dark themes, a soft
+          paper wash for light ones. Type-led themes (Frame / Press) protect
+          their own text (shadows / opaque boxes), so they skip it. */}
+      {showPhoto && isStandard ? (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: style.dark
+              ? "rgba(0,0,0,0.34)"
+              : "rgba(255,255,255,0.26)",
+          }}
         />
       ) : null}
 
@@ -182,17 +192,19 @@ export function SeamlessCanvas({
             position: "absolute",
             left: 0,
             right: 0,
-            top: "26%",
-            height: "48%",
+            // Sits in the upper-middle so the bottom-anchored title/stats clear
+            // it instead of the line striking through the headline.
+            top: "14%",
+            height: "40%",
           }}
         >
           <RouteLine
             accent={style.accent}
             accent2={style.accent2}
             coords={data.routeCoordinates}
-            h={SLIDE_H * 0.48}
+            h={SLIDE_H * 0.4}
             ink={heroInk}
-            overPhoto={photoForeground}
+            overPhoto={showPhoto}
             pad={60}
             showMarkers
             stretch
@@ -220,23 +232,15 @@ export function SeamlessCanvas({
           >
             <Panel
               data={data}
-              hasPhoto={photoForeground}
+              hasPhoto={showPhoto}
+              hero={hero}
               index={i}
+              showEffort={showEffort}
+              showPageNumber={showPageNumber}
+              stats={slidePlan[i]}
               style={style}
               total={total}
             />
-            {/* The cross-viz owns the top-right corner on the wrap-up slide, so
-                drop the micro-graphic there to avoid overlapping the two. */}
-            {style.panelKind === "standard" &&
-            style.microGraphic &&
-            !(isLast && style.crossViz) ? (
-              <MicroGraphicLayer
-                color={heroInk}
-                corner="tr"
-                data={data}
-                fonts={style.fonts}
-              />
-            ) : null}
             {isLast && style.crossViz ? (
               <div style={{ position: "absolute", top: 168, right: 70 }}>
                 <CrossViz
