@@ -4,9 +4,11 @@
 // nameplate) rather than a soft scrim, so it reads like a pasted-up poster.
 
 import type { ActivityData } from "@/components/app/sample-data";
+import { pickProfile } from "@/lib/carousel/profile";
 import type { EffectiveStyle } from "@/lib/carousel/resolve";
 import { formatDateUpper } from "@/lib/format";
-import { DetailViz, type DetailVizKind } from "../detail-viz";
+import { ElevationBand } from "../elevation-band";
+import { RouteLine } from "../route-line";
 import {
   SLIDE_PAD,
   slideNumber,
@@ -64,9 +66,10 @@ function Masthead({
   style: EffectiveStyle;
   total: number;
 }) {
-  const right = `${formatDateUpper(data.date)}${
-    showPageNumber ? ` · ${slideNumber(index, total)}` : ""
-  }`;
+  // Date is the slide-2 dateline only; page number (if on) rides every masthead.
+  const datePart = index === 1 && data.date ? formatDateUpper(data.date) : "";
+  const numPart = showPageNumber ? slideNumber(index, total) : "";
+  const right = [datePart, numPart].filter(Boolean).join(" · ");
   return (
     <Slab
       bg={ink}
@@ -197,11 +200,89 @@ function FrontPage({
   );
 }
 
+const VIZ_W = 540;
+const VIZ_H = 150;
+
+/** The dark "clipping" that overlaps the stat card — a route or elevation cut
+ *  in paper ink, flat and borderless, for a pasted-up magazine feel. */
+function VizCard({
+  kind,
+  data,
+  style,
+  ink,
+  paper,
+}: {
+  data: ActivityData;
+  ink: string;
+  kind: "elevation" | "route";
+  paper: string;
+  style: EffectiveStyle;
+}) {
+  const { profile, mode } = pickProfile(data);
+  const has =
+    kind === "route"
+      ? (data.routeCoordinates?.length ?? 0) > 1
+      : (profile?.length ?? 0) > 1;
+  if (!has) {
+    return null;
+  }
+  return (
+    <div
+      style={{
+        alignSelf: "flex-end",
+        width: VIZ_W + 44,
+        marginTop: -52,
+        background: ink,
+        padding: "20px 22px 16px",
+        boxShadow: "0 16px 44px rgba(0,0,0,0.34)",
+        position: "relative",
+        zIndex: 1,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: style.fonts.mono,
+          fontSize: 15,
+          letterSpacing: "0.24em",
+          color: paper,
+          opacity: 0.66,
+          marginBottom: 10,
+        }}
+      >
+        {kind === "route" ? "THE ROUTE" : "THE PROFILE"}
+      </div>
+      <div style={{ width: VIZ_W, height: VIZ_H }}>
+        {kind === "route" ? (
+          <RouteLine
+            accent={paper}
+            accent2={paper}
+            coords={data.routeCoordinates}
+            h={VIZ_H}
+            ink={paper}
+            pad={12}
+            showMarkers
+            strokeWidth={4}
+            style="poster"
+            w={VIZ_W}
+          />
+        ) : (
+          <ElevationBand
+            colors={{ line: paper, fillFrom: paper, fillTo: "transparent" }}
+            h={VIZ_H}
+            mode={mode}
+            profile={profile}
+            w={VIZ_W}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Spread({
   data,
   style,
   ink,
-  muted,
   paper,
   hasPhoto,
   stats,
@@ -209,64 +290,60 @@ function Spread({
 }: SpreadProps & { index: number }) {
   const lead = stats[0];
   return (
-    <Slab
-      bg={paper}
-      extra={{ marginTop: "auto", marginBottom: "auto" }}
-      fg={ink}
-      onPhoto={hasPhoto}
+    <div
+      style={{
+        marginTop: "auto",
+        marginBottom: "auto",
+        display: "flex",
+        flexDirection: "column",
+      }}
     >
-      <div
-        style={{
-          fontFamily: style.fonts.mono,
-          fontSize: 22,
-          letterSpacing: "0.24em",
-          color: style.accent,
-        }}
-      >
-        {lead?.label}
-      </div>
-      <div
-        style={{
-          fontFamily: style.fonts.numeral,
-          fontWeight: style.fonts.numeralWeight,
-          fontSize: 240,
-          lineHeight: 0.8,
-          color: ink,
-          fontVariantNumeric: "tabular-nums",
-          marginTop: 16,
-        }}
-      >
-        {lead?.value}
-        <span
+      {/* Stat clipping (paper). */}
+      <Slab bg={paper} extra={{ width: "82%" }} fg={ink} onPhoto={hasPhoto}>
+        <div
           style={{
-            fontFamily: style.fonts.display,
-            fontSize: 56,
-            fontStyle: "italic",
+            fontFamily: style.fonts.mono,
+            fontSize: 22,
+            letterSpacing: "0.24em",
+            color: style.accent,
           }}
         >
-          {lead?.unit ? ` ${lead.unit}` : ""}
-        </span>
-      </div>
-      <div
-        aria-hidden
-        style={{ height: 3, background: ink, marginTop: 28, width: "60%" }}
-      />
-      {style.detailViz ? (
-        <div style={{ marginTop: 34 }}>
-          <DetailViz
-            bg={paper}
-            color={ink}
-            data={data}
-            fonts={style.fonts}
-            h={120}
-            kinds={[index === 1 ? "route" : "elevation"] as DetailVizKind[]}
-            muted={muted}
-            print
-            w={360}
-          />
+          {lead?.label}
         </div>
+        <div
+          style={{
+            fontFamily: style.fonts.numeral,
+            fontWeight: style.fonts.numeralWeight,
+            fontSize: 236,
+            lineHeight: 0.78,
+            color: ink,
+            fontVariantNumeric: "tabular-nums",
+            marginTop: 14,
+          }}
+        >
+          {lead?.value}
+          <span
+            style={{
+              fontFamily: style.fonts.display,
+              fontSize: 56,
+              fontStyle: "italic",
+            }}
+          >
+            {lead?.unit ? ` ${lead.unit}` : ""}
+          </span>
+        </div>
+      </Slab>
+
+      {style.detailViz ? (
+        <VizCard
+          data={data}
+          ink={ink}
+          kind={index === 1 ? "route" : "elevation"}
+          paper={paper}
+          style={style}
+        />
       ) : null}
-    </Slab>
+    </div>
   );
 }
 

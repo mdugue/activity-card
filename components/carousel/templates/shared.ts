@@ -38,11 +38,11 @@ export interface SlideTextColors {
 }
 
 // A photo never gets a heavy dark scrim under light themes; instead text carries
-// a dual shadow — a soft halo plus a faint counter-tone — so it reads on busy
-// imagery. Dark themes use a dark drop; light themes a light halo.
-const DARK_SHADOW = "0 1px 2px rgba(0,0,0,0.55), 0 2px 20px rgba(0,0,0,0.42)";
+// a dual shadow — a tight halo plus a soft glow — so even small mono labels
+// ("DISTANCE", "TIME") read on busy imagery. Dark themes use a dark drop.
+const DARK_SHADOW = "0 1px 2px rgba(0,0,0,0.6), 0 2px 22px rgba(0,0,0,0.45)";
 const LIGHT_SHADOW =
-  "0 1px 2px rgba(255,255,255,0.72), 0 2px 16px rgba(255,255,255,0.55), 0 1px 1px rgba(0,0,0,0.16)";
+  "0 0 2px rgba(255,255,255,0.98), 0 0 5px rgba(255,255,255,0.95), 0 0 14px rgba(255,255,255,0.8), 0 1px 2px rgba(0,0,0,0.18)";
 
 /** Foreground colours + an optional text-shadow for the slide's text. */
 export function slideText(
@@ -58,11 +58,12 @@ export function slideText(
     };
   }
   if (hasPhoto) {
-    // Light theme over a (bright-filtered) photo: keep the ink identity and lean
-    // on a halo shadow rather than a heavy overlay.
+    // Light theme over a (bright-filtered) photo: keep the ink identity, but
+    // drop the low-alpha "muted" — small mono labels need full ink + the halo
+    // shadow to stay legible over busy imagery.
     return {
       fg: style.ink,
-      muted: style.mutedInk,
+      muted: style.ink,
       faint: style.mutedInk,
       shadow: LIGHT_SHADOW,
     };

@@ -20,7 +20,6 @@ import type { PaletteTheme } from "@/lib/palette";
 import { filterCss, NO_EFFECTS, type PhotoEffects } from "@/lib/photo-effects";
 import { DEFAULT_VISIBILITY, type Visibility } from "@/lib/visibility";
 import { CarouselPhoto } from "./carousel-photo";
-import { CrossViz } from "./cross-viz";
 import { ElevationBand } from "./elevation-band";
 import { FramePanel } from "./panels/frame-panel";
 import { PressPanel } from "./panels/press-panel";
@@ -195,10 +194,10 @@ export function SeamlessCanvas({
         </div>
       ) : null}
 
-      {/* Per-panel foreground. */}
+      {/* Per-panel foreground. The wrap-up cross-viz is drawn inside the
+          editorial template (centred), not here. */}
       {slides.map((slide, i) => {
         const Panel = panelFor(style.panelKind, slide.template);
-        const isLast = i === total - 1;
         return (
           <div
             key={slide.id}
@@ -222,18 +221,6 @@ export function SeamlessCanvas({
               total={total}
               visibility={visibility}
             />
-            {isLast && style.crossViz ? (
-              <div style={{ position: "absolute", top: 168, right: 70 }}>
-                <CrossViz
-                  accent={style.accent}
-                  color={heroInk}
-                  data={data}
-                  fonts={style.fonts}
-                  kind={style.crossViz}
-                  muted={style.mutedInk}
-                />
-              </div>
-            ) : null}
           </div>
         );
       })}

@@ -38,7 +38,7 @@ export function MetaBand({
         textShadow: colors.shadow || undefined,
       }}
     >
-      <span>{data.date ? formatDateUpper(data.date) : ""}</span>
+      <span>{index === 1 && data.date ? formatDateUpper(data.date) : ""}</span>
       {showPageNumber ? <span>{slideNumber(index, total)}</span> : null}
     </div>
   );

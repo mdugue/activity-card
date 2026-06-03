@@ -5,7 +5,7 @@
 // is disabled when the current activity has no data for it (`available`), and
 // distance/time are locked on for the Single Card (its irreducible core).
 
-import { RotateCcw } from "lucide-react";
+import { ArrowCounterClockwiseIcon } from "@phosphor-icons/react";
 import { useId } from "react";
 import type { CardMode } from "@/components/app/mode-toggle";
 import {
@@ -15,8 +15,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -24,7 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import type { Visibility } from "@/lib/visibility";
@@ -179,56 +176,79 @@ export function ActivityControls({
 
   return (
     <>
-      <div>
-        <div className="flex items-center justify-between">
-          <Label className="caption-label" htmlFor={titleId}>
-            Title
-          </Label>
-          <Switch
-            aria-label="Show title on card"
-            checked={visibility.title}
-            onCheckedChange={(c) => set("title", c)}
-          />
-        </div>
-        <Input
-          className="mt-1 h-auto border-foreground border-b-2 py-2 font-heading text-2xl tracking-tight md:text-2xl"
-          id={titleId}
-          onChange={(e) => onTitleChange(e.target.value)}
-          value={title}
+      {/* The photo is the most important control — lead with it, and make the
+          empty state inviting. */}
+      <ControlBlock label="BACKGROUND PHOTO">
+        <PhotoControl
+          disabled={!photoSupported}
+          onChange={onPhotoChange}
+          photoUrl={photoUrl}
+          prominent={photoSupported}
         />
-      </div>
-
-      <ControlBlock label="SPORT">
-        <Select
-          onValueChange={(v) => onSportChange(v as Sport)}
-          value={data.sport}
-        >
-          <SelectTrigger aria-label="Sport" className="mt-2 w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {SPORT_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {photoSupported ? null : (
+          <p className="caption-micro mt-2">
+            {themeLabel} theme has no room for a photo
+          </p>
+        )}
+        {photoExtras}
       </ControlBlock>
 
-      <ControlBlock label="DETAILS">
+      {slotAfterPhoto}
+
+      <ControlBlock label="ACCENT">
+        <div className="mt-2.5 flex flex-wrap items-center gap-2">
+          <ToggleGroup
+            aria-label="Accent colour"
+            className="flex flex-wrap gap-2"
+            onValueChange={(values) => {
+              if (values[0]) {
+                onAccentChange(values[0]);
+              }
+            }}
+            spacing={2}
+            value={[accent]}
+          >
+            {ACCENTS.map((c) => (
+              <ToggleGroupItem
+                aria-label={`Accent ${c}`}
+                className={cn(
+                  "size-8 rounded-full border-2 border-transparent p-0 outline-none transition-transform",
+                  "ring-foreground ring-offset-2 ring-offset-background",
+                  "data-[pressed]:scale-110 data-[pressed]:ring-2"
+                )}
+                key={c}
+                style={{ background: c }}
+                value={c}
+              />
+            ))}
+          </ToggleGroup>
+          <Button
+            className="ml-auto"
+            disabled={accent === defaultAccent}
+            onClick={() => onAccentChange(defaultAccent)}
+            size="sm"
+            type="button"
+            variant="ghost"
+          >
+            <ArrowCounterClockwiseIcon className="size-3.5" weight="duotone" />
+            Reset
+          </Button>
+        </div>
+      </ControlBlock>
+
+      {/* Text overlays — all styled the same, none more prominent than another. */}
+      <ControlBlock label="TEXT">
         <div className="mt-2 flex flex-col gap-4">
           <DetailField
-            hint="Saved on this device"
-            id={athleteId}
-            label="Athlete name"
-            onChange={onAthleteNameChange}
-            placeholder="Add your name"
+            id={titleId}
+            label="Title"
+            onChange={onTitleChange}
+            placeholder="Name this effort"
             toggle={{
-              checked: visibility.athleteName,
-              onChange: (c) => set("athleteName", c),
+              checked: visibility.title,
+              onChange: (c) => set("title", c),
             }}
-            value={athleteName}
+            value={title}
           />
           <DetailField
             id={locationId}
@@ -250,22 +270,6 @@ export function ActivityControls({
           />
         </div>
       </ControlBlock>
-
-      <ControlBlock label="BACKGROUND PHOTO">
-        <PhotoControl
-          disabled={!photoSupported}
-          onChange={onPhotoChange}
-          photoUrl={photoUrl}
-        />
-        {photoSupported ? null : (
-          <p className="caption-micro mt-2">
-            {themeLabel} theme has no room for a photo
-          </p>
-        )}
-        {photoExtras}
-      </ControlBlock>
-
-      {slotAfterPhoto}
 
       <Accordion
         className="border-foreground/10 border-t"
@@ -308,43 +312,36 @@ export function ActivityControls({
         ) : null}
       </Accordion>
 
-      <ControlBlock label="ACCENT">
-        <div className="mt-2.5 flex flex-wrap items-center gap-2">
-          <ToggleGroup
-            aria-label="Accent colour"
-            className="flex flex-wrap gap-2"
-            onValueChange={(values) => {
-              if (values[0]) {
-                onAccentChange(values[0]);
-              }
+      {/* Activity metadata — least-touched, so it sits at the bottom. */}
+      <ControlBlock label="ACTIVITY">
+        <div className="mt-2 flex flex-col gap-4">
+          <Select
+            onValueChange={(v) => onSportChange(v as Sport)}
+            value={data.sport}
+          >
+            <SelectTrigger aria-label="Sport" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SPORT_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <DetailField
+            hint="Saved on this device"
+            id={athleteId}
+            label="Athlete name"
+            onChange={onAthleteNameChange}
+            placeholder="Add your name"
+            toggle={{
+              checked: visibility.athleteName,
+              onChange: (c) => set("athleteName", c),
             }}
-            spacing={2}
-            value={[accent]}
-          >
-            {ACCENTS.map((c) => (
-              <ToggleGroupItem
-                aria-label={`Accent ${c}`}
-                className={cn(
-                  "size-8 rounded-full border-2 border-transparent p-0 ring-foreground ring-offset-2 ring-offset-background transition-transform",
-                  "data-[state=on]:scale-110 data-[state=on]:border-background data-[state=on]:ring-2"
-                )}
-                key={c}
-                style={{ background: c }}
-                value={c}
-              />
-            ))}
-          </ToggleGroup>
-          <Button
-            className="ml-auto"
-            disabled={accent === defaultAccent}
-            onClick={() => onAccentChange(defaultAccent)}
-            size="sm"
-            type="button"
-            variant="ghost"
-          >
-            <RotateCcw className="size-3.5" />
-            Reset
-          </Button>
+            value={athleteName}
+          />
         </div>
       </ControlBlock>
     </>

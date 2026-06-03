@@ -1,7 +1,6 @@
 // Small path + altitude graphics for themes whose hero layer isn't already the
-// route or the elevation range (Exposure's photo is the hero; Press is type-led).
-// Two variants: "photo" (bare white lines with mono labels over the image) and
-// "print" (ink lines inside bordered paper cuts, newspaper-style).
+// route or the elevation range (Exposure's photo is the hero). Bare lines with
+// mono labels — borderless, so they sit cleanly over the image.
 
 import type { ActivityData } from "@/components/app/sample-data";
 import { pickProfile } from "@/lib/carousel/profile";
@@ -12,8 +11,6 @@ import { RouteLine } from "./route-line";
 export type DetailVizKind = "elevation" | "route";
 
 interface DetailVizProps {
-  /** box background for the print variant cut */
-  bg?: string;
   color: string;
   data: ActivityData;
   fonts: FontPair;
@@ -21,7 +18,6 @@ interface DetailVizProps {
   h?: number;
   kinds: DetailVizKind[];
   muted: string;
-  print?: boolean;
   /** chart width (px) */
   w?: number;
 }
@@ -80,8 +76,6 @@ export function DetailViz({
   color,
   muted,
   fonts,
-  print = false,
-  bg = "transparent",
   w = 320,
   h = 132,
 }: DetailVizProps) {
@@ -92,14 +86,7 @@ export function DetailViz({
   return (
     <div style={{ display: "flex", gap: 24 }}>
       {present.map((kind) => (
-        <div
-          key={kind}
-          style={{
-            background: print ? bg : "transparent",
-            border: print ? `1px solid ${muted}` : undefined,
-            padding: print ? "14px 16px" : 0,
-          }}
-        >
+        <div key={kind}>
           <div
             style={{
               fontFamily: fonts.mono,

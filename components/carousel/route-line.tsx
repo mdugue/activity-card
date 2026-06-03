@@ -1,9 +1,9 @@
-// Carousel route layer. Rounded caps/joins, a subtle drop-shadow, and a single
-// graphic finish marker — a checkered flag at the end of the line (no coloured
-// start/end dots; they read as generic GPS pins). Three styles: poster
-// (silhouette in theme ink), desaturated (accent line over a desaturated photo),
-// highlighter (accent→accent2 gradient). Fills whatever box it's given, so the
-// seamless canvas can hand it a wide viewBox and the line bleeds across edges.
+// Carousel route layer. Rounded caps/joins, a subtle drop-shadow, and a small,
+// understated direction arrow at the *start* of the line (no coloured GPS pins,
+// no finish flag — just a hint of which way the effort went). Three styles:
+// poster (silhouette in theme ink), desaturated (accent over a desaturated
+// photo), highlighter (accent→accent2 gradient). Fills whatever box it's given,
+// so the seamless canvas can hand it a wide viewBox that bleeds across edges.
 
 import { useId } from "react";
 import type { Coord } from "@/components/app/sample-data";
@@ -27,62 +27,39 @@ interface RouteLineProps {
   w: number;
 }
 
-/** A small checkered finish flag anchored at the end point. Monochrome (filled
- *  squares in `color`, gaps transparent) so it reads as a checker on any
- *  background and matches the theme ink. */
-function FinishFlag({
-  x,
-  y,
-  unit,
+/** A small arrowhead at the first point, oriented along the initial heading —
+ *  a quiet "started here, went this way" cue. */
+function StartArrow({
+  points,
+  size,
   color,
 }: {
   color: string;
-  unit: number;
-  x: number;
-  y: number;
+  points: Coord[];
+  size: number;
 }) {
-  const cols = 3;
-  const rows = 2;
-  const flagW = cols * unit;
-  const flagH = rows * unit;
-  const poleH = flagH + unit * 1.6;
-  const top = y - poleH;
-  const squares: React.ReactNode[] = [];
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      if ((r + c) % 2 === 0) {
-        squares.push(
-          <rect
-            height={unit}
-            key={`${r}-${c}`}
-            width={unit}
-            x={x + c * unit}
-            y={top + r * unit}
-          />
-        );
-      }
+  if (points.length < 2) {
+    return null;
+  }
+  const [sx, sy] = points[0];
+  // Look a little down the line for a stable heading (skip jitter at the start).
+  let [ax, ay] = points[1];
+  for (let i = 1; i < points.length; i++) {
+    const dx = points[i][0] - sx;
+    const dy = points[i][1] - sy;
+    if (Math.hypot(dx, dy) > size * 1.6) {
+      ax = points[i][0];
+      ay = points[i][1];
+      break;
     }
   }
+  const angle = (Math.atan2(ay - sy, ax - sx) * 180) / Math.PI;
+  const len = size;
+  const half = size * 0.6;
+  const tri = `${len},0 ${-len * 0.45},${-half} ${-len * 0.45},${half}`;
   return (
-    <g fill={color} stroke="none">
-      {/* pole */}
-      <rect
-        height={poleH}
-        width={Math.max(2, unit * 0.32)}
-        x={x - Math.max(2, unit * 0.32)}
-        y={top}
-      />
-      {/* checker field outline keeps the empty squares legible */}
-      <rect
-        fill="none"
-        height={flagH}
-        stroke={color}
-        strokeWidth={Math.max(1, unit * 0.18)}
-        width={flagW}
-        x={x}
-        y={top}
-      />
-      {squares}
+    <g transform={`translate(${sx} ${sy}) rotate(${angle})`}>
+      <polygon fill={color} opacity={0.9} points={tri} />
     </g>
   );
 }
@@ -102,7 +79,7 @@ export function RouteLine({
   stretch = false,
 }: RouteLineProps) {
   const gradId = useId();
-  const { d, end } = projectRoute(coords, w, h, pad, stretch);
+  const { d, points } = projectRoute(coords, w, h, pad, stretch);
   if (!d) {
     return null;
   }
@@ -118,7 +95,7 @@ export function RouteLine({
     ? "drop-shadow(0 2px 12px rgba(0,0,0,0.55))"
     : "drop-shadow(0 3px 8px rgba(0,0,0,0.18))";
 
-  const flagUnit = Math.max(6, strokeWidth * 1.5);
+  const arrowSize = Math.max(9, strokeWidth * 2.1);
 
   return (
     <svg
@@ -160,9 +137,9 @@ export function RouteLine({
         style={{ filter: shadow }}
       />
 
-      {showMarkers && end ? (
+      {showMarkers ? (
         <g style={{ filter: shadow }}>
-          <FinishFlag color={ink} unit={flagUnit} x={end[0]} y={end[1]} />
+          <StartArrow color={ink} points={points} size={arrowSize} />
         </g>
       ) : null}
     </svg>
