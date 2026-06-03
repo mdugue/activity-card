@@ -124,7 +124,7 @@ export async function exportCarousel(
   await deliver(maybeFiles.filter((f): f is File => f !== null));
 }
 
-/** "effort_ride_20260518_carousel" — slide index is appended at export. */
+/** "effort_ride_2026-05-18_carousel" — slide index is appended at export. */
 export function carouselBaseName(sport: string, date: string): string {
   return `effort_${sport}_${effortDateSlug(date)}_carousel`;
 }

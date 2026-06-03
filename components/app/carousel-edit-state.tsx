@@ -71,6 +71,7 @@ export function CarouselEditState(props: CarouselEditStateProps) {
     theme,
     photoUrl,
     imageTransform,
+    onImageTransformChange,
     photoEffects,
     photoPaletteTheme,
   } = props;
@@ -121,6 +122,42 @@ export function CarouselEditState(props: CarouselEditStateProps) {
       setAdjusting(false);
     }
   }, [adjusting, adjustAvailable]);
+
+  // Keep the saved transform within the current cover bounds. Its inputs change
+  // with deck length (strip width) and rotation (which swaps the photo's
+  // width/height); the adjust overlay only clamps live gestures, so without
+  // this a pan tuned for one geometry could reveal strip edges — and export
+  // wrong framing — after switching decks or rotating.
+  useEffect(() => {
+    if (!imageSize) {
+      return;
+    }
+    const clamped = clampCoverTransform(
+      imageTransform,
+      stripW,
+      1350,
+      quarter ? imageSize.h : imageSize.w,
+      quarter ? imageSize.w : imageSize.h
+    );
+    if (
+      clamped.x !== imageTransform.x ||
+      clamped.y !== imageTransform.y ||
+      clamped.scale !== imageTransform.scale
+    ) {
+      onImageTransformChange(clamped);
+    }
+  }, [imageSize, stripW, quarter, imageTransform, onImageTransformChange]);
+
+  // Clear a pending settle debounce on unmount so a late timer can't select a
+  // slide after the editor is gone (e.g. after a mode switch).
+  useEffect(
+    () => () => {
+      if (settleTimer.current) {
+        clearTimeout(settleTimer.current);
+      }
+    },
+    []
+  );
 
   // Scroll the preview window to the selected slide when selection changes
   // from elsewhere (thumbnail click, add/remove). Flag it as programmatic so
@@ -264,7 +301,7 @@ export function CarouselEditState(props: CarouselEditStateProps) {
           {adjusting ? (
             <ImageAdjustOverlay
               clamp={coverClamp}
-              onChange={props.onImageTransformChange}
+              onChange={onImageTransformChange}
               onDone={() => setAdjusting(false)}
               transform={imageTransform}
             />

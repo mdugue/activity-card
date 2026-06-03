@@ -119,9 +119,9 @@ export function buildStats(data: ActivityData): StatItem[] {
   return items;
 }
 
-/** The single most expressive stat for a Hero slide — distance for most
- *  sports, with elevation as the headline only when it dwarfs a short ride. */
+/** The headline stat for a Hero slide: the leading entry from `buildStats`
+ *  (distance for every current sport). A named accessor so callers don't reach
+ *  into `buildStats(data)[0]` directly. */
 export function heroStat(data: ActivityData): StatItem {
-  const stats = buildStats(data);
-  return stats[0];
+  return buildStats(data)[0];
 }
