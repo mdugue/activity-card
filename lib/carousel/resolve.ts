@@ -24,6 +24,7 @@ export interface EffectiveStyle {
   background: string;
   crossViz?: CrossViz;
   dark: boolean;
+  detailViz: boolean;
   elevation: ElevationColors;
   fonts: FontPair;
   heroLayer: HeroLayer;
@@ -80,6 +81,7 @@ export function resolveDeckStyle(
     ink: tokens.ink,
     mutedInk: tokens.mutedInk,
     dark: tokens.dark,
+    detailViz: tokens.detailViz,
     fonts: FONT_PAIRS[tokens.fontPair],
     routeStyle: tokens.routeStyle,
     heroLayer: tokens.heroLayer,

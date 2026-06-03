@@ -6,6 +6,7 @@
 import type { ActivityData } from "@/components/app/sample-data";
 import type { EffectiveStyle } from "@/lib/carousel/resolve";
 import type { StatItem } from "@/lib/carousel/stats";
+import type { Visibility } from "@/lib/visibility";
 
 export const SLIDE_PAD = 90;
 
@@ -24,6 +25,8 @@ export interface TemplateProps {
   stats: StatItem[];
   style: EffectiveStyle;
   total: number;
+  /** deck-wide element visibility (e.g. distance/time for summaries) */
+  visibility: Visibility;
 }
 
 export interface SlideTextColors {

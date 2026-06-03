@@ -18,13 +18,13 @@ import { SLIDE_H, SLIDE_W, type Slide } from "@/lib/carousel/types";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme } from "@/lib/palette";
 import { filterCss, NO_EFFECTS, type PhotoEffects } from "@/lib/photo-effects";
+import { DEFAULT_VISIBILITY, type Visibility } from "@/lib/visibility";
 import { CarouselPhoto } from "./carousel-photo";
 import { CrossViz } from "./cross-viz";
 import { ElevationBand } from "./elevation-band";
 import { FramePanel } from "./panels/frame-panel";
 import { PressPanel } from "./panels/press-panel";
 import { RouteLine } from "./route-line";
-import { SegmentsTimeline } from "./segments-timeline";
 import { TEMPLATES } from "./templates";
 import type { TemplateProps } from "./templates/shared";
 
@@ -50,12 +50,10 @@ interface SeamlessCanvasProps {
   photoEffects?: PhotoEffects;
   photoTheme?: PaletteTheme | null;
   photoUrl?: string | null;
-  /** print the "made with effort" mark on the wrap-up slide */
-  showEffort?: boolean;
-  /** print the "01 / 04" slide index on every slide */
-  showPageNumber?: boolean;
   slides: Slide[];
   theme: CarouselThemeId;
+  /** deck-wide element visibility (toggled in the sidebar) */
+  visibility?: Visibility;
 }
 
 export function SeamlessCanvas({
@@ -68,8 +66,7 @@ export function SeamlessCanvas({
   imageSize = null,
   photoEffects = NO_EFFECTS,
   photoTheme = null,
-  showEffort = false,
-  showPageNumber = false,
+  visibility = DEFAULT_VISIBILITY,
 }: SeamlessCanvasProps) {
   const total = slides.length;
   const width = total * SLIDE_W;
@@ -85,21 +82,16 @@ export function SeamlessCanvas({
   const photoFilter = filterCss(photoEffects.filter);
 
   const { profile, mode: profileMode } = pickProfile(data);
-  const hasSegments = (data.segments?.length ?? 0) >= 2;
 
   const showElevationHero =
     style.heroLayer === "elevation" && (profile?.length ?? 0) > 1;
-  const showSegmentsHero = style.heroLayer === "segments" && hasSegments;
-  // Route is the hero for route themes, and the fallback for a Relay deck with
-  // no real segments.
-  const showRouteHero =
-    style.heroLayer === "route" ||
-    (style.heroLayer === "segments" && !hasSegments);
+  const showRouteHero = style.heroLayer === "route";
 
   const heroInk = showPhoto && style.dark ? "#ffffff" : style.ink;
 
-  const slidePlan = planSlideStats(data, slides, style);
-  const hero = heroStat(data, style.heroMetric);
+  const statOpts = { distance: visibility.distance, time: visibility.time };
+  const slidePlan = planSlideStats(data, slides, style, statOpts);
+  const hero = heroStat(data, style.heroMetric, statOpts);
 
   return (
     <div
@@ -174,18 +166,6 @@ export function SeamlessCanvas({
         </div>
       ) : null}
 
-      {showSegmentsHero ? (
-        <SegmentsTimeline
-          accent={style.accent}
-          accent2={style.accent2}
-          data={data}
-          ink={style.ink}
-          monoFont={style.fonts.mono}
-          mutedInk={style.mutedInk}
-          numeralFont={style.fonts.numeral}
-        />
-      ) : null}
-
       {showRouteHero ? (
         <div
           style={{
@@ -235,11 +215,12 @@ export function SeamlessCanvas({
               hasPhoto={showPhoto}
               hero={hero}
               index={i}
-              showEffort={showEffort}
-              showPageNumber={showPageNumber}
+              showEffort={visibility.showEffort}
+              showPageNumber={visibility.showPageNumber}
               stats={slidePlan[i]}
               style={style}
               total={total}
+              visibility={visibility}
             />
             {isLast && style.crossViz ? (
               <div style={{ position: "absolute", top: 168, right: 70 }}>

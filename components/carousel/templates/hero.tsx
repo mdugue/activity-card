@@ -25,22 +25,24 @@ export function HeroSlide({
 
   const block = (
     <div style={{ marginTop: anchor === "top" ? 56 : 0 }}>
-      <h1
-        style={{
-          fontFamily: style.fonts.display,
-          fontWeight: style.fonts.displayWeight,
-          fontSize: 92,
-          lineHeight: 0.96,
-          letterSpacing: "-0.01em",
-          margin: 0,
-          color: colors.fg,
-          textWrap: "pretty",
-          maxWidth: "92%",
-          textShadow: colors.shadow || undefined,
-        }}
-      >
-        {data.title}
-      </h1>
+      {data.title ? (
+        <h1
+          style={{
+            fontFamily: style.fonts.display,
+            fontWeight: style.fonts.displayWeight,
+            fontSize: 92,
+            lineHeight: 0.96,
+            letterSpacing: "-0.01em",
+            margin: 0,
+            color: colors.fg,
+            textWrap: "pretty",
+            maxWidth: "92%",
+            textShadow: colors.shadow || undefined,
+          }}
+        >
+          {data.title}
+        </h1>
+      ) : null}
       {data.location ? (
         <div
           style={{

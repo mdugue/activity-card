@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { enterEditViaUpload, selectTheme } from "./helpers";
+import { enterEditViaUpload, selectSingleCard, selectTheme } from "./helpers";
 
 const THEMES = [
   "PATH",
@@ -14,6 +14,7 @@ const THEMES = [
 test.describe("themes", () => {
   test.beforeEach(async ({ page }) => {
     await enterEditViaUpload(page);
+    await selectSingleCard(page);
   });
 
   for (const theme of THEMES) {

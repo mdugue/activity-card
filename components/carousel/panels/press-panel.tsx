@@ -6,6 +6,7 @@
 import type { ActivityData } from "@/components/app/sample-data";
 import type { EffectiveStyle } from "@/lib/carousel/resolve";
 import { formatDateUpper } from "@/lib/format";
+import { DetailViz, type DetailVizKind } from "../detail-viz";
 import {
   SLIDE_PAD,
   slideNumber,
@@ -104,14 +105,226 @@ function Masthead({
   );
 }
 
+interface SpreadProps {
+  data: ActivityData;
+  hasPhoto: boolean;
+  ink: string;
+  muted: string;
+  paper: string;
+  stats: TemplateProps["stats"];
+  style: EffectiveStyle;
+}
+
+function FrontPage({
+  data,
+  style,
+  ink,
+  muted,
+  paper,
+  hasPhoto,
+  stats,
+}: SpreadProps) {
+  const lead = stats[0];
+  return (
+    <Slab
+      bg={paper}
+      extra={{ marginTop: hasPhoto ? 0 : 40 }}
+      fg={ink}
+      onPhoto={hasPhoto}
+    >
+      {data.title ? (
+        <h1
+          style={{
+            fontFamily: style.fonts.display,
+            fontWeight: style.fonts.displayWeight,
+            fontSize: 104,
+            lineHeight: 0.92,
+            letterSpacing: "-0.02em",
+            margin: 0,
+            color: ink,
+            textWrap: "balance",
+          }}
+        >
+          {data.title}
+        </h1>
+      ) : null}
+      {data.location ? (
+        <div
+          style={{
+            marginTop: 22,
+            fontFamily: style.fonts.mono,
+            fontSize: 22,
+            letterSpacing: "0.16em",
+            color: style.accent,
+          }}
+        >
+          {data.location.toUpperCase()}
+        </div>
+      ) : null}
+      <p
+        style={{
+          marginTop: 30,
+          fontFamily: style.fonts.display,
+          fontWeight: style.fonts.displayWeight,
+          fontSize: 40,
+          lineHeight: 1.28,
+          color: ink,
+          columnCount: 2,
+          columnGap: 44,
+          columnRule: `1px solid ${muted}`,
+          textIndent: 0,
+          margin: "30px 0 0 0",
+        }}
+      >
+        <span
+          style={{
+            float: "left",
+            fontSize: 132,
+            lineHeight: 0.74,
+            paddingRight: 14,
+            color: style.accent,
+            fontFamily: style.fonts.display,
+          }}
+        >
+          {lead?.value.charAt(0)}
+        </span>
+        {`${lead?.value} ${lead?.unit} logged — ${stats
+          .slice(1, 3)
+          .map((s) => `${s.value}${s.unit ? ` ${s.unit}` : ""}`)
+          .join(", ")}. A ${data.sport} worth printing.`}
+      </p>
+    </Slab>
+  );
+}
+
+function Spread({
+  data,
+  style,
+  ink,
+  muted,
+  paper,
+  hasPhoto,
+  stats,
+  index,
+}: SpreadProps & { index: number }) {
+  const lead = stats[0];
+  return (
+    <Slab
+      bg={paper}
+      extra={{ marginTop: "auto", marginBottom: "auto" }}
+      fg={ink}
+      onPhoto={hasPhoto}
+    >
+      <div
+        style={{
+          fontFamily: style.fonts.mono,
+          fontSize: 22,
+          letterSpacing: "0.24em",
+          color: style.accent,
+        }}
+      >
+        {lead?.label}
+      </div>
+      <div
+        style={{
+          fontFamily: style.fonts.numeral,
+          fontWeight: style.fonts.numeralWeight,
+          fontSize: 240,
+          lineHeight: 0.8,
+          color: ink,
+          fontVariantNumeric: "tabular-nums",
+          marginTop: 16,
+        }}
+      >
+        {lead?.value}
+        <span
+          style={{
+            fontFamily: style.fonts.display,
+            fontSize: 56,
+            fontStyle: "italic",
+          }}
+        >
+          {lead?.unit ? ` ${lead.unit}` : ""}
+        </span>
+      </div>
+      <div
+        aria-hidden
+        style={{ height: 3, background: ink, marginTop: 28, width: "60%" }}
+      />
+      {style.detailViz ? (
+        <div style={{ marginTop: 34 }}>
+          <DetailViz
+            bg={paper}
+            color={ink}
+            data={data}
+            fonts={style.fonts}
+            h={120}
+            kinds={[index === 1 ? "route" : "elevation"] as DetailVizKind[]}
+            muted={muted}
+            print
+            w={360}
+          />
+        </div>
+      ) : null}
+    </Slab>
+  );
+}
+
+function Byline({
+  data,
+  style,
+  ink,
+  muted,
+  paper,
+  hasPhoto,
+  showEffort,
+}: SpreadProps & { showEffort: boolean }) {
+  return (
+    <Slab bg={paper} extra={{ marginTop: "auto" }} fg={ink} onPhoto={hasPhoto}>
+      {data.athleteName ? (
+        <div
+          style={{
+            fontFamily: style.fonts.display,
+            fontWeight: style.fonts.displayWeight,
+            fontStyle: "italic",
+            fontSize: 64,
+            color: ink,
+          }}
+        >
+          — {data.athleteName}
+        </div>
+      ) : null}
+      <div
+        style={{
+          marginTop: data.athleteName ? 18 : 0,
+          fontFamily: style.fonts.mono,
+          fontSize: 19,
+          letterSpacing: "0.22em",
+          color: muted,
+          borderTop: `1px solid ${muted}`,
+          paddingTop: 18,
+        }}
+      >
+        {showEffort ? "PRINTED WITH EFFORT · " : ""}
+        {formatDateUpper(data.date)}
+      </div>
+    </Slab>
+  );
+}
+
 export function PressPanel(props: TemplateProps) {
   const { data, style, hasPhoto, index, total, stats, showEffort } = props;
   const isFirst = index === 0;
   const isLast = index === total - 1;
-  const paper = style.background;
-  const ink = style.ink;
-  const muted = style.mutedInk;
-  const lead = stats[0];
+  const shared: SpreadProps = {
+    data,
+    style,
+    hasPhoto,
+    stats,
+    ink: style.ink,
+    muted: style.mutedInk,
+    paper: style.background,
+  };
 
   return (
     <div
@@ -127,165 +340,16 @@ export function PressPanel(props: TemplateProps) {
       <Masthead
         data={data}
         index={index}
-        ink={ink}
+        ink={style.ink}
         onPhoto={hasPhoto}
-        paper={paper}
+        paper={style.background}
         showPageNumber={props.showPageNumber}
         style={style}
         total={total}
       />
-
-      {isFirst ? (
-        <Slab
-          bg={paper}
-          extra={{ marginTop: hasPhoto ? 0 : 40 }}
-          fg={ink}
-          onPhoto={hasPhoto}
-        >
-          <h1
-            style={{
-              fontFamily: style.fonts.display,
-              fontWeight: style.fonts.displayWeight,
-              fontSize: 104,
-              lineHeight: 0.92,
-              letterSpacing: "-0.02em",
-              margin: 0,
-              color: ink,
-              textWrap: "balance",
-            }}
-          >
-            {data.title}
-          </h1>
-          {data.location ? (
-            <div
-              style={{
-                marginTop: 22,
-                fontFamily: style.fonts.mono,
-                fontSize: 22,
-                letterSpacing: "0.16em",
-                color: style.accent,
-              }}
-            >
-              {data.location.toUpperCase()}
-            </div>
-          ) : null}
-          <p
-            style={{
-              marginTop: 30,
-              fontFamily: style.fonts.display,
-              fontWeight: style.fonts.displayWeight,
-              fontSize: 40,
-              lineHeight: 1.28,
-              color: ink,
-              columnCount: 2,
-              columnGap: 44,
-              columnRule: `1px solid ${muted}`,
-              textIndent: 0,
-              margin: "30px 0 0 0",
-            }}
-          >
-            <span
-              style={{
-                float: "left",
-                fontSize: 132,
-                lineHeight: 0.74,
-                paddingRight: 14,
-                color: style.accent,
-                fontFamily: style.fonts.display,
-              }}
-            >
-              {lead?.value.charAt(0)}
-            </span>
-            {`${lead?.value} ${lead?.unit} logged — ${stats
-              .slice(1, 3)
-              .map((s) => `${s.value}${s.unit ? ` ${s.unit}` : ""}`)
-              .join(", ")}. A ${data.sport} worth printing.`}
-          </p>
-        </Slab>
-      ) : null}
-
-      {isFirst || isLast ? null : (
-        <Slab
-          bg={paper}
-          extra={{ marginTop: "auto", marginBottom: "auto" }}
-          fg={ink}
-          onPhoto={hasPhoto}
-        >
-          <div
-            style={{
-              fontFamily: style.fonts.mono,
-              fontSize: 22,
-              letterSpacing: "0.24em",
-              color: style.accent,
-            }}
-          >
-            {lead?.label}
-          </div>
-          <div
-            style={{
-              fontFamily: style.fonts.numeral,
-              fontWeight: style.fonts.numeralWeight,
-              fontSize: 240,
-              lineHeight: 0.8,
-              color: ink,
-              fontVariantNumeric: "tabular-nums",
-              marginTop: 16,
-            }}
-          >
-            {lead?.value}
-            <span
-              style={{
-                fontFamily: style.fonts.display,
-                fontSize: 56,
-                fontStyle: "italic",
-              }}
-            >
-              {lead?.unit ? ` ${lead.unit}` : ""}
-            </span>
-          </div>
-          <div
-            aria-hidden
-            style={{ height: 3, background: ink, marginTop: 28, width: "60%" }}
-          />
-        </Slab>
-      )}
-
-      {isLast ? (
-        <Slab
-          bg={paper}
-          extra={{ marginTop: "auto" }}
-          fg={ink}
-          onPhoto={hasPhoto}
-        >
-          {data.athleteName ? (
-            <div
-              style={{
-                fontFamily: style.fonts.display,
-                fontWeight: style.fonts.displayWeight,
-                fontStyle: "italic",
-                fontSize: 64,
-                color: ink,
-              }}
-            >
-              — {data.athleteName}
-            </div>
-          ) : null}
-          <div
-            style={{
-              marginTop: data.athleteName ? 18 : 0,
-              fontFamily: style.fonts.mono,
-              fontSize: 19,
-              letterSpacing: "0.22em",
-              color: muted,
-              borderTop: `1px solid ${muted}`,
-              paddingTop: 18,
-            }}
-          >
-            {showEffort ? "PRINTED WITH EFFORT · " : ""}
-            {formatDateUpper(data.date)}
-          </div>
-        </Slab>
-      ) : null}
+      {isFirst ? <FrontPage {...shared} /> : null}
+      {isFirst || isLast ? null : <Spread {...shared} index={index} />}
+      {isLast ? <Byline {...shared} showEffort={showEffort} /> : null}
     </div>
   );
 }

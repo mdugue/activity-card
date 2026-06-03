@@ -4,6 +4,7 @@
 // the top. Stats are pre-assigned per slide by the deck planner, so StatRow and
 // StatGrid just lay out whatever they're handed.
 
+import { DetailViz } from "../detail-viz";
 import { Stat } from "../stat-block";
 import { MetaBand } from "./parts";
 import {
@@ -40,6 +41,20 @@ export function StatLayout({
 
   const group = (
     <div>
+      {/* Themes whose hero isn't the route/elevation (Exposure) show small path
+          + altitude graphics here so those dimensions still read. */}
+      {style.detailViz ? (
+        <div style={{ marginBottom: 40 }}>
+          <DetailViz
+            color={colors.fg}
+            data={data}
+            fonts={style.fonts}
+            kinds={["route", "elevation"]}
+            muted={colors.muted}
+            w={300}
+          />
+        </div>
+      ) : null}
       <div
         aria-hidden
         style={{
@@ -49,21 +64,23 @@ export function StatLayout({
           marginBottom: 18,
         }}
       />
-      <h2
-        style={{
-          fontFamily: style.fonts.display,
-          fontWeight: style.fonts.displayWeight,
-          fontSize: titleSize,
-          lineHeight: 0.98,
-          margin: "0 0 44px 0",
-          color: colors.fg,
-          maxWidth: "88%",
-          textWrap: "pretty",
-          textShadow: colors.shadow || undefined,
-        }}
-      >
-        {data.title}
-      </h2>
+      {data.title ? (
+        <h2
+          style={{
+            fontFamily: style.fonts.display,
+            fontWeight: style.fonts.displayWeight,
+            fontSize: titleSize,
+            lineHeight: 0.98,
+            margin: "0 0 44px 0",
+            color: colors.fg,
+            maxWidth: "88%",
+            textWrap: "pretty",
+            textShadow: colors.shadow || undefined,
+          }}
+        >
+          {data.title}
+        </h2>
+      ) : null}
 
       <div
         style={{

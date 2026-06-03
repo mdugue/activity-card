@@ -12,7 +12,6 @@ import { ArrowsOutCardinalIcon, ImagesIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { SeamlessCanvas } from "@/components/carousel/seamless-canvas";
 import { Badge } from "@/components/ui/badge";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { CarouselController } from "@/hooks/use-carousel";
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
 import {
@@ -21,7 +20,6 @@ import {
   CAROUSEL_THEME_TOKENS,
   type CarouselThemeId,
 } from "@/lib/carousel/theme-tokens";
-import { DECK_META, DECK_ORDER, type DeckId } from "@/lib/carousel/types";
 import { carouselBaseName, exportCarousel } from "@/lib/export-carousel";
 import {
   clampCoverTransform,
@@ -32,7 +30,6 @@ import type { ParsedActivity } from "@/lib/parse-activity";
 import { isQuarterTurn, type PhotoEffects } from "@/lib/photo-effects";
 import type { Visibility } from "@/lib/visibility";
 import { ActivityControls } from "./activity-controls";
-import { ControlBlock, ToggleRow } from "./control-primitives";
 import { EditSidebar } from "./edit-sidebar";
 import { ImageAdjustOverlay } from "./image-adjust-overlay";
 import { PhotoEffectsControls } from "./photo-effects-controls";
@@ -43,6 +40,7 @@ import { ThemePicker } from "./theme-picker";
 interface CarouselEditStateProps {
   accent: string;
   athleteName: string;
+  available: Record<keyof Visibility, boolean>;
   carousel: CarouselController;
   data: ActivityData;
   imageTransform: ImageTransform;
@@ -63,6 +61,7 @@ interface CarouselEditStateProps {
   photoPaletteTheme: PaletteTheme | null;
   photoUrl: string | null;
   theme: CarouselThemeId;
+  title: string;
   visibility: Visibility;
 }
 
@@ -194,10 +193,9 @@ export function CarouselEditState(props: CarouselEditStateProps) {
     photoEffects,
     photoTheme: photoPaletteTheme,
     photoUrl,
-    showEffort: props.visibility.showEffort,
-    showPageNumber: props.visibility.showPageNumber,
     slides,
     theme,
+    visibility: props.visibility,
   };
 
   return (
@@ -288,42 +286,14 @@ export function CarouselEditState(props: CarouselEditStateProps) {
           photoTheme={photoPaletteTheme}
           photoUrl={photoUrl}
           selectedId={selectedId}
-          showEffort={props.visibility.showEffort}
-          showPageNumber={props.visibility.showPageNumber}
           slides={slides}
           theme={theme}
+          visibility={props.visibility}
         />
 
-        {/* Deck picker — choose the story length instead of editing slides. */}
-        <ToggleGroup
-          aria-label="Deck"
-          className="mx-auto flex gap-2"
-          onValueChange={(values) => {
-            if (values[0]) {
-              carousel.setDeck(values[0] as DeckId);
-            }
-          }}
-          spacing={2}
-          value={[carousel.deck]}
-          variant="outline"
-        >
-          {DECK_ORDER.map((id) => (
-            <ToggleGroupItem
-              aria-label={DECK_META[id].label}
-              className="flex h-auto flex-col items-start px-3 py-2 text-left"
-              key={id}
-              value={id}
-            >
-              <span className="font-heading text-sm uppercase leading-none">
-                {DECK_META[id].label}
-              </span>
-              <span className="caption-micro mt-1">{DECK_META[id].sub}</span>
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-
         {/* Theme selector — same control as Single Card, below the preview,
-            but showing the carousel-specific theme names. */}
+            but showing the carousel-specific theme names. The deck length is
+            fixed per theme, so there's no separate deck picker. */}
         <div className="mt-1 flex flex-col items-center">
           <ThemePicker
             labels={CAROUSEL_THEME_LABELS}
@@ -350,42 +320,11 @@ export function CarouselEditState(props: CarouselEditStateProps) {
         <ActivityControls
           accent={props.accent}
           athleteName={props.athleteName}
-          caps={{
-            usesAthleteName: true,
-            usesLocation: true,
-            usesHeartRate: true,
-            // No carousel theme renders splits, so don't offer a dead toggle.
-            usesSplits: false,
-            photoSupported,
-          }}
+          available={props.available}
           data={data}
-          displayToggles={
-            <ControlBlock label="CAROUSEL">
-              <div className="mt-3 flex flex-col gap-2.5">
-                <ToggleRow
-                  checked={props.visibility.showEffort}
-                  label="Made with Effort"
-                  onCheckedChange={(checked) =>
-                    props.onVisibilityChange({
-                      ...props.visibility,
-                      showEffort: checked,
-                    })
-                  }
-                />
-                <ToggleRow
-                  checked={props.visibility.showPageNumber}
-                  label="Page numbers"
-                  onCheckedChange={(checked) =>
-                    props.onVisibilityChange({
-                      ...props.visibility,
-                      showPageNumber: checked,
-                    })
-                  }
-                />
-              </div>
-            </ControlBlock>
-          }
+          defaultAccent={CAROUSEL_THEME_TOKENS[theme].accent}
           location={props.location}
+          mode="carousel"
           onAccentChange={props.onAccentChange}
           onAthleteNameChange={props.onAthleteNameChange}
           onLocationChange={props.onLocationChange}
@@ -402,8 +341,10 @@ export function CarouselEditState(props: CarouselEditStateProps) {
               />
             ) : null
           }
+          photoSupported={photoSupported}
           photoUrl={photoUrl}
           themeLabel={CAROUSEL_THEME_LABELS[theme].label}
+          title={props.title}
           visibility={props.visibility}
         />
       </EditSidebar>

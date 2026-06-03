@@ -69,7 +69,7 @@ describe("buildStats", () => {
 
 describe("planStandardStats", () => {
   test("intro headlines the hero; detail slides never repeat it", () => {
-    const slides = buildDeck("4");
+    const slides = buildDeck(["hero", "statRow", "statGrid", "editorial"]);
     const plan = planStandardStats(SAMPLE_RIDE, slides, "distance");
     expect(plan).toHaveLength(slides.length);
     // intro slide → only the hero stat
@@ -84,7 +84,7 @@ describe("planStandardStats", () => {
   });
 
   test("a ride's detail slides include power (watts)", () => {
-    const slides = buildDeck("4");
+    const slides = buildDeck(["hero", "statRow", "statGrid", "editorial"]);
     const plan = planStandardStats(SAMPLE_RIDE, slides, "distance");
     const keys = plan.flat().map((s) => s.key);
     expect(keys).toContain("power");

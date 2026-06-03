@@ -16,9 +16,13 @@ export function EditorialSlide({
   hero,
   showEffort,
   showPageNumber,
+  visibility,
 }: TemplateProps) {
   const colors = slideText(style, hasPhoto);
-  const summary = buildStats(data)
+  const summary = buildStats(data, {
+    distance: visibility.distance,
+    time: visibility.time,
+  })
     .slice(0, 3)
     .map((s) => `${s.value}${s.unit ? ` ${s.unit}` : ""}`)
     .join("  ·  ");
@@ -52,23 +56,25 @@ export function EditorialSlide({
             marginBottom: 30,
           }}
         />
-        <h1
-          style={{
-            fontFamily: style.fonts.display,
-            fontWeight: style.fonts.displayWeight,
-            fontStyle: "italic",
-            fontSize: 96,
-            lineHeight: 0.92,
-            letterSpacing: "-0.015em",
-            margin: 0,
-            color: colors.fg,
-            textWrap: "balance",
-            maxWidth: "95%",
-            textShadow: colors.shadow || undefined,
-          }}
-        >
-          {data.title}
-        </h1>
+        {data.title ? (
+          <h1
+            style={{
+              fontFamily: style.fonts.display,
+              fontWeight: style.fonts.displayWeight,
+              fontStyle: "italic",
+              fontSize: 96,
+              lineHeight: 0.92,
+              letterSpacing: "-0.015em",
+              margin: 0,
+              color: colors.fg,
+              textWrap: "balance",
+              maxWidth: "95%",
+              textShadow: colors.shadow || undefined,
+            }}
+          >
+            {data.title}
+          </h1>
+        ) : null}
         <div
           style={{
             marginTop: 28,

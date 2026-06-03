@@ -187,7 +187,7 @@ function FrameSignature({
           textShadow: c.shadow || undefined,
         }}
       >
-        {data.title}
+        {data.title || style.label}
       </h1>
       <Rule color={c.fg} />
       {showEffort || data.athleteName ? (

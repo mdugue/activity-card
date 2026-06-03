@@ -33,6 +33,7 @@ import type { ParsedActivity } from "@/lib/parse-activity";
 import { NO_EFFECTS, type PhotoEffects } from "@/lib/photo-effects";
 import {
   applyVisibility,
+  availableVisibility,
   DEFAULT_VISIBILITY,
   type Visibility,
 } from "@/lib/visibility";
@@ -118,8 +119,9 @@ export default function Home() {
   const [visibility, setVisibility] = useState<Visibility>(DEFAULT_VISIBILITY);
   const [altitudeMood, setAltitudeMood] = useState<AltitudeMood>("night");
   const [photoMood, setPhotoMood] = useState<PhotoMood>("vibrant");
-  const [mode, setMode] = useState<CardMode>("single");
-  const carousel = useCarousel();
+  // Carousel is the headline mode, so it's the default for a fresh session.
+  const [mode, setMode] = useState<CardMode>("carousel");
+  const carousel = useCarousel(carouselTheme);
   // Held outside `data` so it survives between activities and can seed
   // `adoptParsed` when the parsed file lacks an athlete name.
   const persistedAthleteNameRef = useRef<string | undefined>(undefined);
@@ -395,6 +397,7 @@ export default function Home() {
             <CarouselEditState
               accent={accent}
               athleteName={data.athleteName}
+              available={availableVisibility(data)}
               carousel={carousel}
               data={visibleData}
               imageTransform={imageTransform}
@@ -415,6 +418,7 @@ export default function Home() {
               photoPaletteTheme={photoPalette.theme}
               photoUrl={photoUrl}
               theme={carouselTheme}
+              title={data.title}
               visibility={visibility}
             />
           ) : (
@@ -422,6 +426,7 @@ export default function Home() {
               accent={accent}
               altitudeMood={altitudeMood}
               athleteName={data.athleteName}
+              available={availableVisibility(data)}
               data={visibleData}
               imageTransform={imageTransform}
               location={data.location}
@@ -444,6 +449,7 @@ export default function Home() {
               photoPaletteTheme={photoPalette.theme}
               photoUrl={photoUrl}
               theme={theme}
+              title={data.title}
               visibility={visibility}
             />
           )}

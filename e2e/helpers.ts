@@ -18,6 +18,16 @@ export async function selectTheme(page: Page, theme: string): Promise<void> {
 }
 
 /**
+ * Switch to Single Card mode. The app now defaults to Carousel, so single-card
+ * specs flip to it explicitly after entering the edit state.
+ */
+export async function selectSingleCard(page: Page): Promise<void> {
+  const button = page.getByRole("button", { name: /Single Card/i });
+  await button.click();
+  await expect(button).toHaveAttribute("aria-pressed", "true");
+}
+
+/**
  * Upload the default single-run fixture and wait for the edit state. Use
  * `enterEditViaUpload` for the common "clean session" path; call
  * `uploadActivity` directly when a test needs to keep localStorage state

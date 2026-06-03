@@ -4,18 +4,22 @@
  *
  *   heroLayer  — the element spanning the seamless strip:
  *                route (Trace) · elevation (Ascent) · photo (Exposure) ·
- *                segments (Relay) · none (Frame / Press)
+ *                none (Frame / Press)
  *   crossViz   — a small secondary glyph on the wrap-up slide
  *   panelKind  — how each slide is laid out:
  *                standard · frame (one big datum + sparkline) · press (broadsheet)
  *   heroMetric — which number headlines the intro slide (distance vs elevation)
+ *   deck       — the fixed slide sequence for this theme (length is per-theme:
+ *                most are 3, Frame and Press are 4)
+ *   detailViz  — render small path + altitude graphics on the detail slide(s)
+ *                (themes whose hero isn't already the route/elevation)
  *
  * Carousel themes have their OWN id space (`CarouselThemeId`), independent of the
  * Single Card `ThemeId`, so the carousel can grow its own families (e.g. the
  * Dawn/Dusk light·dark pairs) without being capped at the single-card count.
  */
 
-import type { FontPairId, RouteStyle } from "./types";
+import type { FontPairId, RouteStyle, SlideTemplate } from "./types";
 
 /** Carousel theme identifiers. Add new families here freely — nothing ties this
  *  to the single-card theme count. */
@@ -26,8 +30,7 @@ export type CarouselThemeId =
   | "ascentDusk"
   | "exposure"
   | "frame"
-  | "press"
-  | "relay";
+  | "press";
 
 export const DEFAULT_CAROUSEL_THEME: CarouselThemeId = "traceDawn";
 
@@ -51,7 +54,7 @@ export const FONT_PAIRS: Record<FontPairId, FontPair> = {
     numeralWeight: 600,
     mono: "var(--font-ibm-plex-mono), monospace",
   },
-  // Dark & bold — the Dusk pairs + Relay. Anton slab of condensed weight.
+  // Dark & bold — the Dusk pairs. Anton slab of condensed weight.
   bold: {
     display: "var(--font-heading), sans-serif",
     displayWeight: 400,
@@ -83,10 +86,15 @@ export interface ElevationColors {
   line: string;
 }
 
-export type HeroLayer = "elevation" | "none" | "photo" | "route" | "segments";
+export type HeroLayer = "elevation" | "none" | "photo" | "route";
 export type HeroMetric = "distance" | "elevation";
 export type PanelKind = "frame" | "press" | "standard";
 export type CrossViz = "elevation" | "route";
+
+// Most themes tell a tight three-beat story; Frame and Press earn a fourth beat
+// (an extra datum / spread).
+const DECK_3: SlideTemplate[] = ["hero", "statGrid", "editorial"];
+const DECK_4: SlideTemplate[] = ["hero", "statRow", "statGrid", "editorial"];
 
 export interface CarouselThemeTokens {
   accent: string;
@@ -96,10 +104,15 @@ export interface CarouselThemeTokens {
   crossViz?: CrossViz;
   /** true → slide background is dark, default text is light */
   dark: boolean;
+  /** fixed slide sequence for this theme */
+  deck: SlideTemplate[];
   /** photo filter preset applied by default when this theme is chosen */
   defaultFilter: string;
   /** film grain on by default for this theme */
   defaultGrain: boolean;
+  /** render small path + altitude graphics on the detail slide(s) — for themes
+   *  whose hero layer isn't already the route or the elevation range */
+  detailViz: boolean;
   elevation: ElevationColors;
   fontPair: FontPairId;
   heroLayer: HeroLayer;
@@ -141,6 +154,8 @@ export const CAROUSEL_THEME_TOKENS: Record<
     heroMetric: "distance",
     crossViz: "elevation",
     panelKind: "standard",
+    deck: DECK_3,
+    detailViz: false,
     photoSupported: true,
     usesPhotoPalette: false,
     defaultFilter: "fade",
@@ -164,6 +179,8 @@ export const CAROUSEL_THEME_TOKENS: Record<
     heroMetric: "distance",
     crossViz: "elevation",
     panelKind: "standard",
+    deck: DECK_3,
+    detailViz: false,
     photoSupported: true,
     usesPhotoPalette: false,
     defaultFilter: "noir",
@@ -187,6 +204,8 @@ export const CAROUSEL_THEME_TOKENS: Record<
     heroMetric: "elevation",
     crossViz: "route",
     panelKind: "standard",
+    deck: DECK_3,
+    detailViz: false,
     photoSupported: true,
     usesPhotoPalette: false,
     defaultFilter: "fade",
@@ -210,12 +229,15 @@ export const CAROUSEL_THEME_TOKENS: Record<
     heroMetric: "elevation",
     crossViz: "route",
     panelKind: "standard",
+    deck: DECK_3,
+    detailViz: false,
     photoSupported: true,
     usesPhotoPalette: false,
     defaultFilter: "noir",
     defaultGrain: false,
   },
-  // Exposure — full-bleed photo panorama, magazine masthead, thin route.
+  // Exposure — full-bleed photo panorama, magazine masthead. The route +
+  // elevation appear as small graphics on the detail slide (the photo is hero).
   exposure: {
     label: "EXPOSURE",
     tagline: "photo, full-bleed",
@@ -233,6 +255,8 @@ export const CAROUSEL_THEME_TOKENS: Record<
     heroMetric: "distance",
     crossViz: "route",
     panelKind: "standard",
+    deck: DECK_3,
+    detailViz: true,
     photoSupported: true,
     usesPhotoPalette: true,
     defaultFilter: "none",
@@ -255,12 +279,15 @@ export const CAROUSEL_THEME_TOKENS: Record<
     heroLayer: "none",
     heroMetric: "distance",
     panelKind: "frame",
+    deck: DECK_4,
+    detailViz: false,
     photoSupported: true,
     usesPhotoPalette: false,
     defaultFilter: "fade",
     defaultGrain: false,
   },
   // Press — editorial newspaper, serif headline, opaque print boxes over photo.
+  // Small print-style path/altitude cuts ride along the spreads.
   press: {
     label: "PRESS",
     tagline: "the broadsheet",
@@ -273,37 +300,16 @@ export const CAROUSEL_THEME_TOKENS: Record<
     onAccent: "#ffffff",
     fontPair: "magazine",
     routeStyle: "poster",
-    elevation: { line: "#b1281a", fillFrom: "#b1281a", fillTo: "#f2ece1" },
+    elevation: { line: "#14110d", fillFrom: "#14110d", fillTo: "#f2ece1" },
     heroLayer: "none",
     heroMetric: "distance",
     panelKind: "press",
+    deck: DECK_4,
+    detailViz: true,
     photoSupported: true,
     usesPhotoPalette: false,
     defaultFilter: "mono",
     defaultGrain: true,
-  },
-  // Relay — triathlon, swim→T1→bike→T2→run timeline spanning the strip.
-  relay: {
-    label: "RELAY",
-    tagline: "leg by leg",
-    dark: true,
-    background: "#0b1220",
-    ink: "#eef3f8",
-    mutedInk: "rgba(238,243,248,0.6)",
-    accent: "#34c3eb",
-    accent2: "#ffb43c",
-    onAccent: "#06080a",
-    fontPair: "bold",
-    routeStyle: "poster",
-    elevation: { line: "#34c3eb", fillFrom: "#34c3eb", fillTo: "#0b1220" },
-    heroLayer: "segments",
-    heroMetric: "distance",
-    crossViz: "elevation",
-    panelKind: "standard",
-    photoSupported: true,
-    usesPhotoPalette: false,
-    defaultFilter: "noir",
-    defaultGrain: false,
   },
 };
 
@@ -316,7 +322,6 @@ export const CAROUSEL_THEME_ORDER: CarouselThemeId[] = [
   "exposure",
   "frame",
   "press",
-  "relay",
 ];
 
 /** Carousel-facing label + tagline for the theme picker. */

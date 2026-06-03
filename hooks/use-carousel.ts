@@ -1,58 +1,51 @@
-// Carousel slide-state manager. The user chooses a deck (3 or 4 slides) rather
-// than adding/removing single slides; the slides are derived from the deck with
-// stable ids. This hook tracks the chosen deck and which slide is selected for
-// the preview. Styling is deck-wide and lives in app state (theme + accent).
+// Carousel slide-state manager. The deck (slide sequence + length) is fixed per
+// theme — most themes are 3 slides, Frame/Press are 4 — so the user doesn't pick
+// a deck; switching theme switches the deck. This hook derives the slides from
+// the chosen theme and tracks which slide is selected for the preview.
 
 import { useCallback, useState } from "react";
 import {
-  buildDeck,
-  DEFAULT_DECK,
-  type DeckId,
-  type Slide,
-} from "@/lib/carousel/types";
+  CAROUSEL_THEME_TOKENS,
+  type CarouselThemeId,
+} from "@/lib/carousel/theme-tokens";
+import { buildDeck, type Slide } from "@/lib/carousel/types";
 
 export interface CarouselController {
-  deck: DeckId;
   /** reset selection to the first slide (e.g. when a new activity loads) */
   regenerate: () => void;
   select: (id: string) => void;
   selectedId: string | null;
   selectedIndex: number;
-  setDeck: (deck: DeckId) => void;
   slides: Slide[];
 }
 
-export function useCarousel(): CarouselController {
-  const [deck, setDeckState] = useState<DeckId>(DEFAULT_DECK);
+export function useCarousel(theme: CarouselThemeId): CarouselController {
+  // Deterministic, so this is stable across renders without memoisation.
+  const slides = buildDeck(CAROUSEL_THEME_TOKENS[theme].deck);
   const [selectedId, setSelectedId] = useState<string | null>(
-    () => buildDeck(DEFAULT_DECK)[0]?.id ?? null
+    () => slides[0]?.id ?? null
   );
 
-  // Deterministic, so this is stable across renders without memoisation.
-  const slides = buildDeck(deck);
-
-  const setDeck = useCallback((next: DeckId) => {
-    setDeckState(next);
-    setSelectedId(buildDeck(next)[0]?.id ?? null);
-  }, []);
-
-  const select = useCallback((id: string) => setSelectedId(id), []);
-
-  const regenerate = useCallback(() => {
-    setSelectedId(buildDeck(deck)[0]?.id ?? null);
-  }, [deck]);
-
+  // Switching theme can change the deck, invalidating the stored selection;
+  // normalise to the first slide so downstream consumers never see a stale id.
+  const validId = slides.some((s) => s.id === selectedId)
+    ? selectedId
+    : (slides[0]?.id ?? null);
   const selectedIndex = Math.max(
     0,
-    slides.findIndex((s) => s.id === selectedId)
+    slides.findIndex((s) => s.id === validId)
+  );
+
+  const select = useCallback((id: string) => setSelectedId(id), []);
+  const regenerate = useCallback(
+    () => setSelectedId(slides[0]?.id ?? null),
+    [slides]
   );
 
   return {
-    deck,
     slides,
-    selectedId,
+    selectedId: validId,
     selectedIndex,
-    setDeck,
     select,
     regenerate,
   };

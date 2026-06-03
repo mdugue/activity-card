@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import { type Download, expect, type Page, test } from "@playwright/test";
 import { SOLID_MAGENTA_PNG_BASE64 } from "./fixtures";
-import { enterEditViaUpload, selectTheme } from "./helpers";
+import { enterEditViaUpload, selectSingleCard, selectTheme } from "./helpers";
 
 /**
  * Regression guard for the `cacheBust` blob-URL bug: html-to-image appended a
@@ -74,6 +74,7 @@ test("single-card Photo export embeds the uploaded background", async ({
   page,
 }) => {
   await enterEditViaUpload(page);
+  await selectSingleCard(page);
   await selectTheme(page, "PHOTO");
   await page.locator(PHOTO_INPUT).setInputFiles(MAGENTA_PHOTO);
   await expect(page.getByText(/Photo loaded/i)).toBeVisible();
@@ -90,8 +91,8 @@ test("single-card Photo export embeds the uploaded background", async ({
 test("carousel Exposure export embeds the uploaded background", async ({
   page,
 }) => {
+  // Carousel is the default mode, so uploading lands straight in it.
   await enterEditViaUpload(page);
-  await page.getByRole("button", { name: /Carousel/i }).click();
   await selectTheme(page, "EXPOSURE");
   await page.locator(PHOTO_INPUT).setInputFiles(MAGENTA_PHOTO);
   // The carousel only draws the photo once its natural size resolves; the

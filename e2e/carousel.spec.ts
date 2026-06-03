@@ -10,8 +10,8 @@ import { enterEditViaUpload } from "./helpers";
  */
 test.describe("carousel mode", () => {
   test.beforeEach(async ({ page }) => {
+    // Carousel is the default mode, so uploading lands straight in it.
     await enterEditViaUpload(page);
-    await page.getByRole("button", { name: /Carousel/i }).click();
   });
 
   test("generates a default storyboard and renders without page errors", async ({
@@ -20,11 +20,11 @@ test.describe("carousel mode", () => {
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
 
-    // Default deck → 4 slides (Intro · Details ×2 · Wrap-up).
-    await expect(page.getByText(/slide 1 \/ 4/i)).toBeVisible();
+    // Default theme (Trace Dawn) → a tight 3-slide deck.
+    await expect(page.getByText(/slide 1 \/ 3/i)).toBeVisible();
     await expect(
       page.getByRole("button", { name: /^Slide \d+:/i })
-    ).toHaveCount(4);
+    ).toHaveCount(3);
 
     await page.waitForTimeout(200);
     expect(errors).toEqual([]);
@@ -32,15 +32,18 @@ test.describe("carousel mode", () => {
 
   test("selecting a thumbnail moves the preview window", async ({ page }) => {
     await page.getByRole("button", { name: /^Slide 3:/i }).click();
-    await expect(page.getByText(/slide 3 \/ 4/i)).toBeVisible();
+    await expect(page.getByText(/slide 3 \/ 3/i)).toBeVisible();
   });
 
-  test("choosing a deck changes the slide count", async ({ page }) => {
-    await page.getByRole("button", { name: /3 slides/i }).click();
-    await expect(page.getByText(/slide 1 \/ 3/i)).toBeVisible();
+  test("deck length is fixed per theme (Frame → 4 slides)", async ({
+    page,
+  }) => {
+    await page.getByTestId("theme-picker-trigger").click();
+    await page.getByRole("button", { name: /^FRAME/i }).click();
     await expect(
       page.getByRole("button", { name: /^Slide \d+:/i })
-    ).toHaveCount(3);
+    ).toHaveCount(4);
+    await expect(page.getByText(/slide 1 \/ 4/i)).toBeVisible();
   });
 
   test("theme switches via the shared picker below the preview", async ({

@@ -65,11 +65,22 @@ function elevation(data: ActivityData): StatItem | null {
       };
 }
 
+/** Distance and time are the irreducible core of a card, so they're never
+ *  stripped from the data; the carousel honours their visibility here instead. */
+export interface StatOpts {
+  distance?: boolean;
+  time?: boolean;
+}
+
 /** Build the full ordered set of stats available for this activity. Items
  *  with no underlying data are omitted so templates never render a dash. The
  *  order is the storyboard priority — distance always leads. */
-export function buildStats(data: ActivityData): StatItem[] {
-  const items: StatItem[] = [distance(data)];
+export function buildStats(data: ActivityData, opts?: StatOpts): StatItem[] {
+  const items: StatItem[] = [];
+  if (opts?.distance ?? true) {
+    items.push(distance(data));
+  }
+  const dur = (opts?.time ?? true) ? duration(data) : null;
   const push = (item: StatItem | null) => {
     if (item) {
       items.push(item);
@@ -87,7 +98,7 @@ export function buildStats(data: ActivityData): StatItem[] {
       : { key, label, value: formatNumber(n, digits), unit };
 
   if (data.sport === "ride") {
-    push(duration(data));
+    push(dur);
     push(num("avgSpeed", "AVG SPEED", data.avgSpeedKmh, "km/h", 1));
     push(elevation(data));
     push(num("power", "POWER", data.normalizedPowerW, "W"));
@@ -106,7 +117,7 @@ export function buildStats(data: ActivityData): StatItem[] {
           }
         : null
     );
-    push(duration(data));
+    push(dur);
     push(elevation(data));
     push(num("avgHr", "AVG HR", data.avgHeartRate, "bpm"));
     push(num("cadence", "CADENCE", data.avgCadence, "spm"));
@@ -121,13 +132,13 @@ export function buildStats(data: ActivityData): StatItem[] {
           }
         : null
     );
-    push(duration(data));
+    push(dur);
     push(num("swolf", "SWOLF", data.swolf, ""));
     push(num("stroke", "STROKES", data.strokeCountAvg, "/lap"));
     push(num("avgHr", "AVG HR", data.avgHeartRate, "bpm"));
   } else {
-    // triathlon — overall summary; per-segment lives in the Relay timeline
-    push(duration(data));
+    // triathlon — overall summary; per-segment detail is a future theme.
+    push(dur);
     push(elevation(data));
     push(num("avgHr", "AVG HR", data.avgHeartRate, "bpm"));
   }
@@ -140,7 +151,8 @@ export function buildStats(data: ActivityData): StatItem[] {
  *  distance if the requested metric has no data. */
 export function heroStat(
   data: ActivityData,
-  metric: HeroMetric = "distance"
+  metric: HeroMetric = "distance",
+  opts?: StatOpts
 ): StatItem {
   if (metric === "elevation") {
     const el = elevation(data);
@@ -148,7 +160,8 @@ export function heroStat(
       return el;
     }
   }
-  return buildStats(data)[0];
+  // Falls back through the ordered set when the headline metric is hidden.
+  return buildStats(data, opts)[0] ?? distance(data);
 }
 
 /**
@@ -162,10 +175,11 @@ export function heroStat(
 export function planStandardStats(
   data: ActivityData,
   slides: Slide[],
-  metric: HeroMetric
+  metric: HeroMetric,
+  opts?: StatOpts
 ): StatItem[][] {
-  const all = buildStats(data);
-  const hero = heroStat(data, metric);
+  const all = buildStats(data, opts);
+  const hero = heroStat(data, metric, opts);
   const rest = all.filter((s) => s.key !== hero.key);
   let cursor = 0;
   const last = slides.length - 1;
@@ -204,11 +218,12 @@ const FRAME_PRIORITY: Record<ActivityData["sport"], string[]> = {
 export function planSlideStats(
   data: ActivityData,
   slides: Slide[],
-  style: EffectiveStyle
+  style: EffectiveStyle,
+  opts?: StatOpts
 ): StatItem[][] {
   const last = slides.length - 1;
   if (style.panelKind === "frame") {
-    const fs = frameStats(data);
+    const fs = frameStats(data, opts);
     return slides.map((_, i) => {
       if (i === last) {
         return [];
@@ -218,7 +233,7 @@ export function planSlideStats(
     });
   }
   if (style.panelKind === "press") {
-    const all = buildStats(data);
+    const all = buildStats(data, opts);
     const rest = all.slice(3);
     return slides.map((_, i) => {
       if (i === 0) {
@@ -230,11 +245,11 @@ export function planSlideStats(
       return rest[i - 1] ? [rest[i - 1]] : [];
     });
   }
-  return planStandardStats(data, slides, style.heroMetric);
+  return planStandardStats(data, slides, style.heroMetric, opts);
 }
 
-export function frameStats(data: ActivityData): StatItem[] {
-  const all = buildStats(data);
+export function frameStats(data: ActivityData, opts?: StatOpts): StatItem[] {
+  const all = buildStats(data, opts);
   const byKey = new Map(all.map((s) => [s.key, s]));
   const order = FRAME_PRIORITY[data.sport];
   const ordered: StatItem[] = [];
