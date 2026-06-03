@@ -40,7 +40,7 @@ bun dev          # local dev server
 bun build        # production build
 bun lint
 bun typecheck
-bun test         # unit tests (bun:test, scoped to ./lib)
+bun run test     # unit tests (bun:test, scoped to ./lib)
 bun run test:e2e # Playwright e2e
 ```
 
