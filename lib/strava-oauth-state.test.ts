@@ -93,6 +93,10 @@ describe("isAllowedBounceOrigin", () => {
       )
     ).toBe(true);
     // ...as is a hyphen-delimited preview hostname
+    expect(
+      isAllowedBounceOrigin(
+        "https://feature-x-myproject.vercel.app",
+        REGISTERED
       )
     ).toBe(true);
     // ...as is an exact match on the suffix itself.
