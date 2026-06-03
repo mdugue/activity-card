@@ -2,9 +2,10 @@ import { cn } from "@/lib/utils";
 
 /**
  * The Effort logo mark — an ascending line breaking into the accent square.
- * Mirrors `public`'s canonical `effort-mark` SVGs: ink ground, paper stroke,
- * rust square. Colours come from theme tokens so the same mark reads correctly
- * on paper (header) or ink (the claim panels' sign-off slide).
+ * Colours come from theme tokens: an ink ground, paper stroke, rust peak. On
+ * the paper header the ground reads as the mark's body; on an ink panel (the
+ * claim panels' sign-off slide) the ground blends and the paper stroke + rust
+ * peak carry it — the brand's dark-on-light / light-on-dark lockups.
  */
 export function EffortMark({ className }: { className?: string }) {
   return (

@@ -27,7 +27,7 @@ export function StravaConnectButton({
     <a
       aria-label="Connect with Strava"
       className={cn(
-        "inline-flex items-center justify-center rounded-md outline-none transition-all hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "inline-flex items-center justify-center rounded-md outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         className
       )}
       href="/api/strava/authorize"

@@ -199,25 +199,31 @@ export function EmptyState({
   const strava = useStravaConnection();
   const intro = useEmptyStateIntro();
   const inputRef = useRef<HTMLInputElement>(null);
+  const railRef = useRef<HTMLDivElement>(null);
   const connectBtnRef = useRef<HTMLAnchorElement>(null);
   const pickBtnRef = useRef<HTMLButtonElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
+  const [activeSlide, setActiveSlide] = useState(0);
 
   // Focus whichever CTA just resolved so the landing is keyboard-ready and
-  // Enter triggers the right action. Both render only once the probe settles.
+  // Enter triggers the right action. `preventScroll` keeps the action bar from
+  // yanking the viewport away from the intro on shorter screens.
   useEffect(() => {
     if (strava.loading) {
       return;
     }
     if (strava.connected) {
-      pickBtnRef.current?.focus();
+      pickBtnRef.current?.focus({ preventScroll: true });
     } else {
-      connectBtnRef.current?.focus();
+      connectBtnRef.current?.focus({ preventScroll: true });
     }
   }, [strava.loading, strava.connected]);
 
   const handleFiles = async (fileList: FileList | File[]) => {
+    if (isParsing) {
+      return;
+    }
     const files = Array.from(fileList).filter((f) =>
       ACTIVITY_FILE_RE.test(f.name)
     );
@@ -238,6 +244,19 @@ export function EmptyState({
 
   const openFilePicker = () => inputRef.current?.click();
 
+  // Track the centred slide on the touch rail so the dots reflect the swipe.
+  // (No-op on desktop, where the grid doesn't scroll and the dots are hidden.)
+  const handleRailScroll = () => {
+    const el = railRef.current;
+    if (!el) {
+      return;
+    }
+    const max = el.scrollWidth - el.clientWidth;
+    const index =
+      max > 0 ? Math.round((el.scrollLeft / max) * (PANELS.length - 1)) : 0;
+    setActiveSlide(index);
+  };
+
   const showOverlay = isDragging || isParsing;
   const hasError = strava.error === "fetch_failed";
 
@@ -248,6 +267,14 @@ export function EmptyState({
       className="relative flex flex-1 flex-col items-center justify-center gap-5 px-6 pt-20 pb-10 lg:gap-8 lg:pt-24 lg:pb-16"
       onDragLeave={(e) => {
         e.preventDefault();
+        // Ignore leaves that just cross into a child — only clear when the
+        // pointer actually exits the section, so the overlay doesn't flicker.
+        if (
+          e.relatedTarget instanceof Node &&
+          e.currentTarget.contains(e.relatedTarget)
+        ) {
+          return;
+        }
         setIsDragging(false);
       }}
       onDragOver={(e) => {
@@ -293,7 +320,11 @@ export function EmptyState({
       {/* Claim panels: a swipe rail on touch, a 4-up grid from lg up. The
           intro animation slices a seamless photo overlay into these slides. */}
       <div className="relative w-full max-w-[64rem] lg:mx-auto">
-        <div className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto lg:snap-none lg:overflow-x-visible">
+        <div
+          className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto lg:snap-none lg:overflow-x-visible"
+          onScroll={handleRailScroll}
+          ref={railRef}
+        >
           {PANELS.map((p, i) => (
             <ClaimPanel
               glyph={p.glyph}
@@ -308,13 +339,13 @@ export function EmptyState({
         <RevealOverlay photoSrc="/images/dunes.webp" stage={intro.stage} />
       </div>
 
-      {/* Swipe affordance — touch only. */}
+      {/* Swipe affordance — touch only; tracks the centred slide. */}
       <div className="flex gap-1.5 lg:hidden">
         {PANELS.map((p, i) => (
           <span
             className={cn(
-              "h-1.5 rounded-full",
-              i === 0 ? "w-4 bg-primary" : "w-1.5 bg-foreground/25"
+              "h-1.5 rounded-full transition-all",
+              i === activeSlide ? "w-4 bg-primary" : "w-1.5 bg-foreground/25"
             )}
             key={p.word}
           />
@@ -368,7 +399,7 @@ export function EmptyState({
           ) : null}
           {strava.loading || strava.connected ? null : (
             <StravaConnectButton
-              className="shadow-primary/50 shadow-xl transition-transform hover:-translate-y-0.5"
+              className="shadow-primary/50 shadow-xl hover:-translate-y-0.5"
               ref={connectBtnRef}
             />
           )}
