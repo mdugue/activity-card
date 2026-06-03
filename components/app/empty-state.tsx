@@ -4,6 +4,13 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { EffortMark } from "@/components/app/effort-wordmark";
+import {
+  IntroReplay,
+  type IntroStage,
+  panelPartStyle,
+  RevealOverlay,
+  useEmptyStateIntro,
+} from "@/components/app/empty-state-intro";
 import { StravaConnectButton } from "@/components/app/strava-connect-button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -80,7 +87,7 @@ const PANELS: { glyph: React.ReactNode; word: string; wordClass: string }[] = [
   },
   {
     word: "YOUR",
-    wordClass: "text-[3.5rem] leading-[0.86] text-background/55 lg:text-[4rem]",
+    wordClass: "text-[3.5rem] leading-[0.86] text-background/60 lg:text-[4rem]",
     glyph: (
       <div className="h-16 lg:h-20">
         <ElevationGlyph />
@@ -112,11 +119,13 @@ const PANELS: { glyph: React.ReactNode; word: string; wordClass: string }[] = [
 function ClaimPanel({
   glyph,
   index,
+  stage,
   word,
   wordClass,
 }: {
   glyph: React.ReactNode;
   index: number;
+  stage: IntroStage;
   word: string;
   wordClass: string;
 }) {
@@ -125,7 +134,7 @@ function ClaimPanel({
       {/* One panorama, sliced across all panels — the carousel made literal. */}
       <div
         aria-hidden
-        className="absolute inset-y-0"
+        className="absolute inset-y-0 z-0"
         style={{
           width: `calc(${PANEL_COUNT} * 100% + ${PANEL_COUNT - 1} * ${PANEL_GAP})`,
           left: `calc(${-index} * (100% + ${PANEL_GAP}))`,
@@ -142,21 +151,33 @@ function ClaimPanel({
       </div>
       <div
         aria-hidden
-        className="absolute inset-0 bg-linear-to-b from-foreground/60 via-foreground/10 to-foreground/90"
+        className="absolute inset-0 z-10 bg-linear-to-b from-foreground/60 via-foreground/10 to-foreground/90"
+        style={panelPartStyle(stage, "scrim", index)}
       />
       <div
         aria-hidden
-        className="absolute inset-0 bg-foreground opacity-25 mix-blend-color"
+        className="absolute inset-0 z-10 bg-foreground opacity-25 mix-blend-color"
+        style={panelPartStyle(stage, "tint", index)}
       />
 
-      <div className="relative z-10 flex justify-between font-mono text-[11px] text-background/55 tracking-[0.18em]">
+      <div
+        className="relative z-20 flex justify-between font-mono text-[11px] text-background/55 tracking-[0.18em]"
+        style={panelPartStyle(stage, "num", index)}
+      >
         <span>{String(index + 1).padStart(2, "0")}</span>
         <span>/ 0{PANEL_COUNT}</span>
       </div>
-      <p className={cn("relative z-10 mt-5 font-heading uppercase", wordClass)}>
+      <p
+        className={cn("relative z-20 mt-5 font-heading uppercase", wordClass)}
+        style={panelPartStyle(stage, "word", index)}
+      >
         {word}
       </p>
-      <div aria-hidden className="relative z-10 mt-auto">
+      <div
+        aria-hidden
+        className="relative z-20 mt-auto"
+        style={panelPartStyle(stage, "content", index)}
+      >
         {glyph}
       </div>
     </div>
@@ -168,6 +189,7 @@ export function EmptyState({
   onOpenStravaPicker,
 }: EmptyStateProps) {
   const strava = useStravaConnection();
+  const intro = useEmptyStateIntro();
   const inputRef = useRef<HTMLInputElement>(null);
   const connectBtnRef = useRef<HTMLAnchorElement>(null);
   const pickBtnRef = useRef<HTMLButtonElement>(null);
@@ -257,20 +279,25 @@ export function EmptyState({
       ) : null}
 
       <p className="caption-label w-full text-left lg:text-center">
-        Your claim, told across the slides — connect to fill them
+        {intro.eyebrow}
       </p>
 
-      {/* Claim panels: a swipe rail on touch, a 4-up grid from lg up. */}
-      <div className="no-scrollbar flex w-full max-w-[64rem] snap-x snap-mandatory gap-4 overflow-x-auto lg:mx-auto lg:snap-none lg:overflow-x-visible">
-        {PANELS.map((p, i) => (
-          <ClaimPanel
-            glyph={p.glyph}
-            index={i}
-            key={p.word}
-            word={p.word}
-            wordClass={p.wordClass}
-          />
-        ))}
+      {/* Claim panels: a swipe rail on touch, a 4-up grid from lg up. The
+          intro animation slices a seamless photo overlay into these slides. */}
+      <div className="relative w-full max-w-[64rem] lg:mx-auto">
+        <div className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto lg:snap-none lg:overflow-x-visible">
+          {PANELS.map((p, i) => (
+            <ClaimPanel
+              glyph={p.glyph}
+              index={i}
+              key={p.word}
+              stage={intro.stage}
+              word={p.word}
+              wordClass={p.wordClass}
+            />
+          ))}
+        </div>
+        <RevealOverlay photoSrc="/images/dunes.webp" stage={intro.stage} />
       </div>
 
       {/* Swipe affordance — touch only. */}
@@ -355,6 +382,8 @@ export function EmptyState({
           </p>
         </div>
       </div>
+
+      {intro.showReplay ? <IntroReplay onReplay={intro.replay} /> : null}
     </section>
   );
 }
