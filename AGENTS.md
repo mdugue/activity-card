@@ -51,9 +51,8 @@ Two layers, two runners — keep them separate:
 - **Unit tests** use the built-in **`bun:test`** runner. They live colocated
   next to the code they cover as `lib/<name>.test.ts` and assert pure logic
   (formatters, geometry, parsing, OAuth-state encode/validate). Run with
-  `bun test` (scoped to `./lib` so it never picks up the e2e specs),
+  `bun run test` (scoped to `./lib` so it never picks up the e2e specs),
   `bun run test:watch`, or `bun run test:coverage`.
-- **E2E tests** use **Playwright** (`e2e/*.spec.ts`, `bun run test:e2e`). See
   `playwright.config.ts` and [`docs/strava.md`](./docs/strava.md).
 
 Why scoped: Playwright owns `*.spec.ts` under `e2e/`; bun unit tests use
