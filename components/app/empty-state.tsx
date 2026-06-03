@@ -7,6 +7,8 @@ import { EffortMark } from "@/components/app/effort-wordmark";
 import {
   IntroReplay,
   type IntroStage,
+  PANEL_REST_CLASS,
+  panelFadeStyle,
   panelPartStyle,
   RevealOverlay,
   useEmptyStateIntro,
@@ -130,7 +132,13 @@ function ClaimPanel({
   wordClass: string;
 }) {
   return (
-    <div className="relative flex h-[20rem] w-60 shrink-0 snap-center flex-col overflow-hidden bg-foreground p-5 text-background lg:h-[31rem] lg:w-auto lg:flex-1 lg:basis-0 lg:p-6">
+    <div
+      className={cn(
+        "relative flex h-[20rem] w-60 shrink-0 snap-center flex-col overflow-hidden bg-foreground p-5 text-background lg:h-[31rem] lg:w-auto lg:flex-1 lg:basis-0 lg:p-6",
+        PANEL_REST_CLASS[index]
+      )}
+      style={panelFadeStyle(stage, index)}
+    >
       {/* One panorama, sliced across all panels — the carousel made literal. */}
       <div
         aria-hidden

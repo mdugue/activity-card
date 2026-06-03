@@ -31,6 +31,20 @@ const CUT_START = 0.45;
 const CUT_STAGGER = 0.18;
 const FILL_START = 1.15;
 const FILL_STAGGER = 0.16;
+// After the slides fill, the trailing ones recede — softly and slowly — so the
+// eye stays on slide one. Resting opacity drops the farther a panel sits from
+// the first. Desktop only; the mobile rail keeps every slide at full strength.
+const FADE_DELAY = 2.2;
+const FADE_DURATION = 1.5;
+const PANEL_REST_OPACITY = [1, 0.8, 0.65, 0.5];
+// Tailwind counterparts of PANEL_REST_OPACITY — keep the two in lockstep. These
+// are the composed (no-JS / reduced-motion) resting values, lg-gated.
+export const PANEL_REST_CLASS = [
+  "",
+  "lg:opacity-80",
+  "lg:opacity-65",
+  "lg:opacity-50",
+];
 
 const EYEBROW: Record<Beat, string> = {
   whole: "One photo — your activity",
@@ -81,8 +95,8 @@ export function useEmptyStateIntro() {
       window.setTimeout(() => setBeat("done"), 2450),
       window.setTimeout(() => setShowReplay(true), 2550),
       // Lock the composed end-state in case a background tab froze the
-      // transition clock mid-flight.
-      window.setTimeout(() => setStage("composed"), 2750),
+      // transition clock mid-flight (after the slow recede has settled).
+      window.setTimeout(() => setStage("composed"), 3950),
     ];
     return () => {
       cancelAnimationFrame(raf1);
@@ -140,6 +154,26 @@ export function panelPartStyle(
     opacity: r.opacity,
     transform: r.rises ? "translateY(0)" : undefined,
     transition,
+  };
+}
+
+// Whole-panel recede applied to each panel root. Holds full opacity through the
+// fill (the delay) so the photo handoff stays seamless, then eases down to the
+// resting value. `composed` defers to the Tailwind PANEL_REST_CLASS.
+export function panelFadeStyle(
+  stage: IntroStage,
+  panelIndex: number
+): CSSProperties | undefined {
+  const rest = PANEL_REST_OPACITY[panelIndex];
+  if (stage === "composed" || rest === 1) {
+    return;
+  }
+  if (stage === "hidden") {
+    return { opacity: 1, transition: "none" };
+  }
+  return {
+    opacity: rest,
+    transition: `opacity ${FADE_DURATION}s ease-in-out ${FADE_DELAY}s`,
   };
 }
 
