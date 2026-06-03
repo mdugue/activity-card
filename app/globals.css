@@ -152,3 +152,12 @@
 @utility caption-micro {
   @apply font-mono font-medium text-[10px] uppercase tracking-[0.18em] opacity-60;
 }
+
+/* Hide the scrollbar on touch-swipe rails (the claim-panel carousel) while
+   keeping the element scrollable. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
