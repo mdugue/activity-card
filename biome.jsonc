@@ -38,6 +38,19 @@
       }
     },
     {
+      // Bun unit tests (`*.test.ts`, colocated next to source). Inline regex
+      // assertions read more clearly and the hoisting perf gain is irrelevant
+      // in a test process — same rationale as the e2e block below.
+      "includes": ["**/*.test.ts"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "useTopLevelRegex": "off"
+          }
+        }
+      }
+    },
+    {
       // E2E specs read more clearly with inline regex assertions; the
       // perf gain from hoisting them is irrelevant in a test process.
       "includes": ["e2e/**", "playwright.config.ts"],

@@ -1,0 +1,10 @@
+# Bun's integrated test runner.
+#
+# Unit tests live colocated next to the code they cover (e.g. `lib/foo.test.ts`)
+# and use the `bun:test` API. Playwright e2e specs (`e2e/*.spec.ts`) are a
+# separate runner — `bun test` is scoped to source roots via the `test` script
+# in package.json so the two never clash. Keep that scoping in sync if unit
+# tests ever live outside `lib/`.
+[test]
+# Don't count the test files themselves toward coverage numbers.
+coverageSkipTestFiles = true
