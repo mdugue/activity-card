@@ -40,7 +40,25 @@ bun dev          # local dev server
 bun build        # production build
 bun lint
 bun typecheck
+bun run test     # unit tests (bun:test, scoped to ./lib)
+bun run test:e2e # Playwright e2e
 ```
+
+## Testing
+
+Two layers, two runners — keep them separate:
+
+- **Unit tests** use the built-in **`bun:test`** runner. They live colocated
+  next to the code they cover as `lib/<name>.test.ts` and assert pure logic
+  (formatters, geometry, parsing, OAuth-state encode/validate). Run with
+  `bun run test` (scoped to `./lib` so it never picks up the e2e specs),
+  `bun run test:watch`, or `bun run test:coverage`.
+  `playwright.config.ts` and [`docs/strava.md`](./docs/strava.md).
+
+Why scoped: Playwright owns `*.spec.ts` under `e2e/`; bun unit tests use
+`*.test.ts`. The `test` script passes `./lib` explicitly so a bare run can't
+try to execute Playwright specs through the wrong runner. Add new unit-test
+roots to that script (and `bunfig.toml`'s note) if tests grow beyond `lib/`.
 
 ## Conventions
 

@@ -17,6 +17,11 @@ const eslintConfig = defineConfig([
     "hooks/use-mobile.ts",
     // Auto-generated from Strava's OpenAPI spec via `bun run strava:types`.
     "lib/strava-api.generated.ts",
+    // Generated, gitignored test artifacts — Playwright's HTML report bundles
+    // minified vendor JS that eslint would otherwise flag by the thousands.
+    "playwright-report/**",
+    "test-results/**",
+    "coverage/**",
   ]),
 ]);
 
