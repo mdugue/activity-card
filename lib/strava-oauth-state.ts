@@ -90,7 +90,7 @@ export function isAllowedBounceOrigin(
     return true;
   }
   // Operator-supplied allowlist: comma-separated host suffixes. A host
-  // matches when it equals an entry exactly or ends with `.entry`.
+  // matches when it equals an entry exactly or ends with `.entry` or `-entry`.
   const suffixes = (process.env.STRAVA_BOUNCE_ALLOWED_HOST_SUFFIX ?? "")
     .split(",")
     .map((s) => s.trim())
