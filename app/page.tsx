@@ -323,7 +323,10 @@ export default function Home() {
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-background text-foreground">
-      <Header date={data?.date} />
+      <Header
+        date={data?.date}
+        status={state === "empty" ? "STEP 01 / 03 · CONNECT" : undefined}
+      />
       {state === "empty" ? (
         <EmptyState
           onFilesLoaded={handleFilesLoaded}
@@ -416,14 +419,20 @@ export default function Home() {
   );
 }
 
-function Header({ date }: { date?: string }) {
+function Header({ date, status }: { date?: string; status?: string }) {
   const upper = date ? formatDateUpper(date) : "";
   return (
     <header className="absolute top-0 right-0 left-0 z-10 flex items-start justify-between px-6 pt-7 md:px-10">
       <EffortWordmark />
-      <div className="hidden font-medium font-mono text-[11px] tracking-[0.22em] opacity-55 sm:block">
-        ACTIVITY CARD{upper ? ` · ${upper}` : ""}
-      </div>
+      {status ? (
+        <div className="font-medium font-mono text-[10px] tracking-[0.22em] opacity-55 sm:text-[11px]">
+          {status}
+        </div>
+      ) : (
+        <div className="hidden font-medium font-mono text-[11px] tracking-[0.22em] opacity-55 sm:block">
+          ACTIVITY CARD{upper ? ` · ${upper}` : ""}
+        </div>
+      )}
     </header>
   );
 }
