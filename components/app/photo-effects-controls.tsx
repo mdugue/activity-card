@@ -4,7 +4,11 @@
 // sidebar's photo block when a photo is loaded. Pure CSS filters keep
 // preview === output with html-to-image.
 
-import { FlipHorizontal2, FlipVertical2, RotateCw } from "lucide-react";
+import {
+  ArrowClockwiseIcon,
+  FlipHorizontalIcon,
+  FlipVerticalIcon,
+} from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -64,7 +68,7 @@ export function PhotoEffectsControls({
             type="button"
             variant="outline"
           >
-            <RotateCw className="size-3.5" />
+            <ArrowClockwiseIcon className="size-3.5" weight="duotone" />
             Rotate
           </Button>
         ) : null}
@@ -76,7 +80,7 @@ export function PhotoEffectsControls({
           type="button"
           variant="outline"
         >
-          <FlipHorizontal2 className="size-3.5" />
+          <FlipHorizontalIcon className="size-3.5" weight="duotone" />
           Mirror
         </Button>
         <Button
@@ -87,7 +91,7 @@ export function PhotoEffectsControls({
           type="button"
           variant="outline"
         >
-          <FlipVertical2 className="size-3.5" />
+          <FlipVerticalIcon className="size-3.5" weight="duotone" />
           Flip
         </Button>
       </div>

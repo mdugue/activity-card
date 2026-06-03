@@ -8,7 +8,7 @@
 // and output are guaranteed to match. The sidebar reuses the single-card
 // controls; image crop/zoom reuses the single-card adjust overlay, deck-wide.
 
-import { Move } from "lucide-react";
+import { ArrowsOutCardinalIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { SeamlessCanvas } from "@/components/carousel/seamless-canvas";
 import type { ThemeId } from "@/components/themes";
@@ -256,7 +256,11 @@ export function CarouselEditState(props: CarouselEditStateProps) {
                 <button onClick={() => setAdjusting(true)} type="button" />
               }
             >
-              <Move aria-hidden className="size-3" />
+              <ArrowsOutCardinalIcon
+                aria-hidden
+                className="size-3"
+                weight="duotone"
+              />
               Adjust photo
             </Badge>
           ) : null}

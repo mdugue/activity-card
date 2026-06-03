@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, RotateCcw } from "lucide-react";
+import { ArrowCounterClockwiseIcon, CheckIcon } from "@phosphor-icons/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useImageAdjust } from "@/hooks/use-image-adjust";
@@ -85,11 +85,15 @@ export function ImageAdjustOverlay({
           onClick={() => onChange(IDENTITY_TRANSFORM)}
           size="sm"
         >
-          <RotateCcw aria-hidden className="size-3.5" />
+          <ArrowCounterClockwiseIcon
+            aria-hidden
+            className="size-3.5"
+            weight="duotone"
+          />
           Reset
         </Button>
         <Button onClick={onDone} size="sm">
-          <Check aria-hidden className="size-3.5" />
+          <CheckIcon aria-hidden className="size-3.5" weight="duotone" />
           Done
         </Button>
       </div>

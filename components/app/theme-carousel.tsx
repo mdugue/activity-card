@@ -1,6 +1,6 @@
 "use client";
 
-import { Move } from "lucide-react";
+import { ArrowsOutCardinalIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { ImageAdjustOverlay } from "@/components/app/image-adjust-overlay";
 import { RenderTheme, type ThemeId } from "@/components/app/render-theme";
@@ -153,7 +153,11 @@ export function ThemeCarousel({
                         />
                       }
                     >
-                      <Move aria-hidden className="size-3" />
+                      <ArrowsOutCardinalIcon
+                        aria-hidden
+                        className="size-3"
+                        weight="duotone"
+                      />
                       Adjust
                     </Badge>
                   ) : null}

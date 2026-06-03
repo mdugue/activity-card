@@ -1,6 +1,11 @@
 "use client";
 
-import { Bike, Footprints, MapPin, Waves } from "lucide-react";
+import {
+  BicycleIcon,
+  FootprintsIcon,
+  MapPinIcon,
+  WavesIcon,
+} from "@phosphor-icons/react";
 import { useEffect, useId, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -674,15 +679,43 @@ function SportIcon({ sportType }: { sportType: string }) {
   const s = sportType.toLowerCase();
   const cls = "size-5 shrink-0 opacity-70";
   if (s.includes("swim")) {
-    return <Waves aria-hidden className={cls} data-sport="swim" />;
+    return (
+      <WavesIcon
+        aria-hidden
+        className={cls}
+        data-sport="swim"
+        weight="duotone"
+      />
+    );
   }
   if (s.includes("ride") || s.includes("bike") || s.includes("cycl")) {
-    return <Bike aria-hidden className={cls} data-sport="ride" />;
+    return (
+      <BicycleIcon
+        aria-hidden
+        className={cls}
+        data-sport="ride"
+        weight="duotone"
+      />
+    );
   }
   if (s.includes("run")) {
-    return <Footprints aria-hidden className={cls} data-sport="run" />;
+    return (
+      <FootprintsIcon
+        aria-hidden
+        className={cls}
+        data-sport="run"
+        weight="duotone"
+      />
+    );
   }
-  return <MapPin aria-hidden className={cls} data-sport="other" />;
+  return (
+    <MapPinIcon
+      aria-hidden
+      className={cls}
+      data-sport="other"
+      weight="duotone"
+    />
+  );
 }
 
 function formatDate(iso: string): string {

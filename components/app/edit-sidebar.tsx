@@ -7,7 +7,7 @@
 // button at the bottom. Keeping the shell here means the two editors share the
 // same header, spacing, Strava affordances and CTA.
 
-import { ArrowRight } from "lucide-react";
+import { ArrowRightIcon } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useStravaConnection } from "@/hooks/use-strava-connection";
@@ -152,7 +152,7 @@ function FileLoadedRow({
           type="button"
         >
           Swap
-          <ArrowRight aria-hidden className="size-2.5" />
+          <ArrowRightIcon aria-hidden className="size-2.5" weight="duotone" />
         </button>
       </div>
       {error ? (
