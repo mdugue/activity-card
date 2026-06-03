@@ -6,8 +6,17 @@
 
 import {
   ArrowClockwiseIcon,
+  CircleHalfIcon,
+  CloudFogIcon,
+  FilmStripIcon,
   FlipHorizontalIcon,
   FlipVerticalIcon,
+  type Icon,
+  ImageSquareIcon,
+  MoonIcon,
+  SnowflakeIcon,
+  SparkleIcon,
+  SunIcon,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -16,6 +25,19 @@ import {
   nextRotation,
   type PhotoEffects,
 } from "@/lib/photo-effects";
+
+// A glyph per preset that hints at its look — sun for warm, snowflake for cool,
+// moon for moody noir, film strip for vintage sepia, half-circle for grayscale.
+const FILTER_ICONS: Record<string, Icon> = {
+  none: ImageSquareIcon,
+  noir: MoonIcon,
+  mono: CircleHalfIcon,
+  vivid: SparkleIcon,
+  warm: SunIcon,
+  cool: SnowflakeIcon,
+  fade: CloudFogIcon,
+  sepia: FilmStripIcon,
+};
 
 interface PhotoEffectsControlsProps {
   /** rotate is geometry-correct on the carousel panorama; hidden elsewhere */
@@ -45,16 +67,22 @@ export function PhotoEffectsControls({
           value={[effects.filter]}
           variant="outline"
         >
-          {FILTER_PRESETS.map((p) => (
-            <ToggleGroupItem
-              aria-label={p.label}
-              className="h-auto px-2.5 py-1.5 font-medium font-mono text-[10px] uppercase tracking-wide"
-              key={p.id}
-              value={p.id}
-            >
-              {p.label}
-            </ToggleGroupItem>
-          ))}
+          {FILTER_PRESETS.map((p) => {
+            const FilterIcon = FILTER_ICONS[p.id];
+            return (
+              <ToggleGroupItem
+                aria-label={p.label}
+                className="flex h-auto items-center gap-1.5 px-2.5 py-1.5 font-medium font-mono text-[10px] uppercase tracking-wide"
+                key={p.id}
+                value={p.id}
+              >
+                {FilterIcon ? (
+                  <FilterIcon aria-hidden className="size-3" weight="duotone" />
+                ) : null}
+                {p.label}
+              </ToggleGroupItem>
+            );
+          })}
         </ToggleGroup>
       </div>
 
