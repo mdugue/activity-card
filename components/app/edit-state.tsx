@@ -1,5 +1,6 @@
 "use client";
 
+import { DownloadSimpleIcon } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
 import {
   ALTITUDE_MOODS,
@@ -281,6 +282,9 @@ function ControlsPane(props: ControlsPaneProps) {
 
   return (
     <EditSidebar
+      actionIcon={
+        <DownloadSimpleIcon aria-hidden className="size-5" weight="duotone" />
+      }
       actionLabel="Download PNG"
       actionMeta="1080 × 1350"
       data={data}

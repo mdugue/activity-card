@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  ArrowRightIcon,
+  CircleNotchIcon,
   MapPinIcon,
   PersonSimpleBikeIcon,
   PersonSimpleRunIcon,
@@ -657,22 +659,37 @@ function ActivityItem({
         </ItemDescription>
       </ItemContent>
       <ItemActions>
-        <span className="font-mono text-[10px] tracking-[0.18em] opacity-50">
-          {pickAffordance(isPicking, multiSelect)}
-        </span>
+        <PickAffordance isPicking={isPicking} multiSelect={multiSelect} />
       </ItemActions>
     </Item>
   );
 }
 
-function pickAffordance(isPicking: boolean, multiSelect: boolean): string {
+function PickAffordance({
+  isPicking,
+  multiSelect,
+}: {
+  isPicking: boolean;
+  multiSelect: boolean;
+}) {
   if (isPicking) {
-    return "LOADING…";
+    return (
+      <CircleNotchIcon
+        aria-label="Loading"
+        className="size-4 animate-spin opacity-60"
+        weight="duotone"
+      />
+    );
   }
   if (multiSelect) {
-    return "";
+    return null;
   }
-  return "PICK →";
+  return (
+    <span className="flex items-center gap-1 font-mono text-[10px] tracking-[0.18em] opacity-50">
+      PICK
+      <ArrowRightIcon aria-hidden className="size-3" weight="duotone" />
+    </span>
+  );
 }
 
 function SportIcon({ sportType }: { sportType: string }) {

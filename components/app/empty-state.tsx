@@ -1,5 +1,14 @@
 "use client";
 
+import {
+  FileArrowUpIcon,
+  FolderOpenIcon,
+  MedalIcon,
+  PersonSimpleBikeIcon,
+  PersonSimpleRunIcon,
+  PersonSimpleSwimIcon,
+  WarningCircleIcon,
+} from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { StravaConnectButton } from "@/components/app/strava-connect-button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -8,6 +17,13 @@ import { useStravaConnection } from "@/hooks/use-strava-connection";
 import { type ParsedActivity, parseActivityFile } from "@/lib/parse-activity";
 
 const ACTIVITY_FILE_RE = /\.(gpx|fit)$/i;
+
+const SPORT_CHIPS = [
+  { Icon: PersonSimpleBikeIcon, label: "RIDE" },
+  { Icon: PersonSimpleRunIcon, label: "RUN" },
+  { Icon: PersonSimpleSwimIcon, label: "SWIM" },
+  { Icon: MedalIcon, label: "TRIATHLON" },
+] as const;
 
 interface EmptyStateProps {
   onFilesLoaded: (parts: ParsedActivity[]) => void;
@@ -65,6 +81,7 @@ export function EmptyState({
           role="status"
           variant="destructive"
         >
+          <WarningCircleIcon weight="duotone" />
           <AlertTitle>We can&apos;t reach the Effort server.</AlertTitle>
           <AlertDescription>
             Strava sign-in is unavailable right now. Refresh in a moment, or
@@ -100,12 +117,17 @@ export function EmptyState({
       <DropZone onFilesLoaded={onFilesLoaded} />
 
       <div className="mt-9 flex flex-wrap justify-center gap-3">
-        {(["RIDE", "RUN", "SWIM", "TRIATHLON"] as const).map((s) => (
+        {SPORT_CHIPS.map(({ Icon, label }) => (
           <span
-            className="border border-foreground px-3 py-1.5 font-medium font-mono text-xs tracking-[0.22em] opacity-80"
-            key={s}
+            className="flex items-center gap-1.5 border border-foreground px-3 py-1.5 font-medium font-mono text-xs tracking-[0.22em] opacity-80"
+            key={label}
           >
-            {s}
+            <Icon
+              aria-hidden
+              className="size-3.5 opacity-70"
+              weight="duotone"
+            />
+            {label}
           </span>
         ))}
       </div>
@@ -201,6 +223,11 @@ function DropZone({
         type="file"
       />
 
+      <FileArrowUpIcon
+        aria-hidden
+        className="mb-2 size-7 opacity-40"
+        weight="duotone"
+      />
       <div className="text-center font-medium font-mono text-xs tracking-[0.22em] opacity-65">
         {progress ?? (idle ? "DROP A FILE OR" : "DROP TO READ")}
       </div>
@@ -211,10 +238,18 @@ function DropZone({
         size="sm"
         variant="outline"
       >
+        <FolderOpenIcon aria-hidden weight="duotone" />
         Browse files
       </Button>
       {error ? (
-        <div className="mt-3 font-mono text-destructive text-xs">{error}</div>
+        <div className="mt-3 flex items-center gap-1.5 font-mono text-destructive text-xs">
+          <WarningCircleIcon
+            aria-hidden
+            className="size-3.5"
+            weight="duotone"
+          />
+          {error}
+        </div>
       ) : null}
     </div>
   );
