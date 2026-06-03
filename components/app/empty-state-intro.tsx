@@ -31,10 +31,12 @@ const CUT_START = 0.45;
 const CUT_STAGGER = 0.18;
 const FILL_START = 1.15;
 const FILL_STAGGER = 0.16;
-// After the slides fill, the trailing ones recede — softly and slowly — so the
-// eye stays on slide one. Resting opacity drops the farther a panel sits from
-// the first. Desktop only; the mobile rail keeps every slide at full strength.
-const FADE_DELAY = 2.2;
+// Right after the slices are cut, the trailing ones recede — softly and slowly,
+// overlapping the data fill — so the eye stays on slide one. Resting opacity
+// drops the farther a panel sits from the first. The delay clears the photo
+// handoff (~1.4s) so the seam stays clean. Desktop only; the mobile rail keeps
+// every slide at full strength.
+const FADE_DELAY = 1.25;
 const FADE_DURATION = 1.5;
 const PANEL_REST_OPACITY = [1, 0.8, 0.65, 0.5];
 // Tailwind counterparts of PANEL_REST_OPACITY — keep the two in lockstep. These
@@ -96,7 +98,7 @@ export function useEmptyStateIntro() {
       window.setTimeout(() => setShowReplay(true), 2550),
       // Lock the composed end-state in case a background tab froze the
       // transition clock mid-flight (after the slow recede has settled).
-      window.setTimeout(() => setStage("composed"), 3950),
+      window.setTimeout(() => setStage("composed"), 3000),
     ];
     return () => {
       cancelAnimationFrame(raf1);
