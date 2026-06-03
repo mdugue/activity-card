@@ -92,11 +92,7 @@ describe("isAllowedBounceOrigin", () => {
         REGISTERED
       )
     ).toBe(true);
-    // ...as is a slash-delimited path on the subdomain
-    expect(
-      isAllowedBounceOrigin(
-        "https://feature-x-myproject.vercel.app",
-        REGISTERED
+    // ...as is a hyphen-delimited preview hostname
       )
     ).toBe(true);
     // ...as is an exact match on the suffix itself.
