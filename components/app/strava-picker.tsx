@@ -1,10 +1,10 @@
 "use client";
 
 import {
-  BicycleIcon,
-  FootprintsIcon,
   MapPinIcon,
-  WavesIcon,
+  PersonSimpleBikeIcon,
+  PersonSimpleRunIcon,
+  PersonSimpleSwimIcon,
 } from "@phosphor-icons/react";
 import { useEffect, useId, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -680,7 +680,7 @@ function SportIcon({ sportType }: { sportType: string }) {
   const cls = "size-5 shrink-0 opacity-70";
   if (s.includes("swim")) {
     return (
-      <WavesIcon
+      <PersonSimpleSwimIcon
         aria-hidden
         className={cls}
         data-sport="swim"
@@ -690,7 +690,7 @@ function SportIcon({ sportType }: { sportType: string }) {
   }
   if (s.includes("ride") || s.includes("bike") || s.includes("cycl")) {
     return (
-      <BicycleIcon
+      <PersonSimpleBikeIcon
         aria-hidden
         className={cls}
         data-sport="ride"
@@ -700,7 +700,7 @@ function SportIcon({ sportType }: { sportType: string }) {
   }
   if (s.includes("run")) {
     return (
-      <FootprintsIcon
+      <PersonSimpleRunIcon
         aria-hidden
         className={cls}
         data-sport="run"
