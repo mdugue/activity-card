@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { EffortMark } from "@/components/app/effort-wordmark";
 import { StravaConnectButton } from "@/components/app/strava-connect-button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useStravaConnection } from "@/hooks/use-strava-connection";
@@ -285,6 +286,20 @@ export function EmptyState({
         ))}
       </div>
 
+      {hasError ? (
+        <Alert
+          className="w-full max-w-md text-left"
+          role="status"
+          variant="destructive"
+        >
+          <AlertTitle>We can&apos;t reach the Effort server.</AlertTitle>
+          <AlertDescription>
+            Strava sign-in is unavailable right now. Refresh in a moment, or
+            drop a file below in the meantime.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       {/* Action tier — the orange button sits alone on ink so it reads as the
           focal point instead of clashing with the rust accent. */}
       <div className="flex w-full max-w-[64rem] flex-col gap-4 bg-foreground p-5 text-background shadow-2xl shadow-foreground/20 lg:mx-auto lg:flex-row lg:items-center lg:gap-8 lg:px-8 lg:py-7">
@@ -325,13 +340,8 @@ export function EmptyState({
         </div>
 
         <div className="flex items-center justify-between gap-3 lg:ml-auto lg:block lg:text-right">
-          <p
-            className="font-mono text-[11px] text-background/55 uppercase tracking-[0.2em]"
-            role={hasError ? "status" : undefined}
-          >
-            {hasError
-              ? "Strava sign-in unavailable"
-              : "OAuth · Read-only · Revoke anytime"}
+          <p className="font-mono text-[11px] text-background/55 uppercase tracking-[0.2em]">
+            OAuth · Read-only · Revoke anytime
           </p>
           <p className="text-background/65 text-sm lg:mt-2">
             or{" "}
