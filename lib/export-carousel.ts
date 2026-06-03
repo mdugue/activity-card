@@ -70,11 +70,13 @@ export async function exportCarousel(
     1,
     Math.min(PIXEL_RATIO, Math.floor(MAX_CANVAS_DIM / width))
   );
+  // No `cacheBust`: it appends a query to every resource URL, which breaks the
+  // photo's `blob:` object URL (the fetch fails and the panorama drops). See
+  // lib/export-card.ts for the full note.
   const opts = {
     width,
     height: SLIDE_H,
     pixelRatio: pr,
-    cacheBust: true,
     style: { transform: "none", transformOrigin: "top left" },
   };
   if (isIos()) {

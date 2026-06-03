@@ -25,11 +25,14 @@ export async function exportCard(
 
   await waitForFonts();
 
+  // No `cacheBust`: html-to-image appends `?cache-bust=<time>` to every fetched
+  // resource URL, which turns the photo's `blob:` object URL into an
+  // unresolvable one — the fetch fails and the background silently drops from
+  // the PNG. We have no cross-origin images that would need busting.
   const renderOptions = {
     width,
     height,
     pixelRatio,
-    cacheBust: true,
     style: {
       transform: "none",
       transformOrigin: "top left",
