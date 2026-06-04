@@ -1,6 +1,13 @@
 "use client";
 
-import { FileArrowUpIcon, WarningCircleIcon } from "@phosphor-icons/react";
+import {
+  FileArrowUpIcon,
+  MedalIcon,
+  PersonSimpleBikeIcon,
+  PersonSimpleRunIcon,
+  PersonSimpleSwimIcon,
+  WarningCircleIcon,
+} from "@phosphor-icons/react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -27,6 +34,13 @@ const PANEL_COUNT = 4;
 // Keep in sync with the rail's `gap-4` (16px) so the sliced panorama lines up
 // across the gutters and reads as one continuous photo.
 const PANEL_GAP = "16px";
+
+const SPORT_CHIPS = [
+  { Icon: PersonSimpleBikeIcon, label: "RIDE" },
+  { Icon: PersonSimpleRunIcon, label: "RUN" },
+  { Icon: PersonSimpleSwimIcon, label: "SWIM" },
+  { Icon: MedalIcon, label: "TRIATHLON" },
+] as const;
 
 interface EmptyStateProps {
   onFilesLoaded: (parts: ParsedActivity[]) => void;
@@ -357,6 +371,23 @@ export function EmptyState({
             )}
             key={p.word}
           />
+        ))}
+      </div>
+
+      {/* Supported sports — the four card types Effort can render. */}
+      <div className="flex flex-wrap justify-center gap-3">
+        {SPORT_CHIPS.map(({ Icon, label }) => (
+          <span
+            className="flex items-center gap-1.5 border border-foreground px-3 py-1.5 font-medium font-mono text-xs tracking-[0.22em] opacity-80"
+            key={label}
+          >
+            <Icon
+              aria-hidden
+              className="size-3.5 opacity-70"
+              weight="duotone"
+            />
+            {label}
+          </span>
         ))}
       </div>
 
