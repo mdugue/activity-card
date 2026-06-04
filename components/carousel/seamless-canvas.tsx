@@ -82,8 +82,14 @@ export function SeamlessCanvas({
 
   const { profile, mode: profileMode } = pickProfile(data);
 
+  // The Ascent signature is specifically the elevation range. pickProfile can
+  // fall back to the pace curve when elevation is absent (or hidden via the
+  // viz toggle); require a real elevation profile so we never draw pace data as
+  // the mountain range.
   const showElevationHero =
-    style.heroLayer === "elevation" && (profile?.length ?? 0) > 1;
+    style.heroLayer === "elevation" &&
+    profileMode === "elevation" &&
+    (profile?.length ?? 0) > 1;
   const showRouteHero = style.heroLayer === "route";
 
   const heroInk = showPhoto && style.dark ? "#ffffff" : style.ink;

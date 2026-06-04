@@ -56,7 +56,8 @@ export function ElevationBand({
     .join(" ");
   const area = `${line} L${w} ${h} L0 ${h} Z`;
 
-  const showMarkers = markers && mode === "elevation";
+  // Only tag distinct high/low points — a flat profile has no meaningful pair.
+  const showMarkers = markers && mode === "elevation" && max > min;
   const maxIdx = profile.indexOf(max);
   const minIdx = profile.indexOf(min);
   const tags = showMarkers
@@ -66,6 +67,10 @@ export function ElevationBand({
       ]
     : [];
   const labelX = (x: number) => Math.min(Math.max(x, 90), w - 90);
+  // The low point sits at y = h (the viewBox floor), so its "below" label would
+  // fall outside the box and get clipped — keep every label inside the band.
+  const labelY = (y: number, above: boolean) =>
+    Math.min(Math.max(above ? y - 18 : y + 38, 30), h - 14);
 
   return (
     <svg
@@ -103,7 +108,7 @@ export function ElevationBand({
             fontSize={26}
             textAnchor="middle"
             x={labelX(t.p[0])}
-            y={t.above ? t.p[1] - 18 : t.p[1] + 38}
+            y={labelY(t.p[1], t.above)}
           >
             {`${Math.round(t.value)} m`}
           </text>

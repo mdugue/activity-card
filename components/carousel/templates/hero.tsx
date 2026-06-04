@@ -58,40 +58,42 @@ export function HeroSlide({
         </div>
       ) : null}
 
-      <div
-        style={{
-          marginTop: 28,
-          display: "flex",
-          alignItems: "baseline",
-          gap: 16,
-        }}
-      >
-        <span
+      {hero.value ? (
+        <div
           style={{
-            fontFamily: style.fonts.numeral,
-            fontWeight: style.fonts.numeralWeight,
-            fontSize: 348,
-            lineHeight: 0.78,
-            letterSpacing: "-0.02em",
-            color: style.accent,
-            fontVariantNumeric: "tabular-nums",
-            textShadow: colors.shadow || undefined,
+            marginTop: 28,
+            display: "flex",
+            alignItems: "baseline",
+            gap: 16,
           }}
         >
-          {hero.value}
-        </span>
-        <span
-          style={{
-            fontFamily: style.fonts.mono,
-            fontSize: 58,
-            fontWeight: 500,
-            color: colors.fg,
-            textShadow: colors.shadow || undefined,
-          }}
-        >
-          {hero.unit}
-        </span>
-      </div>
+          <span
+            style={{
+              fontFamily: style.fonts.numeral,
+              fontWeight: style.fonts.numeralWeight,
+              fontSize: 348,
+              lineHeight: 0.78,
+              letterSpacing: "-0.02em",
+              color: style.accent,
+              fontVariantNumeric: "tabular-nums",
+              textShadow: colors.shadow || undefined,
+            }}
+          >
+            {hero.value}
+          </span>
+          <span
+            style={{
+              fontFamily: style.fonts.mono,
+              fontSize: 58,
+              fontWeight: 500,
+              color: colors.fg,
+              textShadow: colors.shadow || undefined,
+            }}
+          >
+            {hero.unit}
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 

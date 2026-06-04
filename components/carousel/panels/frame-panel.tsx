@@ -227,6 +227,17 @@ export function FramePanel({
   const isLast = index === total - 1;
   const stat: StatItem | undefined = stats[0];
 
+  // Last slide is the signature; a non-last slide with no datum (sparse activity
+  // with fewer data than datum slots) stays blank rather than duplicating it.
+  let body = <div aria-hidden />;
+  if (isLast) {
+    body = (
+      <FrameSignature c={c} data={data} showEffort={showEffort} style={style} />
+    );
+  } else if (stat) {
+    body = <FrameDatum c={c} data={data} stat={stat} style={style} />;
+  }
+
   return (
     <div
       style={{
@@ -253,16 +264,7 @@ export function FramePanel({
         {showPageNumber ? <span>{slideNumber(index, total)}</span> : null}
       </div>
 
-      {isLast || !stat ? (
-        <FrameSignature
-          c={c}
-          data={data}
-          showEffort={showEffort}
-          style={style}
-        />
-      ) : (
-        <FrameDatum c={c} data={data} stat={stat} style={style} />
-      )}
+      {body}
 
       <div
         aria-hidden

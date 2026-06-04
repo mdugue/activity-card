@@ -85,8 +85,10 @@ Press).
 
 ## Route marker
 
-No coloured GPS pins. The route ends in a **graphic checkered finish flag**
-(`route-line.tsx`), no start marker. Keep markers theme-ink / white over photos.
+No coloured GPS pins, no finish flag. The route carries a small
+**start-direction arrow** at its first point (`route-line.tsx`, `StartArrow`) —
+a quiet "started here, went this way" cue, oriented along the initial heading.
+Keep markers theme-ink / white over photos.
 
 ## Stats & visibility
 
@@ -123,7 +125,7 @@ lib/carousel/stats.ts          buildStats · planSlideStats · frameStats · ser
 lib/carousel/types.ts          SlideTemplate · buildDeck
 hooks/use-carousel.ts          per-theme deck → slides + selection
 components/carousel/seamless-canvas.tsx   the single renderer
-components/carousel/route-line.tsx        route + checkered finish flag
+components/carousel/route-line.tsx        route + start-direction arrow
 components/carousel/elevation-band.tsx    mountain range / sparkline
 components/carousel/detail-viz.tsx        small path + altitude graphics
 components/carousel/carousel-photo.tsx    panorama photo + grain

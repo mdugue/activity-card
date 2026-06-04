@@ -128,6 +128,20 @@ function FrontPage({
   stats,
 }: SpreadProps) {
   const lead = stats[0];
+  // Build the lede as one sentence, then float its first glyph as the drop cap —
+  // so the lead value is never printed twice, and a deck with no lead stat (e.g.
+  // Distance + Time both hidden) degrades to a clean sentence instead of
+  // "undefined undefined logged".
+  const extras = stats
+    .slice(1, 3)
+    .map((s) => `${s.value}${s.unit ? ` ${s.unit}` : ""}`)
+    .join(", ");
+  const ledePrefix = lead
+    ? `${lead.value}${lead.unit ? ` ${lead.unit}` : ""} logged${
+        extras ? ` — ${extras}` : ""
+      }. `
+    : "";
+  const lede = `${ledePrefix}A ${data.sport} worth printing.`;
   return (
     <Slab
       bg={paper}
@@ -189,12 +203,9 @@ function FrontPage({
             fontFamily: style.fonts.display,
           }}
         >
-          {lead?.value.charAt(0)}
+          {lede.charAt(0)}
         </span>
-        {`${lead?.value} ${lead?.unit} logged — ${stats
-          .slice(1, 3)
-          .map((s) => `${s.value}${s.unit ? ` ${s.unit}` : ""}`)
-          .join(", ")}. A ${data.sport} worth printing.`}
+        {lede.slice(1)}
       </p>
     </Slab>
   );
@@ -278,15 +289,27 @@ function Spread({
 }: SpreadProps & { index: number }) {
   const lead = stats[0];
   const extras = stats.slice(1);
+  const viz = style.detailViz ? (
+    <VizCard
+      data={data}
+      ink={ink}
+      kind={index === 1 ? "elevation" : "route"}
+      paper={paper}
+    />
+  ) : null;
+  const column = {
+    marginTop: "auto",
+    marginBottom: "auto",
+    display: "flex",
+    flexDirection: "column",
+  } as const;
+  // A sparse activity can leave a spread with no stat — show just the viz cut
+  // rather than a blank headline numeral.
+  if (!lead) {
+    return <div style={column}>{viz}</div>;
+  }
   return (
-    <div
-      style={{
-        marginTop: "auto",
-        marginBottom: "auto",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
+    <div style={column}>
       {/* Stat clipping (paper). Reserves a bottom band the viz overlaps into, so
           the dark cut never covers the number. */}
       <Slab
@@ -303,7 +326,7 @@ function Spread({
             color: style.accent,
           }}
         >
-          {lead?.label}
+          {lead.label}
         </div>
         <div
           style={{
@@ -316,7 +339,7 @@ function Spread({
             marginTop: 12,
           }}
         >
-          {lead?.value}
+          {lead.value}
           <span
             style={{
               fontFamily: style.fonts.display,
@@ -324,7 +347,7 @@ function Spread({
               fontStyle: "italic",
             }}
           >
-            {lead?.unit ? ` ${lead.unit}` : ""}
+            {lead.unit ? ` ${lead.unit}` : ""}
           </span>
         </div>
 
@@ -377,14 +400,7 @@ function Spread({
         ) : null}
       </Slab>
 
-      {style.detailViz ? (
-        <VizCard
-          data={data}
-          ink={ink}
-          kind={index === 1 ? "elevation" : "route"}
-          paper={paper}
-        />
-      ) : null}
+      {viz}
     </div>
   );
 }

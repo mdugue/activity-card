@@ -154,6 +154,11 @@ export function buildStats(data: ActivityData, opts?: StatOpts): StatItem[] {
 /** The single most expressive stat for a Hero slide. Distance for most themes;
  *  total elevation when the theme headlines the climb (Ascent). Falls back to
  *  distance if the requested metric has no data. */
+/** A blank headline used when every stat (including distance + time) is hidden,
+ *  so the hero slide shows the title alone instead of resurrecting a hidden
+ *  number. */
+const EMPTY_HERO: StatItem = { key: "", label: "", value: "", unit: "" };
+
 export function heroStat(
   data: ActivityData,
   metric: HeroMetric = "distance",
@@ -166,7 +171,10 @@ export function heroStat(
     }
   }
   // Falls back through the ordered set when the headline metric is hidden.
-  return buildStats(data, opts)[0] ?? distance(data);
+  // buildStats already honours the distance/time toggles, so when the user has
+  // hidden Distance *and* Time (and nothing else remains) it is empty — return a
+  // blank hero rather than re-injecting the distance the user just turned off.
+  return buildStats(data, opts)[0] ?? EMPTY_HERO;
 }
 
 /**

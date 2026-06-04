@@ -17,7 +17,7 @@ import {
   type Sport,
 } from "@/components/app/sample-data";
 import { StravaPicker } from "@/components/app/strava-picker";
-import { THEME_META } from "@/components/themes";
+import { themeVisibilityAvailable } from "@/components/themes";
 import type { AltitudeMood } from "@/components/themes/altitude";
 import { useCarousel } from "@/hooks/use-carousel";
 import { useImagePalette } from "@/hooks/use-image-palette";
@@ -35,7 +35,6 @@ import type { ParsedActivity } from "@/lib/parse-activity";
 import { NO_EFFECTS, type PhotoEffects } from "@/lib/photo-effects";
 import {
   applyVisibility,
-  availableVisibility,
   DEFAULT_VISIBILITY,
   type Visibility,
 } from "@/lib/visibility";
@@ -142,7 +141,12 @@ export default function Home() {
     if (persisted.theme) {
       setTheme(persisted.theme);
     }
-    if (persisted.carouselTheme) {
+    // Validate against the current theme set: a stale id from an older build or
+    // hand-edited storage would otherwise throw downstream (tokens[id].deck).
+    if (
+      persisted.carouselTheme &&
+      persisted.carouselTheme in CAROUSEL_THEME_TOKENS
+    ) {
       setCarouselTheme(persisted.carouselTheme);
     }
     if (persisted.accent) {
@@ -320,11 +324,12 @@ export default function Home() {
       }
       return file ? URL.createObjectURL(file) : null;
     });
-    // A new (or removed) photo invalidates any previous pan/zoom. A fresh photo
-    // adopts the current carousel theme's default look (filter + grain) so the
-    // theme's intent shows immediately; the user can still change it.
+    // A new (or removed) photo invalidates any previous pan/zoom. In carousel
+    // mode a fresh photo adopts the current theme's default look (filter + grain)
+    // so the theme's intent shows immediately; the single card has no such theme
+    // look, so it starts clean. The user can still change it either way.
     setImageTransform(IDENTITY_TRANSFORM);
-    if (file) {
+    if (file && mode === "carousel") {
       const tokens = CAROUSEL_THEME_TOKENS[carouselTheme];
       setPhotoEffects({
         ...NO_EFFECTS,
@@ -428,15 +433,7 @@ export default function Home() {
               accent={accent}
               altitudeMood={altitudeMood}
               athleteName={data.athleteName}
-              available={{
-                ...availableVisibility(data),
-                heartRate:
-                  availableVisibility(data).heartRate &&
-                  THEME_META[theme].usesHeartRate,
-                splits:
-                  availableVisibility(data).splits &&
-                  THEME_META[theme].usesSplits,
-              }}
+              available={themeVisibilityAvailable(data, theme)}
               data={visibleData}
               imageTransform={imageTransform}
               location={data.location}
