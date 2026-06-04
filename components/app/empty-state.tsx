@@ -23,6 +23,7 @@ import {
 } from "@/components/app/empty-state-intro";
 import { StravaConnectButton } from "@/components/app/strava-connect-button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useStravaConnection } from "@/hooks/use-strava-connection";
@@ -374,23 +375,6 @@ export function EmptyState({
         ))}
       </div>
 
-      {/* Supported sports — the four card types Effort can render. */}
-      <div className="flex flex-wrap justify-center gap-3">
-        {SPORT_CHIPS.map(({ Icon, label }) => (
-          <span
-            className="flex items-center gap-1.5 border border-foreground px-3 py-1.5 font-medium font-mono text-xs tracking-[0.22em] opacity-80"
-            key={label}
-          >
-            <Icon
-              aria-hidden
-              className="size-3.5 opacity-70"
-              weight="duotone"
-            />
-            {label}
-          </span>
-        ))}
-      </div>
-
       {hasError ? (
         <Alert
           className="w-full max-w-md text-left"
@@ -460,6 +444,16 @@ export function EmptyState({
             </button>
           </p>
         </div>
+      </div>
+
+      {/* Supported sports — the card types Effort can render. */}
+      <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
+        {SPORT_CHIPS.map(({ Icon, label }) => (
+          <Badge key={label}>
+            <Icon aria-hidden data-icon="inline-start" weight="duotone" />
+            {label}
+          </Badge>
+        ))}
       </div>
 
       {intro.showReplay ? <IntroReplay onReplay={intro.replay} /> : null}
