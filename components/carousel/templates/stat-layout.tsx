@@ -15,11 +15,9 @@ import {
 } from "./shared";
 
 interface StatLayoutProps extends TemplateProps {
-  /** gridTemplateColumns */
+  /** gridTemplateColumns — content-sized columns (e.g. "max-content max-content") */
   columns: string;
   numeralSize: number;
-  /** gridTemplateRows, when the grid needs explicit rows */
-  rows?: string;
   titleSize: number;
 }
 
@@ -32,7 +30,6 @@ export function StatLayout({
   stats,
   showPageNumber,
   columns,
-  rows,
   numeralSize,
   titleSize,
 }: StatLayoutProps) {
@@ -82,12 +79,15 @@ export function StatLayout({
         </h2>
       ) : null}
 
+      {/* Content-sized columns packed from the start, so stats sit together
+          (not justified to the slide edges) and the block grows upward, row by
+          row, as more stats are shown. */}
       <div
         style={{
           display: "grid",
           gridTemplateColumns: columns,
-          gridTemplateRows: rows,
-          gap: "44px 28px",
+          justifyContent: "start",
+          gap: "38px 72px",
         }}
       >
         {stats.map((item) => (

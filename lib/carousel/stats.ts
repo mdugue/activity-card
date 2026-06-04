@@ -13,9 +13,14 @@ import {
   formatPaceMin,
   formatPaceSec,
 } from "@/lib/format";
-import type { EffectiveStyle } from "./resolve";
-import type { HeroMetric } from "./theme-tokens";
-import type { Slide } from "./types";
+import { availableVisibility, type Visibility } from "@/lib/visibility";
+import { type EffectiveStyle, resolveDeckStyle } from "./resolve";
+import {
+  CAROUSEL_THEME_TOKENS,
+  type CarouselThemeId,
+  type HeroMetric,
+} from "./theme-tokens";
+import { buildDeck, type Slide } from "./types";
 
 export interface StatItem {
   /** stable identifier, used for visibility toggles + sparkline mapping */
@@ -302,4 +307,51 @@ export function powerSeries(data: ActivityData): number[] | undefined {
 export function paceSeries(data: ActivityData): number[] | undefined {
   const p = data.paceProfile;
   return p && p.length > 1 ? p : undefined;
+}
+
+/** Maps a visibility flag to the StatItem key(s) it controls. */
+const VIS_STAT_KEYS: Partial<Record<keyof Visibility, string[]>> = {
+  distance: ["distance"],
+  time: ["duration"],
+  pace: ["pace"],
+  speed: ["avgSpeed", "maxSpeed"],
+  power: ["power"],
+  elevation: ["elevation"],
+  heartRate: ["avgHr"],
+  cadence: ["cadence"],
+};
+
+/**
+ * Which visibility switches apply for a carousel theme + activity: a stat is
+ * available only when the activity has the data AND the theme actually renders
+ * it (e.g. Frame shows one datum per slide, so deeper stats never appear, and no
+ * theme renders splits). Computed from the raw data with everything on, so
+ * toggling a switch off can't disable its own re-enabling.
+ */
+export function carouselVisibilityAvailable(
+  data: ActivityData,
+  theme: CarouselThemeId
+): Record<keyof Visibility, boolean> {
+  const base = availableVisibility(data);
+  const style = resolveDeckStyle(theme, "#000000", null);
+  const slides = buildDeck(CAROUSEL_THEME_TOKENS[theme].deck);
+  const shown = new Set<string>();
+  for (const slideStats of planSlideStats(data, slides, style, {
+    distance: true,
+    time: true,
+  })) {
+    for (const s of slideStats) {
+      shown.add(s.key);
+    }
+  }
+  shown.add(heroStat(data, style.heroMetric).key);
+
+  const refined = { ...base };
+  for (const key of Object.keys(VIS_STAT_KEYS) as (keyof Visibility)[]) {
+    const keys = VIS_STAT_KEYS[key] ?? [];
+    refined[key] = base[key] && keys.some((k) => shown.has(k));
+  }
+  // No carousel theme renders splits.
+  refined.splits = false;
+  return refined;
 }

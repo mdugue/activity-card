@@ -90,6 +90,14 @@ export function resolveDeckStyle(
     panelKind: tokens.panelKind,
     photoSupported: tokens.photoSupported,
     label: tokens.label,
-    elevation: tokens.elevation,
+    // Some themes tie the elevation viz to the (user-chosen) accent rather than
+    // the fixed token colours.
+    elevation: tokens.elevationAccent
+      ? {
+          line: resolvedAccent,
+          fillFrom: resolvedAccent,
+          fillTo: tokens.background,
+        }
+      : tokens.elevation,
   };
 }

@@ -17,10 +17,12 @@ import {
   type Sport,
 } from "@/components/app/sample-data";
 import { StravaPicker } from "@/components/app/strava-picker";
+import { THEME_META } from "@/components/themes";
 import type { AltitudeMood } from "@/components/themes/altitude";
 import { useCarousel } from "@/hooks/use-carousel";
 import { useImagePalette } from "@/hooks/use-image-palette";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
+import { carouselVisibilityAvailable } from "@/lib/carousel/stats";
 import {
   CAROUSEL_THEME_TOKENS,
   type CarouselThemeId,
@@ -397,7 +399,7 @@ export default function Home() {
             <CarouselEditState
               accent={accent}
               athleteName={data.athleteName}
-              available={availableVisibility(data)}
+              available={carouselVisibilityAvailable(data, carouselTheme)}
               carousel={carousel}
               data={visibleData}
               imageTransform={imageTransform}
@@ -426,7 +428,15 @@ export default function Home() {
               accent={accent}
               altitudeMood={altitudeMood}
               athleteName={data.athleteName}
-              available={availableVisibility(data)}
+              available={{
+                ...availableVisibility(data),
+                heartRate:
+                  availableVisibility(data).heartRate &&
+                  THEME_META[theme].usesHeartRate,
+                splits:
+                  availableVisibility(data).splits &&
+                  THEME_META[theme].usesSplits,
+              }}
               data={visibleData}
               imageTransform={imageTransform}
               location={data.location}

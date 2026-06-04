@@ -114,6 +114,8 @@ export interface CarouselThemeTokens {
    *  whose hero layer isn't already the route or the elevation range */
   detailViz: boolean;
   elevation: ElevationColors;
+  /** elevation viz follows the shared accent instead of the fixed token colours */
+  elevationAccent?: boolean;
   fontPair: FontPairId;
   heroLayer: HeroLayer;
   /** which stat headlines the intro slide */
@@ -225,6 +227,7 @@ export const CAROUSEL_THEME_TOKENS: Record<
     fontPair: "bold",
     routeStyle: "poster",
     elevation: { line: "#ff7a3c", fillFrom: "#ff7a3c", fillTo: "#0c1116" },
+    elevationAccent: true,
     heroLayer: "elevation",
     heroMetric: "elevation",
     crossViz: "route",

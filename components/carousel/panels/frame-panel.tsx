@@ -100,7 +100,7 @@ function FrameDatum({
   stat: StatItem;
   style: TemplateProps["style"];
 }) {
-  const sparkColor = c.shadow && style.dark ? "#ffffff" : style.accent2;
+  const sparkColor = c.shadow && style.dark ? "#ffffff" : style.accent;
   return (
     <div style={{ marginTop: "auto", marginBottom: "auto" }}>
       <Rule color={c.fg} />
