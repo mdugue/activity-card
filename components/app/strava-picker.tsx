@@ -1,6 +1,13 @@
 "use client";
 
-import { Bike, Footprints, MapPin, Waves } from "lucide-react";
+import {
+  ArrowRightIcon,
+  CircleNotchIcon,
+  MapPinIcon,
+  PersonSimpleBikeIcon,
+  PersonSimpleRunIcon,
+  PersonSimpleSwimIcon,
+} from "@phosphor-icons/react";
 import { useEffect, useId, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -652,37 +659,80 @@ function ActivityItem({
         </ItemDescription>
       </ItemContent>
       <ItemActions>
-        <span className="font-mono text-[10px] tracking-[0.18em] opacity-50">
-          {pickAffordance(isPicking, multiSelect)}
-        </span>
+        <PickAffordance isPicking={isPicking} multiSelect={multiSelect} />
       </ItemActions>
     </Item>
   );
 }
 
-function pickAffordance(isPicking: boolean, multiSelect: boolean): string {
+function PickAffordance({
+  isPicking,
+  multiSelect,
+}: {
+  isPicking: boolean;
+  multiSelect: boolean;
+}) {
   if (isPicking) {
-    return "LOADING…";
+    return (
+      <CircleNotchIcon
+        aria-label="Loading"
+        className="size-4 animate-spin opacity-60"
+        weight="duotone"
+      />
+    );
   }
   if (multiSelect) {
-    return "";
+    return null;
   }
-  return "PICK →";
+  return (
+    <span className="flex items-center gap-1 font-mono text-[10px] tracking-[0.18em] opacity-50">
+      PICK
+      <ArrowRightIcon aria-hidden className="size-3" weight="duotone" />
+    </span>
+  );
 }
 
 function SportIcon({ sportType }: { sportType: string }) {
   const s = sportType.toLowerCase();
   const cls = "size-5 shrink-0 opacity-70";
   if (s.includes("swim")) {
-    return <Waves aria-hidden className={cls} data-sport="swim" />;
+    return (
+      <PersonSimpleSwimIcon
+        aria-hidden
+        className={cls}
+        data-sport="swim"
+        weight="duotone"
+      />
+    );
   }
   if (s.includes("ride") || s.includes("bike") || s.includes("cycl")) {
-    return <Bike aria-hidden className={cls} data-sport="ride" />;
+    return (
+      <PersonSimpleBikeIcon
+        aria-hidden
+        className={cls}
+        data-sport="ride"
+        weight="duotone"
+      />
+    );
   }
   if (s.includes("run")) {
-    return <Footprints aria-hidden className={cls} data-sport="run" />;
+    return (
+      <PersonSimpleRunIcon
+        aria-hidden
+        className={cls}
+        data-sport="run"
+        weight="duotone"
+      />
+    );
   }
-  return <MapPin aria-hidden className={cls} data-sport="other" />;
+  return (
+    <MapPinIcon
+      aria-hidden
+      className={cls}
+      data-sport="other"
+      weight="duotone"
+    />
+  );
 }
 
 function formatDate(iso: string): string {

@@ -1,5 +1,13 @@
 "use client";
 
+import {
+  FileArrowUpIcon,
+  MedalIcon,
+  PersonSimpleBikeIcon,
+  PersonSimpleRunIcon,
+  PersonSimpleSwimIcon,
+  WarningCircleIcon,
+} from "@phosphor-icons/react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -15,6 +23,7 @@ import {
 } from "@/components/app/empty-state-intro";
 import { StravaConnectButton } from "@/components/app/strava-connect-button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useStravaConnection } from "@/hooks/use-strava-connection";
@@ -26,6 +35,13 @@ const PANEL_COUNT = 4;
 // Keep in sync with the rail's `gap-4` (16px) so the sliced panorama lines up
 // across the gutters and reads as one continuous photo.
 const PANEL_GAP = "16px";
+
+const SPORT_CHIPS = [
+  { Icon: PersonSimpleBikeIcon, label: "RIDE" },
+  { Icon: PersonSimpleRunIcon, label: "RUN" },
+  { Icon: PersonSimpleSwimIcon, label: "SWIM" },
+  { Icon: MedalIcon, label: "TRIATHLON" },
+] as const;
 
 interface EmptyStateProps {
   onFilesLoaded: (parts: ParsedActivity[]) => void;
@@ -305,7 +321,14 @@ export function EmptyState({
       {showOverlay ? (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/85 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-3 border-2 border-primary border-dashed px-12 py-10">
-            {isParsing ? <Spinner className="size-6 text-primary" /> : null}
+            {isParsing ? (
+              <Spinner className="size-6 text-primary" />
+            ) : (
+              <FileArrowUpIcon
+                className="size-6 text-primary"
+                weight="duotone"
+              />
+            )}
             <span className="font-mono font-semibold text-primary text-xs uppercase tracking-[0.28em]">
               {isParsing ? "Reading…" : "Drop to read"}
             </span>
@@ -358,6 +381,7 @@ export function EmptyState({
           role="status"
           variant="destructive"
         >
+          <WarningCircleIcon weight="duotone" />
           <AlertTitle>We can&apos;t reach the Effort server.</AlertTitle>
           <AlertDescription>
             Strava sign-in is unavailable right now. Refresh in a moment, or
@@ -420,6 +444,16 @@ export function EmptyState({
             </button>
           </p>
         </div>
+      </div>
+
+      {/* Supported sports — the card types Effort can render. */}
+      <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
+        {SPORT_CHIPS.map(({ Icon, label }) => (
+          <Badge key={label}>
+            <Icon aria-hidden data-icon="inline-start" weight="duotone" />
+            {label}
+          </Badge>
+        ))}
       </div>
 
       {intro.showReplay ? <IntroReplay onReplay={intro.replay} /> : null}

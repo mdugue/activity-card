@@ -5,7 +5,7 @@
 // (mobile) with the full theme grid. Extracted from the single-card theme
 // carousel so the two modes share one control.
 
-import { ChevronDown } from "lucide-react";
+import { CaretDownIcon } from "@phosphor-icons/react";
 import { useState, useSyncExternalStore } from "react";
 import {
   THEME_META,
@@ -131,9 +131,10 @@ const ThemeNameButton = ({
       </span>
       <span className="caption-micro mt-1 block">{meta.tagline}</span>
     </span>
-    <ChevronDown
+    <CaretDownIcon
       aria-hidden
       className="size-4 opacity-60 transition-transform group-data-[state=open]:rotate-180"
+      weight="duotone"
     />
   </Button>
 );

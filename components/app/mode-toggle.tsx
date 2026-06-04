@@ -3,6 +3,7 @@
 // Top-level Single Card ↔ Carousel switch. Single Card keeps the existing flow
 // untouched; Carousel swaps in the multi-slide editor.
 
+import { CardsIcon, type Icon, ImagesIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
 export type CardMode = "single" | "carousel";
@@ -12,9 +13,9 @@ interface ModeToggleProps {
   onModeChange: (mode: CardMode) => void;
 }
 
-const MODES: { id: CardMode; label: string; sub: string }[] = [
-  { id: "single", label: "Single Card", sub: "one frame" },
-  { id: "carousel", label: "Carousel", sub: "swipeable set" },
+const MODES: { id: CardMode; label: string; sub: string; Icon: Icon }[] = [
+  { id: "single", label: "Single Card", sub: "one frame", Icon: CardsIcon },
+  { id: "carousel", label: "Carousel", sub: "swipeable set", Icon: ImagesIcon },
 ];
 
 export function ModeToggle({ mode, onModeChange }: ModeToggleProps) {
@@ -23,11 +24,12 @@ export function ModeToggle({ mode, onModeChange }: ModeToggleProps) {
       <legend className="sr-only">Card mode</legend>
       {MODES.map((m) => {
         const active = m.id === mode;
+        const { Icon } = m;
         return (
           <button
             aria-pressed={active}
             className={cn(
-              "flex flex-col items-start px-4 py-2 text-left transition-colors",
+              "flex items-center gap-2.5 px-4 py-2 text-left transition-colors",
               active
                 ? "bg-foreground text-background"
                 : "text-foreground/70 hover:text-foreground"
@@ -36,11 +38,14 @@ export function ModeToggle({ mode, onModeChange }: ModeToggleProps) {
             onClick={() => onModeChange(m.id)}
             type="button"
           >
-            <span className="font-heading text-base uppercase leading-none tracking-wide">
-              {m.label}
-            </span>
-            <span className="mt-1 font-medium font-mono text-[9px] uppercase tracking-[0.18em] opacity-60">
-              {m.sub}
+            <Icon aria-hidden className="size-5 shrink-0" weight="duotone" />
+            <span className="flex flex-col items-start">
+              <span className="font-heading text-base uppercase leading-none tracking-wide">
+                {m.label}
+              </span>
+              <span className="mt-1 font-medium font-mono text-[9px] uppercase tracking-[0.18em] opacity-60">
+                {m.sub}
+              </span>
             </span>
           </button>
         );

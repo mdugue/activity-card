@@ -1,6 +1,11 @@
 "use client";
 
-import { Check } from "lucide-react";
+import {
+  CheckIcon,
+  PencilSimpleIcon,
+  PlusIcon,
+  ShareNetworkIcon,
+} from "@phosphor-icons/react";
 import { useRef, useState } from "react";
 import type { AltitudeMood } from "@/components/themes/altitude";
 import { Button } from "@/components/ui/button";
@@ -81,7 +86,7 @@ export function DownloadState({
             </div>
           </div>
           <div className="absolute -right-3 -bottom-3 flex size-14 items-center justify-center bg-primary text-primary-foreground shadow-lg shadow-primary/50">
-            <Check aria-hidden className="size-6" strokeWidth={3} />
+            <CheckIcon aria-hidden className="size-6" weight="bold" />
           </div>
         </div>
 
@@ -103,12 +108,23 @@ export function DownloadState({
           </p>
           <div className="mt-8 flex flex-wrap gap-2">
             <Button disabled={isSharing} onClick={handleShare} size="lg">
+              <ShareNetworkIcon
+                aria-hidden
+                className="size-4"
+                weight="duotone"
+              />
               {isSharing ? "Sharing…" : "Share"}
             </Button>
             <Button onClick={onKeepEditing} size="lg" variant="outline">
+              <PencilSimpleIcon
+                aria-hidden
+                className="size-4"
+                weight="duotone"
+              />
               Keep editing
             </Button>
             <Button onClick={onNew} size="lg" variant="ghost">
+              <PlusIcon aria-hidden className="size-4" weight="duotone" />
               New
             </Button>
           </div>

@@ -7,7 +7,7 @@
 // button at the bottom. Keeping the shell here means the two editors share the
 // same header, spacing, Strava affordances and CTA.
 
-import { ArrowRight } from "lucide-react";
+import { ArrowRightIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useStravaConnection } from "@/hooks/use-strava-connection";
@@ -18,6 +18,8 @@ import type { ActivityData } from "./sample-data";
 const ACTIVITY_FILE_RE = /\.(gpx|fit)$/i;
 
 interface EditSidebarProps {
+  /** optional duotone icon rendered before the action label */
+  actionIcon?: React.ReactNode;
   /** big primary label, e.g. "Download PNG" / "Export carousel" */
   actionLabel: string;
   /** small mono sub-label, e.g. "1080 × 1350" / "4 × 1080×1350" */
@@ -35,6 +37,7 @@ export function EditSidebar({
   data,
   onFilesLoaded,
   onOpenStravaPicker,
+  actionIcon,
   actionLabel,
   actionMeta,
   isBusy,
@@ -58,7 +61,10 @@ export function EditSidebar({
         onClick={onAction}
         size="lg"
       >
-        <span>{isBusy ? "Rendering…" : actionLabel}</span>
+        <span className="flex items-center gap-2.5">
+          {actionIcon}
+          {isBusy ? "Rendering…" : actionLabel}
+        </span>
         <span className="font-medium font-mono text-[10px] tracking-[0.18em] opacity-75">
           {actionMeta}
         </span>
@@ -152,11 +158,18 @@ function FileLoadedRow({
           type="button"
         >
           Swap
-          <ArrowRight aria-hidden className="size-2.5" />
+          <ArrowRightIcon aria-hidden className="size-2.5" weight="duotone" />
         </button>
       </div>
       {error ? (
-        <div className="font-mono text-[10px] text-destructive">{error}</div>
+        <div className="flex items-center gap-1.5 font-mono text-[10px] text-destructive">
+          <WarningCircleIcon
+            aria-hidden
+            className="size-3.5"
+            weight="duotone"
+          />
+          {error}
+        </div>
       ) : null}
     </div>
   );
