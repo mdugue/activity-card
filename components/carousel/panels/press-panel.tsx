@@ -201,14 +201,14 @@ function FrontPage({
 }
 
 const VIZ_W = 540;
-const VIZ_H = 150;
+const VIZ_H = 140;
 
-/** The dark "clipping" that overlaps the stat card — a route or elevation cut
- *  in paper ink, flat and borderless, for a pasted-up magazine feel. */
+/** The dark "clipping" that overlaps the stat card's empty lower band — a route
+ *  or elevation cut in paper ink, flat and borderless, for a pasted-up magazine
+ *  feel. No title; the paired stat names it. */
 function VizCard({
   kind,
   data,
-  style,
   ink,
   paper,
 }: {
@@ -216,7 +216,6 @@ function VizCard({
   ink: string;
   kind: "elevation" | "route";
   paper: string;
-  style: EffectiveStyle;
 }) {
   const { profile, mode } = pickProfile(data);
   const has =
@@ -231,26 +230,15 @@ function VizCard({
       style={{
         alignSelf: "flex-end",
         width: VIZ_W + 44,
-        marginTop: -52,
+        // Overlaps only the stat card's reserved empty band (see paddingBottom).
+        marginTop: -58,
         background: ink,
-        padding: "20px 22px 16px",
+        padding: 22,
         boxShadow: "0 16px 44px rgba(0,0,0,0.34)",
         position: "relative",
         zIndex: 1,
       }}
     >
-      <div
-        style={{
-          fontFamily: style.fonts.mono,
-          fontSize: 15,
-          letterSpacing: "0.24em",
-          color: paper,
-          opacity: 0.66,
-          marginBottom: 10,
-        }}
-      >
-        {kind === "route" ? "THE ROUTE" : "THE PROFILE"}
-      </div>
       <div style={{ width: VIZ_W, height: VIZ_H }}>
         {kind === "route" ? (
           <RouteLine
@@ -289,6 +277,7 @@ function Spread({
   index,
 }: SpreadProps & { index: number }) {
   const lead = stats[0];
+  const extras = stats.slice(1);
   return (
     <div
       style={{
@@ -298,8 +287,14 @@ function Spread({
         flexDirection: "column",
       }}
     >
-      {/* Stat clipping (paper). */}
-      <Slab bg={paper} extra={{ width: "82%" }} fg={ink} onPhoto={hasPhoto}>
+      {/* Stat clipping (paper). Reserves a bottom band the viz overlaps into, so
+          the dark cut never covers the number. */}
+      <Slab
+        bg={paper}
+        extra={{ width: "84%", paddingBottom: 78 }}
+        fg={ink}
+        onPhoto={hasPhoto}
+      >
         <div
           style={{
             fontFamily: style.fonts.mono,
@@ -314,33 +309,80 @@ function Spread({
           style={{
             fontFamily: style.fonts.numeral,
             fontWeight: style.fonts.numeralWeight,
-            fontSize: 236,
-            lineHeight: 0.78,
+            fontSize: 212,
+            lineHeight: 0.8,
             color: ink,
             fontVariantNumeric: "tabular-nums",
-            marginTop: 14,
+            marginTop: 12,
           }}
         >
           {lead?.value}
           <span
             style={{
               fontFamily: style.fonts.display,
-              fontSize: 56,
+              fontSize: 52,
               fontStyle: "italic",
             }}
           >
             {lead?.unit ? ` ${lead.unit}` : ""}
           </span>
         </div>
+
+        {extras.length > 0 ? (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 40,
+              marginTop: 28,
+            }}
+          >
+            {extras.map((s) => (
+              <div key={s.key}>
+                <div
+                  style={{
+                    fontFamily: style.fonts.mono,
+                    fontSize: 16,
+                    letterSpacing: "0.2em",
+                    color: style.accent,
+                  }}
+                >
+                  {s.label}
+                </div>
+                <div
+                  style={{
+                    marginTop: 6,
+                    fontFamily: style.fonts.numeral,
+                    fontWeight: style.fonts.numeralWeight,
+                    fontSize: 64,
+                    lineHeight: 0.85,
+                    color: ink,
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
+                  {s.value}
+                  <span
+                    style={{
+                      fontFamily: style.fonts.display,
+                      fontSize: 24,
+                      fontStyle: "italic",
+                    }}
+                  >
+                    {s.unit ? ` ${s.unit}` : ""}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </Slab>
 
       {style.detailViz ? (
         <VizCard
           data={data}
           ink={ink}
-          kind={index === 1 ? "route" : "elevation"}
+          kind={index === 1 ? "elevation" : "route"}
           paper={paper}
-          style={style}
         />
       ) : null}
     </div>

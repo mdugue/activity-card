@@ -1,7 +1,8 @@
-// Global elevation/pace band for the seamless strip — the Altitude theme's
+// Global elevation/pace band for the seamless strip — the Ascent theme's
 // signature. The profile is stretched across the full strip width (a mountain
 // range that bleeds across every slide edge) with a filled gradient under the
 // curve and a vertical exaggeration so flat-ish topography still reads.
+// Optionally tags the highest and lowest points with a small dot + altitude.
 
 import { useId } from "react";
 import type { ElevationColors } from "@/lib/carousel/theme-tokens";
@@ -11,6 +12,10 @@ interface ElevationBandProps {
   /** 1 ≈ 70% of the band height, capped at full */
   exaggeration?: number;
   h: number;
+  /** dot + altitude label at the high/low points (elevation mode only) */
+  markerColor?: string;
+  markerFont?: string;
+  markers?: boolean;
   mode?: "elevation" | "pace";
   profile: number[] | undefined;
   w: number;
@@ -23,6 +28,9 @@ export function ElevationBand({
   colors,
   mode = "elevation",
   exaggeration = 1.1,
+  markers = false,
+  markerColor = "#ffffff",
+  markerFont = "monospace",
 }: ElevationBandProps) {
   const areaId = useId();
   if (!profile || profile.length < 2) {
@@ -48,6 +56,17 @@ export function ElevationBand({
     .join(" ");
   const area = `${line} L${w} ${h} L0 ${h} Z`;
 
+  const showMarkers = markers && mode === "elevation";
+  const maxIdx = profile.indexOf(max);
+  const minIdx = profile.indexOf(min);
+  const tags = showMarkers
+    ? [
+        { p: pts[maxIdx], value: max, above: true },
+        { p: pts[minIdx], value: min, above: false },
+      ]
+    : [];
+  const labelX = (x: number) => Math.min(Math.max(x, 90), w - 90);
+
   return (
     <svg
       aria-hidden="true"
@@ -71,6 +90,25 @@ export function ElevationBand({
         strokeWidth={4}
         style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.35))" }}
       />
+
+      {tags.map((t) => (
+        <g
+          key={t.above ? "peak" : "low"}
+          style={{ filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.45))" }}
+        >
+          <circle cx={t.p[0]} cy={t.p[1]} fill={markerColor} r={6} />
+          <text
+            fill={markerColor}
+            fontFamily={markerFont}
+            fontSize={26}
+            textAnchor="middle"
+            x={labelX(t.p[0])}
+            y={t.above ? t.p[1] - 18 : t.p[1] + 38}
+          >
+            {`${Math.round(t.value)} m`}
+          </text>
+        </g>
+      ))}
     </svg>
   );
 }

@@ -46,71 +46,73 @@ export function EditorialSlide({
         total={total}
       />
 
-      {/* Centred round-up visualisation. */}
+      <div style={{ flex: 1 }} />
+
+      {/* Round-up: title + summary, with a small companion visualisation to the
+          right at the same height. */}
       <div
         style={{
-          flex: 1,
           display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+          gap: 40,
         }}
       >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            aria-hidden
+            style={{
+              width: 110,
+              height: 4,
+              background: style.accent,
+              marginBottom: 26,
+            }}
+          />
+          <h1
+            style={{
+              fontFamily: style.fonts.display,
+              fontWeight: style.fonts.displayWeight,
+              fontStyle: "italic",
+              fontSize: 80,
+              lineHeight: 0.94,
+              letterSpacing: "-0.015em",
+              margin: 0,
+              color: colors.fg,
+              textWrap: "balance",
+              textShadow: colors.shadow || undefined,
+            }}
+          >
+            {data.title || "The effort"}
+          </h1>
+          <div
+            style={{
+              marginTop: 24,
+              fontFamily: style.fonts.mono,
+              fontSize: 26,
+              letterSpacing: "0.12em",
+              color: colors.muted,
+              textShadow: colors.shadow || undefined,
+            }}
+          >
+            {summary}
+          </div>
+        </div>
+
         {style.crossViz ? (
           <CrossViz
             accent={style.accent}
             color={colors.fg}
             data={data}
             fonts={style.fonts}
-            h={250}
+            h={130}
             kind={style.crossViz}
             muted={colors.muted}
-            w={560}
+            w={230}
           />
         ) : null}
       </div>
 
-      <div>
-        <div
-          aria-hidden
-          style={{
-            width: 110,
-            height: 4,
-            background: style.accent,
-            marginBottom: 26,
-          }}
-        />
-        <h1
-          style={{
-            fontFamily: style.fonts.display,
-            fontWeight: style.fonts.displayWeight,
-            fontStyle: "italic",
-            fontSize: 80,
-            lineHeight: 0.94,
-            letterSpacing: "-0.015em",
-            margin: 0,
-            color: colors.fg,
-            textWrap: "balance",
-            maxWidth: "95%",
-            textShadow: colors.shadow || undefined,
-          }}
-        >
-          {data.title || "The effort"}
-        </h1>
-        <div
-          style={{
-            marginTop: 24,
-            fontFamily: style.fonts.mono,
-            fontSize: 26,
-            letterSpacing: "0.12em",
-            color: colors.muted,
-            textShadow: colors.shadow || undefined,
-          }}
-        >
-          {summary}
-        </div>
-      </div>
-
-      <div style={{ marginTop: 44 }}>
+      <div style={{ marginTop: 40 }}>
         <Signature
           accent={style.accent}
           athleteName={data.athleteName}

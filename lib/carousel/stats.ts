@@ -237,12 +237,14 @@ export function planSlideStats(
     const rest = all.slice(3);
     return slides.map((_, i) => {
       if (i === 0) {
-        return all.slice(0, 3);
+        return all.slice(0, 3); // headline + lede
       }
       if (i === last) {
         return [];
       }
-      return rest[i - 1] ? [rest[i - 1]] : [];
+      // First spread leads with elevation (paired with the altitude cut); the
+      // second carries the next datum + a couple more (e.g. power) as a row.
+      return i === 1 ? rest.slice(0, 1) : rest.slice(1, 4);
     });
   }
   return planStandardStats(data, slides, style.heroMetric, opts);

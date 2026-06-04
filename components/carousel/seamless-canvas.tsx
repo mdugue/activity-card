@@ -158,6 +158,9 @@ export function SeamlessCanvas({
           <ElevationBand
             colors={style.elevation}
             h={SLIDE_H * 0.62}
+            markerColor={heroInk}
+            markerFont={style.fonts.mono}
+            markers
             mode={profileMode}
             profile={profile}
             w={width}

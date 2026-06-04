@@ -42,7 +42,7 @@ export interface SlideTextColors {
 // ("DISTANCE", "TIME") read on busy imagery. Dark themes use a dark drop.
 const DARK_SHADOW = "0 1px 2px rgba(0,0,0,0.6), 0 2px 22px rgba(0,0,0,0.45)";
 const LIGHT_SHADOW =
-  "0 0 2px rgba(255,255,255,0.98), 0 0 5px rgba(255,255,255,0.95), 0 0 14px rgba(255,255,255,0.8), 0 1px 2px rgba(0,0,0,0.18)";
+  "0 0 2px rgba(255,255,255,1), 0 0 6px rgba(255,255,255,0.98), 0 0 14px rgba(255,255,255,0.9), 0 0 26px rgba(255,255,255,0.72), 0 0 46px rgba(255,255,255,0.5), 0 1px 2px rgba(0,0,0,0.2)";
 
 /** Foreground colours + an optional text-shadow for the slide's text. */
 export function slideText(
