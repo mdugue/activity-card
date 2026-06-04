@@ -268,10 +268,14 @@ test.describe("strava OAuth + picker", () => {
       b: "https://attacker.example",
     });
     const state = Buffer.from(payload).toString("base64url");
+    // Assert the redirect target at navigation commit — the home page strips the
+    // `?strava=` query param on mount (after toasting), and a heavier home
+    // bundle can win that race before a post-load URL check observes it.
     await page.goto(
-      `/api/strava/callback?code=intercepted&state=${encodeURIComponent(state)}`
+      `/api/strava/callback?code=intercepted&state=${encodeURIComponent(state)}`,
+      { waitUntil: "commit" }
     );
-    await page.waitForURL(/strava=bounce_rejected/, { timeout: 5000 });
+    expect(page.url()).toMatch(/strava=bounce_rejected/);
   });
 
   test("502 from /api/strava/activity surfaces an upstream alert", async ({
