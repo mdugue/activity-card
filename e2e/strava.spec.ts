@@ -237,9 +237,11 @@ test.describe("strava OAuth + picker", () => {
     // Connection cleared → Disconnect / "Connected as" disappear.
     await expect(footer.getByText(/connected as/i)).toHaveCount(0);
 
-    // Reload to confirm the cookies are actually gone.
+    // Reload to confirm the cookies are actually gone. The saved draft restores
+    // the card into the editor, but the Strava connection stays gone — the
+    // footer no longer shows the connected athlete.
     await page.reload();
-    await expect(page.getByRole("link", CONNECT_BUTTON)).toBeVisible();
+    await expect(footer.getByText(/connected as/i)).toHaveCount(0);
   });
 
   test("callback ignores a malicious `return_to` and lands on /", async ({
