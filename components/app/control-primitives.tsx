@@ -3,6 +3,7 @@
 // Shared sidebar control primitives, used by both the Single Card and Carousel
 // editors so the two sidebars are literally the same building blocks.
 
+import { ImageSquareIcon } from "@phosphor-icons/react";
 import { useId, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -105,12 +106,56 @@ export function PhotoControl({
   photoUrl,
   onChange,
   disabled,
+  prominent,
 }: {
   disabled?: boolean;
   onChange: (file: File | null) => void;
   photoUrl: string | null;
+  /** big, inviting drop zone when no photo is set (the photo carries the card) */
+  prominent?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const pick = () => inputRef.current?.click();
+  const fileInput = (
+    <input
+      accept="image/*"
+      className="hidden"
+      disabled={disabled}
+      onChange={(e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          onChange(file);
+        }
+      }}
+      ref={inputRef}
+      type="file"
+    />
+  );
+
+  // Empty + supported → a large, inviting drop zone; the photo sets the mood.
+  if (!photoUrl && prominent && !disabled) {
+    return (
+      <>
+        {fileInput}
+        <button
+          className="mt-2 flex w-full flex-col items-center justify-center gap-2 border-2 border-foreground/25 border-dashed bg-muted/40 px-4 py-9 text-center transition-colors hover:border-foreground/55 hover:bg-muted/70"
+          onClick={pick}
+          type="button"
+        >
+          <ImageSquareIcon
+            aria-hidden
+            className="size-7 opacity-70"
+            weight="duotone"
+          />
+          <span className="font-heading text-lg uppercase leading-none tracking-wide">
+            Add a background photo
+          </span>
+          <span className="caption-micro">JPG or PNG · sets the mood</span>
+        </button>
+      </>
+    );
+  }
+
   return (
     <div
       className={cn(
@@ -118,19 +163,7 @@ export function PhotoControl({
         disabled && "opacity-45"
       )}
     >
-      <input
-        accept="image/*"
-        className="hidden"
-        disabled={disabled}
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) {
-            onChange(file);
-          }
-        }}
-        ref={inputRef}
-        type="file"
-      />
+      {fileInput}
       <div
         aria-hidden
         className="size-12"
@@ -155,7 +188,7 @@ export function PhotoControl({
       ) : null}
       <Button
         disabled={disabled}
-        onClick={() => inputRef.current?.click()}
+        onClick={pick}
         size="sm"
         variant={photoUrl ? "ghost" : "default"}
       >

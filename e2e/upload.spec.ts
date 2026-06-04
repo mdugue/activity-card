@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { SINGLE_RUN_GPX, TRIATHLON_FILES } from "./fixtures";
-import { selectTheme } from "./helpers";
+import { selectSingleCard, selectTheme } from "./helpers";
 
 test.describe("upload", () => {
   test("single file → edit state with parsed activity", async ({ page }) => {
@@ -49,6 +49,8 @@ test.describe("upload", () => {
 
     await expect(page.getByText(/3 files · assembled/i)).toBeVisible();
 
+    // The triathlon single-card theme lives in Single Card mode.
+    await selectSingleCard(page);
     // Switch to the triathlon theme — segments should appear with transitions.
     await selectTheme(page, "TRIATHLON");
     // The page mounts the theme twice (visible preview + off-screen export

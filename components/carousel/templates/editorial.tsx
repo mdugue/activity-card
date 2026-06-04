@@ -1,10 +1,11 @@
-// Editorial — typography-led closing/signature slide (Tracksmith/Rapha feel).
-// Magazine headline treatment of the title + a one-line stat summary, athlete
-// signature, and a quiet CTA. The route silhouette is drawn globally across the
-// strip, so this slide adds no route of its own.
+// Editorial — typography-led wrap-up slide. A centred round-up visualisation
+// (the elevation profile for Trace, the route glyph for Ascent / Exposure), a
+// magazine headline of the title, a one-line stat summary, and an opt-in
+// signature. No repeated hero number — distance already lives in the summary.
 
-import { buildStats, heroStat } from "@/lib/carousel/stats";
-import { MetaBand } from "./parts";
+import { buildStats } from "@/lib/carousel/stats";
+import { CrossViz } from "../cross-viz";
+import { MetaBand, Signature } from "./parts";
 import { SLIDE_PAD, slideText, type TemplateProps } from "./shared";
 
 export function EditorialSlide({
@@ -13,11 +14,15 @@ export function EditorialSlide({
   hasPhoto,
   index,
   total,
+  showEffort,
+  showPageNumber,
+  visibility,
 }: TemplateProps) {
   const colors = slideText(style, hasPhoto);
-  const stats = buildStats(data);
-  const hero = heroStat(data);
-  const summary = stats
+  const summary = buildStats(data, {
+    distance: visibility.distance,
+    time: visibility.time,
+  })
     .slice(0, 3)
     .map((s) => `${s.value}${s.unit ? ` ${s.unit}` : ""}`)
     .join("  ·  ");
@@ -37,93 +42,84 @@ export function EditorialSlide({
         data={data}
         fonts={style.fonts}
         index={index}
+        showPageNumber={showPageNumber}
         total={total}
       />
 
-      <div style={{ marginTop: "auto" }}>
-        <div
-          aria-hidden
-          style={{
-            width: 110,
-            height: 4,
-            background: style.accent,
-            marginBottom: 30,
-          }}
-        />
-        <h1
-          style={{
-            fontFamily: style.fonts.display,
-            fontStyle: "italic",
-            fontSize: 96,
-            lineHeight: 0.92,
-            letterSpacing: "-0.015em",
-            margin: 0,
-            color: colors.fg,
-            textWrap: "balance",
-            maxWidth: "95%",
-          }}
-        >
-          {data.title}
-        </h1>
-        <div
-          style={{
-            marginTop: 28,
-            fontFamily: style.fonts.mono,
-            fontSize: 26,
-            letterSpacing: "0.12em",
-            color: colors.muted,
-          }}
-        >
-          {summary}
-        </div>
-      </div>
+      <div style={{ flex: 1 }} />
 
+      {/* Round-up: title + summary, with a small companion visualisation to the
+          right at the same height. */}
       <div
         style={{
-          marginTop: 56,
           display: "flex",
-          justifyContent: "space-between",
           alignItems: "flex-end",
+          justifyContent: "space-between",
+          gap: 40,
         }}
       >
-        <div>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div
+            aria-hidden
             style={{
-              fontFamily: style.fonts.mono,
-              fontSize: 18,
-              letterSpacing: "0.24em",
-              color: colors.faint,
+              width: 110,
+              height: 4,
+              background: style.accent,
+              marginBottom: 26,
+            }}
+          />
+          <h1
+            style={{
+              fontFamily: style.fonts.display,
+              fontWeight: style.fonts.displayWeight,
+              fontStyle: "italic",
+              fontSize: 80,
+              lineHeight: 0.94,
+              letterSpacing: "-0.015em",
+              margin: 0,
+              color: colors.fg,
+              textWrap: "balance",
+              textShadow: colors.shadow || undefined,
             }}
           >
-            MADE WITH EFFORT
+            {data.title || "The effort"}
+          </h1>
+          <div
+            style={{
+              marginTop: 24,
+              fontFamily: style.fonts.mono,
+              fontSize: 26,
+              letterSpacing: "0.12em",
+              color: colors.muted,
+              textShadow: colors.shadow || undefined,
+            }}
+          >
+            {summary}
           </div>
-          {data.athleteName ? (
-            <div
-              style={{
-                fontFamily: style.fonts.display,
-                fontStyle: "italic",
-                fontSize: 52,
-                color: style.accent,
-                marginTop: 8,
-              }}
-            >
-              {data.athleteName}
-            </div>
-          ) : null}
         </div>
-        <div
-          style={{
-            fontFamily: style.fonts.numeral,
-            fontSize: 64,
-            color: colors.fg,
-            fontVariantNumeric: "tabular-nums",
-          }}
-        >
-          {hero.value}
-          <span style={{ fontFamily: style.fonts.mono, fontSize: 22 }}>
-            {hero.unit ? ` ${hero.unit}` : ""}
-          </span>
-        </div>
+
+        {style.crossViz ? (
+          <CrossViz
+            accent={style.accent}
+            color={colors.fg}
+            data={data}
+            fonts={style.fonts}
+            h={130}
+            kind={style.crossViz}
+            muted={colors.muted}
+            w={230}
+          />
+        ) : null}
+      </div>
+
+      <div style={{ marginTop: 40 }}>
+        <Signature
+          accent={style.accent}
+          athleteName={data.athleteName}
+          colors={colors}
+          fonts={style.fonts}
+          showEffort={showEffort}
+        />
       </div>
     </div>
   );

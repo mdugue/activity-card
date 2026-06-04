@@ -14,8 +14,8 @@ interface ModeToggleProps {
 }
 
 const MODES: { id: CardMode; label: string; sub: string; Icon: Icon }[] = [
-  { id: "single", label: "Single Card", sub: "one frame", Icon: CardsIcon },
   { id: "carousel", label: "Carousel", sub: "swipeable set", Icon: ImagesIcon },
+  { id: "single", label: "Single Card", sub: "one frame", Icon: CardsIcon },
 ];
 
 export function ModeToggle({ mode, onModeChange }: ModeToggleProps) {

@@ -16,12 +16,13 @@ interface CrossVizProps {
   color: string;
   data: ActivityData;
   fonts: FontPair;
+  /** chart height (px) */
+  h?: number;
   kind: CrossVizKind;
   muted: string;
+  /** chart width (px) */
+  w?: number;
 }
-
-const BOX_W = 260;
-const BOX_H = 150;
 
 export function CrossViz({
   kind,
@@ -30,6 +31,8 @@ export function CrossViz({
   muted,
   accent,
   fonts,
+  w = 260,
+  h = 150,
 }: CrossVizProps) {
   const { profile, mode } = pickProfile(data);
   const hasRoute = (data.routeCoordinates?.length ?? 0) > 1;
@@ -39,7 +42,7 @@ export function CrossViz({
   }
 
   return (
-    <div style={{ width: BOX_W }}>
+    <div style={{ width: w }}>
       <div
         style={{
           fontFamily: fonts.mono,
@@ -51,28 +54,28 @@ export function CrossViz({
       >
         {kind === "elevation" ? "PROFILE" : "ROUTE"}
       </div>
-      <div style={{ width: BOX_W, height: BOX_H }}>
+      <div style={{ width: w, height: h }}>
         {kind === "elevation" ? (
           <ElevationBand
             colors={{ line: color, fillFrom: color, fillTo: "transparent" }}
             exaggeration={1.2}
-            h={BOX_H}
+            h={h}
             mode={mode}
             profile={profile}
-            w={BOX_W}
+            w={w}
           />
         ) : (
           <RouteLine
             accent={accent}
             accent2={accent}
             coords={data.routeCoordinates}
-            h={BOX_H}
+            h={h}
             ink={color}
             pad={14}
             showMarkers={false}
             strokeWidth={4}
             style="poster"
-            w={BOX_W}
+            w={w}
           />
         )}
       </div>

@@ -17,10 +17,17 @@ import {
   type Sport,
 } from "@/components/app/sample-data";
 import { StravaPicker } from "@/components/app/strava-picker";
+import { themeVisibilityAvailable } from "@/components/themes";
 import type { AltitudeMood } from "@/components/themes/altitude";
 import { useCarousel } from "@/hooks/use-carousel";
 import { useImagePalette } from "@/hooks/use-image-palette";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
+import { carouselVisibilityAvailable } from "@/lib/carousel/stats";
+import {
+  CAROUSEL_THEME_TOKENS,
+  type CarouselThemeId,
+  DEFAULT_CAROUSEL_THEME,
+} from "@/lib/carousel/theme-tokens";
 import { formatDateUpper } from "@/lib/format";
 import { IDENTITY_TRANSFORM, type ImageTransform } from "@/lib/image-transform";
 import type { PhotoMood } from "@/lib/palette";
@@ -39,6 +46,7 @@ interface PersistedUi {
   accent: string;
   altitudeMood: AltitudeMood;
   athleteName?: string;
+  carouselTheme: CarouselThemeId;
   mode: CardMode;
   photoMood: PhotoMood;
   theme: ThemeId;
@@ -60,6 +68,11 @@ function adoptParsed(
     location: parsed.location || base.location,
     athleteName: parsed.athleteName || persistedAthleteName || base.athleteName,
     splits: parsed.splits ?? base.splits,
+    // Power/speed streams aren't parsed yet; never inherit the sample curves, or
+    // a real upload would show a fabricated sparkline. (Frame degrades to the
+    // number alone, and speed falls back to real per-split data when present.)
+    powerProfile: undefined,
+    speedProfile: undefined,
     source,
   };
 }
@@ -90,6 +103,11 @@ export default function Home() {
   const [state, setState] = useState<AppState>("empty");
   const [data, setData] = useState<ActivityData | null>(null);
   const [theme, setTheme] = useState<ThemeId>("path");
+  // Carousel themes have their own id space (Dawn/Dusk pairs etc.), so the
+  // carousel keeps its own selection separate from the single-card theme.
+  const [carouselTheme, setCarouselTheme] = useState<CarouselThemeId>(
+    DEFAULT_CAROUSEL_THEME
+  );
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   // Pan/zoom for the background photo in hero themes. Tied to the current
   // photo, so it resets whenever the photo is swapped or removed.
@@ -102,8 +120,9 @@ export default function Home() {
   const [visibility, setVisibility] = useState<Visibility>(DEFAULT_VISIBILITY);
   const [altitudeMood, setAltitudeMood] = useState<AltitudeMood>("night");
   const [photoMood, setPhotoMood] = useState<PhotoMood>("vibrant");
-  const [mode, setMode] = useState<CardMode>("single");
-  const carousel = useCarousel();
+  // Carousel is the headline mode, so it's the default for a fresh session.
+  const [mode, setMode] = useState<CardMode>("carousel");
+  const carousel = useCarousel(carouselTheme);
   // Held outside `data` so it survives between activities and can seed
   // `adoptParsed` when the parsed file lacks an athlete name.
   const persistedAthleteNameRef = useRef<string | undefined>(undefined);
@@ -121,6 +140,14 @@ export default function Home() {
     /* eslint-disable react-hooks/set-state-in-effect */
     if (persisted.theme) {
       setTheme(persisted.theme);
+    }
+    // Validate against the current theme set: a stale id from an older build or
+    // hand-edited storage would otherwise throw downstream (tokens[id].deck).
+    if (
+      persisted.carouselTheme &&
+      persisted.carouselTheme in CAROUSEL_THEME_TOKENS
+    ) {
+      setCarouselTheme(persisted.carouselTheme);
     }
     if (persisted.accent) {
       setAccent(persisted.accent);
@@ -151,6 +178,7 @@ export default function Home() {
     }
     const payload: PersistedUi = {
       theme,
+      carouselTheme,
       accent,
       visibility,
       altitudeMood,
@@ -165,6 +193,7 @@ export default function Home() {
     }
   }, [
     theme,
+    carouselTheme,
     accent,
     visibility,
     altitudeMood,
@@ -295,9 +324,35 @@ export default function Home() {
       }
       return file ? URL.createObjectURL(file) : null;
     });
-    // A new (or removed) photo invalidates any previous pan/zoom + effects.
+    // A new (or removed) photo invalidates any previous pan/zoom. In carousel
+    // mode a fresh photo adopts the current theme's default look (filter + grain)
+    // so the theme's intent shows immediately; the single card has no such theme
+    // look, so it starts clean. The user can still change it either way.
     setImageTransform(IDENTITY_TRANSFORM);
-    setPhotoEffects(NO_EFFECTS);
+    if (file && mode === "carousel") {
+      const tokens = CAROUSEL_THEME_TOKENS[carouselTheme];
+      setPhotoEffects({
+        ...NO_EFFECTS,
+        filter: tokens.defaultFilter,
+        grain: tokens.defaultGrain,
+      });
+    } else {
+      setPhotoEffects(NO_EFFECTS);
+    }
+  };
+
+  // Switching carousel theme re-applies that theme's signature photo look,
+  // unless there's no photo to affect.
+  const handleCarouselThemeChange = (id: CarouselThemeId) => {
+    setCarouselTheme(id);
+    if (photoUrl) {
+      const tokens = CAROUSEL_THEME_TOKENS[id];
+      setPhotoEffects((prev) => ({
+        ...prev,
+        filter: tokens.defaultFilter,
+        grain: tokens.defaultGrain,
+      }));
+    }
   };
 
   const handleDownload = () => {
@@ -349,6 +404,7 @@ export default function Home() {
             <CarouselEditState
               accent={accent}
               athleteName={data.athleteName}
+              available={carouselVisibilityAvailable(data, carouselTheme)}
               carousel={carousel}
               data={visibleData}
               imageTransform={imageTransform}
@@ -362,13 +418,14 @@ export default function Home() {
               onPhotoChange={handlePhotoChange}
               onPhotoEffectsChange={setPhotoEffects}
               onSportChange={handleSportChange}
-              onThemeChange={setTheme}
+              onThemeChange={handleCarouselThemeChange}
               onTitleChange={handleTitleChange}
               onVisibilityChange={setVisibility}
               photoEffects={photoEffects}
               photoPaletteTheme={photoPalette.theme}
               photoUrl={photoUrl}
-              theme={theme}
+              theme={carouselTheme}
+              title={data.title}
               visibility={visibility}
             />
           ) : (
@@ -376,6 +433,7 @@ export default function Home() {
               accent={accent}
               altitudeMood={altitudeMood}
               athleteName={data.athleteName}
+              available={themeVisibilityAvailable(data, theme)}
               data={visibleData}
               imageTransform={imageTransform}
               location={data.location}
@@ -398,6 +456,7 @@ export default function Home() {
               photoPaletteTheme={photoPalette.theme}
               photoUrl={photoUrl}
               theme={theme}
+              title={data.title}
               visibility={visibility}
             />
           )}

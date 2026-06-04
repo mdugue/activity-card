@@ -184,7 +184,12 @@ export function ThemeCarousel({
 
       {/* Theme name — interactive, opens picker popover/drawer */}
       <div className="mt-2 flex flex-col items-center">
-        <ThemePicker onThemeChange={onThemeChange} theme={theme} />
+        <ThemePicker
+          labels={THEME_META}
+          onThemeChange={onThemeChange}
+          order={THEME_ORDER}
+          theme={theme}
+        />
         <div className="caption-micro mt-2 flex items-center gap-2">
           <span>{THEME_ORDER.indexOf(theme) + 1}</span>
           <span aria-hidden>/</span>

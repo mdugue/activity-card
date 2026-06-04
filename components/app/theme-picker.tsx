@@ -7,11 +7,6 @@
 
 import { CaretDownIcon } from "@phosphor-icons/react";
 import { useState, useSyncExternalStore } from "react";
-import {
-  THEME_META,
-  THEME_ORDER,
-  type ThemeId,
-} from "@/components/themes/index";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -32,25 +27,28 @@ interface ThemeLabel {
   tagline: string;
 }
 
-interface ThemePickerProps {
-  /** label/tagline per theme; defaults to the Single Card names */
-  labels?: Record<ThemeId, ThemeLabel>;
-  onThemeChange: (theme: ThemeId) => void;
-  theme: ThemeId;
+interface ThemePickerProps<T extends string> {
+  /** label/tagline per theme id */
+  labels: Record<T, ThemeLabel>;
+  onThemeChange: (theme: T) => void;
+  /** picker order */
+  order: T[];
+  theme: T;
 }
 
-export function ThemePicker({
+export function ThemePicker<T extends string>({
   theme,
   onThemeChange,
-  labels = THEME_META,
-}: ThemePickerProps) {
+  labels,
+  order,
+}: ThemePickerProps<T>) {
   const [open, setOpen] = useState(false);
   const isMobile = useIsMobile();
   const meta = labels[theme];
 
   const themeList = (
     <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-      {THEME_ORDER.map((id) => {
+      {order.map((id) => {
         const m = labels[id];
         const active = id === theme;
         return (

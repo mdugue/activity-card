@@ -42,10 +42,14 @@ const PHOTO_MOODS: { id: PhotoMood; label: string; sub: string }[] = [
   { id: "pure", label: "PURE", sub: "type only · ignores photo" },
 ];
 
+/** Single Card's default accent — the Reset target in every single-card theme. */
+const DEFAULT_SINGLE_ACCENT = "#c45a2c";
+
 interface EditStateProps {
   accent: string;
   altitudeMood: AltitudeMood;
   athleteName: string;
+  available: Record<keyof Visibility, boolean>;
   data: ActivityData;
   imageTransform: ImageTransform;
   location: string;
@@ -68,6 +72,7 @@ interface EditStateProps {
   photoPaletteTheme: PaletteTheme | null;
   photoUrl: string | null;
   theme: ThemeId;
+  title: string;
   visibility: Visibility;
 }
 
@@ -296,15 +301,11 @@ function ControlsPane(props: ControlsPaneProps) {
       <ActivityControls
         accent={props.accent}
         athleteName={props.athleteName}
-        caps={{
-          usesAthleteName: meta.usesAthleteName,
-          usesLocation: meta.usesLocation,
-          usesHeartRate: meta.usesHeartRate,
-          usesSplits: meta.usesSplits,
-          photoSupported,
-        }}
+        available={props.available}
         data={data}
+        defaultAccent={DEFAULT_SINGLE_ACCENT}
         location={props.location}
+        mode="single"
         onAccentChange={props.onAccentChange}
         onAthleteNameChange={props.onAthleteNameChange}
         onLocationChange={props.onLocationChange}
@@ -313,9 +314,11 @@ function ControlsPane(props: ControlsPaneProps) {
         onTitleChange={props.onTitleChange}
         onVisibilityChange={onVisibilityChange}
         photoExtras={photoExtras}
+        photoSupported={photoSupported}
         photoUrl={photoUrl}
         slotAfterPhoto={moodSlot}
         themeLabel={meta.label}
+        title={props.title}
         visibility={visibility}
       />
     </EditSidebar>

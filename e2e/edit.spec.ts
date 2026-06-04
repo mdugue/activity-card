@@ -1,14 +1,20 @@
 import { expect, test } from "@playwright/test";
 import { TINY_PNG_BASE64 } from "./fixtures";
-import { enterEditViaUpload, selectTheme, uploadActivity } from "./helpers";
+import {
+  enterEditViaUpload,
+  selectSingleCard,
+  selectTheme,
+  uploadActivity,
+} from "./helpers";
 
 test.describe("edit controls", () => {
   test.beforeEach(async ({ page }) => {
     await enterEditViaUpload(page);
+    await selectSingleCard(page);
   });
 
   test("title editor updates the card preview live", async ({ page }) => {
-    const titleInput = page.getByLabel(/^Activity title$/i);
+    const titleInput = page.getByLabel(/^Title$/i);
     await titleInput.fill("Sunrise Loop");
     // The Path theme title shows the user-entered value in the preview.
     await expect(
@@ -64,6 +70,7 @@ test.describe("edit controls", () => {
 test.describe("persistence", () => {
   test("theme + accent + visibility survive a reload", async ({ page }) => {
     await enterEditViaUpload(page);
+    await selectSingleCard(page);
 
     await selectTheme(page, "EDITORIAL");
     const hrSwitch = page.getByRole("switch", { name: /heart rate/i });

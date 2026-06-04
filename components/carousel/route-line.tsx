@@ -1,17 +1,14 @@
-// Carousel route layer (section 5). Rounded caps/joins, subtle drop-shadow,
-// start-green / end-red white-ringed markers. Three styles: poster (silhouette
-// in theme ink), desaturated (saturated accent line meant to sit over a
-// desaturated photo), highlighter (accent→accent2 gradient along the line).
-// Fills whatever box it's given, so the seamless canvas can hand it a wide
-// viewBox and the line bleeds across slide edges.
+// Carousel route layer. Rounded caps/joins, a subtle drop-shadow, and a small,
+// understated direction arrow at the *start* of the line (no coloured GPS pins,
+// no finish flag — just a hint of which way the effort went). Three styles:
+// poster (silhouette in theme ink), desaturated (accent over a desaturated
+// photo), highlighter (accent→accent2 gradient). Fills whatever box it's given,
+// so the seamless canvas can hand it a wide viewBox that bleeds across edges.
 
 import { useId } from "react";
 import type { Coord } from "@/components/app/sample-data";
 import type { RouteStyle } from "@/lib/carousel/types";
 import { projectRoute } from "@/lib/chart-helpers";
-
-const START = "#1f9d57";
-const END = "#e23b2e";
 
 interface RouteLineProps {
   accent: string;
@@ -19,7 +16,7 @@ interface RouteLineProps {
   coords: Coord[] | undefined;
   h: number;
   ink: string;
-  /** stronger shadow + white markers for legibility over a photo */
+  /** stronger shadow for legibility over a photo */
   overPhoto?: boolean;
   pad?: number;
   showMarkers?: boolean;
@@ -28,6 +25,43 @@ interface RouteLineProps {
   strokeWidth?: number;
   style: RouteStyle;
   w: number;
+}
+
+/** A small arrowhead at the first point, oriented along the initial heading —
+ *  a quiet "started here, went this way" cue. */
+function StartArrow({
+  points,
+  size,
+  color,
+}: {
+  color: string;
+  points: Coord[];
+  size: number;
+}) {
+  if (points.length < 2) {
+    return null;
+  }
+  const [sx, sy] = points[0];
+  // Look a little down the line for a stable heading (skip jitter at the start).
+  let [ax, ay] = points[1];
+  for (let i = 1; i < points.length; i++) {
+    const dx = points[i][0] - sx;
+    const dy = points[i][1] - sy;
+    if (Math.hypot(dx, dy) > size * 1.6) {
+      ax = points[i][0];
+      ay = points[i][1];
+      break;
+    }
+  }
+  const angle = (Math.atan2(ay - sy, ax - sx) * 180) / Math.PI;
+  const len = size;
+  const half = size * 0.6;
+  const tri = `${len},0 ${-len * 0.45},${-half} ${-len * 0.45},${half}`;
+  return (
+    <g transform={`translate(${sx} ${sy}) rotate(${angle})`}>
+      <polygon fill={color} opacity={0.9} points={tri} />
+    </g>
+  );
 }
 
 export function RouteLine({
@@ -45,7 +79,7 @@ export function RouteLine({
   stretch = false,
 }: RouteLineProps) {
   const gradId = useId();
-  const { d, start, end } = projectRoute(coords, w, h, pad, stretch);
+  const { d, points } = projectRoute(coords, w, h, pad, stretch);
   if (!d) {
     return null;
   }
@@ -61,7 +95,7 @@ export function RouteLine({
     ? "drop-shadow(0 2px 12px rgba(0,0,0,0.55))"
     : "drop-shadow(0 3px 8px rgba(0,0,0,0.18))";
 
-  const markerR = Math.max(7, strokeWidth * 1.6);
+  const arrowSize = Math.max(9, strokeWidth * 2.1);
 
   return (
     <svg
@@ -103,24 +137,9 @@ export function RouteLine({
         style={{ filter: shadow }}
       />
 
-      {showMarkers && start && end ? (
-        <g>
-          <circle
-            cx={start[0]}
-            cy={start[1]}
-            fill={START}
-            r={markerR}
-            stroke="#ffffff"
-            strokeWidth={markerR * 0.45}
-          />
-          <circle
-            cx={end[0]}
-            cy={end[1]}
-            fill={END}
-            r={markerR}
-            stroke="#ffffff"
-            strokeWidth={markerR * 0.45}
-          />
+      {showMarkers ? (
+        <g style={{ filter: shadow }}>
+          <StartArrow color={ink} points={points} size={arrowSize} />
         </g>
       ) : null}
     </svg>

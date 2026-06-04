@@ -10,7 +10,7 @@ import {
   IDENTITY_TRANSFORM,
   type ImageTransform,
 } from "@/lib/image-transform";
-import { isQuarterTurn, type RotateDeg } from "@/lib/photo-effects";
+import { GRAIN_BG, isQuarterTurn, type RotateDeg } from "@/lib/photo-effects";
 
 interface CarouselPhotoProps {
   desaturate?: boolean;
@@ -18,6 +18,8 @@ interface CarouselPhotoProps {
   filter?: string;
   flipH?: boolean;
   flipV?: boolean;
+  /** overlay analogue film grain on the photo */
+  grain?: boolean;
   imageSize: ImageSize;
   /** light themes render the panorama as a faint texture */
   opacity?: number;
@@ -38,6 +40,7 @@ export function CarouselPhoto({
   desaturate = false,
   opacity = 1,
   filter,
+  grain = false,
   rotate = 0,
   flipH = false,
   flipV = false,
@@ -71,7 +74,6 @@ export function CarouselPhoto({
         inset: 0,
         overflow: "hidden",
         opacity,
-        filter: filterParts || undefined,
       }}
     >
       <div
@@ -85,10 +87,25 @@ export function CarouselPhoto({
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
+          filter: filterParts || undefined,
           transform: `translate(${t.x.toFixed(2)}px, ${t.y.toFixed(2)}px) scale(${t.scale.toFixed(4)}) rotate(${rotate}deg) scaleX(${fx}) scaleY(${fy})`,
           transformOrigin: "center center",
         }}
       />
+      {grain ? (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: GRAIN_BG,
+            backgroundRepeat: "repeat",
+            backgroundSize: "180px 180px",
+            mixBlendMode: "overlay",
+            opacity: 0.5,
+            pointerEvents: "none",
+          }}
+        />
+      ) : null}
     </div>
   );
 }

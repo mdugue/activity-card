@@ -1,3 +1,5 @@
+import type { ActivityData } from "@/components/app/sample-data";
+import { availableVisibility, type Visibility } from "@/lib/visibility";
 import {
   ALTITUDE_MOODS as ALTITUDE_MOODS_SRC,
   ThemeAltitude,
@@ -124,3 +126,25 @@ export const THEME_ORDER: ThemeId[] = [
   "editorial",
   "triathlon",
 ];
+
+/**
+ * Which visibility switches apply for a single-card theme + activity: a field is
+ * toggleable only when the activity has the data AND the chosen theme actually
+ * renders it (athlete name / location / heart rate / splits are theme-gated).
+ * Mirrors `carouselVisibilityAvailable` so both editors disable controls that
+ * would do nothing, and computes `availableVisibility` once.
+ */
+export function themeVisibilityAvailable(
+  data: ActivityData,
+  theme: ThemeId
+): Record<keyof Visibility, boolean> {
+  const base = availableVisibility(data);
+  const meta = THEME_META[theme];
+  return {
+    ...base,
+    athleteName: base.athleteName && meta.usesAthleteName,
+    location: base.location && meta.usesLocation,
+    heartRate: base.heartRate && meta.usesHeartRate,
+    splits: base.splits && meta.usesSplits,
+  };
+}

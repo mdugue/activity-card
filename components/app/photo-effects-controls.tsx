@@ -8,6 +8,7 @@ import {
   ArrowClockwiseIcon,
   CircleHalfIcon,
   CloudFogIcon,
+  DotsNineIcon,
   FilmStripIcon,
   FlipHorizontalIcon,
   FlipVerticalIcon,
@@ -18,7 +19,9 @@ import {
   SparkleIcon,
   SunIcon,
 } from "@phosphor-icons/react";
+
 import { Button } from "@/components/ui/button";
+import { Toggle } from "@/components/ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   FILTER_PRESETS,
@@ -72,7 +75,7 @@ export function PhotoEffectsControls({
             return (
               <ToggleGroupItem
                 aria-label={p.label}
-                className="flex h-auto items-center gap-1.5 px-2.5 py-1.5 font-medium font-mono text-[10px] uppercase tracking-wide"
+                className="data-[pressed]:!border-foreground data-[pressed]:!bg-foreground data-[pressed]:!text-background flex h-auto items-center gap-1.5 px-2.5 py-1.5 font-medium font-mono text-[10px] uppercase tracking-wide"
                 key={p.id}
                 value={p.id}
               >
@@ -100,28 +103,36 @@ export function PhotoEffectsControls({
             Rotate
           </Button>
         ) : null}
-        <Button
-          aria-pressed={effects.flipH}
-          className={effects.flipH ? "border-foreground" : ""}
-          onClick={() => onChange({ ...effects, flipH: !effects.flipH })}
+        <Toggle
+          className="data-[pressed]:!border-foreground data-[pressed]:!bg-foreground data-[pressed]:!text-background gap-1.5"
+          onPressedChange={(p) => onChange({ ...effects, flipH: p })}
+          pressed={effects.flipH}
           size="sm"
-          type="button"
           variant="outline"
         >
           <FlipHorizontalIcon className="size-3.5" weight="duotone" />
           Mirror
-        </Button>
-        <Button
-          aria-pressed={effects.flipV}
-          className={effects.flipV ? "border-foreground" : ""}
-          onClick={() => onChange({ ...effects, flipV: !effects.flipV })}
+        </Toggle>
+        <Toggle
+          className="data-[pressed]:!border-foreground data-[pressed]:!bg-foreground data-[pressed]:!text-background gap-1.5"
+          onPressedChange={(p) => onChange({ ...effects, flipV: p })}
+          pressed={effects.flipV}
           size="sm"
-          type="button"
           variant="outline"
         >
           <FlipVerticalIcon className="size-3.5" weight="duotone" />
           Flip
-        </Button>
+        </Toggle>
+        <Toggle
+          className="data-[pressed]:!border-foreground data-[pressed]:!bg-foreground data-[pressed]:!text-background gap-1.5"
+          onPressedChange={(p) => onChange({ ...effects, grain: p })}
+          pressed={effects.grain}
+          size="sm"
+          variant="outline"
+        >
+          <DotsNineIcon className="size-3.5" weight="duotone" />
+          Grain
+        </Toggle>
       </div>
     </div>
   );

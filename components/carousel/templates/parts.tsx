@@ -1,21 +1,29 @@
-// Small shared JSX fragments for slide templates: the top meta band and the
-// bottom signature line. Kept consistent across templates so a carousel reads
-// as one set (block positions stay put slide to slide).
+// Small shared fragments for slide templates: the top meta band (date + an
+// optional page number — no sport word, no tech read-out) and the wrap-up
+// signature (the "made with effort" mark + athlete name, both opt-in).
 
 import type { ActivityData } from "@/components/app/sample-data";
 import type { FontPair } from "@/lib/carousel/theme-tokens";
 import { formatDateUpper } from "@/lib/format";
-import { type SlideTextColors, slideNumber, sportWord } from "./shared";
+import { type SlideTextColors, slideNumber } from "./shared";
 
 interface MetaBandProps {
   colors: SlideTextColors;
   data: ActivityData;
   fonts: FontPair;
   index: number;
+  showPageNumber: boolean;
   total: number;
 }
 
-export function MetaBand({ data, colors, fonts, index, total }: MetaBandProps) {
+export function MetaBand({
+  data,
+  colors,
+  fonts,
+  index,
+  total,
+  showPageNumber,
+}: MetaBandProps) {
   return (
     <div
       style={{
@@ -27,25 +35,35 @@ export function MetaBand({ data, colors, fonts, index, total }: MetaBandProps) {
         fontWeight: 500,
         letterSpacing: "0.22em",
         color: colors.muted,
+        textShadow: colors.shadow || undefined,
       }}
     >
-      <span>{sportWord(data.sport)}</span>
-      <span>
-        {slideNumber(index, total)}
-        {data.date ? ` · ${formatDateUpper(data.date)}` : ""}
-      </span>
+      <span>{index === 1 && data.date ? formatDateUpper(data.date) : ""}</span>
+      {showPageNumber ? <span>{slideNumber(index, total)}</span> : null}
     </div>
   );
 }
 
-interface SlideFooterProps {
+interface SignatureProps {
   accent: string;
+  athleteName?: string;
   colors: SlideTextColors;
-  data: ActivityData;
   fonts: FontPair;
+  showEffort: boolean;
 }
 
-export function SlideFooter({ data, colors, fonts, accent }: SlideFooterProps) {
+/** Wrap-up mark. Renders nothing unless the Effort mark or athlete name is
+ *  enabled, so a clean deck stays clean. */
+export function Signature({
+  colors,
+  fonts,
+  accent,
+  showEffort,
+  athleteName,
+}: SignatureProps) {
+  if (!(showEffort || athleteName)) {
+    return null;
+  }
   return (
     <div
       style={{
@@ -57,18 +75,26 @@ export function SlideFooter({ data, colors, fonts, accent }: SlideFooterProps) {
         fontWeight: 500,
         letterSpacing: "0.2em",
         color: colors.muted,
+        textShadow: colors.shadow || undefined,
       }}
     >
-      <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <span
-          aria-hidden
-          style={{ width: 30, height: 3, background: accent, display: "block" }}
-        />
-        EFFORT
-      </span>
-      {data.athleteName ? (
-        <span>— {data.athleteName.toUpperCase()}</span>
-      ) : null}
+      {showEffort ? (
+        <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span
+            aria-hidden
+            style={{
+              width: 30,
+              height: 3,
+              background: accent,
+              display: "block",
+            }}
+          />
+          MADE WITH EFFORT
+        </span>
+      ) : (
+        <span />
+      )}
+      {athleteName ? <span>— {athleteName.toUpperCase()}</span> : null}
     </div>
   );
 }

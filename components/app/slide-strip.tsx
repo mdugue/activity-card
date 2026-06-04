@@ -8,13 +8,14 @@
 import type { ActivityData } from "@/components/app/sample-data";
 import { SeamlessCanvas } from "@/components/carousel/seamless-canvas";
 import { TEMPLATE_META } from "@/components/carousel/templates";
-import type { ThemeId } from "@/components/themes";
 import type { ImageSize } from "@/hooks/use-image-natural-size";
+import type { CarouselThemeId } from "@/lib/carousel/theme-tokens";
 import type { Slide } from "@/lib/carousel/types";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme } from "@/lib/palette";
 import type { PhotoEffects } from "@/lib/photo-effects";
 import { cn } from "@/lib/utils";
+import type { Visibility } from "@/lib/visibility";
 
 const THUMB_W = 92;
 const THUMB_H = Math.round((THUMB_W * 1350) / 1080);
@@ -31,7 +32,8 @@ interface SlideStripProps {
   photoUrl?: string | null;
   selectedId: string | null;
   slides: Slide[];
-  theme: ThemeId;
+  theme: CarouselThemeId;
+  visibility?: Visibility;
 }
 
 export function SlideStrip(props: SlideStripProps) {
@@ -50,6 +52,7 @@ export function SlideStrip(props: SlideStripProps) {
       photoUrl={props.photoUrl}
       slides={slides}
       theme={props.theme}
+      visibility={props.visibility}
     />
   );
 

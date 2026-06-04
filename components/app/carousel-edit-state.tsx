@@ -11,16 +11,15 @@
 import { ArrowsOutCardinalIcon, ImagesIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { SeamlessCanvas } from "@/components/carousel/seamless-canvas";
-import type { ThemeId } from "@/components/themes";
 import { Badge } from "@/components/ui/badge";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { CarouselController } from "@/hooks/use-carousel";
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
 import {
   CAROUSEL_THEME_LABELS,
+  CAROUSEL_THEME_ORDER,
   CAROUSEL_THEME_TOKENS,
+  type CarouselThemeId,
 } from "@/lib/carousel/theme-tokens";
-import { DECK_META, DECK_ORDER, type DeckId } from "@/lib/carousel/types";
 import { carouselBaseName, exportCarousel } from "@/lib/export-carousel";
 import {
   clampCoverTransform,
@@ -41,6 +40,7 @@ import { ThemePicker } from "./theme-picker";
 interface CarouselEditStateProps {
   accent: string;
   athleteName: string;
+  available: Record<keyof Visibility, boolean>;
   carousel: CarouselController;
   data: ActivityData;
   imageTransform: ImageTransform;
@@ -54,13 +54,14 @@ interface CarouselEditStateProps {
   onPhotoChange: (file: File | null) => void;
   onPhotoEffectsChange: (next: PhotoEffects) => void;
   onSportChange: (sport: Sport) => void;
-  onThemeChange: (theme: ThemeId) => void;
+  onThemeChange: (theme: CarouselThemeId) => void;
   onTitleChange: (title: string) => void;
   onVisibilityChange: (visibility: Visibility) => void;
   photoEffects: PhotoEffects;
   photoPaletteTheme: PaletteTheme | null;
   photoUrl: string | null;
-  theme: ThemeId;
+  theme: CarouselThemeId;
+  title: string;
   visibility: Visibility;
 }
 
@@ -76,11 +77,10 @@ export function CarouselEditState(props: CarouselEditStateProps) {
   } = props;
   const { slides, selectedId, selectedIndex } = carousel;
 
-  // Only the photo-capable (standard panel) themes render the photo; the
-  // type-led themes (Frame/Telemetry/Press) drop it in the canvas, so mirror
-  // that here and disable the uploader + effects rather than showing dead
-  // controls — same contract the single-card editor derives from theme meta.
-  const photoSupported = CAROUSEL_THEME_TOKENS[theme].panelKind === "standard";
+  // Photo support is per-theme: every carousel theme now renders a background
+  // photo (the type-led Frame/Press keep it clean via shadows / opaque boxes),
+  // so derive it from the theme token rather than the panel kind.
+  const photoSupported = CAROUSEL_THEME_TOKENS[theme].photoSupported;
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const wideRef = useRef<HTMLDivElement>(null);
@@ -195,6 +195,7 @@ export function CarouselEditState(props: CarouselEditStateProps) {
     photoUrl,
     slides,
     theme,
+    visibility: props.visibility,
   };
 
   return (
@@ -287,42 +288,17 @@ export function CarouselEditState(props: CarouselEditStateProps) {
           selectedId={selectedId}
           slides={slides}
           theme={theme}
+          visibility={props.visibility}
         />
 
-        {/* Deck picker — choose the story length instead of editing slides. */}
-        <ToggleGroup
-          aria-label="Deck"
-          className="mx-auto flex gap-2"
-          onValueChange={(values) => {
-            if (values[0]) {
-              carousel.setDeck(values[0] as DeckId);
-            }
-          }}
-          spacing={2}
-          value={[carousel.deck]}
-          variant="outline"
-        >
-          {DECK_ORDER.map((id) => (
-            <ToggleGroupItem
-              aria-label={DECK_META[id].label}
-              className="flex h-auto flex-col items-start px-3 py-2 text-left"
-              key={id}
-              value={id}
-            >
-              <span className="font-heading text-sm uppercase leading-none">
-                {DECK_META[id].label}
-              </span>
-              <span className="caption-micro mt-1">{DECK_META[id].sub}</span>
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-
         {/* Theme selector — same control as Single Card, below the preview,
-            but showing the carousel-specific theme names. */}
+            but showing the carousel-specific theme names. The deck length is
+            fixed per theme, so there's no separate deck picker. */}
         <div className="mt-1 flex flex-col items-center">
           <ThemePicker
             labels={CAROUSEL_THEME_LABELS}
             onThemeChange={props.onThemeChange}
+            order={CAROUSEL_THEME_ORDER}
             theme={theme}
           />
           <div className="caption-micro mt-2">TAP TO CHANGE THEME</div>
@@ -344,16 +320,11 @@ export function CarouselEditState(props: CarouselEditStateProps) {
         <ActivityControls
           accent={props.accent}
           athleteName={props.athleteName}
-          caps={{
-            usesAthleteName: true,
-            usesLocation: true,
-            usesHeartRate: true,
-            // No carousel theme renders splits, so don't offer a dead toggle.
-            usesSplits: false,
-            photoSupported,
-          }}
+          available={props.available}
           data={data}
+          defaultAccent={CAROUSEL_THEME_TOKENS[theme].accent}
           location={props.location}
+          mode="carousel"
           onAccentChange={props.onAccentChange}
           onAthleteNameChange={props.onAthleteNameChange}
           onLocationChange={props.onLocationChange}
@@ -370,8 +341,10 @@ export function CarouselEditState(props: CarouselEditStateProps) {
               />
             ) : null
           }
+          photoSupported={photoSupported}
           photoUrl={photoUrl}
           themeLabel={CAROUSEL_THEME_LABELS[theme].label}
+          title={props.title}
           visibility={props.visibility}
         />
       </EditSidebar>

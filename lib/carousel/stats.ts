@@ -1,21 +1,29 @@
 /**
  * Sport-aware stat model for carousel slides. Reuses the single-card stat
- * conventions (see the `sport-data` skill): rides think in speed, runs in
- * pace, swims in pace-per-100m and SWOLF. Returns ordered, formatted items so
- * every template (Hero, StatRow, StatGrid, Editorial) and the override panel
- * draw from one source of truth.
+ * conventions (see the `sport-data` skill): rides think in speed + power, runs
+ * in pace, swims in pace-per-100m and SWOLF. Returns ordered, formatted items so
+ * every template draws from one source of truth, plus planners that distribute
+ * those stats across a deck so no two slides repeat the same number.
  */
 
-import type { ActivityData } from "@/components/app/sample-data";
+import type { ActivityData, Coord } from "@/components/app/sample-data";
 import {
   formatDuration,
   formatNumber,
   formatPaceMin,
   formatPaceSec,
 } from "@/lib/format";
+import { availableVisibility, type Visibility } from "@/lib/visibility";
+import { type EffectiveStyle, resolveDeckStyle } from "./resolve";
+import {
+  CAROUSEL_THEME_TOKENS,
+  type CarouselThemeId,
+  type HeroMetric,
+} from "./theme-tokens";
+import { buildDeck, type Slide } from "./types";
 
 export interface StatItem {
-  /** stable identifier, used for visibility toggles */
+  /** stable identifier, used for visibility toggles + sparkline mapping */
   key: string;
   label: string;
   /** unit suffix (e.g. "km", "/km", "bpm"); empty for unitless */
@@ -50,10 +58,34 @@ function duration(data: ActivityData): StatItem {
   };
 }
 
+function elevation(data: ActivityData): StatItem | null {
+  return data.elevationGainM === undefined ||
+    !Number.isFinite(data.elevationGainM)
+    ? null
+    : {
+        key: "elevation",
+        label: "ELEVATION",
+        value: formatNumber(data.elevationGainM, 0),
+        unit: "m",
+      };
+}
+
+/** Distance and time are the irreducible core of a card, so they're never
+ *  stripped from the data; the carousel honours their visibility here instead. */
+export interface StatOpts {
+  distance?: boolean;
+  time?: boolean;
+}
+
 /** Build the full ordered set of stats available for this activity. Items
- *  with no underlying data are omitted so templates never render a dash. */
-export function buildStats(data: ActivityData): StatItem[] {
-  const items: StatItem[] = [distance(data)];
+ *  with no underlying data are omitted so templates never render a dash. The
+ *  order is the storyboard priority — distance always leads. */
+export function buildStats(data: ActivityData, opts?: StatOpts): StatItem[] {
+  const items: StatItem[] = [];
+  if (opts?.distance ?? true) {
+    items.push(distance(data));
+  }
+  const dur = (opts?.time ?? true) ? duration(data) : null;
   const push = (item: StatItem | null) => {
     if (item) {
       items.push(item);
@@ -71,13 +103,13 @@ export function buildStats(data: ActivityData): StatItem[] {
       : { key, label, value: formatNumber(n, digits), unit };
 
   if (data.sport === "ride") {
-    push(num("elevation", "ELEVATION", data.elevationGainM, "m"));
+    push(dur);
     push(num("avgSpeed", "AVG SPEED", data.avgSpeedKmh, "km/h", 1));
-    push(duration(data));
-    push(num("maxSpeed", "MAX SPEED", data.maxSpeedKmh, "km/h", 1));
-    push(num("power", "NORM POWER", data.normalizedPowerW, "w"));
+    push(elevation(data));
+    push(num("power", "POWER", data.normalizedPowerW, "W"));
     push(num("avgHr", "AVG HR", data.avgHeartRate, "bpm"));
     push(num("cadence", "CADENCE", data.avgCadence, "rpm"));
+    push(num("maxSpeed", "MAX SPEED", data.maxSpeedKmh, "km/h", 1));
     push(num("vam", "VAM", data.vamMph, "m/h"));
   } else if (data.sport === "run") {
     push(
@@ -90,8 +122,8 @@ export function buildStats(data: ActivityData): StatItem[] {
           }
         : null
     );
-    push(duration(data));
-    push(num("elevation", "ELEVATION", data.elevationGainM, "m"));
+    push(dur);
+    push(elevation(data));
     push(num("avgHr", "AVG HR", data.avgHeartRate, "bpm"));
     push(num("cadence", "CADENCE", data.avgCadence, "spm"));
   } else if (data.sport === "swim") {
@@ -105,23 +137,229 @@ export function buildStats(data: ActivityData): StatItem[] {
           }
         : null
     );
-    push(duration(data));
+    push(dur);
     push(num("swolf", "SWOLF", data.swolf, ""));
     push(num("stroke", "STROKES", data.strokeCountAvg, "/lap"));
     push(num("avgHr", "AVG HR", data.avgHeartRate, "bpm"));
   } else {
-    // triathlon — overall summary; per-segment lives in the template
-    push(duration(data));
-    push(num("elevation", "ELEVATION", data.elevationGainM, "m"));
+    // triathlon — overall summary; per-segment detail is a future theme.
+    push(dur);
+    push(elevation(data));
     push(num("avgHr", "AVG HR", data.avgHeartRate, "bpm"));
   }
 
   return items;
 }
 
-/** The single most expressive stat for a Hero slide — distance for most
- *  sports, with elevation as the headline only when it dwarfs a short ride. */
-export function heroStat(data: ActivityData): StatItem {
-  const stats = buildStats(data);
-  return stats[0];
+/** The single most expressive stat for a Hero slide. Distance for most themes;
+ *  total elevation when the theme headlines the climb (Ascent). Falls back to
+ *  distance if the requested metric has no data. */
+/** A blank headline used when every stat (including distance + time) is hidden,
+ *  so the hero slide shows the title alone instead of resurrecting a hidden
+ *  number. */
+const EMPTY_HERO: StatItem = { key: "", label: "", value: "", unit: "" };
+
+export function heroStat(
+  data: ActivityData,
+  metric: HeroMetric = "distance",
+  opts?: StatOpts
+): StatItem {
+  if (metric === "elevation") {
+    const el = elevation(data);
+    if (el) {
+      return el;
+    }
+  }
+  // Falls back through the ordered set when the headline metric is hidden.
+  // buildStats already honours the distance/time toggles, so when the user has
+  // hidden Distance *and* Time (and nothing else remains) it is empty — return a
+  // blank hero rather than re-injecting the distance the user just turned off.
+  return buildStats(data, opts)[0] ?? EMPTY_HERO;
+}
+
+/**
+ * Assign stats to each slide of a standard deck so the intro headlines the hero
+ * number, the detail slides page through the *rest* without repeating it, and
+ * the wrap-up slide draws its own summary. Returns one StatItem[] per slide.
+ *
+ * Decks are always [hero, …detail, wrap-up]; detail slides carry capacity by
+ * template (statRow 3, statGrid 4) and consume the remaining stats in order.
+ */
+export function planStandardStats(
+  data: ActivityData,
+  slides: Slide[],
+  metric: HeroMetric,
+  opts?: StatOpts
+): StatItem[][] {
+  const all = buildStats(data, opts);
+  const hero = heroStat(data, metric, opts);
+  const rest = all.filter((s) => s.key !== hero.key);
+  let cursor = 0;
+  const last = slides.length - 1;
+  return slides.map((slide, i) => {
+    if (i === 0) {
+      return [hero];
+    }
+    if (i === last) {
+      return [];
+    }
+    const cap = slide.template === "statRow" ? 3 : 4;
+    const slice = rest.slice(cursor, cursor + cap);
+    cursor += cap;
+    return slice;
+  });
+}
+
+/**
+ * Curated, sport-aware order for the Frame theme (one datum per slide). Leads
+ * with the metrics that have an expressive sparkline (route, elevation, power,
+ * speed) so each slide pairs a number with a graphic.
+ */
+const FRAME_PRIORITY: Record<ActivityData["sport"], string[]> = {
+  ride: ["distance", "elevation", "power", "avgSpeed", "duration", "avgHr"],
+  run: ["distance", "pace", "elevation", "duration", "avgHr", "cadence"],
+  swim: ["distance", "pace", "swolf", "duration", "avgHr"],
+  triathlon: ["distance", "duration", "elevation", "avgHr"],
+};
+
+/**
+ * One entry point the seamless canvas calls to assign each slide its stats,
+ * branching on the panel kind: standard decks distribute the rest of the stats
+ * across detail slides; Frame shows one curated datum per slide; Press leads
+ * with a lede then pages a pull-quote stat per spread.
+ */
+export function planSlideStats(
+  data: ActivityData,
+  slides: Slide[],
+  style: EffectiveStyle,
+  opts?: StatOpts
+): StatItem[][] {
+  const last = slides.length - 1;
+  if (style.panelKind === "frame") {
+    const fs = frameStats(data, opts);
+    return slides.map((_, i) => {
+      if (i === last) {
+        return [];
+      }
+      const item = fs[i];
+      return item ? [item] : [];
+    });
+  }
+  if (style.panelKind === "press") {
+    const all = buildStats(data, opts);
+    const rest = all.slice(3);
+    return slides.map((_, i) => {
+      if (i === 0) {
+        return all.slice(0, 3); // headline + lede
+      }
+      if (i === last) {
+        return [];
+      }
+      // First spread leads with elevation (paired with the altitude cut); the
+      // second carries the next datum + a couple more (e.g. power) as a row.
+      return i === 1 ? rest.slice(0, 1) : rest.slice(1, 4);
+    });
+  }
+  return planStandardStats(data, slides, style.heroMetric, opts);
+}
+
+export function frameStats(data: ActivityData, opts?: StatOpts): StatItem[] {
+  const all = buildStats(data, opts);
+  const byKey = new Map(all.map((s) => [s.key, s]));
+  const order = FRAME_PRIORITY[data.sport];
+  const ordered: StatItem[] = [];
+  for (const key of order) {
+    const item = byKey.get(key);
+    if (item) {
+      ordered.push(item);
+    }
+  }
+  const seen = new Set(order);
+  for (const s of all) {
+    if (!seen.has(s.key)) {
+      ordered.push(s);
+    }
+  }
+  return ordered;
+}
+
+/* ---- sparkline series (Frame) ---- */
+
+export function routeSeries(data: ActivityData): Coord[] | undefined {
+  const c = data.routeCoordinates;
+  return c && c.length > 1 ? c : undefined;
+}
+
+export function elevationSeries(data: ActivityData): number[] | undefined {
+  const p = data.elevationProfile;
+  return p && p.length > 1 ? p : undefined;
+}
+
+export function speedSeries(data: ActivityData): number[] | undefined {
+  if (data.speedProfile && data.speedProfile.length > 1) {
+    return data.speedProfile;
+  }
+  // Real uploads have no speed stream, but per-split avg speed makes a fair
+  // coarse curve.
+  const fromSplits = (data.splits ?? [])
+    .map((s) => s.avgSpeedKmh)
+    .filter((v): v is number => v !== undefined && Number.isFinite(v));
+  return fromSplits.length > 1 ? fromSplits : undefined;
+}
+
+export function powerSeries(data: ActivityData): number[] | undefined {
+  const p = data.powerProfile;
+  return p && p.length > 1 ? p : undefined;
+}
+
+export function paceSeries(data: ActivityData): number[] | undefined {
+  const p = data.paceProfile;
+  return p && p.length > 1 ? p : undefined;
+}
+
+/** Maps a visibility flag to the StatItem key(s) it controls. */
+const VIS_STAT_KEYS: Partial<Record<keyof Visibility, string[]>> = {
+  distance: ["distance"],
+  time: ["duration"],
+  pace: ["pace"],
+  speed: ["avgSpeed", "maxSpeed"],
+  power: ["power"],
+  elevation: ["elevation"],
+  heartRate: ["avgHr"],
+  cadence: ["cadence"],
+};
+
+/**
+ * Which visibility switches apply for a carousel theme + activity: a stat is
+ * available only when the activity has the data AND the theme actually renders
+ * it (e.g. Frame shows one datum per slide, so deeper stats never appear, and no
+ * theme renders splits). Computed from the raw data with everything on, so
+ * toggling a switch off can't disable its own re-enabling.
+ */
+export function carouselVisibilityAvailable(
+  data: ActivityData,
+  theme: CarouselThemeId
+): Record<keyof Visibility, boolean> {
+  const base = availableVisibility(data);
+  const style = resolveDeckStyle(theme, "#000000", null);
+  const slides = buildDeck(CAROUSEL_THEME_TOKENS[theme].deck);
+  const shown = new Set<string>();
+  for (const slideStats of planSlideStats(data, slides, style, {
+    distance: true,
+    time: true,
+  })) {
+    for (const s of slideStats) {
+      shown.add(s.key);
+    }
+  }
+  shown.add(heroStat(data, style.heroMetric).key);
+
+  const refined = { ...base };
+  for (const key of Object.keys(VIS_STAT_KEYS) as (keyof Visibility)[]) {
+    const keys = VIS_STAT_KEYS[key] ?? [];
+    refined[key] = base[key] && keys.some((k) => shown.has(k));
+  }
+  // No carousel theme renders splits.
+  refined.splits = false;
+  return refined;
 }
