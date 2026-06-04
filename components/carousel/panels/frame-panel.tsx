@@ -143,7 +143,7 @@ function FrameDatum({
               style={{
                 fontFamily: style.fonts.mono,
                 fontSize: 48,
-                color: style.accent2,
+                color: style.accent,
                 textShadow: c.shadow || undefined,
               }}
             >

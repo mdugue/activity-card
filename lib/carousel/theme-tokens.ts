@@ -202,6 +202,7 @@ export const CAROUSEL_THEME_TOKENS: Record<
     fontPair: "serif",
     routeStyle: "poster",
     elevation: { line: "#2f6f86", fillFrom: "#2f6f86", fillTo: "#eaedef" },
+    elevationAccent: true,
     heroLayer: "elevation",
     heroMetric: "elevation",
     crossViz: "route",
