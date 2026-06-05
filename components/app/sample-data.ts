@@ -380,6 +380,7 @@ export const SAMPLE_TRI: ActivityData = {
       avgPaceMinPerKm: 4 + 38 / 60,
       elevationGainM: 60,
       routeCoordinates: genOutBack(2.1, 100),
+      elevationProfile: genElevation(2.1, 100, 6, 70),
       paceProfile: genPace(2.1, 100, 278, 18),
     },
   ],

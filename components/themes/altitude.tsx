@@ -21,9 +21,14 @@ import {
   resolveClaim,
   supportingStats,
 } from "@/lib/altitude";
-import { elevationPath, pacePath } from "@/lib/chart-helpers";
+import {
+  type Coord,
+  type NormalizedCurve,
+  normalizeOverlay,
+} from "@/lib/chart-helpers";
 import { formatDateUpper } from "@/lib/format";
 import type { ImageTransform } from "@/lib/image-transform";
+import { isMultiActivity, segmentProfiles } from "@/lib/multi-activity";
 import { PhotoLayer } from "./photo-layer";
 import type { ActivityCardProps } from "./types";
 
@@ -157,33 +162,16 @@ function hashId(s: string): string {
 }
 
 /**
- * Elevation curve points mapped into a w-wide box, confined to a [bandTop,
- * bandTop+bandH] band through the vertical middle of the type so the line cuts
- * across the glyphs.
- */
-function bandCoords(
-  profile: number[],
-  useElevation: boolean,
-  w: number,
-  bandTop: number,
-  bandH: number
-): [number, number][] {
-  const n = profile.length;
-  const min = Math.min(...profile);
-  const max = Math.max(...profile);
-  const dv = max - min || 1;
-  return profile.map((v, i) => {
-    const x = n > 1 ? (i / (n - 1)) * w : 0;
-    // 1 = highest point of the curve. Pace is "lower is better", so invert it.
-    const t = useElevation ? (v - min) / dv : (max - v) / dv;
-    return [x, bandTop + (1 - t) * bandH];
-  });
-}
-
-/**
  * Full-width hero text, sized + wrapped by `layout`. `cut` splits it along the
- * elevation curve (opaque above, `belowOpacity` below) and draws the white line
- * on the seam; otherwise it's solid with a soft dark drop for legibility.
+ * overlaid `curves` and draws a white line on each seam; otherwise it's solid
+ * with a soft dark drop for legibility.
+ *
+ * With one curve (a single activity) the type is opaque above the line and
+ * fades to `belowOpacity` below it. With several curves (a multi-activity
+ * project) the cut is graduated: a copy of the type is clipped above each curve
+ * and the copies compound, so a point's opacity grows with how many curves sit
+ * below it — opaque above the topmost, `belowOpacity` below the lowest, relative
+ * steps between.
  */
 function ClaimText({
   layout,
@@ -191,23 +179,21 @@ function ClaimText({
   fontWeight,
   cut,
   belowOpacity,
-  profile,
-  useElevation,
+  curves,
   uid,
 }: {
   belowOpacity: number;
+  curves: NormalizedCurve[];
   cut: boolean;
   fontFamily: string;
   fontWeight: number;
   layout: ClaimLayout;
-  profile?: number[];
   uid: string;
-  useElevation: boolean;
 }) {
   const { lines } = layout;
   // Uniform scale to fill the width — no glyph distortion (see fitFontSize).
   const fontSize = fitFontSize(lines, fontFamily, fontWeight, layout.fontSize);
-  const hasCurve = cut && Boolean(profile && profile.length > 1);
+  const hasCurve = cut && curves.length > 0;
   // Tight vertical metrics: caps sit just below the top edge, and we only
   // reserve descender room when the text needs it or the curve dips below the
   // baseline — so numbers don't carry a tall empty box.
@@ -220,45 +206,58 @@ function ClaimText({
   const baseline0 = topPad + capH;
   const boxH = baseline0 + (lines.length - 1) * lineH + descent;
 
-  const renderLines = (
-    opacity: number,
-    opts: { clipId?: string; fill?: string; dy?: number } = {}
-  ) =>
+  const textLines = (opacity: number, fill = "#fff", dy = 0) =>
     lines.map((ln, i) => (
       <text
-        clipPath={opts.clipId ? `url(#${opts.clipId})` : undefined}
-        fill={opts.fill ?? "#fff"}
+        fill={fill}
         fontFamily={fontFamily}
         fontSize={fontSize}
         fontWeight={fontWeight}
         key={`${i}-${ln}`}
         opacity={opacity}
         x={0}
-        y={baseline0 + i * lineH + (opts.dy ?? 0)}
+        y={baseline0 + i * lineH + dy}
       >
         {ln}
       </text>
     ));
 
-  let lineD = "";
-  let aboveD = "";
-  if (hasCurve && profile) {
-    // Ground the profile on the LAST line: its highest point sits at the golden
-    // section down the cap height, valleys settle just below the baseline. Most
-    // of the type stays opaque — only the feet are cut.
-    const lastBaseline = baseline0 + (lines.length - 1) * lineH;
-    const bandH = capH * 0.5;
-    const peakY = lastBaseline - capH * 0.382;
-    const coords = bandCoords(profile, useElevation, CONTENT_W, peakY, bandH);
-    lineD = coords
-      .map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`)
-      .join(" ");
-    // Close the "above" region well past the top of the glyphs so the opaque
-    // copy covers them fully — otherwise tall caps poke above the clip and only
-    // the faint base shows through up there.
-    const topY = (-fontSize).toFixed(1);
-    aboveD = `${lineD} L${CONTENT_W.toFixed(1)} ${topY} L0 ${topY} Z`;
-  }
+  // Ground every curve on the LAST line: highest points sit at the golden
+  // section down the cap height, valleys settle just below the baseline, so most
+  // of the type stays opaque and only the feet are cut.
+  const lastBaseline = baseline0 + (lines.length - 1) * lineH;
+  const bandH = capH * 0.5;
+  const peakY = lastBaseline - capH * 0.382;
+  // Close the "above" regions well past the top of the glyphs so the opaque
+  // copy covers them fully — otherwise tall caps poke above the clip.
+  const topY = -fontSize;
+  const seams = hasCurve
+    ? curves.map((c) => {
+        const mapped: Coord[] = c.pts.map((p) => [
+          p[0] * CONTENT_W,
+          peakY + (1 - p[1]) * bandH,
+        ]);
+        const lineD = mapped
+          .map(
+            (p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`
+          )
+          .join(" ");
+        // A leg shorter than the longest ends before the full width; close the
+        // clip at its own right edge so it only cuts the type it spans.
+        const endX = mapped.at(-1)?.[0] ?? CONTENT_W;
+        const aboveD = `${lineD} L${endX.toFixed(1)} ${topY.toFixed(1)} L0 ${topY.toFixed(1)} Z`;
+        return { lineD, aboveD };
+      })
+    : [];
+
+  // Per-layer opacity, picked so the area above all `n` curves composites to
+  // ~opaque while a single curve stays effectively solid above the line.
+  const n = seams.length;
+  const remain = Math.max(0.001, 1 - belowOpacity);
+  const layerOpacity = Math.max(
+    0,
+    Math.min(1, 1 - (0.015 / remain) ** (1 / Math.max(1, n)))
+  );
 
   return (
     <svg
@@ -270,59 +269,79 @@ function ClaimText({
       {hasCurve ? (
         <>
           <defs>
-            <clipPath id={`${uid}-above`}>
-              <path d={aboveD} />
-            </clipPath>
+            {seams.map((s, k) => (
+              <clipPath id={`${uid}-a${k}`} key={`clip-${k}`}>
+                <path d={s.aboveD} />
+              </clipPath>
+            ))}
           </defs>
-          {/* faint base everywhere → shows through below the seam */}
-          {renderLines(belowOpacity)}
-          {/* opaque copy, clipped to the area above the curve */}
-          {renderLines(1, { clipId: `${uid}-above` })}
-          <path
-            d={lineD}
-            fill="none"
-            stroke="rgba(0,0,0,0.35)"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={5}
-          />
-          <path
-            d={lineD}
-            fill="none"
-            stroke="#fff"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={3.25}
-          />
+          {/* faint base everywhere → shows through below the lowest seam */}
+          {textLines(belowOpacity)}
+          {/* one clipped copy per curve; the opacities compound upward */}
+          {seams.map((_, k) => (
+            <g clipPath={`url(#${uid}-a${k})`} key={`above-${k}`}>
+              {textLines(layerOpacity)}
+            </g>
+          ))}
+          {/* white line on each seam */}
+          {seams.map((s, k) => (
+            <g key={`seam-${k}`}>
+              <path
+                d={s.lineD}
+                fill="none"
+                stroke="rgba(0,0,0,0.35)"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={5}
+              />
+              <path
+                d={s.lineD}
+                fill="none"
+                stroke="#fff"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={3.25}
+              />
+            </g>
+          ))}
         </>
       ) : (
         <>
-          {renderLines(1, { fill: "rgba(0,0,0,0.32)", dy: 4 })}
-          {renderLines(1)}
+          {textLines(1, "rgba(0,0,0,0.32)", 4)}
+          {textLines(1)}
         </>
       )}
     </svg>
   );
 }
 
-/** Decorative elevation band (stacked treatment + the no-claim hero). */
-function LineBand({
-  profile,
-  useElevation,
+/**
+ * Decorative elevation band (stacked treatment + the no-claim hero). Renders
+ * every overlaid curve — one for a single activity, several for a project —
+ * sharing one vertical scale and left-aligned, with the longest leg full-width.
+ */
+function MultiLineBand({
+  curves,
   strokeWidth = 3.5,
   style,
 }: {
-  profile: number[];
+  curves: NormalizedCurve[];
   strokeWidth?: number;
   style?: CSSProperties;
-  useElevation: boolean;
 }) {
-  const d = useElevation
-    ? elevationPath(profile, W, 100, 18)
-    : pacePath(profile, W, 100, 18);
-  if (!d) {
+  if (curves.length === 0) {
     return null;
   }
+  const pad = 18;
+  const innerW = W - pad * 2;
+  const innerH = 100 - pad * 2;
+  const toD = (c: NormalizedCurve) =>
+    c.pts
+      .map(
+        (p, i) =>
+          `${i ? "L" : "M"}${(pad + p[0] * innerW).toFixed(1)} ${(pad + (1 - p[1]) * innerH).toFixed(1)}`
+      )
+      .join(" ");
   return (
     <svg
       aria-hidden="true"
@@ -330,25 +349,35 @@ function LineBand({
       style={{ display: "block", overflow: "visible", width: "100%", ...style }}
       viewBox={`0 0 ${W} 100`}
     >
-      <title>Elevation line</title>
-      <path
-        d={d}
-        fill="none"
-        stroke="rgba(0,0,0,0.35)"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={strokeWidth + 3}
-        vectorEffect="non-scaling-stroke"
-      />
-      <path
-        d={d}
-        fill="none"
-        stroke="#fff"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={strokeWidth}
-        vectorEffect="non-scaling-stroke"
-      />
+      <title>Elevation lines</title>
+      {curves.map((c, i) => {
+        const d = toD(c);
+        // Fade successive legs slightly so overlaps stay readable.
+        const op = Math.max(0.5, 1 - i * 0.26);
+        return (
+          <g key={`band-${i}`}>
+            <path
+              d={d}
+              fill="none"
+              stroke="rgba(0,0,0,0.35)"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={strokeWidth + 3}
+              vectorEffect="non-scaling-stroke"
+            />
+            <path
+              d={d}
+              fill="none"
+              stroke="#fff"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeOpacity={op}
+              strokeWidth={strokeWidth}
+              vectorEffect="non-scaling-stroke"
+            />
+          </g>
+        );
+      })}
     </svg>
   );
 }
@@ -442,9 +471,27 @@ export function ThemeAltitude({
     ? supportingStats(data, claim?.key ?? null)
     : [];
 
-  const profile = data.elevationProfile ?? data.paceProfile;
-  const useElevation = Boolean(data.elevationProfile?.length);
-  const hasLine = Boolean(profile && profile.length > 1);
+  // One curve for a single activity; several (shared scale, left-aligned,
+  // longest leg full-width) for a multi-activity project.
+  const multi = isMultiActivity(data);
+  const curves = ((): NormalizedCurve[] => {
+    if (multi) {
+      const seg = segmentProfiles(data);
+      return seg.profiles.length
+        ? normalizeOverlay(seg.profiles, seg.distances, seg.useElevation)
+        : [];
+    }
+    const profile = data.elevationProfile ?? data.paceProfile;
+    if (!profile || profile.length <= 1) {
+      return [];
+    }
+    return normalizeOverlay(
+      [profile],
+      [undefined],
+      Boolean(data.elevationProfile?.length)
+    );
+  })();
+  const hasLine = curves.length > 0;
 
   const font = FONT_FAMILY[config.font];
   const fontWeight = FONT_WEIGHT[config.font];
@@ -495,13 +542,12 @@ export function ThemeAltitude({
           <div>
             <ClaimText
               belowOpacity={belowOpacity}
+              curves={curves}
               cut
               fontFamily={font}
               fontWeight={fontWeight}
               layout={layout}
-              profile={profile}
               uid={uid}
-              useElevation={useElevation}
             />
             <FooterRow
               marginTop={16}
@@ -530,20 +576,16 @@ export function ThemeAltitude({
             </div>
             <ClaimText
               belowOpacity={1}
+              curves={curves}
               cut={false}
               fontFamily={font}
               fontWeight={fontWeight}
               layout={layout}
               uid={uid}
-              useElevation={useElevation}
             />
-            {hasLine && profile ? (
+            {hasLine ? (
               <div style={{ height: 104, marginTop: 22, width: "100%" }}>
-                <LineBand
-                  profile={profile}
-                  style={{ height: "100%" }}
-                  useElevation={useElevation}
-                />
+                <MultiLineBand curves={curves} style={{ height: "100%" }} />
               </div>
             ) : null}
             <FooterRow
@@ -556,14 +598,13 @@ export function ThemeAltitude({
         ) : null}
 
         {/* No claim: the line becomes the hero element. */}
-        {!claim && hasLine && profile ? (
+        {!claim && hasLine ? (
           <div>
             <div style={{ height: 232, width: "100%" }}>
-              <LineBand
-                profile={profile}
+              <MultiLineBand
+                curves={curves}
                 strokeWidth={4}
                 style={{ height: "100%" }}
-                useElevation={useElevation}
               />
             </div>
             <FooterRow

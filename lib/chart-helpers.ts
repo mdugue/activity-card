@@ -136,11 +136,38 @@ export function projectRoute(
   h: number,
   pad = 0
 ): ProjectedRoute {
-  if (!coords || coords.length === 0) {
-    return { d: "", points: [], start: null, end: null };
+  return projectRoutes([coords], w, h, pad)[0];
+}
+
+/**
+ * Project several routes into one **shared** w×h box: a single uniform scale and
+ * centring offset computed over the combined bounding box of every route, so the
+ * silhouettes keep their true proportions *and their real positions relative to
+ * one another*. This is what a multi-activity project (e.g. a triathlon's swim /
+ * bike / run legs) needs — each leg drawn in the same coordinate system rather
+ * than each rescaled to its own box. Empty/absent routes map to an empty
+ * `ProjectedRoute` so the return array stays index-aligned with the input.
+ */
+export function projectRoutes(
+  routes: (Coord[] | undefined)[],
+  w: number,
+  h: number,
+  pad = 0
+): ProjectedRoute[] {
+  const all: Coord[] = [];
+  for (const r of routes) {
+    if (r) {
+      for (const c of r) {
+        all.push(c);
+      }
+    }
   }
-  const xs = coords.map((c) => c[0]);
-  const ys = coords.map((c) => c[1]);
+  const empty: ProjectedRoute = { d: "", points: [], start: null, end: null };
+  if (all.length === 0) {
+    return routes.map(() => ({ ...empty }));
+  }
+  const xs = all.map((c) => c[0]);
+  const ys = all.map((c) => c[1]);
   const minX = Math.min(...xs);
   const minY = Math.min(...ys);
   const dx = Math.max(...xs) - minX || 1;
@@ -148,19 +175,138 @@ export function projectRoute(
   const innerW = w - pad * 2;
   const innerH = h - pad * 2;
 
-  // One uniform scale + centre offset → the route keeps its real aspect ratio.
+  // One uniform scale + centre offset over the combined bbox → every route keeps
+  // its real aspect ratio and its true position relative to the others.
   const scale = Math.min(innerW / dx, innerH / dy);
   const offsetX = pad + (innerW - dx * scale) / 2;
   const offsetY = pad + (innerH - dy * scale) / 2;
-  const points: Coord[] = coords.map((c) => [
-    offsetX + (c[0] - minX) * scale,
-    offsetY + (c[1] - minY) * scale,
-  ]);
 
-  const d = points
-    .map(
-      (p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(2)} ${p[1].toFixed(2)}`
-    )
-    .join(" ");
-  return { d, points, start: points[0], end: points.at(-1) ?? null };
+  return routes.map((coords) => {
+    if (!coords || coords.length === 0) {
+      return { ...empty };
+    }
+    const points: Coord[] = coords.map((c) => [
+      offsetX + (c[0] - minX) * scale,
+      offsetY + (c[1] - minY) * scale,
+    ]);
+    const d = points
+      .map(
+        (p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(2)} ${p[1].toFixed(2)}`
+      )
+      .join(" ");
+    return { d, points, start: points[0], end: points.at(-1) ?? null };
+  });
+}
+
+export interface NormalizedCurve {
+  /**
+   * Fractional points. `x ∈ [0, widthFrac]` runs left→right (every curve starts
+   * at 0); `y ∈ [0, 1]` where 1 is the highest value (drawn toward the top).
+   */
+  pts: Coord[];
+  /** Share of the full width this curve occupies (the longest leg = 1). */
+  widthFrac: number;
+}
+
+/**
+ * Normalise several profiles into overlaid curves that share one vertical scale
+ * and one horizontal axis — for stacking a multi-activity project's elevation
+ * (or pace) profiles in a single frame.
+ *
+ * - **Shared height scale:** every curve is normalised against the global
+ *   min/max across *all* profiles, so a flat leg reads flat next to a hilly one.
+ * - **Left-aligned, distance-proportional width:** all curves start at x=0; the
+ *   leg with the largest `weight` (distance) spans the full width, shorter legs
+ *   span proportionally less.
+ *
+ * `weights[i]` is typically each leg's distance; when absent the point count is
+ * used as a stand-in. Profiles with fewer than two points are dropped (and so
+ * are their weights), keeping the result tight rather than index-aligned.
+ */
+export function normalizeOverlay(
+  profiles: number[][],
+  weights: (number | undefined)[],
+  useElevation = true
+): NormalizedCurve[] {
+  const valid = profiles
+    .map((p, i) => ({ p, weight: weights[i] }))
+    .filter((e) => e.p.length > 1);
+  if (valid.length === 0) {
+    return [];
+  }
+  let min = Number.POSITIVE_INFINITY;
+  let max = Number.NEGATIVE_INFINITY;
+  for (const { p } of valid) {
+    for (const v of p) {
+      if (v < min) {
+        min = v;
+      }
+      if (v > max) {
+        max = v;
+      }
+    }
+  }
+  const dv = max - min || 1;
+  const widthOf = (e: { p: number[]; weight?: number }) =>
+    e.weight !== undefined && e.weight > 0 ? e.weight : e.p.length;
+  const maxW = Math.max(...valid.map(widthOf));
+  return valid.map((e) => {
+    const widthFrac = maxW > 0 ? widthOf(e) / maxW : 1;
+    const n = e.p.length;
+    const pts: Coord[] = e.p.map((v, i) => {
+      const tx = n > 1 ? (i / (n - 1)) * widthFrac : 0;
+      // 1 = highest point. Pace is "lower is better", so invert it.
+      const ty = useElevation ? (v - min) / dv : (max - v) / dv;
+      return [tx, ty];
+    });
+    return { pts, widthFrac };
+  });
+}
+
+/* ------------- colour helpers (accent shades for overlaid routes) --------- */
+
+function parseHex(hex: string): [number, number, number] {
+  const h = hex.replace("#", "");
+  const full =
+    h.length === 3
+      ? h
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : h;
+  return [
+    Number.parseInt(full.slice(0, 2), 16),
+    Number.parseInt(full.slice(2, 4), 16),
+    Number.parseInt(full.slice(4, 6), 16),
+  ];
+}
+
+const toHexByte = (n: number) =>
+  Math.max(0, Math.min(255, Math.round(n)))
+    .toString(16)
+    .padStart(2, "0");
+
+/** Linear blend of two hex colours; `t=0` → `a`, `t=1` → `b`. */
+export function mixHex(a: string, b: string, t: number): string {
+  const pa = parseHex(a);
+  const pb = parseHex(b);
+  const m = (i: number) => toHexByte(pa[i] + (pb[i] - pa[i]) * t);
+  return `#${m(0)}${m(1)}${m(2)}`;
+}
+
+/**
+ * A coherent ramp of `n` shades in the accent's colour family — a bright tint
+ * through to a deep shade — for distinguishing several overlaid routes without
+ * leaving the accent hue. `n <= 1` returns the accent itself.
+ */
+export function accentShades(accent: string, n: number): string[] {
+  if (n <= 0) {
+    return [];
+  }
+  if (n === 1) {
+    return [accent];
+  }
+  const light = mixHex(accent, "#ffffff", 0.5);
+  const dark = mixHex(accent, "#000000", 0.4);
+  return Array.from({ length: n }, (_, i) => mixHex(light, dark, i / (n - 1)));
 }
