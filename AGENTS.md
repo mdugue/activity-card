@@ -13,7 +13,8 @@ Single-page, fully client-side, no backend, no auth (for MVP). The card is a Rea
 1. [`SPEC.md`](./SPEC.md) — product vision, architecture decisions, data model, build phases. This is the source of truth for _what_ and _why_.
 2. Skills in `.claude/skills/` — focused technical references:
    - `activity-card-spec/` — quick reference to scope and phases
-   - `card-rendering/` — `html-to-image` gotchas, route SVG math, theme component contract
+   - `card-rendering/` — `html-to-image` gotchas, route SVG math, the single-card theme component contract
+   - `carousel-themes/` — the Carousel ("accordion") theme system: tokens, decks, photo handling
    - `sport-data/` — sport-specific metrics, units, parsing normalisation
 3. Topic-specific docs under `docs/`:
    - [`docs/strava.md`](./docs/strava.md) — Strava OAuth + picker
@@ -60,6 +61,44 @@ Why scoped: Playwright owns `*.spec.ts` under `e2e/`; bun unit tests use
 try to execute Playwright specs through the wrong runner. Add new unit-test
 roots to that script (and `bunfig.toml`'s note) if tests grow beyond `lib/`.
 
+## Themes — two families
+
+Effort has **two independent theme systems**. They share the `ActivityData`
+model and the route/elevation geometry helpers (`lib/chart-helpers.ts`) but
+nothing else — separate id spaces, separate rendering models. Keep them
+separate; never cross-import a single-card theme into the carousel or vice-versa.
+
+|                | Single card                                            | Carousel ("accordion")                                              |
+| -------------- | ------------------------------------------------------ | ------------------------------------------------------------------- |
+| Output         | one 1080×1350 poster                                   | an n×1080 × 1350 seamless strip, sliced into slides                 |
+| A theme is…    | **a component file**                                   | **a token row** (data)                                              |
+| Lives in       | `components/themes/<name>.tsx`                          | tokens: `lib/carousel/theme-tokens.ts` · render: `components/carousel/` |
+| Id space       | `ThemeId` (`components/themes/index.ts`)               | `CarouselThemeId` (`lib/carousel/theme-tokens.ts`)                  |
+| Registered in  | `THEMES` + `THEME_META`                                | `CAROUSEL_THEME_TOKENS` + `CAROUSEL_THEME_ORDER`                    |
+| Renderer       | the theme component itself                             | one shared `components/carousel/seamless-canvas.tsx`                |
+| Contract       | `ActivityCardProps` — see `card-rendering` skill       | theme tokens/levers — see `carousel-themes` skill                   |
+| Story          | `components/themes/<name>.stories.tsx`                 | a story in `components/carousel/seamless-canvas.stories.tsx`        |
+
+## Storybook
+
+Stories live **colocated** with the component as `<name>.stories.tsx`
+(`.storybook/main.ts` globs `components/**/*.stories.tsx`). The shared preview
+imports `app/globals.css` so stories render with the real Tailwind layer + theme
+tokens; a **Background** toolbar dropdown (free sport photos) plus a per-story
+**Background upload** control let you preview any photo-capable theme over an
+image (`.storybook/backgrounds.ts`, `.storybook/with-background.tsx`).
+
+- `bun run storybook` — dev server · `bun run build-storybook` — static build,
+  the headless check that every story still compiles (a vitest runner is
+  intentionally not wired up).
+- Tag generated stories `['ai-generated']`.
+
+**Every theme must have a story — both families** (see the table above for where
+each lives). A theme is not "done" until it renders in Storybook. For a
+photo-capable theme, spread `backgroundArgTypes` into the story `meta` and type
+it `Meta<ComponentProps<typeof X> & BackgroundArgs>` so the background controls
+appear.
+
 ## Conventions
 
 - **TypeScript strict mode.** No `any` without a `// reason:` comment.
@@ -68,8 +107,11 @@ roots to that script (and `bunfig.toml`'s note) if tests grow beyond `lib/`.
 - **Shadows use Tailwind's scale** (`shadow-xs` … `shadow-2xl`), tinted when needed via `shadow-<token>` (e.g. `shadow-primary/50`). No arbitrary `shadow-[…]` in app chrome. Themes in `components/themes/` are the exception: they rasterise to PNG, so their shadows stay inline as `style={{ boxShadow }}`.
 - **Route/path silhouettes stay geographically faithful.** Project route coordinates with a single uniform scale and centre them in their container — use `projectRoute` / `routePath` (`lib/chart-helpers.ts`), which do exactly this. Never stretch a path per-axis to fill a box (e.g. to span the full carousel width): a distorted silhouette misrepresents the real route. Keep its true proportions and centre it (for the carousel hero, in the middle of the complete viewport).
 - **No console.log in committed code.** Use proper error UI for user-facing failures.
+- **Every theme ships a colocated story** — single-card *and* carousel. Adding or
+  renaming a theme isn't complete without its `*.stories.tsx`; see [Storybook](#storybook).
 - **Commit messages**: Conventional Commits (`feat:`, `fix:`, `refactor:`, etc.).
-- **Lint + typecheck must be green** before pushing: `bun lint && bun typecheck`.
+- **Lint + typecheck must be green** before pushing: `bun lint && bun typecheck`. Keep
+  `bun run build-storybook` green too when you touch themes or stories.
 
 ## File structure
 
@@ -79,11 +121,20 @@ app/                  Next.js App Router routes only (page.tsx, layout.tsx, rout
 components/
   ui/                 shadcn primitives. VENDOR — do NOT edit; re-add via `bunx shadcn add`.
   app/                App-level composite components (states, shell, wordmark, sample data).
-  themes/             Activity-card themes, one file per theme. All export a component
-                      matching the shared `ActivityCardProps` interface.
+  themes/             SINGLE-CARD themes — one file per theme, each exporting a
+                      component matching `ActivityCardProps`; registered in
+                      `themes/index.ts` (`THEMES` / `ThemeId`).
+  carousel/           CAROUSEL ("accordion") themes — one renderer
+                      (`seamless-canvas.tsx`) + slide templates/panels. A carousel
+                      theme itself is a token row in `lib/carousel/theme-tokens.ts`,
+                      not a file-per-theme component.
+                      (Stories colocate next to components as `<name>.stories.tsx`.)
 hooks/                Shared client hooks. (`use-mobile.ts` is shadcn-vendor.)
-lib/                  Utilities (`cn`, parsers, formatters).
+lib/                  Utilities (`cn`, parsers, formatters). `lib/carousel/` holds the
+                      carousel theme tokens, deck + stat planning, and resolve logic.
 public/               Static assets.
+.storybook/           Storybook config + the shared preview, background presets,
+                      and the background-photo decorator.
 .claude/skills/       Focused references — read before non-trivial work in their area.
 ```
 
@@ -102,7 +153,12 @@ public/               Static assets.
 ### Where new code goes
 
 - **A new screen or state of the app** → `components/app/<name>.tsx`, wired from `app/page.tsx`.
-- **A new theme** → `components/themes/<name>.tsx`, registered in the theme map.
+- **A new single-card theme** → `components/themes/<name>.tsx`, registered in the
+  theme map (`components/themes/index.ts`), **plus a colocated
+  `components/themes/<name>.stories.tsx`**.
+- **A new carousel theme** → a token row in `lib/carousel/theme-tokens.ts` (add
+  the id to `CarouselThemeId` + `CAROUSEL_THEME_ORDER`), **plus a story for it in
+  `components/carousel/seamless-canvas.stories.tsx`**. See the `carousel-themes` skill.
 - **A new shadcn primitive** → `bunx shadcn add <name>` (lands in `components/ui/`, untouched).
 - **A new shared utility** → `lib/<name>.ts`.
 

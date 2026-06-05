@@ -126,6 +126,12 @@ for it. Athlete name, the "made with effort" mark, and page numbers default OFF.
    `seamless-canvas.tsx` and the planner branch in `planSlideStats`).
 3. Keep the contract: render foreground only; the canvas owns the photo, veil,
    spanning hero layer, and per-slide stat assignment.
+4. **Add a story** for the new id in
+   `components/carousel/seamless-canvas.stories.tsx` — one export per
+   `CarouselThemeId`, built from `buildDeck(CAROUSEL_THEME_TOKENS[id].deck)` and
+   the theme's accent + default filter/grain (see the existing `themeArgs`
+   helper). Every carousel theme must have a story — this is enforced in
+   `AGENTS.md`. Verify with `bun run build-storybook`.
 
 ## File map
 
@@ -142,4 +148,5 @@ components/carousel/detail-viz.tsx        small path + altitude graphics
 components/carousel/carousel-photo.tsx    panorama photo + grain
 components/carousel/templates/            standard panels + shared contract
 components/carousel/panels/               frame-panel · press-panel
+components/carousel/seamless-canvas.stories.tsx  one story per CarouselThemeId (required)
 ```
