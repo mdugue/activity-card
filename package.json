@@ -44,7 +44,20 @@
     "openapi-typescript": "^7.13.0",
     "tailwindcss": "^4.3.0",
     "typescript": "^6.0.3",
-    "ultracite": "7.8.1"
+    "ultracite": "7.8.1",
+    "storybook": "^10.4.2",
+    "@storybook/nextjs-vite": "^10.4.2",
+    "@chromatic-com/storybook": "^5.2.1",
+    "@storybook/addon-vitest": "^10.4.2",
+    "@storybook/addon-a11y": "^10.4.2",
+    "@storybook/addon-docs": "^10.4.2",
+    "@storybook/addon-mcp": "^0.6.0",
+    "vite": "^8.0.16",
+    "eslint-plugin-storybook": "^10.4.2",
+    "vitest": "^4.1.8",
+    "playwright": "^1.60.0",
+    "@vitest/browser-playwright": "^4.1.8",
+    "@vitest/coverage-v8": "^4.1.8"
   },
   "name": "activity-card",
   "scripts": {
@@ -59,7 +72,9 @@
     "test:watch": "bun test ./lib --watch",
     "test:coverage": "bun test ./lib --coverage",
     "test:e2e": "playwright test",
-    "strava:types": "bunx --bun swagger2openapi https://developers.strava.com/swagger/swagger.json --outfile strava-oas3.tmp.json && openapi-typescript strava-oas3.tmp.json -o lib/strava-api.generated.ts && rm -f strava-oas3.tmp.json"
+    "strava:types": "bunx --bun swagger2openapi https://developers.strava.com/swagger/swagger.json --outfile strava-oas3.tmp.json && openapi-typescript strava-oas3.tmp.json -o lib/strava-api.generated.ts && rm -f strava-oas3.tmp.json",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "version": "0.1.0",
   "private": true,
