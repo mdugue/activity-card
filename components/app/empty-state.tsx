@@ -27,10 +27,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useStravaConnection } from "@/hooks/use-strava-connection";
-import { type ParsedActivity, parseActivityFile } from "@/lib/parse-activity";
+import { type ParsedActivity, parseActivityFiles } from "@/lib/parse-activity";
 import { cn } from "@/lib/utils";
 
-const ACTIVITY_FILE_RE = /\.(gpx|fit)$/i;
 const PANEL_COUNT = 4;
 // Keep in sync with the rail's `gap-4` (16px) so the sliced panorama lines up
 // across the gutters and reads as one continuous photo.
@@ -240,17 +239,9 @@ export function EmptyState({
     if (isParsing) {
       return;
     }
-    const files = Array.from(fileList).filter((f) =>
-      ACTIVITY_FILE_RE.test(f.name)
-    );
-    if (!files.length) {
-      toast.error("Drop a .gpx or .fit file.");
-      return;
-    }
     setIsParsing(true);
     try {
-      const parts = await Promise.all(files.map((f) => parseActivityFile(f)));
-      onFilesLoaded(parts);
+      onFilesLoaded(await parseActivityFiles(fileList));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not read that file.");
     } finally {

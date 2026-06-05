@@ -32,10 +32,12 @@ Visible differences when an activity comes from Strava (`data.source === 'strava
   `stravaActivityIds` on `ActivityData` is segment-aligned, with `null`
   slots for file-sourced parts in mixed-source triathlons.
 
-App-wide attribution sits in the footer (`components/app/strava-footer.tsx`)
-as plain text "Compatible with Strava" — Strava's guidelines (§1.2, §4)
-treat the API logos as optional and accept text references using one of
-the approved phrases. No in-card mark; the downloaded PNG stays clean.
+Attribution sits in the footer (`components/app/strava-footer.tsx`) as plain
+text "Compatible with Strava" — Strava's guidelines (§1.2, §4) treat the API
+logos as optional and accept text references using one of the approved phrases.
+It renders on the Strava-facing surfaces — the connect (empty) screen and the
+activity picker — via `app/page.tsx`; the editor/download stay clean and the
+downloaded PNG carries no in-card mark.
 
 ## Architecture in one diagram
 
@@ -102,9 +104,9 @@ skew), so the picker and detail handlers don't need refresh logic.
 | `lib/strava-types.ts` | Strava model types. Base shapes derive from the generated spec; the `ActivityExtras` layer adds fields the spec omits. |
 | `lib/strava-api.generated.ts` | Auto-generated from Strava's OpenAPI spec via `bun run strava:types`. Do not edit — regenerate. Lint/format/eslint skip it. |
 | `lib/strava-to-parsed.ts` | Maps Strava streams + detail into the same `TrackPoint`/`ParsedActivity` shape the GPX/.fit parsers produce. Reuses `finalise()` and `detectSport()` from `lib/parse-shared.ts`. |
-| `components/app/strava-picker.tsx` | Activity-list screen (`AppState === "picking-strava"`) — shadcn `Item`/`Pagination`/`Switch`/`Checkbox`. Owns single-pick, multi-select, pagination, and the per-error-kind `<StravaErrorAlert>` rendering. |
+| `components/app/strava-picker.tsx` | Activity-list screen (`AppState === "picking-strava"`) — shadcn `Item`/`Pagination`/`Switch`/`Checkbox`. Owns single-pick, multi-select, pagination, and the per-error-kind `<StravaErrorAlert>` rendering. Its `PickerConnection` header row shows "Connected as … / Disconnect". |
 | `components/app/strava-connect-button.tsx` | Official 237×48 "Connect with Strava" SVG (per §1.1) wrapped in an anchor → `/api/strava/authorize`. The asset is at `public/strava/btn-connect-with-strava-orange.svg` and must not be modified. |
-| `components/app/strava-footer.tsx` | App-wide footer with the plain-text "Compatible with Strava" reference. Mounted in `app/layout.tsx`. |
+| `components/app/strava-footer.tsx` | Plain-text "Compatible with Strava" reference. Rendered on the empty + picker states from `app/page.tsx`. |
 | `hooks/use-strava-connection.ts` | `useStravaConnection()` — wraps `/api/strava/me`. Exposes `{ connected, athlete, loading, error }` so the empty state can distinguish "you're not signed in" (`connected:false`) from "the server is broken" (`error:'fetch_failed'`). |
 | `e2e/strava-mock.ts` | Bun.serve mock server used by Playwright tests. |
 | `e2e/strava.spec.ts` | End-to-end coverage of the full flow. |
@@ -272,7 +274,9 @@ How we satisfy each clause of Strava's brand guidelines
 5. **§4 Use of the Strava name + interoperability.** Footer carries
    "Compatible with Strava" verbatim. "Effort" is the app name
    throughout; no derivation from "Strava".
-6. **Working Disconnect.** Edit-state row exposes one; it POSTs to
+6. **Working Disconnect.** The picker header (`PickerConnection`) and the
+   editor's activity overlay (`ActivityInfo`, shown whenever connected — even
+   for file-sourced activities) each expose one; it POSTs to
    `/api/strava/disconnect` which clears all four cookies.
 
 Strava revokes API access for violations — treat compliance as

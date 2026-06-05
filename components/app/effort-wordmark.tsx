@@ -31,7 +31,9 @@ export function EffortMark({ className }: { className?: string }) {
 
 export function EffortWordmark({
   size = "default",
+  labelClassName,
 }: {
+  labelClassName?: string;
   size?: "default" | "sm";
 }) {
   const isSm = size === "sm";
@@ -41,7 +43,8 @@ export function EffortWordmark({
       <span
         className={cn(
           "font-heading uppercase leading-none tracking-wide",
-          isSm ? "text-2xl" : "text-3xl"
+          isSm ? "text-2xl" : "text-3xl",
+          labelClassName
         )}
         style={{ fontFamily: "var(--font-heading)" }}
       >

@@ -16,6 +16,7 @@ import {
   SAMPLE_RUN,
   type Sport,
 } from "@/components/app/sample-data";
+import { StravaFooter } from "@/components/app/strava-footer";
 import { StravaPicker } from "@/components/app/strava-picker";
 import { themeVisibilityAvailable } from "@/components/themes";
 import { useCarousel } from "@/hooks/use-carousel";
@@ -383,10 +384,12 @@ export default function Home() {
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-background text-foreground">
-      <Header
-        date={data?.date}
-        status={state === "empty" ? "STEP 01 / 03 · CONNECT" : undefined}
-      />
+      {state === "edit" ? null : (
+        <Header
+          date={data?.date}
+          status={state === "empty" ? "STEP 01 / 03 · CONNECT" : undefined}
+        />
+      )}
       {state === "empty" ? (
         <EmptyState
           onFilesLoaded={handleFilesLoaded}
@@ -402,9 +405,7 @@ export default function Home() {
       ) : null}
       {state === "edit" && visibleData && data ? (
         <div className="flex flex-1 flex-col">
-          <div className="mx-auto w-full max-w-[1180px] px-6 pt-14 md:px-10 lg:pt-16">
-            <ModeToggle mode={mode} onModeChange={setMode} />
-          </div>
+          <EditTopBar mode={mode} onModeChange={setMode} />
           {mode === "carousel" ? (
             <CarouselEditState
               accent={accent}
@@ -479,6 +480,33 @@ export default function Home() {
           theme={theme}
         />
       ) : null}
+      {/* "Compatible with Strava" (§4) on the Strava-facing surfaces: the
+          connect (empty) screen and the activity picker. The editor/download
+          stay clean — the card carries no Strava mark by brand rule. */}
+      {state === "empty" || state === "picking-strava" ? (
+        <StravaFooter />
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * The editor's top bar: the wordmark and the compact Carousel/Single Card
+ * toggle on one line, with the activity control (name + source + swap, in a
+ * popover) directly below. Replaces the standalone header + mode-toggle row so
+ * the top stays tight on mobile and reads cleanly on desktop.
+ */
+function EditTopBar({
+  mode,
+  onModeChange,
+}: {
+  mode: CardMode;
+  onModeChange: (mode: CardMode) => void;
+}) {
+  return (
+    <div className="mx-auto flex w-full max-w-[1180px] items-center justify-between gap-3 px-6 pt-7 md:px-10">
+      <EffortWordmark labelClassName="hidden sm:inline" size="sm" />
+      <ModeToggle mode={mode} onModeChange={onModeChange} />
     </div>
   );
 }
