@@ -25,6 +25,8 @@ const eslintConfig = defineConfig([
     "playwright-report/**",
     "test-results/**",
     "coverage/**",
+    // Gitignored Storybook build output — minified vendor bundles.
+    "storybook-static/**",
   ]),
   ...storybook.configs["flat/recommended"],
 ]);
