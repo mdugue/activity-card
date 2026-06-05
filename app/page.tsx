@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "sonner";
 import { CarouselEditState } from "@/components/app/carousel-edit-state";
 import { DownloadState } from "@/components/app/download-state";
@@ -16,9 +22,11 @@ import {
   SAMPLE_RUN,
   type Sport,
 } from "@/components/app/sample-data";
+import { StartOverButton } from "@/components/app/start-over-button";
 import { StravaPicker } from "@/components/app/strava-picker";
 import { themeVisibilityAvailable } from "@/components/themes";
 import type { AltitudeMood } from "@/components/themes/altitude";
+import { Spinner } from "@/components/ui/spinner";
 import { useCarousel } from "@/hooks/use-carousel";
 import { useImagePalette } from "@/hooks/use-image-palette";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
@@ -28,6 +36,16 @@ import {
   type CarouselThemeId,
   DEFAULT_CAROUSEL_THEME,
 } from "@/lib/carousel/theme-tokens";
+import {
+  clearDraft,
+  clearDraftImage,
+  hasSavedDraft,
+  type LoadedDraft,
+  loadDraft,
+  requestPersistentStorage,
+  saveDraftImage,
+  saveDraftMeta,
+} from "@/lib/draft-store";
 import { formatDateUpper } from "@/lib/format";
 import { IDENTITY_TRANSFORM, type ImageTransform } from "@/lib/image-transform";
 import type { PhotoMood } from "@/lib/palette";
@@ -126,6 +144,9 @@ export default function Home() {
   // Held outside `data` so it survives between activities and can seed
   // `adoptParsed` when the parsed file lacks an athlete name.
   const persistedAthleteNameRef = useRef<string | undefined>(undefined);
+  // Holds the first paint until the cold-start draft check resolves, so a saved
+  // card restores straight into the editor instead of flashing the empty state.
+  const [hydrating, setHydrating] = useState(true);
 
   // One palette extraction for the whole app, regardless of how many copies
   // of the photo theme are mounted (preview + offscreen export mount).
@@ -256,6 +277,73 @@ export default function Home() {
     window.history.replaceState({}, "", url.toString());
   }, []);
 
+  // Apply a loaded draft to local state. Pulled out of the restore effect so
+  // that effect stays simple; it only touches stable setters/refs, so its
+  // dependency list is empty.
+  const applyDraft = useCallback((loaded: LoadedDraft) => {
+    const { meta, image } = loaded;
+    setData(meta.activity);
+    setImageTransform(meta.imageTransform);
+    setPhotoEffects(meta.photoEffects);
+    // Prefer the synchronously-hydrated prefs value (the current athlete name)
+    // over the draft's debounced — possibly stale — copy; fall back to the
+    // draft only when prefs carried no name.
+    persistedAthleteNameRef.current =
+      persistedAthleteNameRef.current || meta.activity.athleteName;
+    if (image) {
+      setPhotoUrl(URL.createObjectURL(image));
+    }
+    // Resume in the editor — but don't override a screen another mount effect
+    // already chose (e.g. the Strava OAuth return opening the picker). The
+    // `?strava` param is stripped synchronously before this async restore runs,
+    // so key off the current state, not the URL.
+    setState((prev) => (prev === "empty" ? "edit" : prev));
+  }, []);
+
+  // Restore a previously auto-saved draft on cold start so a refresh resumes the
+  // card. The draft only carries what the UI-pref hydration above doesn't: the
+  // activity, the photo, and the per-photo transform + effects. We hold the
+  // first paint (`hydrating`) across the async read so the empty state never
+  // flashes before the editor.
+  useEffect(() => {
+    let cancelled = false;
+    requestPersistentStorage();
+    (async () => {
+      // Only touch IndexedDB when the synchronous hint says a draft exists —
+      // otherwise the empty state renders without waiting on the read.
+      const loaded = hasSavedDraft() ? await loadDraft() : null;
+      if (cancelled) {
+        return;
+      }
+      if (loaded) {
+        applyDraft(loaded);
+      }
+      setHydrating(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [applyDraft]);
+
+  // Auto-save the in-progress card (debounced) so a reload restores it. The
+  // image Blob is persisted separately on change; this write covers the
+  // activity plus the per-photo transform/effects. Styling lives in UI prefs.
+  useEffect(() => {
+    if (hydrating || data === null) {
+      return;
+    }
+    const handle = setTimeout(() => {
+      saveDraftMeta({
+        activity: data,
+        imageTransform,
+        photoEffects,
+        savedAt: Date.now(),
+        v: 1,
+      });
+    }, 500);
+    return () => clearTimeout(handle);
+  }, [data, imageTransform, photoEffects, hydrating]);
+
   const adoptParts = (
     parts: ParsedActivity[],
     source: ActivitySource
@@ -339,6 +427,13 @@ export default function Home() {
     } else {
       setPhotoEffects(NO_EFFECTS);
     }
+    // Persist (or drop) the photo separately from the JSON metadata so editing
+    // text doesn't rewrite a multi-MB blob.
+    if (file) {
+      saveDraftImage(file);
+    } else {
+      clearDraftImage();
+    }
   };
 
   // Switching carousel theme re-applies that theme's signature photo look,
@@ -364,6 +459,7 @@ export default function Home() {
   };
 
   const handleNew = () => {
+    clearDraft();
     setData(null);
     if (photoUrl) {
       URL.revokeObjectURL(photoUrl);
@@ -374,12 +470,24 @@ export default function Home() {
     setState("empty");
   };
 
+  if (hydrating) {
+    return (
+      <div className="relative flex min-h-screen flex-col overflow-hidden bg-background text-foreground">
+        <Header />
+        <div className="flex flex-1 items-center justify-center">
+          <Spinner className="size-6 opacity-30" />
+        </div>
+      </div>
+    );
+  }
+
   const visibleData = data ? applyVisibility(data, visibility) : data;
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-background text-foreground">
       <Header
         date={data?.date}
+        onStartOver={state === "edit" ? handleNew : undefined}
         status={state === "empty" ? "STEP 01 / 03 · CONNECT" : undefined}
       />
       {state === "empty" ? (
@@ -478,20 +586,36 @@ export default function Home() {
   );
 }
 
-function Header({ date, status }: { date?: string; status?: string }) {
+function Header({
+  date,
+  status,
+  onStartOver,
+}: {
+  date?: string;
+  status?: string;
+  onStartOver?: () => void;
+}) {
   const upper = date ? formatDateUpper(date) : "";
+  let right: ReactNode;
+  if (onStartOver) {
+    right = <StartOverButton onConfirm={onStartOver} />;
+  } else if (status) {
+    right = (
+      <div className="font-medium font-mono text-[10px] tracking-[0.22em] opacity-55 sm:text-[11px]">
+        {status}
+      </div>
+    );
+  } else {
+    right = (
+      <div className="hidden font-medium font-mono text-[11px] tracking-[0.22em] opacity-55 sm:block">
+        ACTIVITY CARD{upper ? ` · ${upper}` : ""}
+      </div>
+    );
+  }
   return (
     <header className="absolute top-0 right-0 left-0 z-10 flex items-start justify-between px-6 pt-7 md:px-10">
       <EffortWordmark />
-      {status ? (
-        <div className="font-medium font-mono text-[10px] tracking-[0.22em] opacity-55 sm:text-[11px]">
-          {status}
-        </div>
-      ) : (
-        <div className="hidden font-medium font-mono text-[11px] tracking-[0.22em] opacity-55 sm:block">
-          ACTIVITY CARD{upper ? ` · ${upper}` : ""}
-        </div>
-      )}
+      {right}
     </header>
   );
 }
