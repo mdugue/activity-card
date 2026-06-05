@@ -60,7 +60,7 @@
     "test:watch": "bun test ./lib --watch",
     "test:coverage": "bun test ./lib --coverage",
     "test:e2e": "playwright test",
-    "generate-icons": "bun run scripts/generate-icons.mjs",
+    "generate-icons": "bun run scripts/generate-icons.ts",
     "strava:types": "bunx --bun swagger2openapi https://developers.strava.com/swagger/swagger.json --outfile strava-oas3.tmp.json && openapi-typescript strava-oas3.tmp.json -o lib/strava-api.generated.ts && rm -f strava-oas3.tmp.json"
   },
   "version": "0.1.0",

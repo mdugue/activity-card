@@ -4,7 +4,7 @@
 // The source SVG keeps the logo inside the central ~64% "safe zone" so it
 // survives both Android maskable circles and the iOS rounded-square mask.
 //
-// Run with: `bun run scripts/generate-icons.mjs`
+// Run with: `bun run generate-icons`
 // Uses the pure-wasm resvg build so it works on any platform without native
 // libvips/sharp binaries.
 
@@ -20,7 +20,12 @@ await initWasm(wasm);
 
 const svg = readFileSync(`${root}public/icons/icon-source.svg`, "utf8");
 
-const targets = [
+interface IconTarget {
+  out: string;
+  size: number;
+}
+
+const targets: IconTarget[] = [
   { out: "public/icons/icon-192.png", size: 192 },
   { out: "public/icons/icon-512.png", size: 512 },
   { out: "public/icons/icon-maskable-512.png", size: 512 },
