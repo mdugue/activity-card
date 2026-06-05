@@ -193,6 +193,17 @@ Themes branch on `activity.sport` to choose which stats to show and how to rende
 
 When `activity.backgroundImage` is set, themes that support it (Photo theme always, others optionally) use it as a CSS `background-image` on a layer. For html-to-image to capture it correctly, the photo should be an object URL or data URL — not a remote URL that would fail CORS.
 
+### Every theme needs a story
+
+Each single-card theme has a colocated `components/themes/<name>.stories.tsx`
+(Storybook). A theme is not done until it renders there — enforced in
+`AGENTS.md`. Photo-capable themes spread `backgroundArgTypes`
+(`.storybook/backgrounds.ts`) into the story `meta` (typed
+`Meta<ComponentProps<typeof X> & BackgroundArgs>`) so the Background
+toolbar/upload controls preview the theme over an image. Verify with
+`bun run build-storybook`. (Carousel themes carry the same requirement — see the
+`carousel-themes` skill.)
+
 ## Fonts
 
 Self-host theme fonts in `public/fonts/` and load via `@font-face` in `app/globals.css`. Google Fonts CDN also works but adds a network dependency for export — self-hosting is more reliable.
