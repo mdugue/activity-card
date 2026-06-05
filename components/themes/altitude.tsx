@@ -40,6 +40,63 @@ const CONTENT_W = W - PAD_X * 2;
 // when the text actually needs it (numbers/caps stay tight).
 const DESCENDERS = /[gjpqy]/;
 
+// --- Fit-to-width by measure-and-scale --------------------------------------
+// Scaling the font size uniformly is the only way to fill the width without
+// distorting glyph shapes (unlike SVG `textLength`). We measure the natural
+// width against a detached probe; next/font ships metric-matched fallbacks, so
+// this is accurate even before the web font loads, and the resulting size is
+// baked into the DOM that html-to-image clones, so the export matches.
+const REF_PX = 100;
+const MIN_FIT = 40;
+const MAX_FIT = 620;
+let measureProbe: HTMLSpanElement | null = null;
+
+function probeWidth(
+  text: string,
+  fontFamily: string,
+  fontWeight: number
+): number {
+  if (typeof document === "undefined") {
+    return 0;
+  }
+  if (!measureProbe) {
+    measureProbe = document.createElement("span");
+    measureProbe.setAttribute("aria-hidden", "true");
+    Object.assign(measureProbe.style, {
+      position: "absolute",
+      left: "-99999px",
+      top: "0",
+      visibility: "hidden",
+      whiteSpace: "pre",
+      pointerEvents: "none",
+      letterSpacing: "normal",
+      fontSize: `${REF_PX}px`,
+    });
+    document.body.appendChild(measureProbe);
+  }
+  measureProbe.style.fontFamily = fontFamily;
+  measureProbe.style.fontWeight = String(fontWeight);
+  measureProbe.textContent = text;
+  return measureProbe.getBoundingClientRect().width;
+}
+
+/** Largest size (clamped) at which the widest line still fits `CONTENT_W`. */
+function fitFontSize(
+  lines: string[],
+  fontFamily: string,
+  fontWeight: number,
+  fallback: number
+): number {
+  let widest = 0;
+  for (const line of lines) {
+    widest = Math.max(widest, probeWidth(line, fontFamily, fontWeight));
+  }
+  if (widest <= 0) {
+    return fallback;
+  }
+  return Math.min(MAX_FIT, Math.max(MIN_FIT, (CONTENT_W / widest) * REF_PX));
+}
+
 const FONT_FAMILY: Record<AltitudeConfig["font"], string> = {
   modern: "var(--font-heading), sans-serif",
   serif: "var(--font-playfair), serif",
@@ -147,7 +204,9 @@ function ClaimText({
   uid: string;
   useElevation: boolean;
 }) {
-  const { lines, fontSize, fill } = layout;
+  const { lines } = layout;
+  // Uniform scale to fill the width — no glyph distortion (see fitFontSize).
+  const fontSize = fitFontSize(lines, fontFamily, fontWeight, layout.fontSize);
   const hasCurve = cut && Boolean(profile && profile.length > 1);
   // Tight vertical metrics: caps sit just below the top edge, and we only
   // reserve descender room when the text needs it or the curve dips below the
@@ -160,9 +219,6 @@ function ClaimText({
     Math.max(DESCENDERS.test(lines.join("")) ? 0.2 : 0.05, hasCurve ? 0.12 : 0);
   const baseline0 = topPad + capH;
   const boxH = baseline0 + (lines.length - 1) * lineH + descent;
-  // Only a single line is stretched to the exact width; wrapped lines stay
-  // left-aligned at their natural width (ragged, but undistorted).
-  const justify = fill && lines.length === 1;
 
   const renderLines = (
     opacity: number,
@@ -176,9 +232,7 @@ function ClaimText({
         fontSize={fontSize}
         fontWeight={fontWeight}
         key={`${i}-${ln}`}
-        lengthAdjust={justify ? "spacingAndGlyphs" : undefined}
         opacity={opacity}
-        textLength={justify ? CONTENT_W : undefined}
         x={0}
         y={baseline0 + i * lineH + (opts.dy ?? 0)}
       >
