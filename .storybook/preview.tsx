@@ -3,8 +3,15 @@ import type { Preview } from "@storybook/nextjs-vite";
 // (--primary, --foreground, …) every card and chrome component reads.
 // Importing it here is what makes stories render with the real styles.
 import "../app/globals.css";
+import { backgroundGlobalTypes, DEFAULT_BACKGROUND } from "./backgrounds";
+import { withBackground } from "./with-background";
 
 const preview: Preview = {
+  // Resolves the toolbar Background preset / per-story upload into a `photoUrl`
+  // for every theme story. Harmless on stories that don't render a photo.
+  decorators: [withBackground],
+  globalTypes: backgroundGlobalTypes,
+  initialGlobals: { background: DEFAULT_BACKGROUND },
   parameters: {
     controls: {
       matchers: {

@@ -49,3 +49,6 @@ next-env.d.ts
 
 *storybook.log
 storybook-static
+
+# playwright-cli scratch (snapshots, console/request logs)
+.playwright-cli

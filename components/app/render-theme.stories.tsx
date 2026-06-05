@@ -1,18 +1,24 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { ComponentProps } from "react";
 import { expect } from "storybook/test";
 import {
   SAMPLE_RIDE,
   SAMPLE_RUN,
   SAMPLE_TRI,
 } from "@/components/app/sample-data";
+import {
+  type BackgroundArgs,
+  backgroundArgTypes,
+} from "../../.storybook/backgrounds";
 import { RenderTheme } from "./render-theme";
 
 const meta = {
   component: RenderTheme,
   tags: ["ai-generated"],
   parameters: { layout: "fullscreen" },
+  argTypes: { ...backgroundArgTypes },
   args: { data: SAMPLE_RIDE },
-} satisfies Meta<typeof RenderTheme>;
+} satisfies Meta<ComponentProps<typeof RenderTheme> & BackgroundArgs>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;

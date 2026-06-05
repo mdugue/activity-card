@@ -1,12 +1,18 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { ComponentProps } from "react";
 import { SAMPLE_RIDE, SAMPLE_RUN } from "@/components/app/sample-data";
+import {
+  type BackgroundArgs,
+  backgroundArgTypes,
+} from "../../.storybook/backgrounds";
 import { ThemeMinimal } from "./minimal";
 
 const meta = {
   component: ThemeMinimal,
   tags: ["ai-generated"],
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof ThemeMinimal>;
+  argTypes: { ...backgroundArgTypes },
+} satisfies Meta<ComponentProps<typeof ThemeMinimal> & BackgroundArgs>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
