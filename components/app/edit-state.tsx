@@ -2,37 +2,25 @@
 
 import { DownloadSimpleIcon } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
-import {
-  ALTITUDE_MOODS,
-  type AltitudeMood,
-} from "@/components/themes/altitude";
 import { THEME_META } from "@/components/themes/index";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { PaletteStatus } from "@/hooks/use-image-palette";
+import type { AltitudeConfig } from "@/lib/altitude";
 import { defaultFilename, exportCard } from "@/lib/export-card";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme, PhotoMood } from "@/lib/palette";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import type { Visibility } from "@/lib/visibility";
 import { ActivityControls } from "./activity-controls";
+import { AltitudeControls } from "./altitude-controls";
 import { ControlBlock } from "./control-primitives";
 import { EditSidebar } from "./edit-sidebar";
 import { RenderTheme, type ThemeId } from "./render-theme";
 import type { ActivityData, Sport } from "./sample-data";
 import { ThemeCarousel } from "./theme-carousel";
-
-// Ordered moods for the Altitude theme — keys map to ALTITUDE_MOODS specs.
-const ALTITUDE_MOOD_ORDER: AltitudeMood[] = [
-  "day",
-  "dawn",
-  "night",
-  "heat",
-  "rain",
-  "snow",
-];
 
 const PHOTO_MOODS: { id: PhotoMood; label: string; sub: string }[] = [
   { id: "vibrant", label: "VIBRANT", sub: "photo-forward" },
@@ -47,14 +35,14 @@ const DEFAULT_SINGLE_ACCENT = "#c45a2c";
 
 interface EditStateProps {
   accent: string;
-  altitudeMood: AltitudeMood;
+  altitudeConfig: AltitudeConfig;
   athleteName: string;
   available: Record<keyof Visibility, boolean>;
   data: ActivityData;
   imageTransform: ImageTransform;
   location: string;
   onAccentChange: (accent: string) => void;
-  onAltitudeMoodChange: (mood: AltitudeMood) => void;
+  onAltitudeConfigChange: (config: AltitudeConfig) => void;
   onAthleteNameChange: (name: string) => void;
   onDownload: () => void;
   onFilesLoaded: (parts: ParsedActivity[]) => void;
@@ -82,7 +70,7 @@ export function EditState(props: EditStateProps) {
     theme,
     photoUrl,
     photoPaletteTheme,
-    altitudeMood,
+    altitudeConfig,
     onDownload,
     onThemeChange,
     visibility,
@@ -112,7 +100,7 @@ export function EditState(props: EditStateProps) {
       <div className="mx-auto grid w-full max-w-[1180px] flex-1 grid-cols-1 gap-8 px-6 pt-6 pb-8 md:px-10 lg:grid-cols-[minmax(0,640px)_400px] lg:gap-12">
         <div className="min-w-0">
           <ThemeCarousel
-            altitudeMood={altitudeMood}
+            altitudeConfig={altitudeConfig}
             data={data}
             imageTransform={imageTransform}
             onImageTransformChange={onImageTransformChange}
@@ -142,7 +130,7 @@ export function EditState(props: EditStateProps) {
           }}
         >
           <RenderTheme
-            altitudeMood={altitudeMood}
+            altitudeConfig={altitudeConfig}
             data={data}
             imageTransform={imageTransform}
             photoBackdropEnabled={visibility.photoBackdrop}
@@ -172,8 +160,8 @@ function ControlsPane(props: ControlsPaneProps) {
     visibility,
     onVisibilityChange,
     isExporting,
-    altitudeMood,
-    onAltitudeMoodChange,
+    altitudeConfig,
+    onAltitudeConfigChange,
     photoMood,
     onPhotoMoodChange,
     photoPaletteStatus,
@@ -182,7 +170,7 @@ function ControlsPane(props: ControlsPaneProps) {
   const photoSupported = meta.photoMode !== "none";
   const showBackdropSwitch = meta.photoMode === "supports";
   const showRepositionHint = meta.photoMode === "hero" && photoUrl !== null;
-  const showAltitudeMood = theme === "altitude";
+  const showAltitude = theme === "altitude";
   const showPhotoMood = theme === "photo" && photoUrl !== null;
 
   const photoExtras = (
@@ -214,34 +202,12 @@ function ControlsPane(props: ControlsPaneProps) {
 
   const moodSlot = (
     <>
-      {showAltitudeMood ? (
-        <ControlBlock label="MOOD">
-          <ToggleGroup
-            aria-label="Altitude mood"
-            className="mt-2 grid w-full grid-cols-3 gap-2"
-            onValueChange={(values) => {
-              if (values[0]) {
-                onAltitudeMoodChange(values[0] as AltitudeMood);
-              }
-            }}
-            spacing={2}
-            value={[altitudeMood]}
-            variant="outline"
-          >
-            {ALTITUDE_MOOD_ORDER.map((id) => (
-              <ToggleGroupItem
-                aria-label={ALTITUDE_MOODS[id].label}
-                className="flex h-auto flex-col items-start justify-start px-3 py-2.5 text-left"
-                key={id}
-                value={id}
-              >
-                <div className="font-heading text-base uppercase leading-none">
-                  {ALTITUDE_MOODS[id].label}
-                </div>
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </ControlBlock>
+      {showAltitude ? (
+        <AltitudeControls
+          config={altitudeConfig}
+          data={data}
+          onChange={onAltitudeConfigChange}
+        />
       ) : null}
 
       {showPhotoMood ? (

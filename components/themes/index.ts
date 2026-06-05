@@ -1,9 +1,6 @@
 import type { ActivityData } from "@/components/app/sample-data";
 import { availableVisibility, type Visibility } from "@/lib/visibility";
-import {
-  ALTITUDE_MOODS as ALTITUDE_MOODS_SRC,
-  ThemeAltitude,
-} from "./altitude";
+import { ThemeAltitude } from "./altitude";
 import { ThemeData } from "./data";
 import { ThemeEditorial } from "./editorial";
 import { ThemeMinimal } from "./minimal";
@@ -22,8 +19,6 @@ export const THEMES = {
 } as const;
 
 export type ThemeId = keyof typeof THEMES;
-
-export const ALTITUDE_MOODS = ALTITUDE_MOODS_SRC;
 
 /**
  * `hero` — photo is the centrepiece (ThemePhoto).
@@ -58,8 +53,8 @@ export const THEME_META: Record<ThemeId, ThemeMeta> = {
   altitude: {
     id: "altitude",
     label: "ALTITUDE",
-    tagline: "profile portrait",
-    photoMode: "supports",
+    tagline: "elevation as headline",
+    photoMode: "hero",
     usesAthleteName: false,
     usesLocation: true,
     usesHeartRate: true,
