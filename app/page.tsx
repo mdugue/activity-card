@@ -18,9 +18,9 @@ import {
 } from "@/components/app/sample-data";
 import { StravaPicker } from "@/components/app/strava-picker";
 import { themeVisibilityAvailable } from "@/components/themes";
-import type { AltitudeMood } from "@/components/themes/altitude";
 import { useCarousel } from "@/hooks/use-carousel";
 import { useImagePalette } from "@/hooks/use-image-palette";
+import { type AltitudeConfig, DEFAULT_ALTITUDE_CONFIG } from "@/lib/altitude";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
 import { carouselVisibilityAvailable } from "@/lib/carousel/stats";
 import {
@@ -44,7 +44,7 @@ const STORAGE_KEY = "effort:ui:v1";
 
 interface PersistedUi {
   accent: string;
-  altitudeMood: AltitudeMood;
+  altitudeConfig: AltitudeConfig;
   athleteName?: string;
   carouselTheme: CarouselThemeId;
   mode: CardMode;
@@ -118,7 +118,9 @@ export default function Home() {
   const [photoEffects, setPhotoEffects] = useState<PhotoEffects>(NO_EFFECTS);
   const [accent, setAccent] = useState<string>("#c45a2c");
   const [visibility, setVisibility] = useState<Visibility>(DEFAULT_VISIBILITY);
-  const [altitudeMood, setAltitudeMood] = useState<AltitudeMood>("night");
+  const [altitudeConfig, setAltitudeConfig] = useState<AltitudeConfig>(
+    DEFAULT_ALTITUDE_CONFIG
+  );
   const [photoMood, setPhotoMood] = useState<PhotoMood>("vibrant");
   // Carousel is the headline mode, so it's the default for a fresh session.
   const [mode, setMode] = useState<CardMode>("carousel");
@@ -155,8 +157,11 @@ export default function Home() {
     if (persisted.visibility) {
       setVisibility({ ...DEFAULT_VISIBILITY, ...persisted.visibility });
     }
-    if (persisted.altitudeMood) {
-      setAltitudeMood(persisted.altitudeMood);
+    if (persisted.altitudeConfig) {
+      setAltitudeConfig({
+        ...DEFAULT_ALTITUDE_CONFIG,
+        ...persisted.altitudeConfig,
+      });
     }
     if (persisted.photoMood) {
       setPhotoMood(persisted.photoMood);
@@ -181,7 +186,7 @@ export default function Home() {
       carouselTheme,
       accent,
       visibility,
-      altitudeMood,
+      altitudeConfig,
       photoMood,
       mode,
       athleteName: data?.athleteName || persistedAthleteNameRef.current,
@@ -196,7 +201,7 @@ export default function Home() {
     carouselTheme,
     accent,
     visibility,
-    altitudeMood,
+    altitudeConfig,
     photoMood,
     mode,
     data?.athleteName,
@@ -431,14 +436,14 @@ export default function Home() {
           ) : (
             <EditState
               accent={accent}
-              altitudeMood={altitudeMood}
+              altitudeConfig={altitudeConfig}
               athleteName={data.athleteName}
               available={themeVisibilityAvailable(data, theme)}
               data={visibleData}
               imageTransform={imageTransform}
               location={data.location}
               onAccentChange={setAccent}
-              onAltitudeMoodChange={setAltitudeMood}
+              onAltitudeConfigChange={setAltitudeConfig}
               onAthleteNameChange={handleAthleteNameChange}
               onDownload={handleDownload}
               onFilesLoaded={handleFilesLoaded}
@@ -464,7 +469,7 @@ export default function Home() {
       ) : null}
       {state === "download" && visibleData ? (
         <DownloadState
-          altitudeMood={altitudeMood}
+          altitudeConfig={altitudeConfig}
           data={visibleData}
           imageTransform={imageTransform}
           onKeepEditing={handleKeepEditing}

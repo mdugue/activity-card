@@ -6,7 +6,6 @@ import { ImageAdjustOverlay } from "@/components/app/image-adjust-overlay";
 import { RenderTheme, type ThemeId } from "@/components/app/render-theme";
 import type { ActivityData } from "@/components/app/sample-data";
 import { ThemePicker } from "@/components/app/theme-picker";
-import type { AltitudeMood } from "@/components/themes/altitude";
 import { THEME_META, THEME_ORDER } from "@/components/themes/index";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -17,12 +16,13 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+import type { AltitudeConfig } from "@/lib/altitude";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme } from "@/lib/palette";
 import { cn } from "@/lib/utils";
 
 interface ThemeCarouselProps {
-  altitudeMood: AltitudeMood;
+  altitudeConfig: AltitudeConfig;
   data: ActivityData;
   imageTransform: ImageTransform;
   onImageTransformChange: (next: ImageTransform) => void;
@@ -39,7 +39,7 @@ export function ThemeCarousel({
   photoUrl,
   photoBackdropEnabled,
   theme,
-  altitudeMood,
+  altitudeConfig,
   photoPaletteTheme,
   imageTransform,
   onImageTransformChange,
@@ -133,7 +133,7 @@ export function ThemeCarousel({
                     }}
                   >
                     <RenderTheme
-                      altitudeMood={altitudeMood}
+                      altitudeConfig={altitudeConfig}
                       data={data}
                       imageTransform={imageTransform}
                       photoBackdropEnabled={photoBackdropEnabled}

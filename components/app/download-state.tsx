@@ -7,8 +7,8 @@ import {
   ShareNetworkIcon,
 } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
-import type { AltitudeMood } from "@/components/themes/altitude";
 import { Button } from "@/components/ui/button";
+import type { AltitudeConfig } from "@/lib/altitude";
 import { defaultFilename, exportCard } from "@/lib/export-card";
 import { formatDateUpper } from "@/lib/format";
 import type { ImageTransform } from "@/lib/image-transform";
@@ -19,7 +19,7 @@ import type { ActivityData } from "./sample-data";
 const CONFETTI_COLORS = ["#c45a2c", "#1d3a2e", "#1a1714", "#a98352"];
 
 interface DownloadStateProps {
-  altitudeMood: AltitudeMood;
+  altitudeConfig: AltitudeConfig;
   data: ActivityData;
   imageTransform: ImageTransform;
   onKeepEditing: () => void;
@@ -33,7 +33,7 @@ export function DownloadState({
   data,
   theme,
   photoUrl,
-  altitudeMood,
+  altitudeConfig,
   photoPaletteTheme,
   imageTransform,
   onKeepEditing,
@@ -75,7 +75,7 @@ export function DownloadState({
                 style={{ width: 1080, height: 1350 }}
               >
                 <RenderTheme
-                  altitudeMood={altitudeMood}
+                  altitudeConfig={altitudeConfig}
                   data={data}
                   imageTransform={imageTransform}
                   photoPaletteTheme={photoPaletteTheme}
@@ -141,7 +141,7 @@ export function DownloadState({
         style={{ width: 1080, height: 1350, transform: "translateX(-200%)" }}
       >
         <RenderTheme
-          altitudeMood={altitudeMood}
+          altitudeConfig={altitudeConfig}
           data={data}
           imageTransform={imageTransform}
           photoPaletteTheme={photoPaletteTheme}

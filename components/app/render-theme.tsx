@@ -1,15 +1,16 @@
 import type { ActivityData } from "@/components/app/sample-data";
 import { THEME_META, THEMES, type ThemeId } from "@/components/themes";
-import { type AltitudeMood, ThemeAltitude } from "@/components/themes/altitude";
+import { ThemeAltitude } from "@/components/themes/altitude";
 import { ThemeMinimal } from "@/components/themes/minimal";
 import { ThemePhoto } from "@/components/themes/photo";
+import type { AltitudeConfig } from "@/lib/altitude";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme } from "@/lib/palette";
 
 export type { ThemeId } from "@/components/themes";
 
 interface RenderThemeProps {
-  altitudeMood?: AltitudeMood;
+  altitudeConfig?: AltitudeConfig;
   data: ActivityData;
   /** Pan/zoom applied to the background photo in "hero" themes. */
   imageTransform?: ImageTransform | null;
@@ -49,13 +50,20 @@ export function RenderTheme({
   data,
   photoUrl,
   photoBackdropEnabled = true,
-  altitudeMood,
+  altitudeConfig,
   photoPaletteTheme = null,
   imageTransform = null,
 }: RenderThemeProps) {
   const photo = effectivePhotoUrl(theme, photoUrl, photoBackdropEnabled);
   if (theme === "altitude") {
-    return <ThemeAltitude data={data} mood={altitudeMood} photoUrl={photo} />;
+    return (
+      <ThemeAltitude
+        config={altitudeConfig}
+        data={data}
+        imageTransform={imageTransform}
+        photoUrl={photo}
+      />
+    );
   }
   if (theme === "photo") {
     return (

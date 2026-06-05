@@ -10,7 +10,7 @@
 //   unreliable inside html-to-image's clone tree and broken in iOS Safari for
 //   our export path.
 
-export type BackdropTreatment = "path" | "altitude" | "editorial";
+export type BackdropTreatment = "path" | "editorial";
 
 interface PhotoBackdropProps {
   photoUrl: string;
@@ -58,46 +58,6 @@ export function PhotoBackdrop({ photoUrl, treatment }: PhotoBackdropProps) {
             inset: 0,
             background:
               "radial-gradient(ellipse at 50% 50%, rgba(243,237,226,0) 0%, rgba(243,237,226,0.55) 80%)",
-          }}
-        />
-      </div>
-    );
-  }
-
-  if (treatment === "altitude") {
-    // Photo anchors the bottom band; the top of the canvas remains the mood
-    // sky. A horizontal scrim hands off cleanly between the two.
-    return (
-      <div
-        aria-hidden
-        style={{
-          position: "absolute",
-          inset: 0,
-          zIndex: 0,
-          overflow: "hidden",
-          pointerEvents: "none",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            left: -20,
-            right: -20,
-            bottom: -20,
-            height: "62%",
-            backgroundImage: `url(${photoUrl})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            filter: "blur(6px) saturate(0.9) brightness(0.85)",
-            opacity: 0.62,
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background:
-              "linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 38%, rgba(0,0,0,0.35) 100%)",
           }}
         />
       </div>
