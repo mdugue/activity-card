@@ -180,22 +180,25 @@ export function SeamlessCanvas({
             position: "absolute",
             left: 0,
             right: 0,
-            // Sits in the upper-middle so the bottom-anchored title/stats clear
-            // it instead of the line striking through the headline.
-            top: "14%",
-            height: "40%",
+            // Centred in the middle of the complete carousel viewport. RouteLine
+            // projects aspect-preserving into this full-width box and centres the
+            // silhouette, so the route shows at its true proportions in the
+            // middle of the strip — never stretched per-axis to span the slides.
+            // Compact routes concentrate around the centre slide; genuinely long
+            // routes reach further across on their own.
+            top: "20%",
+            height: "60%",
           }}
         >
           <RouteLine
             accent={style.accent}
             accent2={style.accent2}
             coords={data.routeCoordinates}
-            h={SLIDE_H * 0.4}
+            h={SLIDE_H * 0.6}
             ink={heroInk}
             overPhoto={showPhoto}
             pad={60}
             showMarkers
-            stretch
             strokeWidth={8}
             style={style.routeStyle}
             w={width}

@@ -66,6 +66,7 @@ roots to that script (and `bunfig.toml`'s note) if tests grow beyond `lib/`.
 - **Tailwind for styling.** No CSS-in-JS, no styled-components. Theme components may use scoped `<style>` for fonts.
 - **Combine class names with `cn()`** from `@/lib/utils` (clsx + tailwind-merge). Never template-literal concatenation for conditional classes — write `cn("base", active && "…")`, not `` `base ${active ? "…" : ""}` ``.
 - **Shadows use Tailwind's scale** (`shadow-xs` … `shadow-2xl`), tinted when needed via `shadow-<token>` (e.g. `shadow-primary/50`). No arbitrary `shadow-[…]` in app chrome. Themes in `components/themes/` are the exception: they rasterise to PNG, so their shadows stay inline as `style={{ boxShadow }}`.
+- **Route/path silhouettes stay geographically faithful.** Project route coordinates with a single uniform scale and centre them in their container — use `projectRoute` / `routePath` (`lib/chart-helpers.ts`), which do exactly this. Never stretch a path per-axis to fill a box (e.g. to span the full carousel width): a distorted silhouette misrepresents the real route. Keep its true proportions and centre it (for the carousel hero, in the middle of the complete viewport).
 - **No console.log in committed code.** Use proper error UI for user-facing failures.
 - **Commit messages**: Conventional Commits (`feat:`, `fix:`, `refactor:`, etc.).
 - **Lint + typecheck must be green** before pushing: `bun lint && bun typecheck`.

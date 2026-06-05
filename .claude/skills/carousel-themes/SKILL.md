@@ -90,6 +90,17 @@ No coloured GPS pins, no finish flag. The route carries a small
 a quiet "started here, went this way" cue, oriented along the initial heading.
 Keep markers theme-ink / white over photos.
 
+## Route geometry — never stretch
+
+The route is the Trace hero and the cross-/detail-viz glyph elsewhere. It is
+always projected **aspect-preserving and centred** (`RouteLine` → `projectRoute`
+in `lib/chart-helpers.ts` uses a single uniform scale), so the silhouette keeps
+its real proportions. As the spanning hero it sits in the **middle of the
+complete carousel viewport** at its true shape — do **not** stretch the path
+per-axis to span the full strip width. A smeared silhouette misrepresents the
+ride; compact routes naturally concentrate around the centre slide, and only
+genuinely long routes reach further across.
+
 ## Stats & visibility
 
 `planSlideStats(data, slides, style, opts)` (`lib/carousel/stats.ts`) assigns
