@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import {
   Anton,
   Archivo_Narrow,
@@ -90,10 +90,34 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
 });
 
+const APP_NAME = "Effort";
+const APP_TITLE = "Effort — Activity Card";
+const APP_DESCRIPTION =
+  "Turn a single endurance workout into a beautiful, shareable image.";
+
 export const metadata: Metadata = {
-  title: "Effort — Activity Card",
-  description:
-    "Turn a single endurance workout into a beautiful, shareable image.",
+  applicationName: APP_NAME,
+  title: APP_TITLE,
+  description: APP_DESCRIPTION,
+  // `app/manifest.ts` already emits the <link rel="manifest">; this keeps the
+  // PWA install metadata for iOS standalone mode in one place.
+  appleWebApp: {
+    capable: true,
+    title: APP_NAME,
+    statusBarStyle: "default",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+};
+
+export const viewport: Viewport = {
+  // Tints the browser/standalone UI to the app's warm near-white background.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#faf8f5" },
+    { media: "(prefers-color-scheme: dark)", color: "#1a1714" },
+  ],
+  colorScheme: "light",
 };
 
 export default function RootLayout({
