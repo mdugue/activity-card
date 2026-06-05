@@ -17,6 +17,7 @@ import {
   type ClaimLayout,
   DEFAULT_ALTITUDE_CONFIG,
   layoutClaim,
+  type ResolvedStat,
   resolveClaim,
   supportingStats,
 } from "@/lib/altitude";
@@ -35,6 +36,9 @@ const W = 1080;
 const H = 1350;
 const PAD_X = 84;
 const CONTENT_W = W - PAD_X * 2;
+// Characters that drop below the baseline — used to reserve descender room only
+// when the text actually needs it (numbers/caps stay tight).
+const DESCENDERS = /[gjpqy]/;
 
 const FONT_FAMILY: Record<AltitudeConfig["font"], string> = {
   modern: "var(--font-heading), sans-serif",
@@ -81,7 +85,7 @@ function clusterPosition(position: AltitudePosition): CSSProperties {
   if (position === "center") {
     return { ...base, top: "50%", transform: "translateY(-50%)" };
   }
-  return { ...base, bottom: 150 };
+  return { ...base, bottom: 120 };
 }
 
 /** Hash identical-content claims to a stable id (clip ids must not collide
@@ -144,11 +148,18 @@ function ClaimText({
   useElevation: boolean;
 }) {
   const { lines, fontSize, fill } = layout;
-  const topPad = fontSize * 0.18;
-  const ascent = fontSize * 0.78;
-  const lineH = fontSize * 0.94;
-  const descent = fontSize * 0.24;
-  const boxH = topPad + ascent + (lines.length - 1) * lineH + descent;
+  const hasCurve = cut && Boolean(profile && profile.length > 1);
+  // Tight vertical metrics: caps sit just below the top edge, and we only
+  // reserve descender room when the text needs it or the curve dips below the
+  // baseline — so numbers don't carry a tall empty box.
+  const capH = fontSize * 0.72;
+  const topPad = fontSize * 0.05;
+  const lineH = fontSize * 0.92;
+  const descent =
+    fontSize *
+    Math.max(DESCENDERS.test(lines.join("")) ? 0.2 : 0.05, hasCurve ? 0.12 : 0);
+  const baseline0 = topPad + capH;
+  const boxH = baseline0 + (lines.length - 1) * lineH + descent;
   // Only a single line is stretched to the exact width; wrapped lines stay
   // left-aligned at their natural width (ragged, but undistorted).
   const justify = fill && lines.length === 1;
@@ -169,27 +180,22 @@ function ClaimText({
         opacity={opacity}
         textLength={justify ? CONTENT_W : undefined}
         x={0}
-        y={topPad + ascent + i * lineH + (opts.dy ?? 0)}
+        y={baseline0 + i * lineH + (opts.dy ?? 0)}
       >
         {ln}
       </text>
     ));
 
-  const hasCurve = cut && Boolean(profile && profile.length > 1);
   let lineD = "";
   let aboveD = "";
   if (hasCurve && profile) {
-    // Cut through the middle of a single line; for wrapped names drop the seam
-    // lower so the first line(s) stay opaque rather than just the top one.
-    const bandH = boxH * 0.28;
-    const center = lines.length === 1 ? 0.5 : 0.66;
-    const coords = bandCoords(
-      profile,
-      useElevation,
-      CONTENT_W,
-      boxH * center - bandH / 2,
-      bandH
-    );
+    // Ground the profile on the LAST line: its highest point sits at the golden
+    // section down the cap height, valleys settle just below the baseline. Most
+    // of the type stays opaque — only the feet are cut.
+    const lastBaseline = baseline0 + (lines.length - 1) * lineH;
+    const bandH = capH * 0.5;
+    const peakY = lastBaseline - capH * 0.382;
+    const coords = bandCoords(profile, useElevation, CONTENT_W, peakY, bandH);
     lineD = coords
       .map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`)
       .join(" ");
@@ -293,6 +299,84 @@ function LineBand({
   );
 }
 
+/**
+ * One condensed row under the claim: supporting stats on the left, the claim's
+ * unit (when not already in a kicker) bottom-aligned on the right.
+ */
+function FooterRow({
+  stats,
+  unit,
+  unitFontFamily,
+  unitFontSize,
+  marginTop,
+}: {
+  marginTop: number;
+  stats: ResolvedStat[];
+  unit?: string;
+  unitFontFamily: string;
+  unitFontSize: number;
+}) {
+  if (stats.length === 0 && !unit) {
+    return null;
+  }
+  return (
+    <div
+      style={{
+        marginTop,
+        display: "flex",
+        alignItems: "flex-end",
+        gap: 24,
+        width: "100%",
+      }}
+    >
+      {stats.length > 0 ? (
+        <div
+          style={{
+            fontFamily: "var(--font-mono), monospace",
+            fontSize: 31,
+            letterSpacing: "0.04em",
+            opacity: 0.92,
+            textShadow: "0 2px 12px rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "baseline",
+            flexWrap: "wrap",
+            gap: 14,
+          }}
+        >
+          {stats.map((s, i) => (
+            <span
+              key={s.label}
+              style={{ alignItems: "baseline", display: "inline-flex", gap: 8 }}
+            >
+              <span>{s.value}</span>
+              {s.unit ? (
+                <span style={{ fontSize: 22, opacity: 0.8 }}>{s.unit}</span>
+              ) : null}
+              {i < stats.length - 1 ? (
+                <span style={{ marginLeft: 10, opacity: 0.45 }}>·</span>
+              ) : null}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {unit ? (
+        <div
+          style={{
+            marginLeft: "auto",
+            fontFamily: unitFontFamily,
+            fontSize: unitFontSize,
+            lineHeight: 1,
+            opacity: 0.9,
+            textShadow: "0 2px 12px rgba(0,0,0,0.5)",
+          }}
+        >
+          {unit}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function ThemeAltitude({
   data,
   photoUrl,
@@ -317,16 +401,9 @@ export function ThemeAltitude({
     : null;
   const uid = `alt-${hashId(`${claim?.value ?? ""}|${config.position}|${config.claimStyle}|${config.cutoutOpacity}|${config.font}`)}`;
 
-  const unitStyle: CSSProperties = {
-    fontFamily: font,
-    fontSize: layout
-      ? Math.min(88, Math.max(40, Math.round(layout.fontSize * 0.2)))
-      : 40,
-    letterSpacing: "0.04em",
-    opacity: 0.85,
-    marginTop: 10,
-    textShadow: "0 2px 12px rgba(0,0,0,0.5)",
-  };
+  const unitFontSize = layout
+    ? Math.min(64, Math.max(40, Math.round(layout.fontSize * 0.13)))
+    : 40;
 
   const metaBits = [
     formatDateUpper(data.date),
@@ -372,7 +449,13 @@ export function ThemeAltitude({
               uid={uid}
               useElevation={useElevation}
             />
-            {claim.unit ? <div style={unitStyle}>{claim.unit}</div> : null}
+            <FooterRow
+              marginTop={16}
+              stats={stats}
+              unit={claim.unit}
+              unitFontFamily={font}
+              unitFontSize={unitFontSize}
+            />
           </div>
         ) : null}
 
@@ -384,7 +467,7 @@ export function ThemeAltitude({
                 fontSize: 24,
                 letterSpacing: "0.28em",
                 opacity: 0.82,
-                marginBottom: 18,
+                marginBottom: 16,
                 textShadow: "0 2px 12px rgba(0,0,0,0.5)",
               }}
             >
@@ -401,7 +484,7 @@ export function ThemeAltitude({
               useElevation={useElevation}
             />
             {hasLine && profile ? (
-              <div style={{ height: 128, marginTop: 28, width: "100%" }}>
+              <div style={{ height: 104, marginTop: 22, width: "100%" }}>
                 <LineBand
                   profile={profile}
                   style={{ height: "100%" }}
@@ -409,54 +492,32 @@ export function ThemeAltitude({
                 />
               </div>
             ) : null}
+            <FooterRow
+              marginTop={18}
+              stats={stats}
+              unitFontFamily={font}
+              unitFontSize={unitFontSize}
+            />
           </div>
         ) : null}
 
         {/* No claim: the line becomes the hero element. */}
         {!claim && hasLine && profile ? (
-          <div style={{ height: 240, width: "100%" }}>
-            <LineBand
-              profile={profile}
-              strokeWidth={4}
-              style={{ height: "100%" }}
-              useElevation={useElevation}
+          <div>
+            <div style={{ height: 232, width: "100%" }}>
+              <LineBand
+                profile={profile}
+                strokeWidth={4}
+                style={{ height: "100%" }}
+                useElevation={useElevation}
+              />
+            </div>
+            <FooterRow
+              marginTop={20}
+              stats={stats}
+              unitFontFamily={font}
+              unitFontSize={unitFontSize}
             />
-          </div>
-        ) : null}
-
-        {stats.length > 0 ? (
-          <div
-            style={{
-              marginTop: 32,
-              fontFamily: "var(--font-mono), monospace",
-              fontSize: 32,
-              letterSpacing: "0.04em",
-              opacity: 0.92,
-              textShadow: "0 2px 12px rgba(0,0,0,0.5)",
-              display: "flex",
-              alignItems: "baseline",
-              flexWrap: "wrap",
-              gap: 16,
-            }}
-          >
-            {stats.map((s, i) => (
-              <span
-                key={s.label}
-                style={{
-                  alignItems: "baseline",
-                  display: "inline-flex",
-                  gap: 8,
-                }}
-              >
-                <span>{s.value}</span>
-                {s.unit ? (
-                  <span style={{ fontSize: 23, opacity: 0.8 }}>{s.unit}</span>
-                ) : null}
-                {i < stats.length - 1 ? (
-                  <span style={{ marginLeft: 12, opacity: 0.45 }}>·</span>
-                ) : null}
-              </span>
-            ))}
           </div>
         ) : null}
       </div>
