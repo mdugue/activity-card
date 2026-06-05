@@ -1,7 +1,14 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
 import type { ActivityData } from "@/components/app/sample-data";
-import { claimOptions, resolveClaim, supportingStats } from "@/lib/altitude";
+import {
+  claimOptions,
+  layoutClaim,
+  resolveClaim,
+  supportingStats,
+} from "@/lib/altitude";
+
+const CONTENT_W = 912;
 
 function make(partial: Partial<ActivityData>): ActivityData {
   return {
@@ -112,5 +119,54 @@ describe("claimOptions", () => {
 
   test("drops name when the title is blank", () => {
     expect(claimOptions(make({ title: "   " }))).not.toContain("name");
+  });
+});
+
+describe("layoutClaim", () => {
+  test("sizes a short number bigger than a long one", () => {
+    const short = layoutClaim("857", "modern", false, CONTENT_W);
+    const long = layoutClaim("1423", "modern", false, CONTENT_W);
+    expect(short.fontSize).toBeGreaterThan(long.fontSize);
+    expect(short.lines).toEqual(["857"]);
+  });
+
+  test("caps the size so 1–2 chars can't fill the card", () => {
+    const tiny = layoutClaim("5", "modern", false, CONTENT_W);
+    expect(tiny.fontSize).toBeLessThanOrEqual(560);
+    // Too short to justify to the full width.
+    expect(tiny.fill).toBe(false);
+  });
+
+  test("a number that ~fills the width is marked fill", () => {
+    expect(layoutClaim("857", "modern", false, CONTENT_W).fill).toBe(true);
+  });
+
+  test("keeps a medium name on one line", () => {
+    const l = layoutClaim("Running Test", "modern", true, CONTENT_W);
+    expect(l.lines.length).toBe(1);
+  });
+
+  test("wraps a long name across multiple lines", () => {
+    const l = layoutClaim(
+      "Saturday in the Elbsandstein",
+      "modern",
+      true,
+      CONTENT_W
+    );
+    expect(l.lines.length).toBeGreaterThan(1);
+    // Wrapping must restore a hero-scale size.
+    expect(l.fontSize).toBeGreaterThan(100);
+    // No word is dropped.
+    expect(l.lines.join(" ")).toBe("Saturday in the Elbsandstein");
+  });
+
+  test("never exceeds the line cap", () => {
+    const l = layoutClaim(
+      "one two three four five six seven eight nine ten",
+      "serif",
+      true,
+      CONTENT_W
+    );
+    expect(l.lines.length).toBeLessThanOrEqual(3);
   });
 });

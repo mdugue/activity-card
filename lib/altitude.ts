@@ -294,3 +294,98 @@ export function claimOptions(data: ActivityData): AltitudeClaim[] {
     k === "name" ? Boolean(data.title?.trim()) : metricStat(k, data) !== null
   );
 }
+
+// ---------------------------------------------------------------------------
+// Claim type-setting. The hero is drawn as SVG <text>, so we can't rely on the
+// browser to wrap or fit it — we size it analytically instead. `ADVANCE` is the
+// average glyph advance as a fraction of the font size for each face (measured
+// empirically and tuned against renders); it lets us estimate a string's width
+// without a DOM measure, which keeps the result deterministic and export-safe.
+// ---------------------------------------------------------------------------
+
+const ADVANCE: Record<AltitudeFont, number> = {
+  modern: 0.5, // Anton — heavy + condensed
+  serif: 0.55, // Playfair Display
+};
+
+/** Largest hero height (px) we allow, so a 1–2 char value can't fill the card. */
+const MAX_FONT = 560;
+const MIN_FONT = 40;
+/** Below this single-line size a name is wrapped instead of shrunk further. */
+const WRAP_MIN_FONT = 150;
+/** A single line is justified to the full width once it's at least this full. */
+const FILL_RATIO = 0.86;
+const MAX_LINES = 3;
+const WHITESPACE = /\s+/;
+
+export interface ClaimLayout {
+  /** Stretch the (single) line to exactly the content width. */
+  fill: boolean;
+  fontSize: number;
+  lines: string[];
+}
+
+function clamp(n: number, lo: number, hi: number): number {
+  return Math.min(hi, Math.max(lo, n));
+}
+
+/** Greedy, length-balanced split of `words` into `n` lines. */
+function balanceLines(words: string[], n: number): string[] {
+  const total = words.reduce((a, w) => a + w.length + 1, -1);
+  const target = total / n;
+  const lines: string[] = [];
+  let cur = "";
+  for (const w of words) {
+    const next = cur ? `${cur} ${w}` : w;
+    if (cur && next.length > target && lines.length < n - 1) {
+      lines.push(cur);
+      cur = w;
+    } else {
+      cur = next;
+    }
+  }
+  if (cur) {
+    lines.push(cur);
+  }
+  return lines;
+}
+
+/**
+ * Size (and, for long names, wrap) the hero text so it reads as large as
+ * possible across the given content width. Numbers never wrap; names wrap on
+ * whitespace once a single line would be too small to be a hero.
+ */
+export function layoutClaim(
+  text: string,
+  font: AltitudeFont,
+  isText: boolean,
+  contentW: number
+): ClaimLayout {
+  const adv = ADVANCE[font];
+  const units = (s: string) => Math.max(1, s.trim().length) * adv;
+  const oneLineFont = contentW / units(text);
+
+  // Numbers, short text, or anything with no spaces: a single line.
+  if (!isText || oneLineFont >= WRAP_MIN_FONT || !text.trim().includes(" ")) {
+    const fontSize = clamp(oneLineFont, MIN_FONT, MAX_FONT);
+    const natural = units(text) * fontSize;
+    return { lines: [text], fontSize, fill: natural >= contentW * FILL_RATIO };
+  }
+
+  // Long name: find the fewest lines that lift the size back to hero scale.
+  const words = text.trim().split(WHITESPACE);
+  let lines = [text];
+  for (let n = 2; n <= Math.min(MAX_LINES, words.length); n++) {
+    lines = balanceLines(words, n);
+    const widest = Math.max(...lines.map(units));
+    if (contentW / widest >= WRAP_MIN_FONT) {
+      break;
+    }
+  }
+  const widest = Math.max(...lines.map(units));
+  return {
+    lines,
+    fontSize: clamp(contentW / widest, MIN_FONT, MAX_FONT),
+    fill: false,
+  };
+}

@@ -14,8 +14,9 @@ import type { CSSProperties } from "react";
 import {
   type AltitudeConfig,
   type AltitudePosition,
+  type ClaimLayout,
   DEFAULT_ALTITUDE_CONFIG,
-  type ResolvedClaim,
+  layoutClaim,
   resolveClaim,
   supportingStats,
 } from "@/lib/altitude";
@@ -83,14 +84,6 @@ function clusterPosition(position: AltitudePosition): CSSProperties {
   return { ...base, bottom: 150 };
 }
 
-/** Hero text height (px). Numbers run tall; names shrink so they still fit. */
-function claimFontSize(claim: ResolvedClaim): number {
-  if (claim.isText) {
-    return claim.value.length > 14 ? 116 : 158;
-  }
-  return 288;
-}
-
 /** Hash identical-content claims to a stable id (clip ids must not collide
  * across the several Altitude mounts the editor/export keep alive at once;
  * identical props → identical id → identical clip, which is harmless). */
@@ -103,39 +96,38 @@ function hashId(s: string): string {
 }
 
 /**
- * Elevation curve points mapped into a w×boxH box, confined to a band through
- * the vertical middle of the type so the line cuts across the glyphs.
+ * Elevation curve points mapped into a w-wide box, confined to a [bandTop,
+ * bandTop+bandH] band through the vertical middle of the type so the line cuts
+ * across the glyphs.
  */
 function bandCoords(
   profile: number[],
   useElevation: boolean,
   w: number,
-  boxH: number
+  bandTop: number,
+  bandH: number
 ): [number, number][] {
   const n = profile.length;
   const min = Math.min(...profile);
   const max = Math.max(...profile);
   const dv = max - min || 1;
-  const top = boxH * 0.27;
-  const band = boxH * 0.32;
   return profile.map((v, i) => {
     const x = n > 1 ? (i / (n - 1)) * w : 0;
     // 1 = highest point of the curve. Pace is "lower is better", so invert it.
     const t = useElevation ? (v - min) / dv : (max - v) / dv;
-    return [x, top + (1 - t) * band];
+    return [x, bandTop + (1 - t) * bandH];
   });
 }
 
 /**
- * Full-width hero text. `cut` splits it along the elevation curve (opaque
- * above, `belowOpacity` below) and draws the white line on the seam; otherwise
- * the whole string is solid with a soft dark drop for legibility.
+ * Full-width hero text, sized + wrapped by `layout`. `cut` splits it along the
+ * elevation curve (opaque above, `belowOpacity` below) and draws the white line
+ * on the seam; otherwise it's solid with a soft dark drop for legibility.
  */
 function ClaimText({
-  text,
+  layout,
   fontFamily,
   fontWeight,
-  fontSize,
   cut,
   belowOpacity,
   profile,
@@ -145,44 +137,76 @@ function ClaimText({
   belowOpacity: number;
   cut: boolean;
   fontFamily: string;
-  fontSize: number;
   fontWeight: number;
+  layout: ClaimLayout;
   profile?: number[];
-  text: string;
   uid: string;
   useElevation: boolean;
 }) {
-  const boxH = fontSize * 1.12;
-  const baseline = fontSize * 0.84;
-  const textProps = {
-    x: 0,
-    y: baseline,
-    textLength: CONTENT_W,
-    lengthAdjust: "spacing" as const,
-    fontFamily,
-    fontWeight,
-    fontSize,
-    fill: "#fff",
-  };
-  const hasCurve = cut && Boolean(profile && profile.length > 1);
+  const { lines, fontSize, fill } = layout;
+  const topPad = fontSize * 0.18;
+  const ascent = fontSize * 0.78;
+  const lineH = fontSize * 0.94;
+  const descent = fontSize * 0.24;
+  const boxH = topPad + ascent + (lines.length - 1) * lineH + descent;
+  // Only a single line is stretched to the exact width; wrapped lines stay
+  // left-aligned at their natural width (ragged, but undistorted).
+  const justify = fill && lines.length === 1;
 
+  const renderLines = (
+    opacity: number,
+    opts: { clipId?: string; fill?: string; dy?: number } = {}
+  ) =>
+    lines.map((ln, i) => (
+      <text
+        clipPath={opts.clipId ? `url(#${opts.clipId})` : undefined}
+        fill={opts.fill ?? "#fff"}
+        fontFamily={fontFamily}
+        fontSize={fontSize}
+        fontWeight={fontWeight}
+        key={`${i}-${ln}`}
+        lengthAdjust={justify ? "spacingAndGlyphs" : undefined}
+        opacity={opacity}
+        textLength={justify ? CONTENT_W : undefined}
+        x={0}
+        y={topPad + ascent + i * lineH + (opts.dy ?? 0)}
+      >
+        {ln}
+      </text>
+    ));
+
+  const hasCurve = cut && Boolean(profile && profile.length > 1);
   let lineD = "";
   let aboveD = "";
   if (hasCurve && profile) {
-    const coords = bandCoords(profile, useElevation, CONTENT_W, boxH);
+    // Cut through the middle of a single line; for wrapped names drop the seam
+    // lower so the first line(s) stay opaque rather than just the top one.
+    const bandH = boxH * 0.28;
+    const center = lines.length === 1 ? 0.5 : 0.66;
+    const coords = bandCoords(
+      profile,
+      useElevation,
+      CONTENT_W,
+      boxH * center - bandH / 2,
+      bandH
+    );
     lineD = coords
       .map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`)
       .join(" ");
-    aboveD = `${lineD} L${CONTENT_W.toFixed(1)} 0 L0 0 Z`;
+    // Close the "above" region well past the top of the glyphs so the opaque
+    // copy covers them fully — otherwise tall caps poke above the clip and only
+    // the faint base shows through up there.
+    const topY = (-fontSize).toFixed(1);
+    aboveD = `${lineD} L${CONTENT_W.toFixed(1)} ${topY} L0 ${topY} Z`;
   }
 
   return (
     <svg
       aria-hidden="true"
       style={{ display: "block", overflow: "visible", width: "100%" }}
-      viewBox={`0 0 ${CONTENT_W} ${boxH}`}
+      viewBox={`0 0 ${CONTENT_W} ${boxH.toFixed(1)}`}
     >
-      <title>{text}</title>
+      <title>{lines.join(" ")}</title>
       {hasCurve ? (
         <>
           <defs>
@@ -191,13 +215,9 @@ function ClaimText({
             </clipPath>
           </defs>
           {/* faint base everywhere → shows through below the seam */}
-          <text {...textProps} opacity={belowOpacity}>
-            {text}
-          </text>
+          {renderLines(belowOpacity)}
           {/* opaque copy, clipped to the area above the curve */}
-          <text {...textProps} clipPath={`url(#${uid}-above)`}>
-            {text}
-          </text>
+          {renderLines(1, { clipId: `${uid}-above` })}
           <path
             d={lineD}
             fill="none"
@@ -217,10 +237,8 @@ function ClaimText({
         </>
       ) : (
         <>
-          <text {...textProps} fill="rgba(0,0,0,0.32)" y={baseline + 4}>
-            {text}
-          </text>
-          <text {...textProps}>{text}</text>
+          {renderLines(1, { fill: "rgba(0,0,0,0.32)", dy: 4 })}
+          {renderLines(1)}
         </>
       )}
     </svg>
@@ -294,15 +312,19 @@ export function ThemeAltitude({
   const fontWeight = FONT_WEIGHT[config.font];
   const cutout = config.claimStyle === "cutout" && claim !== null;
   const belowOpacity = Math.min(1, Math.max(0, config.cutoutOpacity / 100));
-  const fontSize = claim ? claimFontSize(claim) : 0;
+  const layout = claim
+    ? layoutClaim(claim.value, config.font, claim.isText, CONTENT_W)
+    : null;
   const uid = `alt-${hashId(`${claim?.value ?? ""}|${config.position}|${config.claimStyle}|${config.cutoutOpacity}|${config.font}`)}`;
 
   const unitStyle: CSSProperties = {
     fontFamily: font,
-    fontSize: Math.round(fontSize * 0.18),
+    fontSize: layout
+      ? Math.min(88, Math.max(40, Math.round(layout.fontSize * 0.2)))
+      : 40,
     letterSpacing: "0.04em",
     opacity: 0.85,
-    marginTop: 6,
+    marginTop: 10,
     textShadow: "0 2px 12px rgba(0,0,0,0.5)",
   };
 
@@ -338,16 +360,15 @@ export function ThemeAltitude({
       />
 
       <div style={clusterPosition(config.position)}>
-        {claim && cutout ? (
+        {claim && cutout && layout ? (
           <div>
             <ClaimText
               belowOpacity={belowOpacity}
               cut
               fontFamily={font}
-              fontSize={fontSize}
               fontWeight={fontWeight}
+              layout={layout}
               profile={profile}
-              text={claim.value}
               uid={uid}
               useElevation={useElevation}
             />
@@ -355,7 +376,7 @@ export function ThemeAltitude({
           </div>
         ) : null}
 
-        {claim && !cutout ? (
+        {claim && !cutout && layout ? (
           <div>
             <div
               style={{
@@ -374,9 +395,8 @@ export function ThemeAltitude({
               belowOpacity={1}
               cut={false}
               fontFamily={font}
-              fontSize={fontSize}
               fontWeight={fontWeight}
-              text={claim.value}
+              layout={layout}
               uid={uid}
               useElevation={useElevation}
             />
