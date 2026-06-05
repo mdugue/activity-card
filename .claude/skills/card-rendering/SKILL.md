@@ -98,6 +98,11 @@ export function projectRoute(
 
 Render as `<polyline points={projected} fill="none" stroke="..." strokeWidth={...} strokeLinejoin="round" strokeLinecap="round" />`.
 
+**Always project with one uniform `scale` (as above) and centre the route — never
+map each axis independently to fill the box.** Stretching a path to fill a wide
+container (e.g. the full carousel strip) distorts the silhouette so it no longer
+matches the real route; keep it geographically faithful and centre it instead.
+
 ### Simplification
 
 Raw GPX often has 5000+ points. Simplify to ~150 with Ramer–Douglas–Peucker before storing on `Activity.routeCoordinates`. Implement in `lib/metrics/simplify.ts`. If you reach for `turf` for this, that's fine — but RDP is ~30 lines and avoids a dependency.

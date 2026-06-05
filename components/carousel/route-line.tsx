@@ -2,8 +2,9 @@
 // understated direction arrow at the *start* of the line (no coloured GPS pins,
 // no finish flag — just a hint of which way the effort went). Three styles:
 // poster (silhouette in theme ink), desaturated (accent over a desaturated
-// photo), highlighter (accent→accent2 gradient). Fills whatever box it's given,
-// so the seamless canvas can hand it a wide viewBox that bleeds across edges.
+// photo), highlighter (accent→accent2 gradient). The route is always projected
+// aspect-preserving and centred in the box it's given (never stretched to fill
+// it), so its silhouette stays geographically faithful.
 
 import { useId } from "react";
 import type { Coord } from "@/components/app/sample-data";
@@ -20,8 +21,6 @@ interface RouteLineProps {
   overPhoto?: boolean;
   pad?: number;
   showMarkers?: boolean;
-  /** fill the box on both axes (seamless strip) instead of preserving aspect */
-  stretch?: boolean;
   strokeWidth?: number;
   style: RouteStyle;
   w: number;
@@ -76,10 +75,9 @@ export function RouteLine({
   overPhoto = false,
   strokeWidth = 7,
   showMarkers = true,
-  stretch = false,
 }: RouteLineProps) {
   const gradId = useId();
-  const { d, points } = projectRoute(coords, w, h, pad, stretch);
+  const { d, points } = projectRoute(coords, w, h, pad);
   if (!d) {
     return null;
   }
@@ -100,7 +98,7 @@ export function RouteLine({
   return (
     <svg
       aria-hidden="true"
-      preserveAspectRatio={stretch ? "none" : "xMidYMid meet"}
+      preserveAspectRatio="xMidYMid meet"
       style={{ width: "100%", height: "100%", display: "block" }}
       viewBox={`0 0 ${w} ${h}`}
     >

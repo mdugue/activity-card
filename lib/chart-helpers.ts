@@ -122,17 +122,19 @@ export interface ProjectedRoute {
 
 /**
  * Project a route into a w×h box and return the path string plus the projected
- * points (needed for start/end markers and gradient stops). Aspect-preserving
- * by default (same maths as `routePath`); pass `stretch` to map each axis
- * independently and fill the box — so a wide seamless strip's line visibly
- * crosses every slide edge regardless of the route's native aspect.
+ * points (needed for start/end markers and gradient stops). Always
+ * aspect-preserving (same maths as `routePath`): a single uniform scale plus a
+ * centring offset, so the silhouette keeps its true proportions and sits in the
+ * middle of the box. Routes are never stretched per-axis to fill a container —
+ * a smeared silhouette misrepresents the actual route. A wide box (e.g. the
+ * seamless carousel strip) therefore shows the route centred at its real
+ * proportions, not edge-to-edge.
  */
 export function projectRoute(
   coords: Coord[] | undefined,
   w: number,
   h: number,
-  pad = 0,
-  stretch = false
+  pad = 0
 ): ProjectedRoute {
   if (!coords || coords.length === 0) {
     return { d: "", points: [], start: null, end: null };
@@ -146,21 +148,14 @@ export function projectRoute(
   const innerW = w - pad * 2;
   const innerH = h - pad * 2;
 
-  let points: Coord[];
-  if (stretch) {
-    points = coords.map((c) => [
-      pad + ((c[0] - minX) / dx) * innerW,
-      pad + ((c[1] - minY) / dy) * innerH,
-    ]);
-  } else {
-    const scale = Math.min(innerW / dx, innerH / dy);
-    const offsetX = pad + (innerW - dx * scale) / 2;
-    const offsetY = pad + (innerH - dy * scale) / 2;
-    points = coords.map((c) => [
-      offsetX + (c[0] - minX) * scale,
-      offsetY + (c[1] - minY) * scale,
-    ]);
-  }
+  // One uniform scale + centre offset → the route keeps its real aspect ratio.
+  const scale = Math.min(innerW / dx, innerH / dy);
+  const offsetX = pad + (innerW - dx * scale) / 2;
+  const offsetY = pad + (innerH - dy * scale) / 2;
+  const points: Coord[] = coords.map((c) => [
+    offsetX + (c[0] - minX) * scale,
+    offsetY + (c[1] - minY) * scale,
+  ]);
 
   const d = points
     .map(
