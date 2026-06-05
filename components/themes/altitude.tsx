@@ -1,8 +1,14 @@
-// ALTITUDE — a full-bleed photo with the elevation line drawn through a large
-// "claim" (a hero metric, or the activity name). Photo-led ("hero") theme.
-// Type: Anton (modern) / Playfair Display (serif) for the claim; JetBrains Mono
-// for the supporting line and footer. Parameterised by `config` — see
-// `lib/altitude.ts` for the model and the pure stat resolution.
+// ALTITUDE — a full-bleed photo with the elevation line drawn through a large,
+// full-width "claim" (a hero metric, or the activity name). Photo-led ("hero")
+// theme. Type: Anton (modern) / Playfair Display (serif) for the claim;
+// JetBrains Mono for the supporting line and footer. Parameterised by `config`
+// — see `lib/altitude.ts` for the model and the pure stat resolution.
+//
+// The claim is rendered as SVG <text> so it can (a) stretch to the full content
+// width via `textLength` and (b) be split along the elevation curve in the
+// "cutout" treatment: the portion above the line stays opaque, the portion
+// below fades to the opacity parameter. Both are export-safe (plain inline SVG,
+// no CSS filters / backdrop-filter that html-to-image mishandles).
 
 import type { CSSProperties } from "react";
 import {
@@ -27,10 +33,15 @@ interface ThemeAltitudeProps extends ActivityCardProps {
 const W = 1080;
 const H = 1350;
 const PAD_X = 84;
+const CONTENT_W = W - PAD_X * 2;
 
 const FONT_FAMILY: Record<AltitudeConfig["font"], string> = {
   modern: "var(--font-heading), sans-serif",
   serif: "var(--font-playfair), serif",
+};
+const FONT_WEIGHT: Record<AltitudeConfig["font"], number> = {
+  modern: 400,
+  serif: 600,
 };
 
 const NO_PHOTO_BG =
@@ -69,35 +80,155 @@ function clusterPosition(position: AltitudePosition): CSSProperties {
   if (position === "center") {
     return { ...base, top: "50%", transform: "translateY(-50%)" };
   }
-  return { ...base, bottom: 168 };
+  return { ...base, bottom: 150 };
 }
 
+/** Hero text height (px). Numbers run tall; names shrink so they still fit. */
 function claimFontSize(claim: ResolvedClaim): number {
   if (claim.isText) {
-    const len = claim.value.length;
-    if (len > 18) {
-      return 88;
-    }
-    if (len > 11) {
-      return 116;
-    }
-    return 150;
+    return claim.value.length > 14 ? 116 : 158;
   }
-  const len = claim.value.length;
-  if (len <= 4) {
-    return 250;
-  }
-  if (len <= 6) {
-    return 200;
-  }
-  if (len <= 9) {
-    return 156;
-  }
-  return 120;
+  return 288;
 }
 
-/** Mountain-silhouette line with a soft dark halo (no filters — export-safe). */
-function Line({
+/** Hash identical-content claims to a stable id (clip ids must not collide
+ * across the several Altitude mounts the editor/export keep alive at once;
+ * identical props → identical id → identical clip, which is harmless). */
+function hashId(s: string): string {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = (h * 31 + s.charCodeAt(i)) % 2_147_483_647;
+  }
+  return h.toString(36);
+}
+
+/**
+ * Elevation curve points mapped into a w×boxH box, confined to a band through
+ * the vertical middle of the type so the line cuts across the glyphs.
+ */
+function bandCoords(
+  profile: number[],
+  useElevation: boolean,
+  w: number,
+  boxH: number
+): [number, number][] {
+  const n = profile.length;
+  const min = Math.min(...profile);
+  const max = Math.max(...profile);
+  const dv = max - min || 1;
+  const top = boxH * 0.27;
+  const band = boxH * 0.32;
+  return profile.map((v, i) => {
+    const x = n > 1 ? (i / (n - 1)) * w : 0;
+    // 1 = highest point of the curve. Pace is "lower is better", so invert it.
+    const t = useElevation ? (v - min) / dv : (max - v) / dv;
+    return [x, top + (1 - t) * band];
+  });
+}
+
+/**
+ * Full-width hero text. `cut` splits it along the elevation curve (opaque
+ * above, `belowOpacity` below) and draws the white line on the seam; otherwise
+ * the whole string is solid with a soft dark drop for legibility.
+ */
+function ClaimText({
+  text,
+  fontFamily,
+  fontWeight,
+  fontSize,
+  cut,
+  belowOpacity,
+  profile,
+  useElevation,
+  uid,
+}: {
+  belowOpacity: number;
+  cut: boolean;
+  fontFamily: string;
+  fontSize: number;
+  fontWeight: number;
+  profile?: number[];
+  text: string;
+  uid: string;
+  useElevation: boolean;
+}) {
+  const boxH = fontSize * 1.12;
+  const baseline = fontSize * 0.84;
+  const textProps = {
+    x: 0,
+    y: baseline,
+    textLength: CONTENT_W,
+    lengthAdjust: "spacing" as const,
+    fontFamily,
+    fontWeight,
+    fontSize,
+    fill: "#fff",
+  };
+  const hasCurve = cut && Boolean(profile && profile.length > 1);
+
+  let lineD = "";
+  let aboveD = "";
+  if (hasCurve && profile) {
+    const coords = bandCoords(profile, useElevation, CONTENT_W, boxH);
+    lineD = coords
+      .map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`)
+      .join(" ");
+    aboveD = `${lineD} L${CONTENT_W.toFixed(1)} 0 L0 0 Z`;
+  }
+
+  return (
+    <svg
+      aria-hidden="true"
+      style={{ display: "block", overflow: "visible", width: "100%" }}
+      viewBox={`0 0 ${CONTENT_W} ${boxH}`}
+    >
+      <title>{text}</title>
+      {hasCurve ? (
+        <>
+          <defs>
+            <clipPath id={`${uid}-above`}>
+              <path d={aboveD} />
+            </clipPath>
+          </defs>
+          {/* faint base everywhere → shows through below the seam */}
+          <text {...textProps} opacity={belowOpacity}>
+            {text}
+          </text>
+          {/* opaque copy, clipped to the area above the curve */}
+          <text {...textProps} clipPath={`url(#${uid}-above)`}>
+            {text}
+          </text>
+          <path
+            d={lineD}
+            fill="none"
+            stroke="rgba(0,0,0,0.35)"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={5}
+          />
+          <path
+            d={lineD}
+            fill="none"
+            stroke="#fff"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={3.25}
+          />
+        </>
+      ) : (
+        <>
+          <text {...textProps} fill="rgba(0,0,0,0.32)" y={baseline + 4}>
+            {text}
+          </text>
+          <text {...textProps}>{text}</text>
+        </>
+      )}
+    </svg>
+  );
+}
+
+/** Decorative elevation band (stacked treatment + the no-claim hero). */
+function LineBand({
   profile,
   useElevation,
   strokeWidth = 3.5,
@@ -118,7 +249,7 @@ function Line({
     <svg
       aria-hidden="true"
       preserveAspectRatio="none"
-      style={{ display: "block", width: "100%", overflow: "visible", ...style }}
+      style={{ display: "block", overflow: "visible", width: "100%", ...style }}
       viewBox={`0 0 ${W} 100`}
     >
       <title>Elevation line</title>
@@ -160,19 +291,19 @@ export function ThemeAltitude({
   const hasLine = Boolean(profile && profile.length > 1);
 
   const font = FONT_FAMILY[config.font];
-  const isSerif = config.font === "serif";
+  const fontWeight = FONT_WEIGHT[config.font];
   const cutout = config.claimStyle === "cutout" && claim !== null;
-  const opacity = Math.min(1, Math.max(0, config.cutoutOpacity / 100));
-  const size = claim ? claimFontSize(claim) : 0;
+  const belowOpacity = Math.min(1, Math.max(0, config.cutoutOpacity / 100));
+  const fontSize = claim ? claimFontSize(claim) : 0;
+  const uid = `alt-${hashId(`${claim?.value ?? ""}|${config.position}|${config.claimStyle}|${config.cutoutOpacity}|${config.font}`)}`;
 
-  const claimValueStyle: CSSProperties = {
+  const unitStyle: CSSProperties = {
     fontFamily: font,
-    fontSize: size,
-    lineHeight: 0.9,
-    fontWeight: isSerif ? 500 : 400,
-    letterSpacing: isSerif ? "0" : "-0.01em",
-    whiteSpace: claim?.isText ? "normal" : "nowrap",
-    margin: 0,
+    fontSize: Math.round(fontSize * 0.18),
+    letterSpacing: "0.04em",
+    opacity: 0.85,
+    marginTop: 6,
+    textShadow: "0 2px 12px rgba(0,0,0,0.5)",
   };
 
   const metaBits = [
@@ -209,32 +340,18 @@ export function ThemeAltitude({
       <div style={clusterPosition(config.position)}>
         {claim && cutout ? (
           <div>
-            <div style={{ position: "relative", width: "100%" }}>
-              <div style={{ ...claimValueStyle, color: "#fff", opacity }}>
-                {claim.value}
-              </div>
-              {hasLine && profile ? (
-                <Line
-                  profile={profile}
-                  style={{ position: "absolute", inset: 0, height: "100%" }}
-                  useElevation={useElevation}
-                />
-              ) : null}
-            </div>
-            {claim.unit ? (
-              <div
-                style={{
-                  fontFamily: font,
-                  fontSize: Math.round(size * 0.2),
-                  letterSpacing: "0.04em",
-                  opacity: 0.85,
-                  marginTop: 8,
-                  textShadow: "0 2px 12px rgba(0,0,0,0.5)",
-                }}
-              >
-                {claim.unit}
-              </div>
-            ) : null}
+            <ClaimText
+              belowOpacity={belowOpacity}
+              cut
+              fontFamily={font}
+              fontSize={fontSize}
+              fontWeight={fontWeight}
+              profile={profile}
+              text={claim.value}
+              uid={uid}
+              useElevation={useElevation}
+            />
+            {claim.unit ? <div style={unitStyle}>{claim.unit}</div> : null}
           </div>
         ) : null}
 
@@ -246,35 +363,26 @@ export function ThemeAltitude({
                 fontSize: 24,
                 letterSpacing: "0.28em",
                 opacity: 0.82,
-                marginBottom: 16,
+                marginBottom: 18,
                 textShadow: "0 2px 12px rgba(0,0,0,0.5)",
               }}
             >
               {claim.label}
+              {claim.unit ? ` · ${claim.unit}` : ""}
             </div>
-            <div
-              style={{
-                ...claimValueStyle,
-                color: "#fff",
-                textShadow: "0 3px 18px rgba(0,0,0,0.45)",
-              }}
-            >
-              {claim.value}
-              {claim.unit ? (
-                <span
-                  style={{
-                    fontSize: Math.round(size * 0.3),
-                    marginLeft: 16,
-                    opacity: 0.85,
-                  }}
-                >
-                  {claim.unit}
-                </span>
-              ) : null}
-            </div>
+            <ClaimText
+              belowOpacity={1}
+              cut={false}
+              fontFamily={font}
+              fontSize={fontSize}
+              fontWeight={fontWeight}
+              text={claim.value}
+              uid={uid}
+              useElevation={useElevation}
+            />
             {hasLine && profile ? (
-              <div style={{ height: 132, marginTop: 28, width: "100%" }}>
-                <Line
+              <div style={{ height: 128, marginTop: 28, width: "100%" }}>
+                <LineBand
                   profile={profile}
                   style={{ height: "100%" }}
                   useElevation={useElevation}
@@ -287,7 +395,7 @@ export function ThemeAltitude({
         {/* No claim: the line becomes the hero element. */}
         {!claim && hasLine && profile ? (
           <div style={{ height: 240, width: "100%" }}>
-            <Line
+            <LineBand
               profile={profile}
               strokeWidth={4}
               style={{ height: "100%" }}
@@ -299,7 +407,7 @@ export function ThemeAltitude({
         {stats.length > 0 ? (
           <div
             style={{
-              marginTop: 30,
+              marginTop: 32,
               fontFamily: "var(--font-mono), monospace",
               fontSize: 32,
               letterSpacing: "0.04em",
