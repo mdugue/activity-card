@@ -21,7 +21,7 @@ test.describe("carousel mode", () => {
     page.on("pageerror", (e) => errors.push(e.message));
 
     // Default theme (Trace Dawn) → a tight 3-slide deck.
-    await expect(page.getByText(/slide 1 \/ 3/i)).toBeVisible();
+    await expect(page.getByTestId("carousel-preview")).toBeVisible();
     await expect(
       page.getByRole("button", { name: /^Slide \d+:/i })
     ).toHaveCount(3);
@@ -31,30 +31,29 @@ test.describe("carousel mode", () => {
   });
 
   test("selecting a thumbnail moves the preview window", async ({ page }) => {
-    await page.getByRole("button", { name: /^Slide 3:/i }).click();
-    await expect(page.getByText(/slide 3 \/ 3/i)).toBeVisible();
+    const slide3 = page.getByRole("button", { name: /^Slide 3:/i });
+    await slide3.click();
+    await expect(slide3).toHaveAttribute("aria-pressed", "true");
   });
 
   test("deck length is fixed per theme (Frame → 4 slides)", async ({
     page,
   }) => {
-    await page.getByTestId("theme-picker-trigger").click();
-    await page.getByRole("button", { name: /^FRAME/i }).click();
+    await page.getByRole("button", { name: /^FRAME\b/i }).click();
     await expect(
       page.getByRole("button", { name: /^Slide \d+:/i })
     ).toHaveCount(4);
-    await expect(page.getByText(/slide 1 \/ 4/i)).toBeVisible();
   });
 
-  test("theme switches via the shared picker below the preview", async ({
-    page,
-  }) => {
+  test("theme switches via the rail in the THEME section", async ({ page }) => {
     // Carousel uses its own theme names (Trace Dawn/Dusk, Ascent, Press, …).
-    const trigger = page.getByTestId("theme-picker-trigger");
-    await expect(trigger).toContainText(/TRACE/i);
-    await trigger.click();
-    await page.getByRole("button", { name: /^PRESS/i }).click();
-    await expect(trigger).toContainText(/PRESS/i);
+    // Default is Trace Dawn → its toggle is pressed; picking Press selects it.
+    await expect(
+      page.getByRole("button", { name: /^TRACE DAWN\b/i })
+    ).toHaveAttribute("aria-pressed", "true");
+    const press = page.getByRole("button", { name: /^PRESS\b/i });
+    await press.click();
+    await expect(press).toHaveAttribute("aria-pressed", "true");
   });
 
   test("uploading a photo reveals the deck-wide adjust control", async ({
@@ -74,8 +73,7 @@ test.describe("carousel mode", () => {
   test("type-led themes still accept a background photo", async ({ page }) => {
     // Frame and Press now render a background photo (kept clean via shadows /
     // opaque print boxes), so the uploader stays enabled — no "no room" note.
-    await page.getByTestId("theme-picker-trigger").click();
-    await page.getByRole("button", { name: /^FRAME/i }).click();
+    await page.getByRole("button", { name: /^FRAME\b/i }).click();
     await expect(page.getByText(/no room for a photo/i)).toHaveCount(0);
     await page.locator('input[type="file"][accept="image/*"]').setInputFiles({
       name: "photo.png",

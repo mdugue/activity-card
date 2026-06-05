@@ -2,19 +2,16 @@ import { expect, type Page } from "@playwright/test";
 import { SINGLE_RUN_GPX } from "./fixtures";
 
 /**
- * Open the theme picker and select the named theme. The new theme switcher
- * shows the current theme as a button that opens a popover/drawer; we click
- * the trigger first, then the option, and wait for the trigger to reflect
- * the selection.
+ * Select the named theme. Themes are an inline rail of toggle buttons in the
+ * THEME section now (no popup) — each button is named "<LABEL> <tagline>", so
+ * we click the one whose name starts with the label and confirm it's pressed.
  */
 export async function selectTheme(page: Page, theme: string): Promise<void> {
-  const trigger = page.getByTestId("theme-picker-trigger");
-  await trigger.click();
-  // Popover items are buttons named "<LABEL>\n<tagline>".
-  await page
-    .getByRole("button", { name: new RegExp(`^${theme}\\b`, "i") })
-    .click();
-  await expect(trigger).toContainText(theme);
+  const btn = page.getByRole("button", {
+    name: new RegExp(`^${theme}\\b`, "i"),
+  });
+  await btn.click();
+  await expect(btn).toHaveAttribute("aria-pressed", "true");
 }
 
 /**
@@ -40,7 +37,7 @@ export async function uploadActivity(page: Page): Promise<void> {
     mimeType: "application/gpx+xml",
     buffer: Buffer.from(SINGLE_RUN_GPX),
   });
-  await expect(page.getByTestId("theme-picker-trigger")).toBeVisible();
+  await expect(page.getByTestId("export-action")).toBeVisible();
 }
 
 /**

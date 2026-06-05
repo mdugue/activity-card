@@ -1,7 +1,7 @@
 "use client";
 
-// Top-level Single Card ↔ Carousel switch. Single Card keeps the existing flow
-// untouched; Carousel swaps in the multi-slide editor.
+// Top-level Single Card ↔ Carousel switch — a compact segmented control that
+// sits inline with the wordmark in the editor's header line.
 
 import { CardsIcon, type Icon, ImagesIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
@@ -13,14 +13,14 @@ interface ModeToggleProps {
   onModeChange: (mode: CardMode) => void;
 }
 
-const MODES: { id: CardMode; label: string; sub: string; Icon: Icon }[] = [
-  { id: "carousel", label: "Carousel", sub: "swipeable set", Icon: ImagesIcon },
-  { id: "single", label: "Single Card", sub: "one frame", Icon: CardsIcon },
+const MODES: { id: CardMode; label: string; Icon: Icon }[] = [
+  { id: "carousel", label: "Carousel", Icon: ImagesIcon },
+  { id: "single", label: "Single Card", Icon: CardsIcon },
 ];
 
 export function ModeToggle({ mode, onModeChange }: ModeToggleProps) {
   return (
-    <fieldset className="m-0 inline-flex border-2 border-foreground/15 p-1">
+    <fieldset className="m-0 inline-flex border border-foreground/15 p-0.5">
       <legend className="sr-only">Card mode</legend>
       {MODES.map((m) => {
         const active = m.id === mode;
@@ -29,23 +29,18 @@ export function ModeToggle({ mode, onModeChange }: ModeToggleProps) {
           <button
             aria-pressed={active}
             className={cn(
-              "flex items-center gap-2.5 px-4 py-2 text-left transition-colors",
+              "flex items-center gap-1.5 px-2.5 py-1.5 transition-colors",
               active
                 ? "bg-foreground text-background"
-                : "text-foreground/70 hover:text-foreground"
+                : "text-foreground/65 hover:text-foreground"
             )}
             key={m.id}
             onClick={() => onModeChange(m.id)}
             type="button"
           >
-            <Icon aria-hidden className="size-5 shrink-0" weight="duotone" />
-            <span className="flex flex-col items-start">
-              <span className="font-heading text-base uppercase leading-none tracking-wide">
-                {m.label}
-              </span>
-              <span className="mt-1 font-medium font-mono text-[9px] uppercase tracking-[0.18em] opacity-60">
-                {m.sub}
-              </span>
+            <Icon aria-hidden className="size-4 shrink-0" weight="duotone" />
+            <span className="whitespace-nowrap font-heading text-sm uppercase leading-none tracking-wide">
+              {m.label}
             </span>
           </button>
         );

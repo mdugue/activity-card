@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { useStravaConnection } from "@/hooks/use-strava-connection";
 import type { ParsedActivity } from "@/lib/parse-activity";
 
 interface StravaSummaryActivity {
@@ -52,6 +53,42 @@ interface StravaPickerProps {
 }
 
 const PER_PAGE = 30;
+
+/** Connection status + the central Disconnect control, shown in the picker
+ * header. This is the single home for "Connected as … / Disconnect" now that
+ * the app chrome no longer carries it. */
+function PickerConnection() {
+  const strava = useStravaConnection();
+  if (!strava.connected) {
+    return null;
+  }
+  return (
+    <div className="flex shrink-0 items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] opacity-70">
+      <span
+        aria-hidden
+        className="size-1.5 rounded-full"
+        style={{ background: "#FC5200" }}
+      />
+      <span className="hidden sm:inline">
+        {strava.athlete?.firstname
+          ? `Connected as ${strava.athlete.firstname}`
+          : "Connected"}
+      </span>
+      <span aria-hidden className="hidden opacity-50 sm:inline">
+        ·
+      </span>
+      <button
+        className="underline-offset-4 hover:underline"
+        onClick={() => {
+          strava.disconnect();
+        }}
+        type="button"
+      >
+        Disconnect
+      </button>
+    </div>
+  );
+}
 
 /** Discriminated error shape mirrored from `stravaErrorResponse` on the
  * server. Lets the picker show actionable per-kind copy instead of a
@@ -315,8 +352,11 @@ export function StravaPicker({
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-6 pt-20 pb-32 md:px-10 lg:pt-24">
-      <div className="font-medium font-mono text-xs tracking-[0.32em] opacity-55">
-        STEP 02 / 03 · PICK FROM STRAVA
+      <div className="flex items-center justify-between gap-4">
+        <div className="font-medium font-mono text-xs tracking-[0.32em] opacity-55">
+          STEP 02 / 03 · PICK FROM STRAVA
+        </div>
+        <PickerConnection />
       </div>
       <h1 className="mt-7 font-heading text-5xl uppercase leading-[0.92] tracking-tight sm:text-6xl">
         Your recent <span className="text-primary">efforts.</span>

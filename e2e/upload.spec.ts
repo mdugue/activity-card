@@ -15,10 +15,11 @@ test.describe("upload", () => {
       buffer: Buffer.from(SINGLE_RUN_GPX),
     });
 
-    // Edit state is recognisable by the theme picker + filename row.
-    await expect(page.getByTestId("theme-picker-trigger")).toBeVisible();
+    // Edit state is recognisable by the export action; the source label lives
+    // in the ACTIVITY section (always visible in the desktop sidebar).
+    await expect(page.getByTestId("export-action")).toBeVisible();
     await expect(page.getByText(/morning-run\.gpx|run_/i)).toBeVisible();
-    await expect(page.getByText(/files · assembled/i)).not.toBeVisible();
+    await expect(page.getByText(/files · assembled/i)).toHaveCount(0);
   });
 
   test("multiple files → triathlon assembly with computed transitions", async ({
@@ -47,6 +48,7 @@ test.describe("upload", () => {
       },
     ]);
 
+    // The combined-source label is in the ACTIVITY section.
     await expect(page.getByText(/3 files · assembled/i)).toBeVisible();
 
     // The triathlon single-card theme lives in Single Card mode.
@@ -72,6 +74,6 @@ test.describe("upload", () => {
     });
     await expect(page.getByText(/Drop a \.gpx or \.fit file/i)).toBeVisible();
     // Should NOT have advanced to the edit state.
-    await expect(page.getByTestId("theme-picker-trigger")).not.toBeVisible();
+    await expect(page.getByTestId("export-action")).not.toBeVisible();
   });
 });

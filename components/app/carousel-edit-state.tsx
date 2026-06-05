@@ -5,13 +5,15 @@
 // reveals the neighbours with the seamless bleed, exactly like an Instagram /
 // Strava carousel. The slide strip below windows onto the same canvas, and the
 // off-screen full-width mount feeds the slicing export — so preview, thumbnails
-// and output are guaranteed to match. The sidebar reuses the single-card
-// controls; image crop/zoom reuses the single-card adjust overlay, deck-wide.
+// and output are guaranteed to match. The controls reuse the shared ControlDeck
+// (focused toolbar on mobile, horizontal sidebar on desktop); image crop/zoom
+// reuses the single-card adjust overlay, deck-wide.
 
 import { ArrowsOutCardinalIcon, ImagesIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { SeamlessCanvas } from "@/components/carousel/seamless-canvas";
 import { Badge } from "@/components/ui/badge";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CarouselController } from "@/hooks/use-carousel";
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
 import {
@@ -29,13 +31,16 @@ import type { PaletteTheme } from "@/lib/palette";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import { isQuarterTurn, type PhotoEffects } from "@/lib/photo-effects";
 import type { Visibility } from "@/lib/visibility";
-import { ActivityControls } from "./activity-controls";
-import { EditSidebar } from "./edit-sidebar";
+import { useActivityTools } from "./activity-tools";
+import { ControlDeck } from "./control-deck";
 import { ImageAdjustOverlay } from "./image-adjust-overlay";
-import { PhotoEffectsControls } from "./photo-effects-controls";
+import {
+  PhotoFilterControl,
+  PhotoTransformControls,
+} from "./photo-effects-controls";
 import type { ActivityData, Sport } from "./sample-data";
 import { SlideStrip } from "./slide-strip";
-import { ThemePicker } from "./theme-picker";
+import { ThemeRail } from "./theme-rail";
 
 interface CarouselEditStateProps {
   accent: string;
@@ -198,170 +203,165 @@ export function CarouselEditState(props: CarouselEditStateProps) {
     visibility: props.visibility,
   };
 
-  return (
-    <div className="mx-auto grid w-full max-w-[1180px] flex-1 grid-cols-1 gap-8 px-6 pt-6 pb-8 md:px-10 lg:grid-cols-[minmax(0,640px)_400px] lg:gap-12">
-      <div className="flex min-w-0 flex-col gap-5">
-        <div className="flex items-center justify-between">
-          <div className="caption-micro">
-            Slide {selectedIndex + 1} / {slides.length}
-          </div>
-          <div className="caption-micro">SWIPE · SEAMLESS</div>
-        </div>
+  const photoEditable = photoUrl !== null && photoSupported;
 
-        {/* Scroll-snap window onto the seamless canvas. */}
-        <div className="relative mx-auto w-full max-w-[360px]">
+  const tools = useActivityTools({
+    accent: props.accent,
+    athleteName: props.athleteName,
+    available: props.available,
+    data,
+    defaultAccent: CAROUSEL_THEME_TOKENS[theme].accent,
+    filterControl: photoEditable ? (
+      <PhotoFilterControl
+        effects={photoEffects}
+        onChange={props.onPhotoEffectsChange}
+      />
+    ) : undefined,
+    location: props.location,
+    mode: "carousel",
+    onAccentChange: props.onAccentChange,
+    onAthleteNameChange: props.onAthleteNameChange,
+    onFilesLoaded: props.onFilesLoaded,
+    onLocationChange: props.onLocationChange,
+    onOpenStravaPicker: props.onOpenStravaPicker,
+    onPhotoChange: props.onPhotoChange,
+    onSportChange: props.onSportChange,
+    onTitleChange: props.onTitleChange,
+    onVisibilityChange: props.onVisibilityChange,
+    photoExtras: photoEditable ? (
+      <PhotoTransformControls
+        allowRotate
+        effects={photoEffects}
+        onChange={props.onPhotoEffectsChange}
+      />
+    ) : null,
+    photoSupported,
+    photoUrl,
+    themeControl: (
+      <ThemeRail
+        labels={CAROUSEL_THEME_LABELS}
+        onThemeChange={props.onThemeChange}
+        order={CAROUSEL_THEME_ORDER}
+        theme={theme}
+      />
+    ),
+    themeLabel: CAROUSEL_THEME_LABELS[theme].label,
+    title: props.title,
+    visibility: props.visibility,
+  });
+
+  const preview = (
+    <div className="flex min-w-0 flex-col gap-5">
+      {/* Scroll-snap window onto the seamless canvas. */}
+      <div className="relative mx-auto w-full max-w-[360px]">
+        <div
+          className="@container relative aspect-[1080/1350] w-full overflow-x-auto overflow-y-hidden bg-white shadow-[0_24px_50px_-14px_rgba(26,23,20,0.3)]"
+          data-testid="carousel-preview"
+          onScroll={handleScroll}
+          ref={viewportRef}
+          style={{
+            scrollSnapType: adjusting ? "none" : "x mandatory",
+            overflowX: adjusting ? "hidden" : "auto",
+          }}
+        >
           <div
-            className="@container relative aspect-[1080/1350] w-full overflow-x-auto overflow-y-hidden bg-white shadow-[0_24px_50px_-14px_rgba(26,23,20,0.3)]"
-            data-testid="carousel-preview"
-            onScroll={handleScroll}
-            ref={viewportRef}
-            style={{
-              scrollSnapType: adjusting ? "none" : "x mandatory",
-              overflowX: adjusting ? "hidden" : "auto",
-            }}
+            className="relative h-full"
+            style={{ width: `calc(100cqw * ${slides.length})` }}
           >
             <div
-              className="relative h-full"
-              style={{ width: `calc(100cqw * ${slides.length})` }}
+              className="absolute top-0 left-0 origin-top-left"
+              style={{
+                width: 1080 * slides.length,
+                height: 1350,
+                transform: "scale(calc(100cqw / 1080px))",
+              }}
             >
-              <div
-                className="absolute top-0 left-0 origin-top-left"
-                style={{
-                  width: 1080 * slides.length,
-                  height: 1350,
-                  transform: "scale(calc(100cqw / 1080px))",
-                }}
-              >
-                <SeamlessCanvas {...canvasProps} />
-              </div>
-              <div className="absolute inset-0 flex">
-                {slides.map((s) => (
-                  <div
-                    aria-hidden
-                    key={s.id}
-                    style={{
-                      flex: "0 0 100cqw",
-                      width: "100cqw",
-                      scrollSnapAlign: "start",
-                    }}
-                  />
-                ))}
-              </div>
+              <SeamlessCanvas {...canvasProps} />
+            </div>
+            <div className="absolute inset-0 flex">
+              {slides.map((s) => (
+                <div
+                  aria-hidden
+                  key={s.id}
+                  style={{
+                    flex: "0 0 100cqw",
+                    width: "100cqw",
+                    scrollSnapAlign: "start",
+                  }}
+                />
+              ))}
             </div>
           </div>
+        </div>
 
-          {adjustAvailable && !adjusting ? (
-            <Badge
-              className="absolute top-3 right-3 z-10 rounded-full bg-black/55 px-3 py-1.5 font-mono text-[10px] text-white backdrop-blur-sm transition-colors hover:bg-black/75"
-              render={
-                <button onClick={() => setAdjusting(true)} type="button" />
-              }
-            >
-              <ArrowsOutCardinalIcon
-                aria-hidden
-                className="size-3"
-                weight="duotone"
-              />
-              Adjust photo
-            </Badge>
-          ) : null}
-
-          {adjusting ? (
-            <ImageAdjustOverlay
-              clamp={coverClamp}
-              onChange={props.onImageTransformChange}
-              onDone={() => setAdjusting(false)}
-              transform={imageTransform}
+        {adjustAvailable && !adjusting ? (
+          <Badge
+            className="absolute top-3 right-3 z-10 rounded-full bg-black/55 px-3 py-1.5 font-mono text-[10px] text-white backdrop-blur-sm transition-colors hover:bg-black/75"
+            render={<button onClick={() => setAdjusting(true)} type="button" />}
+          >
+            <ArrowsOutCardinalIcon
+              aria-hidden
+              className="size-3"
+              weight="duotone"
             />
-          ) : null}
-        </div>
+            Adjust photo
+          </Badge>
+        ) : null}
 
-        <SlideStrip
-          accent={props.accent}
-          data={data}
-          imageSize={imageSize}
-          imageTransform={imageTransform}
-          onSelect={carousel.select}
-          photoEffects={photoEffects}
-          photoTheme={photoPaletteTheme}
-          photoUrl={photoUrl}
-          selectedId={selectedId}
-          slides={slides}
-          theme={theme}
-          visibility={props.visibility}
-        />
-
-        {/* Theme selector — same control as Single Card, below the preview,
-            but showing the carousel-specific theme names. The deck length is
-            fixed per theme, so there's no separate deck picker. */}
-        <div className="mt-1 flex flex-col items-center">
-          <ThemePicker
-            labels={CAROUSEL_THEME_LABELS}
-            onThemeChange={props.onThemeChange}
-            order={CAROUSEL_THEME_ORDER}
-            theme={theme}
+        {adjusting ? (
+          <ImageAdjustOverlay
+            clamp={coverClamp}
+            onChange={props.onImageTransformChange}
+            onDone={() => setAdjusting(false)}
+            transform={imageTransform}
           />
-          <div className="caption-micro mt-2">TAP TO CHANGE THEME</div>
-        </div>
+        ) : null}
       </div>
 
-      <EditSidebar
-        actionIcon={
-          <ImagesIcon aria-hidden className="size-5" weight="duotone" />
-        }
-        actionLabel="Export carousel"
-        actionMeta={`${slides.length} × 1080×1350`}
+      <SlideStrip
+        accent={props.accent}
         data={data}
-        isBusy={isExporting}
-        onAction={handleExport}
-        onFilesLoaded={props.onFilesLoaded}
-        onOpenStravaPicker={props.onOpenStravaPicker}
-      >
-        <ActivityControls
-          accent={props.accent}
-          athleteName={props.athleteName}
-          available={props.available}
-          data={data}
-          defaultAccent={CAROUSEL_THEME_TOKENS[theme].accent}
-          location={props.location}
-          mode="carousel"
-          onAccentChange={props.onAccentChange}
-          onAthleteNameChange={props.onAthleteNameChange}
-          onLocationChange={props.onLocationChange}
-          onPhotoChange={props.onPhotoChange}
-          onSportChange={props.onSportChange}
-          onTitleChange={props.onTitleChange}
-          onVisibilityChange={props.onVisibilityChange}
-          photoExtras={
-            photoUrl && photoSupported ? (
-              <PhotoEffectsControls
-                allowRotate
-                effects={photoEffects}
-                onChange={props.onPhotoEffectsChange}
-              />
-            ) : null
-          }
-          photoSupported={photoSupported}
-          photoUrl={photoUrl}
-          themeLabel={CAROUSEL_THEME_LABELS[theme].label}
-          title={props.title}
-          visibility={props.visibility}
-        />
-      </EditSidebar>
-
-      {/* Off-screen full-width mount used by the slicing export. */}
-      <div
-        aria-hidden
-        className="pointer-events-none fixed top-0 left-0 -z-10"
-        style={{ transform: "translateX(-200%)" }}
-      >
-        <div
-          ref={wideRef}
-          style={{ width: slides.length * 1080, height: 1350 }}
-        >
-          <SeamlessCanvas {...canvasProps} />
-        </div>
-      </div>
+        imageSize={imageSize}
+        imageTransform={imageTransform}
+        onSelect={carousel.select}
+        photoEffects={photoEffects}
+        photoTheme={photoPaletteTheme}
+        photoUrl={photoUrl}
+        selectedId={selectedId}
+        slides={slides}
+        theme={theme}
+        visibility={props.visibility}
+      />
     </div>
+  );
+
+  return (
+    <TooltipProvider delay={200}>
+      <ControlDeck
+        action={{
+          icon: <ImagesIcon aria-hidden className="size-5" weight="duotone" />,
+          isBusy: isExporting,
+          label: "Export carousel",
+          meta: `${slides.length} × 1080×1350`,
+          onAction: handleExport,
+        }}
+        preview={preview}
+        tools={tools}
+      >
+        {/* Off-screen full-width mount used by the slicing export. */}
+        <div
+          aria-hidden
+          className="pointer-events-none fixed top-0 left-0 -z-10"
+          style={{ transform: "translateX(-200%)" }}
+        >
+          <div
+            ref={wideRef}
+            style={{ width: slides.length * 1080, height: 1350 }}
+          >
+            <SeamlessCanvas {...canvasProps} />
+          </div>
+        </div>
+      </ControlDeck>
+    </TooltipProvider>
   );
 }

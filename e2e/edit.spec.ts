@@ -86,9 +86,10 @@ test.describe("persistence", () => {
     // come back when we re-enter the edit state. Keep localStorage so the
     // theme / visibility we just set is still there.
     await uploadActivity(page);
-    await expect(page.getByTestId("theme-picker-trigger")).toContainText(
-      "EDITORIAL"
-    );
+    // The persisted theme shows as the pressed toggle in the rail.
+    await expect(
+      page.getByRole("button", { name: /^EDITORIAL\b/i })
+    ).toHaveAttribute("aria-pressed", "true");
     await expect(
       page.getByRole("switch", { name: /heart rate/i })
     ).not.toBeChecked();

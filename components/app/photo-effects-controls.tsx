@@ -1,8 +1,10 @@
 "use client";
 
-// Photo manipulation controls (filter preset + rotate + mirror) shown in the
-// sidebar's photo block when a photo is loaded. Pure CSS filters keep
-// preview === output with html-to-image.
+// Photo manipulation controls, split so the focused-toolbar layout can place
+// them in different categories: `PhotoFilterControl` is the filter-preset row
+// (its own FILTER category) and `PhotoTransformControls` is rotate/mirror/flip/
+// grain (shown inside the PHOTO category). Pure CSS filters keep preview ===
+// output with html-to-image.
 
 import {
   ArrowClockwiseIcon,
@@ -42,98 +44,102 @@ const FILTER_ICONS: Record<string, Icon> = {
   sepia: FilmStripIcon,
 };
 
-interface PhotoEffectsControlsProps {
-  /** rotate is geometry-correct on the carousel panorama; hidden elsewhere */
-  allowRotate?: boolean;
+interface PhotoControlProps {
   effects: PhotoEffects;
   onChange: (next: PhotoEffects) => void;
 }
 
-export function PhotoEffectsControls({
+/** Filter-preset row. Its section label is supplied by the FILTER category. */
+export function PhotoFilterControl({ effects, onChange }: PhotoControlProps) {
+  return (
+    <ToggleGroup
+      aria-label="Photo filter"
+      className="mt-2 flex flex-wrap gap-1.5"
+      onValueChange={(values) => {
+        if (values[0]) {
+          onChange({ ...effects, filter: values[0] });
+        }
+      }}
+      spacing={2}
+      value={[effects.filter]}
+      variant="outline"
+    >
+      {FILTER_PRESETS.map((p) => {
+        const FilterIcon = FILTER_ICONS[p.id];
+        return (
+          <ToggleGroupItem
+            aria-label={p.label}
+            className="data-[pressed]:!border-foreground data-[pressed]:!bg-foreground data-[pressed]:!text-background flex h-auto items-center gap-1.5 px-2.5 py-1.5 font-medium font-mono text-[10px] uppercase tracking-wide"
+            key={p.id}
+            value={p.id}
+          >
+            {FilterIcon ? (
+              <FilterIcon aria-hidden className="size-3" weight="duotone" />
+            ) : null}
+            {p.label}
+          </ToggleGroupItem>
+        );
+      })}
+    </ToggleGroup>
+  );
+}
+
+interface PhotoTransformControlsProps extends PhotoControlProps {
+  /** rotate is geometry-correct on the carousel panorama; hidden elsewhere */
+  allowRotate?: boolean;
+}
+
+/** Rotate / mirror / flip / grain row, shown inside the PHOTO category. */
+export function PhotoTransformControls({
   effects,
   onChange,
   allowRotate = false,
-}: PhotoEffectsControlsProps) {
+}: PhotoTransformControlsProps) {
   return (
-    <div className="mt-3 flex flex-col gap-3">
-      <div>
-        <div className="caption-micro mb-1.5">FILTER</div>
-        <ToggleGroup
-          aria-label="Photo filter"
-          className="flex flex-wrap gap-1.5"
-          onValueChange={(values) => {
-            if (values[0]) {
-              onChange({ ...effects, filter: values[0] });
-            }
-          }}
-          spacing={2}
-          value={[effects.filter]}
-          variant="outline"
-        >
-          {FILTER_PRESETS.map((p) => {
-            const FilterIcon = FILTER_ICONS[p.id];
-            return (
-              <ToggleGroupItem
-                aria-label={p.label}
-                className="data-[pressed]:!border-foreground data-[pressed]:!bg-foreground data-[pressed]:!text-background flex h-auto items-center gap-1.5 px-2.5 py-1.5 font-medium font-mono text-[10px] uppercase tracking-wide"
-                key={p.id}
-                value={p.id}
-              >
-                {FilterIcon ? (
-                  <FilterIcon aria-hidden className="size-3" weight="duotone" />
-                ) : null}
-                {p.label}
-              </ToggleGroupItem>
-            );
-          })}
-        </ToggleGroup>
-      </div>
-
-      <div className="flex items-center gap-2">
-        {allowRotate ? (
-          <Button
-            onClick={() =>
-              onChange({ ...effects, rotate: nextRotation(effects.rotate) })
-            }
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            <ArrowClockwiseIcon className="size-3.5" weight="duotone" />
-            Rotate
-          </Button>
-        ) : null}
-        <Toggle
-          className="data-[pressed]:!border-foreground data-[pressed]:!bg-foreground data-[pressed]:!text-background gap-1.5"
-          onPressedChange={(p) => onChange({ ...effects, flipH: p })}
-          pressed={effects.flipH}
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      {allowRotate ? (
+        <Button
+          onClick={() =>
+            onChange({ ...effects, rotate: nextRotation(effects.rotate) })
+          }
           size="sm"
+          type="button"
           variant="outline"
         >
-          <FlipHorizontalIcon className="size-3.5" weight="duotone" />
-          Mirror
-        </Toggle>
-        <Toggle
-          className="data-[pressed]:!border-foreground data-[pressed]:!bg-foreground data-[pressed]:!text-background gap-1.5"
-          onPressedChange={(p) => onChange({ ...effects, flipV: p })}
-          pressed={effects.flipV}
-          size="sm"
-          variant="outline"
-        >
-          <FlipVerticalIcon className="size-3.5" weight="duotone" />
-          Flip
-        </Toggle>
-        <Toggle
-          className="data-[pressed]:!border-foreground data-[pressed]:!bg-foreground data-[pressed]:!text-background gap-1.5"
-          onPressedChange={(p) => onChange({ ...effects, grain: p })}
-          pressed={effects.grain}
-          size="sm"
-          variant="outline"
-        >
-          <DotsNineIcon className="size-3.5" weight="duotone" />
-          Grain
-        </Toggle>
-      </div>
+          <ArrowClockwiseIcon className="size-3.5" weight="duotone" />
+          Rotate
+        </Button>
+      ) : null}
+      <Toggle
+        className="data-[pressed]:!border-foreground data-[pressed]:!bg-foreground data-[pressed]:!text-background gap-1.5"
+        onPressedChange={(p) => onChange({ ...effects, flipH: p })}
+        pressed={effects.flipH}
+        size="sm"
+        variant="outline"
+      >
+        <FlipHorizontalIcon className="size-3.5" weight="duotone" />
+        Mirror
+      </Toggle>
+      <Toggle
+        className="data-[pressed]:!border-foreground data-[pressed]:!bg-foreground data-[pressed]:!text-background gap-1.5"
+        onPressedChange={(p) => onChange({ ...effects, flipV: p })}
+        pressed={effects.flipV}
+        size="sm"
+        variant="outline"
+      >
+        <FlipVerticalIcon className="size-3.5" weight="duotone" />
+        Flip
+      </Toggle>
+      <Toggle
+        className="data-[pressed]:!border-foreground data-[pressed]:!bg-foreground data-[pressed]:!text-background gap-1.5"
+        onPressedChange={(p) => onChange({ ...effects, grain: p })}
+        pressed={effects.grain}
+        size="sm"
+        variant="outline"
+      >
+        <DotsNineIcon className="size-3.5" weight="duotone" />
+        Grain
+      </Toggle>
     </div>
   );
 }

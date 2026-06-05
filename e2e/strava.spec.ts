@@ -55,6 +55,12 @@ test.describe("strava OAuth + picker", () => {
     await expect(
       page.getByRole("button", { name: /saturday in the elbsandstein/i })
     ).toBeVisible();
+    // §4 attribution is present on the picker, not just the empty screen.
+    await expect(
+      page
+        .locator("footer")
+        .getByRole("link", { name: /compatible with strava/i })
+    ).toBeVisible();
   });
 
   test("after connecting, the empty state offers 'Pick from Strava'", async ({
@@ -84,10 +90,11 @@ test.describe("strava OAuth + picker", () => {
       .getByRole("button", { name: /saturday in the elbsandstein/i })
       .click();
 
-    await expect(page.getByTestId("theme-picker-trigger")).toBeVisible();
+    await expect(page.getByTestId("export-action")).toBeVisible();
 
-    // Connection-status row inside the controls pane.
-    await expect(page.getByText(/STRAVA · ALEX/i)).toBeVisible();
+    // Source + "View on Strava" live in the ACTIVITY section (visible in the
+    // desktop sidebar).
+    await expect(page.getByText(/Strava · Alex/i)).toBeVisible();
 
     // "View on Strava" link points at the picked activity (id 1001 per the mock).
     const link = page.getByRole("link", { name: /view on strava/i });
@@ -96,6 +103,11 @@ test.describe("strava OAuth + picker", () => {
       "href",
       "https://www.strava.com/activities/1001/overview"
     );
+
+    // §6 Working Disconnect is reachable from the editor's activity overlay too.
+    await expect(
+      page.getByRole("button", { name: /disconnect strava/i })
+    ).toBeVisible();
   });
 
   test("card itself carries NO in-image Strava mark, regardless of source", async ({
@@ -126,7 +138,7 @@ test.describe("strava OAuth + picker", () => {
 
     await page.getByRole("button", { name: /^combine 2 activities$/i }).click();
 
-    await expect(page.getByTestId("theme-picker-trigger")).toBeVisible();
+    await expect(page.getByTestId("export-action")).toBeVisible();
     await expect(
       page.getByText(/Strava · 2 activities combined/i)
     ).toBeVisible();
@@ -204,38 +216,29 @@ test.describe("strava OAuth + picker", () => {
     await page
       .getByRole("button", { name: /saturday in the elbsandstein/i })
       .click();
-    await expect(page.getByTestId("theme-picker-trigger")).toBeVisible();
+    await expect(page.getByTestId("export-action")).toBeVisible();
 
-    await expect(
-      page.getByText(/Strava · Saturday in the Elbsandstein/i)
-    ).toBeVisible();
-    await page.getByRole("button", { name: /^swap$/i }).click();
+    // Swap now lives in the ACTIVITY section.
+    const swap = page.getByRole("button", { name: /swap — pick another/i });
+    await expect(swap).toBeVisible();
+    await swap.click();
     await expect(
       page.getByRole("heading", { name: /your recent/i })
     ).toBeVisible();
   });
 
-  test("Disconnect lives in the footer and is reachable from any state", async ({
+  test("Disconnect lives in the Strava picker and clears the connection", async ({
     page,
   }) => {
     await page.getByRole("link", CONNECT_BUTTON).click();
     await page.waitForURL(/\/$/);
-    // Verify footer carries the Disconnect after connecting — picker state.
-    const footer = page.locator("footer");
-    await expect(footer.getByText(/connected as alex/i)).toBeVisible();
-    await expect(
-      footer.getByRole("button", { name: /^disconnect$/i })
-    ).toBeVisible();
+    // The picker header carries the connection status + Disconnect — the
+    // single home for it now that the app chrome no longer does.
+    await expect(page.getByText(/connected as alex/i)).toBeVisible();
+    await page.getByRole("button", { name: /^disconnect$/i }).click();
 
-    // And it's still there from the edit state.
-    await page
-      .getByRole("button", { name: /saturday in the elbsandstein/i })
-      .click();
-    await expect(page.getByTestId("theme-picker-trigger")).toBeVisible();
-    await footer.getByRole("button", { name: /^disconnect$/i }).click();
-
-    // Connection cleared → Disconnect / "Connected as" disappear.
-    await expect(footer.getByText(/connected as/i)).toHaveCount(0);
+    // Connection cleared → "Connected as" disappears.
+    await expect(page.getByText(/connected as/i)).toHaveCount(0);
 
     // Reload to confirm the cookies are actually gone.
     await page.reload();

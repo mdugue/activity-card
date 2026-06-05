@@ -1,19 +1,27 @@
 "use client";
 
-// Shared sidebar body used by both the Single Card and Carousel editors. Every
-// overlay element has a switch here, grouped into collapsible sections. A toggle
-// is disabled when the current activity has no data for it (`available`), and
-// distance/time are locked on for the Single Card (its irreducible core).
+// Builds the shared list of editor categories (the `ControlTool[]` the
+// ControlDeck renders) from the activity + handlers. Every overlay element has a
+// switch here, grouped by category; a switch is disabled when the activity has
+// no data for it (`available`), and distance/time are locked on for the Single
+// Card (its irreducible core). Both editors consume this hook, so the Single
+// Card and Carousel control sets stay literally the same building blocks — they
+// differ only in the mode-specific slots they pass in (theme picker, photo
+// filter/effects, mood, marks).
 
-import { ArrowCounterClockwiseIcon } from "@phosphor-icons/react";
-import { useId } from "react";
-import type { CardMode } from "@/components/app/mode-toggle";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+  ArrowCounterClockwiseIcon,
+  ChartBarIcon,
+  ImageIcon,
+  PersonSimpleRunIcon,
+  SquaresFourIcon,
+  StarIcon,
+  SunHorizonIcon,
+  TextAaIcon,
+} from "@phosphor-icons/react";
+import { useId } from "react";
+import type { ControlTool } from "@/components/app/control-deck";
+import type { CardMode } from "@/components/app/mode-toggle";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -23,8 +31,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import type { ParsedActivity } from "@/lib/parse-activity";
 import { cn } from "@/lib/utils";
 import type { Visibility } from "@/lib/visibility";
+import { ActivitySource } from "./activity-source";
 import {
   ControlBlock,
   DetailField,
@@ -89,7 +99,7 @@ const CAROUSEL_TOGGLES: ToggleDef[] = [
   { key: "showPageNumber", label: "Page numbers" },
 ];
 
-interface ActivityControlsProps {
+interface UseActivityToolsProps {
   accent: string;
   athleteName: string;
   /** which switches address data the current activity actually has */
@@ -97,11 +107,19 @@ interface ActivityControlsProps {
   data: ActivityData;
   /** the current theme's default accent (target of the Reset control) */
   defaultAccent: string;
+  /** photo filter (carousel); rendered in the PHOTO section, omit to drop it */
+  filterControl?: React.ReactNode;
   location: string;
   mode: CardMode;
+  /** MOOD category body (single-card altitude/photo mood); omit to drop it */
+  moodControl?: React.ReactNode;
   onAccentChange: (accent: string) => void;
   onAthleteNameChange: (name: string) => void;
+  /** swap by uploading a new file (ACTIVITY section) */
+  onFilesLoaded: (parts: ParsedActivity[]) => void;
   onLocationChange: (location: string) => void;
+  /** swap by reopening the Strava picker (ACTIVITY section) */
+  onOpenStravaPicker: () => void;
   onPhotoChange: (file: File | null) => void;
   onSportChange: (sport: Sport) => void;
   onTitleChange: (title: string) => void;
@@ -110,8 +128,8 @@ interface ActivityControlsProps {
   photoExtras?: React.ReactNode;
   photoSupported: boolean;
   photoUrl: string | null;
-  /** rendered after the photo block (e.g. the single-card mood picker) */
-  slotAfterPhoto?: React.ReactNode;
+  /** the theme rail for this mode (rendered at the top of the THEME section) */
+  themeControl: React.ReactNode;
   /** label used in "<theme> has no room for a photo" copy */
   themeLabel: string;
   /** raw (unstripped) title for the editable input */
@@ -119,29 +137,40 @@ interface ActivityControlsProps {
   visibility: Visibility;
 }
 
-export function ActivityControls({
-  data,
-  mode,
-  themeLabel,
-  athleteName,
-  location,
-  visibility,
-  available,
-  accent,
-  defaultAccent,
-  photoUrl,
-  photoSupported,
-  onTitleChange,
-  onSportChange,
-  onAthleteNameChange,
-  onLocationChange,
-  onVisibilityChange,
-  onAccentChange,
-  onPhotoChange,
-  photoExtras,
-  slotAfterPhoto,
-  title,
-}: ActivityControlsProps) {
+const ICON_PROPS = {
+  "aria-hidden": true,
+  className: "size-5",
+  weight: "duotone",
+} as const;
+
+export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
+  const {
+    data,
+    mode,
+    themeLabel,
+    themeControl,
+    athleteName,
+    location,
+    visibility,
+    available,
+    accent,
+    defaultAccent,
+    photoUrl,
+    photoSupported,
+    onTitleChange,
+    onSportChange,
+    onAthleteNameChange,
+    onLocationChange,
+    onVisibilityChange,
+    onAccentChange,
+    onPhotoChange,
+    onFilesLoaded,
+    onOpenStravaPicker,
+    photoExtras,
+    filterControl,
+    moodControl,
+    title,
+  } = props;
   const titleId = useId();
   const athleteId = useId();
   const locationId = useId();
@@ -174,29 +203,19 @@ export function ActivityControls({
     );
   };
 
-  return (
-    <>
-      {/* The photo is the most important control — lead with it, and make the
-          empty state inviting. */}
-      <ControlBlock label="BACKGROUND PHOTO">
-        <PhotoControl
-          disabled={!photoSupported}
-          onChange={onPhotoChange}
-          photoUrl={photoUrl}
-          prominent={photoSupported}
-        />
-        {photoSupported ? null : (
-          <p className="caption-micro mt-2">
-            {themeLabel} theme has no room for a photo
-          </p>
-        )}
-        {photoExtras}
-      </ControlBlock>
+  const tools: ControlTool[] = [];
 
-      {slotAfterPhoto}
-
-      <ControlBlock label="ACCENT">
-        <div className="mt-2.5 flex flex-wrap items-center gap-2">
+  // THEME leads: the scrolling theme rail, then the accent swatches under it —
+  // the two "what does this card look like" choices live together.
+  tools.push({
+    id: "theme",
+    label: "THEME",
+    icon: <SquaresFourIcon {...ICON_PROPS} />,
+    content: (
+      <ControlBlock label="THEME">
+        {themeControl}
+        <div className="caption-micro mt-4 mb-2">ACCENT</div>
+        <div className="flex flex-wrap items-center gap-2">
           <ToggleGroup
             aria-label="Accent colour"
             className="flex flex-wrap gap-2"
@@ -235,8 +254,54 @@ export function ActivityControls({
           </Button>
         </div>
       </ControlBlock>
+    ),
+  });
 
-      {/* Text overlays — all styled the same, none more prominent than another. */}
+  // The photo is the most important control — lead with it, and make the empty
+  // state inviting.
+  tools.push({
+    id: "photo",
+    label: "PHOTO",
+    icon: <ImageIcon {...ICON_PROPS} />,
+    content: (
+      <ControlBlock label="BACKGROUND PHOTO">
+        <PhotoControl
+          disabled={!photoSupported}
+          onChange={onPhotoChange}
+          photoUrl={photoUrl}
+          prominent={photoSupported}
+        />
+        {photoSupported ? null : (
+          <p className="caption-micro mt-2">
+            {themeLabel} theme has no room for a photo
+          </p>
+        )}
+        {photoExtras}
+        {filterControl ? (
+          <div className="mt-3">
+            <div className="caption-micro mb-1.5">FILTER</div>
+            {filterControl}
+          </div>
+        ) : null}
+      </ControlBlock>
+    ),
+  });
+
+  if (moodControl) {
+    tools.push({
+      id: "mood",
+      label: "MOOD",
+      icon: <SunHorizonIcon {...ICON_PROPS} />,
+      content: <ControlBlock label="MOOD">{moodControl}</ControlBlock>,
+    });
+  }
+
+  // Text overlays — all styled the same, none more prominent than another.
+  tools.push({
+    id: "text",
+    label: "TEXT",
+    icon: <TextAaIcon {...ICON_PROPS} />,
+    content: (
       <ControlBlock label="TEXT">
         <div className="mt-2 flex flex-col gap-4">
           <DetailField
@@ -270,51 +335,58 @@ export function ActivityControls({
           />
         </div>
       </ControlBlock>
+    ),
+  });
 
-      <Accordion
-        className="border-foreground/10 border-t"
-        defaultValue={["stats", "visuals", "carousel"]}
-        multiple
-      >
-        <AccordionItem value="stats">
-          <AccordionTrigger className="caption-label py-3 hover:no-underline">
-            Stats
-          </AccordionTrigger>
-          <AccordionContent>
-            <div className="flex flex-col gap-2.5">
-              {STAT_TOGGLES.map(renderToggle)}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
+  tools.push({
+    id: "stats",
+    label: "STATS",
+    icon: <ChartBarIcon {...ICON_PROPS} />,
+    content: (
+      <div className="flex flex-col gap-5">
+        <ControlBlock label="STATS">
+          <div className="mt-2 flex flex-col gap-2.5">
+            {STAT_TOGGLES.map(renderToggle)}
+          </div>
+        </ControlBlock>
+        <ControlBlock label="VISUALISATIONS">
+          <div className="mt-2 flex flex-col gap-2.5">
+            {VIZ_TOGGLES.map(renderToggle)}
+          </div>
+        </ControlBlock>
+      </div>
+    ),
+  });
 
-        <AccordionItem value="visuals">
-          <AccordionTrigger className="caption-label py-3 hover:no-underline">
-            Visualisations
-          </AccordionTrigger>
-          <AccordionContent>
-            <div className="flex flex-col gap-2.5">
-              {VIZ_TOGGLES.map(renderToggle)}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
+  if (mode === "carousel") {
+    tools.push({
+      id: "marks",
+      label: "MARKS",
+      icon: <StarIcon {...ICON_PROPS} />,
+      content: (
+        <ControlBlock label="CAROUSEL MARKS">
+          <div className="mt-2 flex flex-col gap-2.5">
+            {CAROUSEL_TOGGLES.map(renderToggle)}
+          </div>
+        </ControlBlock>
+      ),
+    });
+  }
 
-        {mode === "carousel" ? (
-          <AccordionItem value="carousel">
-            <AccordionTrigger className="caption-label py-3 hover:no-underline">
-              Carousel marks
-            </AccordionTrigger>
-            <AccordionContent>
-              <div className="flex flex-col gap-2.5">
-                {CAROUSEL_TOGGLES.map(renderToggle)}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        ) : null}
-      </Accordion>
-
-      {/* Activity metadata — least-touched, so it sits at the bottom. */}
+  // Activity — the loaded source (Strava / file), View on Strava, Swap and
+  // Disconnect, plus the sport + athlete metadata. Sits last.
+  tools.push({
+    id: "activity",
+    label: "ACTIVITY",
+    icon: <PersonSimpleRunIcon {...ICON_PROPS} />,
+    content: (
       <ControlBlock label="ACTIVITY">
-        <div className="mt-2 flex flex-col gap-4">
+        <ActivitySource
+          data={data}
+          onFilesLoaded={onFilesLoaded}
+          onOpenStravaPicker={onOpenStravaPicker}
+        />
+        <div className="mt-4 flex flex-col gap-4">
           <Select
             onValueChange={(v) => onSportChange(v as Sport)}
             value={data.sport}
@@ -344,6 +416,8 @@ export function ActivityControls({
           />
         </div>
       </ControlBlock>
-    </>
-  );
+    ),
+  });
+
+  return tools;
 }
