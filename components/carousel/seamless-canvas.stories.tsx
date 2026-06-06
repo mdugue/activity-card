@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import type { ComponentProps } from "react";
 import { expect } from "storybook/test";
-import { SAMPLE_RIDE } from "@/components/app/sample-data";
+import { SAMPLE_RIDE, SAMPLE_TRI } from "@/components/app/sample-data";
 import {
   CAROUSEL_THEME_TOKENS,
   type CarouselThemeId,
@@ -67,3 +67,16 @@ export const AscentDusk: Story = { args: themeArgs("ascentDusk") };
 export const Exposure: Story = { args: themeArgs("exposure") };
 export const Frame: Story = { args: themeArgs("frame") };
 export const Press: Story = { args: themeArgs("press") };
+
+// Multi-activity project: every leg's route/elevation overlays in the hero
+// signature (Trace = route, Ascent = elevation range) and in the detail nods
+// (Exposure's photo-hero deck).
+export const TraceTriathlon: Story = {
+  args: { ...themeArgs("traceDawn"), data: SAMPLE_TRI },
+};
+export const AscentTriathlon: Story = {
+  args: { ...themeArgs("ascentDawn"), data: SAMPLE_TRI },
+};
+export const ExposureTriathlon: Story = {
+  args: { ...themeArgs("exposure"), data: SAMPLE_TRI },
+};

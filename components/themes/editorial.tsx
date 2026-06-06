@@ -2,7 +2,8 @@
 // Type: Instrument Serif (display) + Geist Mono (small caps)
 // Cream paper, soft black, single deep-forest accent
 
-import { routePath } from "@/lib/chart-helpers";
+import type { Coord } from "@/components/app/sample-data";
+import { accentShades, routePath } from "@/lib/chart-helpers";
 import {
   formatDate,
   formatDateUpper,
@@ -11,6 +12,12 @@ import {
   formatPaceMin,
   formatPaceSec,
 } from "@/lib/format";
+import {
+  isMultiActivity,
+  type SegmentRoute,
+  segmentRoutes,
+} from "@/lib/multi-activity";
+import { OverlayRoute } from "./overlay-route";
 import { PhotoBackdrop } from "./photo-backdrop";
 import type { ActivityCardProps } from "./types";
 
@@ -44,8 +51,66 @@ function Row({ k, v }: RowProps) {
 
 const MORNING_WORDS = ["quiet", "gentle", "steady", "still", "clear"] as const;
 
+// "THE LINE" glyph: pool lanes for a swim, every leg overlaid for a project,
+// otherwise a single silhouette — all in the deep-forest accent.
+function EditorialRoute({
+  sport,
+  multi,
+  routes,
+  coords,
+}: {
+  coords?: Coord[];
+  multi: boolean;
+  routes: SegmentRoute[];
+  sport: string;
+}) {
+  if (sport === "swim") {
+    return (
+      <>
+        {Array.from({ length: 5 }, (_, i) => (
+          <line
+            key={`lane-${i}`}
+            opacity={0.5 + i * 0.1}
+            stroke={ACCENT}
+            strokeDasharray="2 8"
+            strokeWidth={1.4}
+            x1={20}
+            x2={260}
+            y1={40 + i * 28}
+            y2={40 + i * 28}
+          />
+        ))}
+      </>
+    );
+  }
+  if (multi) {
+    return (
+      <OverlayRoute
+        colors={accentShades(ACCENT, routes.length)}
+        h={200}
+        pad={16}
+        routes={routes.map((r) => r.coords)}
+        strokeWidth={2}
+        w={280}
+      />
+    );
+  }
+  return (
+    <path
+      d={routePath(coords, 280, 200, 16)}
+      fill="none"
+      stroke={ACCENT}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+    />
+  );
+}
+
 export function ThemeEditorial({ data, photoUrl }: ActivityCardProps) {
   const sport = data.sport;
+  const multi = isMultiActivity(data);
+  const routes = multi ? segmentRoutes(data) : [];
 
   const dist =
     sport === "swim"
@@ -233,30 +298,12 @@ export function ThemeEditorial({ data, photoUrl }: ActivityCardProps) {
                 viewBox="0 0 280 200"
               >
                 <title>Route silhouette</title>
-                {sport === "swim" ? (
-                  Array.from({ length: 5 }, (_, i) => (
-                    <line
-                      key={`lane-${i}`}
-                      opacity={0.5 + i * 0.1}
-                      stroke={ACCENT}
-                      strokeDasharray="2 8"
-                      strokeWidth={1.4}
-                      x1={20}
-                      x2={260}
-                      y1={40 + i * 28}
-                      y2={40 + i * 28}
-                    />
-                  ))
-                ) : (
-                  <path
-                    d={routePath(data.routeCoordinates, 280, 200, 16)}
-                    fill="none"
-                    stroke={ACCENT}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                  />
-                )}
+                <EditorialRoute
+                  coords={data.routeCoordinates}
+                  multi={multi}
+                  routes={routes}
+                  sport={sport}
+                />
               </svg>
             </div>
 

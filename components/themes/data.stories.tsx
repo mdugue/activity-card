@@ -1,6 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect } from "storybook/test";
-import { SAMPLE_RIDE, SAMPLE_RUN } from "@/components/app/sample-data";
+import {
+  SAMPLE_RIDE,
+  SAMPLE_RUN,
+  SAMPLE_TRI,
+} from "@/components/app/sample-data";
 import { ThemeData } from "./data";
 
 const meta = {
@@ -23,3 +27,4 @@ export const Ride: Story = {
 };
 
 export const Run: Story = { args: { data: SAMPLE_RUN } };
+export const Triathlon: Story = { args: { data: SAMPLE_TRI } };

@@ -4,9 +4,13 @@
 // IG-safe: all text >= 24px on the 1080-wide canvas.
 
 import type { ReactNode } from "react";
+import type { Coord } from "@/components/app/sample-data";
 import {
   abstractLanes,
+  accentShades,
   elevationPath,
+  normalizeOverlay,
+  overlayPaths,
   pacePath,
   routePath,
 } from "@/lib/chart-helpers";
@@ -18,6 +22,13 @@ import {
   formatPaceMin,
   formatPaceSec,
 } from "@/lib/format";
+import {
+  isMultiActivity,
+  type SegmentRoute,
+  segmentProfiles,
+  segmentRoutes,
+} from "@/lib/multi-activity";
+import { OverlayRoute } from "./overlay-route";
 import type { ActivityCardProps } from "./types";
 
 const INK = "#0e0e0e";
@@ -94,8 +105,71 @@ const DEFAULT_ZONES = [
   { zone: "HARD", pct: 15 },
 ];
 
+// Route glyph: pool lanes for a swim, every leg overlaid (accent shades) for a
+// project, otherwise the single ink silhouette.
+function DataRoute({
+  sport,
+  multi,
+  routes,
+  coords,
+}: {
+  coords?: Coord[];
+  multi: boolean;
+  routes: SegmentRoute[];
+  sport: string;
+}) {
+  if (sport === "swim") {
+    return (
+      <g>
+        {abstractLanes(460, 200, 5, 14).map((l, i) => (
+          <path
+            d={`M${l.x} ${l.y + l.h / 2} Q${l.x + l.w / 4} ${l.y + l.h / 2 - 10}, ${l.x + l.w / 2} ${l.y + l.h / 2} T${l.x + l.w} ${l.y + l.h / 2}`}
+            fill="none"
+            key={`lane-${i}`}
+            opacity={0.75}
+            stroke={ACCENT}
+            strokeWidth={2}
+          />
+        ))}
+      </g>
+    );
+  }
+  if (multi) {
+    return (
+      <OverlayRoute
+        colors={accentShades(ACCENT, routes.length)}
+        h={200}
+        pad={14}
+        routes={routes.map((r) => r.coords)}
+        strokeWidth={2.2}
+        w={460}
+      />
+    );
+  }
+  return (
+    <path
+      d={routePath(coords, 460, 200, 14)}
+      fill="none"
+      stroke={INK}
+      strokeLinejoin="round"
+      strokeWidth={2.2}
+    />
+  );
+}
+
 export function ThemeData({ data }: ActivityCardProps) {
   const sport = data.sport;
+  const multi = isMultiActivity(data);
+  const routes = multi ? segmentRoutes(data) : [];
+  const segProf = multi ? segmentProfiles(data) : null;
+  const elevCurves =
+    segProf && segProf.profiles.length > 0
+      ? normalizeOverlay(
+          segProf.profiles,
+          segProf.distances,
+          segProf.useElevation
+        )
+      : [];
 
   let cells: ReactNode = null;
   if (sport === "ride") {
@@ -201,7 +275,9 @@ export function ThemeData({ data }: ActivityCardProps) {
   })();
 
   let chartLabel = "ELEVATION (m)";
-  if (sport === "run" && data.paceProfile) {
+  if (multi) {
+    chartLabel = segProf?.useElevation ? "ELEVATION (m)" : "PACE (s/km)";
+  } else if (sport === "run" && data.paceProfile) {
     chartLabel = "PACE (s/km)";
   } else if (sport === "swim") {
     chartLabel = "LAP PACE (s/100m)";
@@ -344,28 +420,12 @@ export function ThemeData({ data }: ActivityCardProps) {
                 y2={i * 50}
               />
             ))}
-            {sport === "swim" ? (
-              <g>
-                {abstractLanes(460, 200, 5, 14).map((l, i) => (
-                  <path
-                    d={`M${l.x} ${l.y + l.h / 2} Q${l.x + l.w / 4} ${l.y + l.h / 2 - 10}, ${l.x + l.w / 2} ${l.y + l.h / 2} T${l.x + l.w} ${l.y + l.h / 2}`}
-                    fill="none"
-                    key={`lane-${i}`}
-                    opacity={0.75}
-                    stroke={ACCENT}
-                    strokeWidth={2}
-                  />
-                ))}
-              </g>
-            ) : (
-              <path
-                d={routePath(data.routeCoordinates, 460, 200, 14)}
-                fill="none"
-                stroke={INK}
-                strokeLinejoin="round"
-                strokeWidth={2.2}
-              />
-            )}
+            <DataRoute
+              coords={data.routeCoordinates}
+              multi={multi}
+              routes={routes}
+              sport={sport}
+            />
           </svg>
         </div>
         <div
@@ -402,7 +462,24 @@ export function ThemeData({ data }: ActivityCardProps) {
                 y2={i * 50}
               />
             ))}
-            {sport === "run" && data.paceProfile && (
+            {multi
+              ? overlayPaths(elevCurves, 460, 200).map((op, i) => {
+                  const shade = accentShades(ACCENT, elevCurves.length)[i];
+                  return (
+                    <g key={`elev-${i}-${op.endX.toFixed(0)}`}>
+                      <path d={op.area} fill={shade} fillOpacity={0.18} />
+                      <path
+                        d={op.line}
+                        fill="none"
+                        stroke={shade}
+                        strokeLinejoin="round"
+                        strokeWidth={2.2}
+                      />
+                    </g>
+                  );
+                })
+              : null}
+            {!multi && sport === "run" && data.paceProfile && (
               <path
                 d={pacePath(data.paceProfile, 460, 200, 8, true)}
                 fill={ACCENT}
@@ -411,7 +488,8 @@ export function ThemeData({ data }: ActivityCardProps) {
                 strokeWidth={2.2}
               />
             )}
-            {sport === "swim" &&
+            {!multi &&
+              sport === "swim" &&
               (() => {
                 const bars = data.lapPacesPer100m || [];
                 if (bars.length === 0) {
@@ -436,20 +514,26 @@ export function ThemeData({ data }: ActivityCardProps) {
                   );
                 });
               })()}
-            {sport !== "run" && sport !== "swim" && data.elevationProfile && (
-              <path
-                d={elevationPath(data.elevationProfile, 460, 200, 8, true)}
-                fill={INK}
-                fillOpacity={0.85}
-              />
-            )}
-            {sport === "run" && !data.paceProfile && data.elevationProfile && (
-              <path
-                d={elevationPath(data.elevationProfile, 460, 200, 8, true)}
-                fill={INK}
-                fillOpacity={0.85}
-              />
-            )}
+            {!multi &&
+              sport !== "run" &&
+              sport !== "swim" &&
+              data.elevationProfile && (
+                <path
+                  d={elevationPath(data.elevationProfile, 460, 200, 8, true)}
+                  fill={INK}
+                  fillOpacity={0.85}
+                />
+              )}
+            {!multi &&
+              sport === "run" &&
+              !data.paceProfile &&
+              data.elevationProfile && (
+                <path
+                  d={elevationPath(data.elevationProfile, 460, 200, 8, true)}
+                  fill={INK}
+                  fillOpacity={0.85}
+                />
+              )}
           </svg>
         </div>
       </div>

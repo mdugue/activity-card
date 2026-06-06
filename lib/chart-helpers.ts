@@ -263,6 +263,45 @@ export function normalizeOverlay(
   });
 }
 
+export interface OverlayPath {
+  /** Filled-area path (line closed down to the baseline at its own right edge). */
+  area: string;
+  /** This curve's right edge in box coordinates (shorter legs end before `w`). */
+  endX: number;
+  /** Open line path. */
+  line: string;
+  widthFrac: number;
+}
+
+/**
+ * Map normalised overlay curves into `line` + filled `area` path strings inside
+ * a w×h box (y grows downward, the curve's highest point near the top). `reach`
+ * is a vertical-exaggeration factor (1 = use the full height). Each area closes
+ * down to the baseline at the curve's own right edge, so a short leg's fill
+ * doesn't smear across the rest of the width.
+ */
+export function overlayPaths(
+  curves: NormalizedCurve[],
+  w: number,
+  h: number,
+  reach = 1
+): OverlayPath[] {
+  const clampReach = Math.min(1, Math.max(0, reach));
+  return curves.map((c) => {
+    const pts = c.pts.map(
+      (p) => [p[0] * w, h - p[1] * h * clampReach] as Coord
+    );
+    const line = pts
+      .map(
+        (p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`
+      )
+      .join(" ");
+    const endX = pts.at(-1)?.[0] ?? w;
+    const area = `${line} L${endX.toFixed(1)} ${h.toFixed(1)} L0 ${h.toFixed(1)} Z`;
+    return { line, area, endX, widthFrac: c.widthFrac };
+  });
+}
+
 /* ------------- colour helpers (accent shades for overlaid routes) --------- */
 
 function parseHex(hex: string): [number, number, number] {

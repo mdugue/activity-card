@@ -9,7 +9,7 @@
 import { useId } from "react";
 import type { Coord } from "@/components/app/sample-data";
 import type { RouteStyle } from "@/lib/carousel/types";
-import { projectRoute } from "@/lib/chart-helpers";
+import { mixHex, projectRoute, projectRoutes } from "@/lib/chart-helpers";
 
 interface RouteLineProps {
   accent: string;
@@ -20,6 +20,9 @@ interface RouteLineProps {
   /** stronger shadow for legibility over a photo */
   overPhoto?: boolean;
   pad?: number;
+  /** Multi-activity project: every leg's route, drawn in one shared coordinate
+   *  system and tinted along an accent2→accent ramp. Overrides `coords`. */
+  routes?: Coord[][];
   showMarkers?: boolean;
   strokeWidth?: number;
   style: RouteStyle;
@@ -65,6 +68,7 @@ function StartArrow({
 
 export function RouteLine({
   coords,
+  routes,
   w,
   h,
   pad = 80,
@@ -77,6 +81,67 @@ export function RouteLine({
   showMarkers = true,
 }: RouteLineProps) {
   const gradId = useId();
+
+  const shadow = overPhoto
+    ? "drop-shadow(0 2px 12px rgba(0,0,0,0.55))"
+    : "drop-shadow(0 3px 8px rgba(0,0,0,0.18))";
+  const arrowSize = Math.max(9, strokeWidth * 2.1);
+
+  // Multi-activity project: overlay every leg in one shared coordinate system.
+  if (routes && routes.length > 0) {
+    const projected = projectRoutes(routes, w, h, pad);
+    if (!projected.some((p) => p.d)) {
+      return null;
+    }
+    const cols = routes.map((_, i) =>
+      routes.length <= 1
+        ? accent
+        : mixHex(accent2, accent, i / (routes.length - 1))
+    );
+    const lead = projected.find((p) => p.points.length > 1);
+    return (
+      <svg
+        aria-hidden="true"
+        preserveAspectRatio="xMidYMid meet"
+        style={{ width: "100%", height: "100%", display: "block" }}
+        viewBox={`0 0 ${w} ${h}`}
+      >
+        <title>Routes</title>
+        {projected.map((pr, i) =>
+          pr.d ? (
+            <g key={pr.d}>
+              {style === "poster" && !overPhoto ? (
+                <path
+                  d={pr.d}
+                  fill="none"
+                  stroke={ink}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeOpacity={0.08}
+                  strokeWidth={strokeWidth * 3.5}
+                />
+              ) : null}
+              <path
+                d={pr.d}
+                fill="none"
+                stroke={cols[i]}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={strokeWidth}
+                style={{ filter: shadow }}
+              />
+            </g>
+          ) : null
+        )}
+        {showMarkers && lead ? (
+          <g style={{ filter: shadow }}>
+            <StartArrow color={ink} points={lead.points} size={arrowSize} />
+          </g>
+        ) : null}
+      </svg>
+    );
+  }
+
   const { d, points } = projectRoute(coords, w, h, pad);
   if (!d) {
     return null;
@@ -88,12 +153,6 @@ export function RouteLine({
   } else if (style === "desaturated") {
     stroke = accent;
   }
-
-  const shadow = overPhoto
-    ? "drop-shadow(0 2px 12px rgba(0,0,0,0.55))"
-    : "drop-shadow(0 3px 8px rgba(0,0,0,0.18))";
-
-  const arrowSize = Math.max(9, strokeWidth * 2.1);
 
   return (
     <svg

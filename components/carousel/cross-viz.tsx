@@ -8,6 +8,11 @@ import type {
   CrossViz as CrossVizKind,
   FontPair,
 } from "@/lib/carousel/theme-tokens";
+import {
+  isMultiActivity,
+  segmentProfiles,
+  segmentRoutes,
+} from "@/lib/multi-activity";
 import { ElevationBand } from "./elevation-band";
 import { RouteLine } from "./route-line";
 
@@ -24,6 +29,19 @@ interface CrossVizProps {
   w?: number;
 }
 
+/** Whether the wrap-up nod has data to show, project-aware. */
+function hasCross(data: ActivityData, kind: CrossVizKind): boolean {
+  if (isMultiActivity(data)) {
+    return kind === "elevation"
+      ? segmentProfiles(data).profiles.length > 0
+      : segmentRoutes(data).length > 0;
+  }
+  if (kind === "elevation") {
+    return (pickProfile(data).profile?.length ?? 0) > 1;
+  }
+  return (data.routeCoordinates?.length ?? 0) > 1;
+}
+
 export function CrossViz({
   kind,
   data,
@@ -34,11 +52,16 @@ export function CrossViz({
   w = 260,
   h = 150,
 }: CrossVizProps) {
-  const { profile, mode } = pickProfile(data);
-  const hasRoute = (data.routeCoordinates?.length ?? 0) > 1;
-  const hasProfile = (profile?.length ?? 0) > 1;
-  if (kind === "elevation" ? !hasProfile : !hasRoute) {
+  if (!hasCross(data, kind)) {
     return null;
+  }
+  const { profile, mode } = pickProfile(data);
+  const multi = isMultiActivity(data);
+  const seg = multi ? segmentProfiles(data) : null;
+  const routes = multi ? segmentRoutes(data) : [];
+  let bandMode = mode;
+  if (seg) {
+    bandMode = seg.useElevation ? "elevation" : "pace";
   }
 
   return (
@@ -60,9 +83,11 @@ export function CrossViz({
             colors={{ line: color, fillFrom: color, fillTo: "transparent" }}
             exaggeration={1.2}
             h={h}
-            mode={mode}
+            mode={bandMode}
             profile={profile}
+            profiles={multi ? seg?.profiles : undefined}
             w={w}
+            weights={multi ? seg?.distances : undefined}
           />
         ) : (
           <RouteLine
@@ -72,6 +97,7 @@ export function CrossViz({
             h={h}
             ink={color}
             pad={14}
+            routes={multi ? routes.map((r) => r.coords) : undefined}
             showMarkers={false}
             strokeWidth={4}
             style="poster"
