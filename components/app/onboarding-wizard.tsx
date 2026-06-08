@@ -732,7 +732,10 @@ export function OnboardingWizard({
             cards size to content and can't overlap; a 2-col grid on desktop.
             (A stacked grid with the body's fixed height stretches the rows and
             overlaps the cards.) */}
-        <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 pb-2 sm:px-8 md:grid md:grid-cols-2 md:items-start">
+        {/* Body — both steps. `px-2`/`py-2` (plus the card padding) give the
+            active card's `ring-2` room inside the scroll container: with no
+            top/side padding, overflow-y-auto shaves the ring's outer edge. */}
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-2 sm:px-8 md:grid md:grid-cols-2 md:items-start">
           <ActivityStep
             active={!activity}
             activity={activity}
