@@ -148,7 +148,7 @@ function activityKicker(activity: WizardActivity): string {
 
 function OrDivider() {
   return (
-    <div className="my-3 flex items-center gap-3">
+    <div className="my-2.5 flex items-center gap-3">
       <span className="h-px flex-1 bg-border" />
       <span className="caption-micro">or</span>
       <span className="h-px flex-1 bg-border" />
@@ -176,7 +176,10 @@ function StepCard({
   title: string;
 }) {
   return (
-    <Card className={cn("gap-4", active && "ring-2 ring-primary")} size="sm">
+    <Card
+      className={cn("shrink-0 gap-4", active && "ring-2 ring-primary")}
+      size="sm"
+    >
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <span className={cn("font-heading", numClass)}>{num}</span>
@@ -213,7 +216,7 @@ function DropZone({
   return (
     <button
       className={cn(
-        "flex flex-col items-center gap-2.5 border border-foreground/30 border-dashed bg-foreground/[0.015] px-4 py-5 text-center transition-colors hover:border-primary hover:bg-primary/5",
+        "flex flex-col items-center gap-2 border border-foreground/30 border-dashed bg-foreground/[0.015] px-4 py-4 text-center transition-colors hover:border-primary hover:bg-primary/5",
         dragging && "border-primary bg-primary/5"
       )}
       onClick={onBrowse}
@@ -368,7 +371,7 @@ function ActivityStep({
             }
             icon={
               <MapTrifoldIcon
-                className="size-9 text-foreground"
+                className="size-8 text-foreground"
                 weight="duotone"
               />
             }
@@ -477,7 +480,7 @@ function PhotoStepBody({
         cta="Browse photos"
         dragging={dragging}
         hint="Drop a photo"
-        icon={<ImageIcon className="size-9 text-foreground" weight="duotone" />}
+        icon={<ImageIcon className="size-8 text-foreground" weight="duotone" />}
         onBrowse={onBrowse}
         onDragStateChange={onDragStateChange}
         onFiles={onFiles}
