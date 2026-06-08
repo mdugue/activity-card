@@ -11,7 +11,6 @@ import {
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { EffortMark } from "@/components/app/effort-wordmark";
 import {
   type ActivityData,
   type ActivitySource,
@@ -44,7 +43,11 @@ import {
   useStravaConnection,
 } from "@/hooks/use-strava-connection";
 import { formatDuration, formatNumber } from "@/lib/format";
-import { type ParsedActivity, parseActivityFiles } from "@/lib/parse-activity";
+import {
+  ACTIVITY_FILE_RE,
+  type ParsedActivity,
+  parseActivityFiles,
+} from "@/lib/parse-activity";
 import { cn } from "@/lib/utils";
 
 /** What the wizard hands back when the user opens the editor. Exactly one of
@@ -145,7 +148,7 @@ function activityKicker(activity: WizardActivity): string {
 
 function OrDivider() {
   return (
-    <div className="my-4 flex items-center gap-3">
+    <div className="my-3 flex items-center gap-3">
       <span className="h-px flex-1 bg-border" />
       <span className="caption-micro">or</span>
       <span className="h-px flex-1 bg-border" />
@@ -210,7 +213,7 @@ function DropZone({
   return (
     <button
       className={cn(
-        "flex flex-col items-center gap-3 border border-foreground/30 border-dashed bg-foreground/[0.015] px-4 py-6 text-center transition-colors hover:border-primary hover:bg-primary/5",
+        "flex flex-col items-center gap-2.5 border border-foreground/30 border-dashed bg-foreground/[0.015] px-4 py-5 text-center transition-colors hover:border-primary hover:bg-primary/5",
         dragging && "border-primary bg-primary/5"
       )}
       onClick={onBrowse}
@@ -521,7 +524,7 @@ function PhotoStep({
       badgeClass="bg-primary text-primary-foreground"
       num="02"
       numClass="text-primary"
-      title="Add a background photo"
+      title="Add a photo"
     >
       <PhotoStepBody {...body} />
     </StepCard>
@@ -543,6 +546,9 @@ export function OnboardingWizard({
     null
   );
   const [stravaPickerOpen, setStravaPickerOpen] = useState(false);
+  // Guards the async hand-off (sample photos await a fetch) against a
+  // double-click firing onComplete twice.
+  const [finishing, setFinishing] = useState(false);
   const activityInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -572,12 +578,17 @@ export function OnboardingWizard({
     setParsing(true);
     try {
       const parts = await parseActivityFiles(files);
-      const list = Array.from(files);
+      // Count only the activity files (drag-drop can include others), so the
+      // confirmation label matches what was actually loaded.
+      const matched = Array.from(files).filter((f) =>
+        ACTIVITY_FILE_RE.test(f.name)
+      );
       setActivity({
         kind: "parts",
         source: "upload",
         parts,
-        name: list.length === 1 ? list[0].name : `${list.length} files`,
+        name:
+          matched.length === 1 ? matched[0].name : `${matched.length} files`,
         label: parts[0].title,
         meta: activityMeta(parts[0]),
       });
@@ -627,9 +638,10 @@ export function OnboardingWizard({
   };
 
   const finish = async () => {
-    if (!activity) {
+    if (!activity || finishing) {
       return;
     }
+    setFinishing(true);
     let photoFile: File | null = null;
     if (photo?.kind === "upload") {
       photoFile = photo.file;
@@ -652,9 +664,13 @@ export function OnboardingWizard({
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent
-        className="flex max-h-[92dvh] w-full max-w-[calc(100%-1rem)] flex-col gap-0 overflow-hidden border-foreground border-t-4 bg-background p-0 sm:max-h-[88vh] sm:max-w-[60rem]"
+        className="flex max-h-[92dvh] w-full max-w-[calc(100%-1rem)] flex-col gap-0 overflow-hidden bg-background p-0 sm:max-h-[88vh] sm:max-w-[60rem]"
         showCloseButton={false}
       >
+        {/* Brutalist top accent. Rendered as a child bar rather than a
+            border-top: an overflow-hidden + transformed dialog shaves a top
+            border on some browsers, but content can't be clipped. */}
+        <div aria-hidden className="h-1 shrink-0 bg-foreground" />
         <input
           accept=".gpx,.fit"
           className="hidden"
@@ -682,18 +698,15 @@ export function OnboardingWizard({
           type="file"
         />
 
-        {/* Header — brand + title left, close top-right. */}
-        <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4 sm:px-8">
-          <div className="flex flex-col gap-2">
-            <span className="caption-micro flex items-center gap-2">
-              <EffortMark className="size-4" /> Welcome to Effort
-            </span>
+        {/* Header — title left, close top-right. */}
+        <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-3 sm:px-8 sm:pt-6 sm:pb-4">
+          <div className="flex flex-col gap-1.5">
             <DialogTitle className="text-2xl sm:text-3xl">
               Two steps to your card
             </DialogTitle>
-            <DialogDescription className="max-w-md">
-              Bring in an activity, drop a photo behind it, then make it yours
-              in the editor.
+            <DialogDescription className="hidden max-w-md sm:block">
+              Bring in an activity, add a photo, then make it yours in the
+              editor.
             </DialogDescription>
           </div>
           <DialogClose render={<Button size="icon-sm" variant="outline" />}>
@@ -702,8 +715,11 @@ export function OnboardingWizard({
           </DialogClose>
         </div>
 
-        {/* Body — both steps at once: side-by-side on desktop, stacked on touch. */}
-        <div className="grid flex-1 grid-cols-1 items-start gap-4 overflow-y-auto px-6 pb-2 sm:px-8 md:grid-cols-[1fr_auto_1fr] md:gap-3">
+        {/* Body — both steps at once. Flex column when stacked (touch) so the
+            cards size to content and can't overlap; a 2-col grid on desktop.
+            (A stacked grid with the body's fixed height stretches the rows and
+            overlaps the cards.) */}
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 pb-2 sm:px-8 md:grid md:grid-cols-2 md:items-start">
           <ActivityStep
             active={!activity}
             activity={activity}
@@ -717,11 +733,6 @@ export function OnboardingWizard({
             parsing={parsing}
             strava={strava}
           />
-
-          {/* Connector — points right between cards, down when stacked. */}
-          <div className="flex items-center justify-center pt-2 text-muted-foreground md:pt-12">
-            <ArrowRightIcon className="size-5 rotate-90 md:rotate-0" />
-          </div>
 
           <PhotoStep
             active={Boolean(activity) && !photo && !photoSkipped}
@@ -753,7 +764,7 @@ export function OnboardingWizard({
           </div>
           <Button
             className="ml-auto h-12 px-8 font-heading text-lg uppercase tracking-wide"
-            disabled={!activity}
+            disabled={!activity || finishing}
             onClick={finish}
             size="lg"
           >
@@ -769,9 +780,10 @@ export function OnboardingWizard({
               step 1 so the photo step still follows. */}
         <Dialog onOpenChange={setStravaPickerOpen} open={stravaPickerOpen}>
           <DialogContent
-            className="flex max-h-[90dvh] w-full max-w-2xl flex-col gap-0 overflow-hidden border-foreground border-t-4 bg-background p-0 sm:max-h-[85vh]"
+            className="flex max-h-[90dvh] w-full max-w-2xl flex-col gap-0 overflow-hidden bg-background p-0 sm:max-h-[85vh]"
             showCloseButton={false}
           >
+            <div aria-hidden className="h-1 shrink-0 bg-foreground" />
             <DialogTitle className="sr-only">Pick from Strava</DialogTitle>
             <DialogDescription className="sr-only">
               Choose a recent Strava activity to turn into a card.
