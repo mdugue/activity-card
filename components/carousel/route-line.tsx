@@ -9,7 +9,12 @@
 import { useId } from "react";
 import type { Coord } from "@/components/app/sample-data";
 import type { RouteStyle } from "@/lib/carousel/types";
-import { mixHex, projectRoute, projectRoutes } from "@/lib/chart-helpers";
+import {
+  accentShades,
+  mixHex,
+  projectRoute,
+  projectRoutes,
+} from "@/lib/chart-helpers";
 
 interface RouteLineProps {
   accent: string;
@@ -93,11 +98,20 @@ export function RouteLine({
     if (!projected.some((p) => p.d)) {
       return null;
     }
-    const cols = routes.map((_, i) =>
-      routes.length <= 1
-        ? accent
-        : mixHex(accent2, accent, i / (routes.length - 1))
-    );
+    // Distinguish the legs by colour. When the caller gives two distinct accents
+    // (the route hero), ramp between them; when it passes a single colour (the
+    // detail / cross-viz / panel glyphs), ramp that colour's own shades so the
+    // legs still read apart at small sizes.
+    let cols: string[];
+    if (routes.length <= 1) {
+      cols = [accent];
+    } else if (accent === accent2) {
+      cols = accentShades(accent, routes.length);
+    } else {
+      cols = routes.map((_, i) =>
+        mixHex(accent2, accent, i / (routes.length - 1))
+      );
+    }
     const lead = projected.find((p) => p.points.length > 1);
     return (
       <svg

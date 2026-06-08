@@ -73,3 +73,24 @@ export function segmentProfiles(data: ActivityData): SegmentProfiles {
   }
   return { profiles, distances, sports, useElevation };
 }
+
+/**
+ * Collect one *specific* per-leg series (elevation or pace) with its distances —
+ * for callers that need a fixed metric rather than `segmentProfiles`'
+ * elevation-preferred pick (e.g. a theme showing a dedicated pace sparkline).
+ */
+export function segmentSeries(
+  data: ActivityData,
+  field: "elevationProfile" | "paceProfile"
+): { distances: number[]; profiles: number[][] } {
+  const profiles: number[][] = [];
+  const distances: number[] = [];
+  for (const s of data.segments ?? []) {
+    const p = s[field];
+    if (p && p.length > 1) {
+      profiles.push(p);
+      distances.push(s.distanceKm);
+    }
+  }
+  return { profiles, distances };
+}

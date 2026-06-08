@@ -398,3 +398,47 @@ export const SAMPLE_TRI: ActivityData = {
     { name: "T2", durationSec: 1 * 60 + 48 },
   ],
 };
+
+// A two-leg project (bike + run) — the common "brick" session. The run is a
+// small loop near the end of the bike (a realistic relative size/position), to
+// exercise multi-route rendering where one leg is much smaller than the other.
+const brickBike = translate(genLoop(1.1, 160), 0, 0);
+const brickRun = translate(
+  genOutBack(3.3, 90).map(([x, y]): Coord => [x * 0.34, y * 0.34]),
+  1.45,
+  -0.15
+);
+
+export const SAMPLE_BRICK: ActivityData = {
+  sport: "triathlon",
+  title: "Brick session",
+  date: "2026-06-05",
+  location: "Sächsische Schweiz, Germany",
+  athleteName: "Manuel",
+  distanceKm: 71.6,
+  durationSec: 3 * 3600 + 9 * 60,
+  elevationGainM: 477,
+  avgHeartRate: 148,
+  segments: [
+    {
+      sport: "bike",
+      distanceKm: 60,
+      durationSec: 2 * 3600 + 28 * 60,
+      avgSpeedKmh: 24.3,
+      elevationGainM: 430,
+      routeCoordinates: brickBike,
+      elevationProfile: genElevation(1.1, 160, 120, 430),
+    },
+    {
+      sport: "run",
+      distanceKm: 11.6,
+      durationSec: 41 * 60,
+      avgPaceMinPerKm: 3 + 32 / 60,
+      elevationGainM: 47,
+      routeCoordinates: brickRun,
+      elevationProfile: genElevation(3.3, 90, 110, 60),
+      paceProfile: genPace(3.3, 90, 212, 14),
+    },
+  ],
+  transitions: [{ name: "T1", durationSec: 1 * 60 + 36 }],
+};

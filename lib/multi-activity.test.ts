@@ -5,6 +5,7 @@ import {
   isMultiActivity,
   segmentProfiles,
   segmentRoutes,
+  segmentSeries,
 } from "@/lib/multi-activity";
 
 const base: ActivityData = {
@@ -114,5 +115,39 @@ describe("segmentProfiles", () => {
     });
     expect(out.useElevation).toBe(false);
     expect(out.profiles).toHaveLength(2);
+  });
+});
+
+describe("segmentSeries", () => {
+  const data: ActivityData = {
+    ...base,
+    segments: [
+      {
+        sport: "bike",
+        distanceKm: 5,
+        durationSec: 5,
+        elevationProfile: [0, 10, 20],
+      },
+      {
+        sport: "run",
+        distanceKm: 2,
+        durationSec: 2,
+        elevationProfile: [1, 2, 3],
+        paceProfile: [300, 290, 280],
+      },
+    ],
+  };
+
+  test("collects the requested field across legs, with distances", () => {
+    const elev = segmentSeries(data, "elevationProfile");
+    expect(elev.profiles).toHaveLength(2);
+    expect(elev.distances).toEqual([5, 2]);
+  });
+
+  test("includes only legs that carry the field", () => {
+    // Only the run has a pace profile.
+    const pace = segmentSeries(data, "paceProfile");
+    expect(pace.profiles).toHaveLength(1);
+    expect(pace.distances).toEqual([2]);
   });
 });
