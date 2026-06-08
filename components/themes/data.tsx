@@ -29,6 +29,7 @@ import {
   segmentRoutes,
 } from "@/lib/multi-activity";
 import { OverlayRoute } from "./overlay-route";
+import { PhotoUnderlay } from "./photo-underlay";
 import type { ActivityCardProps } from "./types";
 
 const INK = "#0e0e0e";
@@ -157,7 +158,7 @@ function DataRoute({
   );
 }
 
-export function ThemeData({ data }: ActivityCardProps) {
+export function ThemeData({ data, photoUrl }: ActivityCardProps) {
   const sport = data.sport;
   const multi = isMultiActivity(data);
   const routes = multi ? segmentRoutes(data) : [];
@@ -309,10 +310,14 @@ export function ThemeData({ data }: ActivityCardProps) {
         padding: "60px 56px 52px 56px",
         boxSizing: "border-box",
         position: "relative",
+        // Stacking context so the z-index:-1 photo underlay paints above the
+        // solid background (not behind it) and below the dense content.
+        isolation: "isolate",
         display: "flex",
         flexDirection: "column",
       }}
     >
+      {photoUrl ? <PhotoUnderlay photoUrl={photoUrl} /> : null}
       <div
         style={{
           display: "flex",

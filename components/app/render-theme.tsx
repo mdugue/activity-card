@@ -3,9 +3,11 @@ import { THEME_META, THEMES, type ThemeId } from "@/components/themes";
 import { ThemeAltitude } from "@/components/themes/altitude";
 import { ThemeMinimal } from "@/components/themes/minimal";
 import { ThemePhoto } from "@/components/themes/photo";
+import { ThemeStrata } from "@/components/themes/strata";
 import type { AltitudeConfig } from "@/lib/altitude";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme } from "@/lib/palette";
+import type { StrataConfig } from "@/lib/strata";
 
 export type { ThemeId } from "@/components/themes";
 
@@ -18,6 +20,7 @@ interface RenderThemeProps {
   /** Photo theme: pre-resolved palette extracted from the photo, if available. */
   photoPaletteTheme?: PaletteTheme | null;
   photoUrl?: string | null;
+  strataConfig?: StrataConfig;
   theme: ThemeId;
 }
 
@@ -51,10 +54,14 @@ export function RenderTheme({
   photoUrl,
   photoBackdropEnabled = true,
   altitudeConfig,
+  strataConfig,
   photoPaletteTheme = null,
   imageTransform = null,
 }: RenderThemeProps) {
   const photo = effectivePhotoUrl(theme, photoUrl, photoBackdropEnabled);
+  if (theme === "strata") {
+    return <ThemeStrata config={strataConfig} data={data} photoUrl={photo} />;
+  }
   if (theme === "altitude") {
     return (
       <ThemeAltitude

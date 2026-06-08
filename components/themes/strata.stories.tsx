@@ -8,15 +8,22 @@ import {
   SAMPLE_TRI,
 } from "@/components/app/sample-data";
 import { DEFAULT_STRATA_CONFIG } from "@/lib/strata";
+import {
+  type BackgroundArgs,
+  backgroundArgTypes,
+} from "../../.storybook/backgrounds";
 import { ThemeStrata } from "./strata";
 
-// STRATA is a generative card (photoMode "none") — no background controls.
+// STRATA is generative, but a background photo is optional: pick one from the
+// Background toolbar (or upload via the per-story control) to preview the field
+// over a photo with its mood-tinted scrim.
 const meta = {
   component: ThemeStrata,
   tags: ["ai-generated"],
   parameters: { layout: "fullscreen" },
+  argTypes: { ...backgroundArgTypes },
   args: { data: SAMPLE_RIDE },
-} satisfies Meta<ComponentProps<typeof ThemeStrata>>;
+} satisfies Meta<ComponentProps<typeof ThemeStrata> & BackgroundArgs>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;

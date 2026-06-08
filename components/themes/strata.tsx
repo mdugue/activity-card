@@ -1,11 +1,12 @@
-// STRATA — a generative card built from the activity alone, no photo needed.
-// The route's wander (top) is morphed point-by-point down through a woven field
-// of strata into the elevation / pace profile (bottom); both source curves stay
-// highlighted, the layers between are the abstraction. Parameterised by `config`
-// (mood · density · legend) — the model and the morph maths live in
-// `lib/strata.ts`. Type: Space Grotesk (display) + JetBrains Mono (cartographic
-// labels / data). Renders to plain inline SVG (no CSS filters) so it rasterises
-// cleanly via html-to-image.
+// STRATA — a generative card built from the activity itself; a background photo
+// is optional. The route's wander (top) is morphed point-by-point down through a
+// woven field of strata into the elevation / pace profile (bottom); both source
+// curves stay highlighted, the layers between are the abstraction. Over a photo,
+// the mood becomes a tinted legibility scrim and the field rides on top.
+// Parameterised by `config` (mood · density · legend) — the model and the morph
+// maths live in `lib/strata.ts`. Type: Syne (display) + JetBrains Mono
+// (cartographic labels / data). Renders to plain inline SVG (no CSS filters) so
+// it rasterises cleanly via html-to-image.
 
 import type { ActivityData } from "@/components/app/sample-data";
 import { mixHex } from "@/lib/chart-helpers";
@@ -27,7 +28,7 @@ import {
 } from "@/lib/strata";
 import type { ActivityCardProps } from "./types";
 
-const DISPLAY = "var(--font-space-grotesk), sans-serif";
+const DISPLAY = "var(--font-syne), sans-serif";
 const MONO = "var(--font-mono), monospace";
 
 // The morph field's internal coordinate space; the SVG scales to fill the hero.
@@ -42,9 +43,12 @@ interface ThemeStrataProps extends ActivityCardProps {
 function StrataField({
   data,
   config,
+  overPhoto,
 }: {
   config: StrataConfig;
   data: ActivityData;
+  /** Boost halos + outline the captions so the field reads over a photo. */
+  overPhoto: boolean;
 }) {
   const tokens = STRATA_MOODS[config.mood];
   const source = resolveStrataSource(data);
@@ -73,6 +77,8 @@ function StrataField({
   const routeTopY = Math.min(...hero0.pts.map((p) => p[1]));
   const elevBotY = Math.max(...heroN.pts.map((p) => p[1]));
   const haloW = tokens.heroW + 8;
+  // Over a photo the heroes need a firmer halo and the captions an outline.
+  const haloOpacity = overPhoto ? 0.34 : 0.18;
 
   return (
     <svg
@@ -116,7 +122,7 @@ function StrataField({
         stroke={tokens.elevColor}
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeOpacity={0.18}
+        strokeOpacity={haloOpacity}
         strokeWidth={haloW}
       />
       <path
@@ -134,7 +140,7 @@ function StrataField({
         stroke={tokens.routeColor}
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeOpacity={0.18}
+        strokeOpacity={haloOpacity}
         strokeWidth={haloW}
       />
       <path
@@ -153,7 +159,14 @@ function StrataField({
       </g>
 
       {config.legend ? (
-        <g fill={tokens.text} fontFamily={MONO} fontWeight={600}>
+        <g
+          fill={tokens.text}
+          fontFamily={MONO}
+          fontWeight={600}
+          paintOrder="stroke"
+          stroke={overPhoto ? `rgba(${tokens.scrim},0.7)` : "none"}
+          strokeWidth={overPhoto ? 4 : 0}
+        >
           <text fontSize={22} letterSpacing={3} x={6} y={routeTopY - 16}>
             ROUTE
           </text>
@@ -214,11 +227,13 @@ function sportLabel(sport: ActivityData["sport"]): string {
 
 export function ThemeStrata({
   data,
+  photoUrl,
   config = DEFAULT_STRATA_CONFIG,
 }: ThemeStrataProps) {
   const tokens = STRATA_MOODS[config.mood];
   const stats = statRow(data);
   const statText = tokens.inkStat ? tokens.text : "#fff";
+  const overPhoto = Boolean(photoUrl);
   const metaParts = [
     (data.location || "").toUpperCase(),
     formatDateUpper(data.date),
@@ -233,6 +248,9 @@ export function ThemeStrata({
         color: tokens.text,
         fontFamily: MONO,
         position: "relative",
+        // Own stacking context so the z-index:-1 photo/scrim paint above this
+        // background (not behind it) yet below all content.
+        isolation: "isolate",
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
@@ -240,6 +258,34 @@ export function ThemeStrata({
         boxSizing: "border-box",
       }}
     >
+      {/* Optional background photo + a mood-tinted legibility scrim. Both sit at
+          z-index -1 (above the solid mood background, below all content) so the
+          woven field and type ride on top without rewrapping the layout. */}
+      {photoUrl ? (
+        <>
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              inset: 0,
+              zIndex: -1,
+              backgroundImage: `url(${photoUrl})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          />
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              inset: 0,
+              zIndex: -1,
+              background: `linear-gradient(180deg, rgba(${tokens.scrim},0.86) 0%, rgba(${tokens.scrim},0.36) 17%, rgba(${tokens.scrim},0) 37%, rgba(${tokens.scrim},0) 58%, rgba(${tokens.scrim},0.5) 84%, rgba(${tokens.scrim},0.85) 100%)`,
+            }}
+          />
+        </>
+      ) : null}
+
       {/* Meta band. */}
       <div
         style={{
@@ -267,13 +313,16 @@ export function ThemeStrata({
       <h1
         style={{
           fontFamily: DISPLAY,
-          fontWeight: 700,
+          fontWeight: 800,
           fontSize: 82,
           lineHeight: 0.94,
           letterSpacing: "-0.02em",
           margin: "34px 0 14px 0",
           maxWidth: "94%",
           textWrap: "pretty",
+          textShadow: overPhoto
+            ? `0 2px 30px rgba(${tokens.scrim},0.6)`
+            : undefined,
         }}
       >
         {data.title}
@@ -298,7 +347,7 @@ export function ThemeStrata({
           minHeight: 0,
         }}
       >
-        <StrataField config={config} data={data} />
+        <StrataField config={config} data={data} overPhoto={overPhoto} />
       </div>
 
       {/* Stat strip. */}

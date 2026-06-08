@@ -12,6 +12,7 @@ import {
   formatPaceMin,
   formatPaceSec,
 } from "@/lib/format";
+import { PhotoUnderlay } from "./photo-underlay";
 import type { ActivityCardProps } from "./types";
 
 const INK = "#11151a";
@@ -82,7 +83,7 @@ function heroFor(seg: TriSegment): string {
   return `${formatPaceMin(seg.avgPaceMinPerKm)} /km`;
 }
 
-export function ThemeTriathlon({ data }: ActivityCardProps) {
+export function ThemeTriathlon({ data, photoUrl }: ActivityCardProps) {
   const sports = data.segments || [];
   const transitions = data.transitions || [];
 
@@ -160,12 +161,16 @@ export function ThemeTriathlon({ data }: ActivityCardProps) {
         color: INK,
         fontFamily: "var(--font-ibm-plex-mono), monospace",
         position: "relative",
+        // Stacking context so the z-index:-1 photo underlay paints above the
+        // solid background (not behind it) and below the content.
+        isolation: "isolate",
         padding: "70px 70px 50px 70px",
         boxSizing: "border-box",
         display: "flex",
         flexDirection: "column",
       }}
     >
+      {photoUrl ? <PhotoUnderlay photoUrl={photoUrl} /> : null}
       <div
         style={{
           display: "flex",

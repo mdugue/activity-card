@@ -13,6 +13,7 @@ import { defaultFilename, exportCard } from "@/lib/export-card";
 import { formatDateUpper } from "@/lib/format";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme } from "@/lib/palette";
+import type { StrataConfig } from "@/lib/strata";
 import { RenderTheme, type ThemeId } from "./render-theme";
 import type { ActivityData } from "./sample-data";
 
@@ -26,6 +27,7 @@ interface DownloadStateProps {
   onNew: () => void;
   photoPaletteTheme: PaletteTheme | null;
   photoUrl: string | null;
+  strataConfig: StrataConfig;
   theme: ThemeId;
 }
 
@@ -34,6 +36,7 @@ export function DownloadState({
   theme,
   photoUrl,
   altitudeConfig,
+  strataConfig,
   photoPaletteTheme,
   imageTransform,
   onKeepEditing,
@@ -80,6 +83,7 @@ export function DownloadState({
                   imageTransform={imageTransform}
                   photoPaletteTheme={photoPaletteTheme}
                   photoUrl={photoUrl}
+                  strataConfig={strataConfig}
                   theme={theme}
                 />
               </div>
@@ -146,6 +150,7 @@ export function DownloadState({
           imageTransform={imageTransform}
           photoPaletteTheme={photoPaletteTheme}
           photoUrl={photoUrl}
+          strataConfig={strataConfig}
           theme={theme}
         />
       </div>

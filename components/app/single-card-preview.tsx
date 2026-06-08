@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import type { AltitudeConfig } from "@/lib/altitude";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme } from "@/lib/palette";
+import type { StrataConfig } from "@/lib/strata";
 
 interface SingleCardPreviewProps {
   altitudeConfig: AltitudeConfig;
@@ -25,6 +26,7 @@ interface SingleCardPreviewProps {
   photoBackdropEnabled: boolean;
   photoPaletteTheme: PaletteTheme | null;
   photoUrl: string | null;
+  strataConfig: StrataConfig;
   theme: ThemeId;
 }
 
@@ -34,6 +36,7 @@ export function SingleCardPreview({
   photoUrl,
   photoBackdropEnabled,
   altitudeConfig,
+  strataConfig,
   photoPaletteTheme,
   imageTransform,
   onImageTransformChange,
@@ -70,6 +73,7 @@ export function SingleCardPreview({
             photoBackdropEnabled={photoBackdropEnabled}
             photoPaletteTheme={photoPaletteTheme}
             photoUrl={photoUrl}
+            strataConfig={strataConfig}
             theme={theme}
           />
         </div>

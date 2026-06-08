@@ -18,7 +18,7 @@ import {
 } from "@/components/app/sample-data";
 import { StravaFooter } from "@/components/app/strava-footer";
 import { StravaPicker } from "@/components/app/strava-picker";
-import { themeVisibilityAvailable } from "@/components/themes";
+import { THEME_META, themeVisibilityAvailable } from "@/components/themes";
 import { useCarousel } from "@/hooks/use-carousel";
 import { useImagePalette } from "@/hooks/use-image-palette";
 import { type AltitudeConfig, DEFAULT_ALTITUDE_CONFIG } from "@/lib/altitude";
@@ -34,6 +34,7 @@ import { IDENTITY_TRANSFORM, type ImageTransform } from "@/lib/image-transform";
 import type { PhotoMood } from "@/lib/palette";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import { NO_EFFECTS, type PhotoEffects } from "@/lib/photo-effects";
+import { DEFAULT_STRATA_CONFIG, type StrataConfig } from "@/lib/strata";
 import {
   applyVisibility,
   DEFAULT_VISIBILITY,
@@ -50,6 +51,7 @@ interface PersistedUi {
   carouselTheme: CarouselThemeId;
   mode: CardMode;
   photoMood: PhotoMood;
+  strataConfig: StrataConfig;
   theme: ThemeId;
   visibility: Visibility;
 }
@@ -122,6 +124,9 @@ export default function Home() {
   const [altitudeConfig, setAltitudeConfig] = useState<AltitudeConfig>(
     DEFAULT_ALTITUDE_CONFIG
   );
+  const [strataConfig, setStrataConfig] = useState<StrataConfig>(
+    DEFAULT_STRATA_CONFIG
+  );
   const [photoMood, setPhotoMood] = useState<PhotoMood>("vibrant");
   // Carousel is the headline mode, so it's the default for a fresh session.
   const [mode, setMode] = useState<CardMode>("carousel");
@@ -164,6 +169,9 @@ export default function Home() {
         ...persisted.altitudeConfig,
       });
     }
+    if (persisted.strataConfig) {
+      setStrataConfig({ ...DEFAULT_STRATA_CONFIG, ...persisted.strataConfig });
+    }
     if (persisted.photoMood) {
       setPhotoMood(persisted.photoMood);
     }
@@ -188,6 +196,7 @@ export default function Home() {
       accent,
       visibility,
       altitudeConfig,
+      strataConfig,
       photoMood,
       mode,
       athleteName: data?.athleteName || persistedAthleteNameRef.current,
@@ -203,6 +212,7 @@ export default function Home() {
     accent,
     visibility,
     altitudeConfig,
+    strataConfig,
     photoMood,
     mode,
     data?.athleteName,
@@ -335,6 +345,16 @@ export default function Home() {
     // so the theme's intent shows immediately; the single card has no such theme
     // look, so it starts clean. The user can still change it either way.
     setImageTransform(IDENTITY_TRANSFORM);
+    if (file) {
+      // A freshly added photo adopts the active single-card theme's default
+      // backdrop state — STRATA / Data / Triathlon start OFF so their designed
+      // look shows first; the photo-led themes start ON. (Carousel ignores this
+      // flag, so setting it here is harmless in that mode.)
+      setVisibility((v) => ({
+        ...v,
+        photoBackdrop: THEME_META[theme].photoBackdropDefaultOn,
+      }));
+    }
     if (file && mode === "carousel") {
       const tokens = CAROUSEL_THEME_TOKENS[carouselTheme];
       setPhotoEffects({
@@ -345,6 +365,17 @@ export default function Home() {
     } else {
       setPhotoEffects(NO_EFFECTS);
     }
+  };
+
+  // Selecting a single-card theme applies that theme's default backdrop state
+  // (STRATA / Data / Triathlon default OFF; the photo-led themes default ON).
+  // The photo can still be toggled for the current theme afterwards.
+  const handleSingleThemeChange = (next: ThemeId) => {
+    setTheme(next);
+    setVisibility((v) => ({
+      ...v,
+      photoBackdrop: THEME_META[next].photoBackdropDefaultOn,
+    }));
   };
 
   // Switching carousel theme re-applies that theme's signature photo look,
@@ -454,13 +485,15 @@ export default function Home() {
               onPhotoChange={handlePhotoChange}
               onPhotoMoodChange={setPhotoMood}
               onSportChange={handleSportChange}
-              onThemeChange={setTheme}
+              onStrataConfigChange={setStrataConfig}
+              onThemeChange={handleSingleThemeChange}
               onTitleChange={handleTitleChange}
               onVisibilityChange={setVisibility}
               photoMood={photoMood}
               photoPaletteStatus={photoPalette.status}
               photoPaletteTheme={photoPalette.theme}
               photoUrl={photoUrl}
+              strataConfig={strataConfig}
               theme={theme}
               title={data.title}
               visibility={visibility}
@@ -477,6 +510,7 @@ export default function Home() {
           onNew={handleNew}
           photoPaletteTheme={photoPalette.theme}
           photoUrl={photoUrl}
+          strataConfig={strataConfig}
           theme={theme}
         />
       ) : null}

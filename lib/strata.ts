@@ -69,6 +69,8 @@ export interface StrataMoodTokens {
   midW: number;
   /** The top hero: the real route. */
   routeColor: string;
+  /** `r,g,b` tone for the legibility scrim drawn over a background photo. */
+  scrim: string;
   statBg: string;
   statBorder: string;
   text: string;
@@ -86,6 +88,7 @@ export const STRATA_MOODS: Record<StrataMood, StrataMoodTokens> = {
     heroW: 4.5,
     midW: 1.35,
     marker: "#c45a2c",
+    scrim: "243,237,226",
     statBg: "rgba(255,253,248,0.7)",
     statBorder: "rgba(26,23,20,0.2)",
     inkStat: true,
@@ -101,6 +104,7 @@ export const STRATA_MOODS: Record<StrataMood, StrataMoodTokens> = {
     heroW: 4.5,
     midW: 1.4,
     marker: "#e0823a",
+    scrim: "246,221,194",
     statBg: "rgba(255,252,247,0.66)",
     statBorder: "rgba(42,34,64,0.16)",
     inkStat: true,
@@ -116,6 +120,7 @@ export const STRATA_MOODS: Record<StrataMood, StrataMoodTokens> = {
     heroW: 4.5,
     midW: 1.5,
     marker: "#ffd98a",
+    scrim: "16,8,24",
     statBg: "rgba(26,10,22,0.4)",
     statBorder: "rgba(248,234,215,0.2)",
     inkStat: false,
@@ -131,6 +136,7 @@ export const STRATA_MOODS: Record<StrataMood, StrataMoodTokens> = {
     heroW: 4.5,
     midW: 1.5,
     marker: "#82e3e0",
+    scrim: "6,11,28",
     statBg: "rgba(6,11,28,0.5)",
     statBorder: "rgba(231,237,255,0.16)",
     inkStat: false,
@@ -146,6 +152,7 @@ export const STRATA_MOODS: Record<StrataMood, StrataMoodTokens> = {
     heroW: 4.5,
     midW: 1.4,
     marker: "#1f5a6b",
+    scrim: "223,234,240",
     statBg: "rgba(255,255,255,0.66)",
     statBorder: "rgba(22,36,44,0.16)",
     inkStat: true,

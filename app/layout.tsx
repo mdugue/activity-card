@@ -13,6 +13,7 @@ import {
   Manrope,
   Playfair_Display,
   Space_Grotesk,
+  Syne,
 } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
@@ -47,6 +48,12 @@ const manrope = Manrope({
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-space-grotesk",
+});
+
+const syne = Syne({
+  weight: ["600", "700", "800"],
+  subsets: ["latin"],
+  variable: "--font-syne",
 });
 
 const playfair = Playfair_Display({
@@ -135,6 +142,7 @@ export default function RootLayout({
         cormorant.variable,
         manrope.variable,
         spaceGrotesk.variable,
+        syne.variable,
         playfair.variable,
         dmSans.variable,
         archivoNarrow.variable,
