@@ -164,7 +164,6 @@ function StepCard({
   badgeClass,
   children,
   num,
-  numClass,
   title,
 }: {
   active: boolean;
@@ -172,7 +171,6 @@ function StepCard({
   badgeClass: string;
   children: React.ReactNode;
   num: string;
-  numClass?: string;
   title: string;
 }) {
   return (
@@ -182,7 +180,7 @@ function StepCard({
     >
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <span className={cn("font-heading", numClass)}>{num}</span>
+          <span className="font-heading">{num}</span>
           {title}
         </CardTitle>
         <CardAction>
@@ -216,7 +214,7 @@ function DropZone({
   return (
     <button
       className={cn(
-        "flex flex-col items-center gap-1.5 border border-foreground/30 border-dashed bg-foreground/[0.015] px-4 py-3 text-center transition-colors hover:border-primary hover:bg-primary/5 sm:gap-2 sm:py-4",
+        "flex items-center gap-3 border border-foreground/30 border-dashed bg-foreground/[0.015] px-3 py-2.5 text-left transition-colors hover:border-primary hover:bg-primary/5 sm:flex-col sm:gap-2 sm:px-4 sm:py-4 sm:text-center",
         dragging && "border-primary bg-primary/5"
       )}
       onClick={onBrowse}
@@ -237,9 +235,11 @@ function DropZone({
       }}
       type="button"
     >
-      {parsing ? <Spinner className="size-9 text-primary" /> : icon}
-      <span className="text-muted-foreground text-sm">{hint}</span>
-      <span className="inline-flex h-9 items-center bg-foreground px-5 font-heading text-background text-sm uppercase tracking-wide">
+      {parsing ? <Spinner className="size-6 text-primary sm:size-9" /> : icon}
+      <span className="flex-1 text-muted-foreground text-sm sm:flex-none">
+        {hint}
+      </span>
+      <span className="inline-flex h-8 shrink-0 items-center bg-foreground px-3 font-heading text-background text-xs uppercase tracking-wide sm:h-9 sm:px-5 sm:text-sm">
         {cta}
       </span>
     </button>
@@ -371,7 +371,7 @@ function ActivityStep({
             }
             icon={
               <MapTrifoldIcon
-                className="size-7 text-foreground sm:size-8"
+                className="size-6 text-foreground sm:size-8"
                 weight="duotone"
               />
             }
@@ -393,7 +393,7 @@ function ActivityStep({
                 : ""}
             </Button>
           ) : (
-            <StravaConnectButton className="self-start max-sm:[&_img]:h-10 max-sm:[&_img]:w-auto" />
+            <StravaConnectButton className="self-start max-sm:[&_img]:h-8 max-sm:[&_img]:w-auto" />
           )}
           <p className="caption-micro mt-3">
             {strava.connected
@@ -486,7 +486,7 @@ function PhotoStepBody({
         hint="Drop a photo"
         icon={
           <ImageIcon
-            className="size-7 text-foreground sm:size-8"
+            className="size-6 text-foreground sm:size-8"
             weight="duotone"
           />
         }
@@ -537,7 +537,6 @@ function PhotoStep({
       badge="Recommended"
       badgeClass="bg-primary text-primary-foreground"
       num="02"
-      numClass="text-primary"
       title="Add a photo"
     >
       <PhotoStepBody {...body} />
@@ -678,13 +677,13 @@ export function OnboardingWizard({
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent
-        className="flex max-h-[96dvh] w-full max-w-[calc(100%-0.5rem)] flex-col gap-0 overflow-hidden bg-background p-0 sm:max-h-[88vh] sm:max-w-[60rem]"
+        className="flex max-h-[96dvh] w-full max-w-[calc(100%-0.5rem)] flex-col gap-0 bg-background p-0 sm:max-h-[88vh] sm:max-w-[60rem]"
         showCloseButton={false}
       >
-        {/* Brutalist top accent. Rendered as a child bar rather than a
-            border-top: an overflow-hidden + transformed dialog shaves a top
-            border on some browsers, but content can't be clipped. */}
-        <div aria-hidden className="h-1.5 shrink-0 bg-foreground" />
+        {/* Brutalist top accent, as a child bar. The dialog deliberately has
+            NO overflow-hidden: combined with its transform positioning, iOS
+            Safari clips this top edge. The scrollable body clips itself. */}
+        <div aria-hidden className="h-1 shrink-0 bg-foreground" />
         <input
           accept=".gpx,.fit"
           className="hidden"
@@ -798,7 +797,7 @@ export function OnboardingWizard({
               step 1 so the photo step still follows. */}
         <Dialog onOpenChange={setStravaPickerOpen} open={stravaPickerOpen}>
           <DialogContent
-            className="flex max-h-[90dvh] w-full max-w-2xl flex-col gap-0 overflow-hidden bg-background p-0 sm:max-h-[85vh]"
+            className="flex max-h-[90dvh] w-full max-w-2xl flex-col gap-0 bg-background p-0 sm:max-h-[85vh]"
             showCloseButton={false}
           >
             <div aria-hidden className="h-1 shrink-0 bg-foreground" />
