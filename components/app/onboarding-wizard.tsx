@@ -216,7 +216,7 @@ function DropZone({
   return (
     <button
       className={cn(
-        "flex flex-col items-center gap-2 border border-foreground/30 border-dashed bg-foreground/[0.015] px-4 py-4 text-center transition-colors hover:border-primary hover:bg-primary/5",
+        "flex flex-col items-center gap-1.5 border border-foreground/30 border-dashed bg-foreground/[0.015] px-4 py-3 text-center transition-colors hover:border-primary hover:bg-primary/5 sm:gap-2 sm:py-4",
         dragging && "border-primary bg-primary/5"
       )}
       onClick={onBrowse}
@@ -371,7 +371,7 @@ function ActivityStep({
             }
             icon={
               <MapTrifoldIcon
-                className="size-8 text-foreground"
+                className="size-7 text-foreground sm:size-8"
                 weight="duotone"
               />
             }
@@ -393,27 +393,31 @@ function ActivityStep({
                 : ""}
             </Button>
           ) : (
-            <StravaConnectButton className="self-start" />
+            <StravaConnectButton className="self-start max-sm:[&_img]:h-10 max-sm:[&_img]:w-auto" />
           )}
           <p className="caption-micro mt-3">
             {strava.connected
               ? "Connected"
               : "OAuth · Read-only · Revoke anytime"}
           </p>
-          <OrDivider />
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="caption-micro">Try a sample</span>
-            {SAMPLES.map(({ data, sport }) => (
-              <Button
-                className="px-3"
-                key={sport}
-                onClick={() => onLoadSample(data)}
-                size="xs"
-                variant="outline"
-              >
-                {sport}
-              </Button>
-            ))}
+          {/* Samples are a desktop affordance; hidden on mobile to keep the
+              sheet airy. */}
+          <div className="hidden sm:block">
+            <OrDivider />
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="caption-micro">Try a sample</span>
+              {SAMPLES.map(({ data, sport }) => (
+                <Button
+                  className="px-3"
+                  key={sport}
+                  onClick={() => onLoadSample(data)}
+                  size="xs"
+                  variant="outline"
+                >
+                  {sport}
+                </Button>
+              ))}
+            </div>
           </div>
         </>
       )}
@@ -480,34 +484,41 @@ function PhotoStepBody({
         cta="Browse photos"
         dragging={dragging}
         hint="Drop a photo"
-        icon={<ImageIcon className="size-8 text-foreground" weight="duotone" />}
+        icon={
+          <ImageIcon
+            className="size-7 text-foreground sm:size-8"
+            weight="duotone"
+          />
+        }
         onBrowse={onBrowse}
         onDragStateChange={onDragStateChange}
         onFiles={onFiles}
       />
-      <OrDivider />
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="caption-micro">Try a sample</span>
-        <div className="flex gap-2">
-          {SAMPLE_PHOTOS.map((p) => (
-            <button
-              className="relative h-14 w-20 overflow-hidden outline outline-1 outline-foreground/20 transition-all hover:outline-2 hover:outline-primary"
-              key={p.url}
-              onClick={() => onChooseSample(p.url, p.name)}
-              type="button"
-            >
-              <Image
-                alt={p.name}
-                className="object-cover"
-                fill
-                sizes="80px"
-                src={p.url}
-              />
-            </button>
-          ))}
+      <div className="hidden sm:block">
+        <OrDivider />
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="caption-micro">Try a sample</span>
+          <div className="flex gap-2">
+            {SAMPLE_PHOTOS.map((p) => (
+              <button
+                className="relative h-14 w-20 overflow-hidden outline outline-1 outline-foreground/20 transition-all hover:outline-2 hover:outline-primary"
+                key={p.url}
+                onClick={() => onChooseSample(p.url, p.name)}
+                type="button"
+              >
+                <Image
+                  alt={p.name}
+                  className="object-cover"
+                  fill
+                  sizes="80px"
+                  src={p.url}
+                />
+              </button>
+            ))}
+          </div>
         </div>
       </div>
-      <div className="mt-4">
+      <div className="mt-3">
         <Button onClick={onSkip} size="xs" variant="link">
           Skip for now
         </Button>
@@ -667,13 +678,13 @@ export function OnboardingWizard({
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent
-        className="flex max-h-[92dvh] w-full max-w-[calc(100%-1rem)] flex-col gap-0 overflow-hidden bg-background p-0 sm:max-h-[88vh] sm:max-w-[60rem]"
+        className="flex max-h-[96dvh] w-full max-w-[calc(100%-0.5rem)] flex-col gap-0 overflow-hidden bg-background p-0 sm:max-h-[88vh] sm:max-w-[60rem]"
         showCloseButton={false}
       >
         {/* Brutalist top accent. Rendered as a child bar rather than a
             border-top: an overflow-hidden + transformed dialog shaves a top
             border on some browsers, but content can't be clipped. */}
-        <div aria-hidden className="h-1 shrink-0 bg-foreground" />
+        <div aria-hidden className="h-1.5 shrink-0 bg-foreground" />
         <input
           accept=".gpx,.fit"
           className="hidden"
@@ -759,19 +770,23 @@ export function OnboardingWizard({
           />
         </div>
 
-        {/* Footer — gentle status + the gated handoff into the editor. */}
-        <div className="flex flex-wrap items-center gap-4 border-border border-t bg-background px-6 py-4 sm:px-8">
-          <div className="flex flex-col gap-0.5">
-            <span className="caption-micro">{note.kicker}</span>
-            <span className="text-muted-foreground text-sm">{note.hint}</span>
+        {/* Footer — one row: status on the left, the gated hand-off on the
+            right. On mobile the description sits beside a compact "Open". */}
+        <div className="flex items-center gap-3 border-border border-t bg-background px-6 py-3 sm:gap-4 sm:px-8 sm:py-4">
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="caption-micro truncate">{note.kicker}</span>
+            <span className="hidden truncate text-muted-foreground text-sm sm:block">
+              {note.hint}
+            </span>
           </div>
           <Button
-            className="ml-auto h-12 px-8 font-heading text-lg uppercase tracking-wide"
+            className="ml-auto h-11 shrink-0 px-6 font-heading text-base uppercase tracking-wide sm:h-12 sm:px-8 sm:text-lg"
             disabled={!activity || finishing}
             onClick={finish}
             size="lg"
           >
-            Open the editor
+            <span className="sm:hidden">Open</span>
+            <span className="hidden sm:inline">Open the editor</span>
             <ArrowRightIcon />
           </Button>
         </div>
