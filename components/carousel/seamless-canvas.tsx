@@ -29,6 +29,7 @@ import { ElevationBand } from "./elevation-band";
 import { FramePanel } from "./panels/frame-panel";
 import { PressPanel } from "./panels/press-panel";
 import { RouteLine } from "./route-line";
+import { StrataCanvas } from "./strata-canvas";
 import { TEMPLATES } from "./templates";
 import type { TemplateProps } from "./templates/shared";
 
@@ -242,6 +243,32 @@ export function SeamlessCanvas({
             w={width}
           />
         </div>
+      ) : null}
+
+      {/* Strata signature — the woven morph-field spans the whole strip (route
+          ridge top, elevation ridge bottom), with a vertical scrim so the panel
+          text stays legible over the weave. */}
+      {style.heroLayer === "strata" ? (
+        <>
+          <div style={{ position: "absolute", inset: 0 }}>
+            <StrataCanvas
+              data={data}
+              elevColor={style.accent2}
+              h={SLIDE_H}
+              routeColor={style.accent}
+              w={width}
+            />
+          </div>
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(180deg, rgba(10,6,16,0.62) 0%, rgba(10,6,16,0.12) 24%, rgba(10,6,16,0) 46%, rgba(10,6,16,0.1) 66%, rgba(10,6,16,0.58) 100%)",
+            }}
+          />
+        </>
       ) : null}
 
       {/* Per-panel foreground. The wrap-up cross-viz is drawn inside the
