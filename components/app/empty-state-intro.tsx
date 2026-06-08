@@ -52,7 +52,7 @@ const EYEBROW: Record<Beat, string> = {
   whole: "One photo — your activity",
   cut: "Sliced into story slides",
   reveal: "Overlaid with your data",
-  done: "Your claim, told across the slides — connect to fill them",
+  done: "Your claim, told across the slides — two steps to fill them",
 };
 
 // Only narrate where the 4-up grid actually exists and motion is welcome.

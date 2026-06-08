@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { uploadActivity } from "./helpers";
+import { connectStrava, openWizard, uploadActivity } from "./helpers";
 
 /**
  * E2E coverage for the Strava OAuth + activity-picker flow.
@@ -20,16 +20,14 @@ test.describe("strava OAuth + picker", () => {
     await page.reload();
   });
 
-  test("empty state shows the official Connect button focused", async ({
-    page,
-  }) => {
-    // Per Strava brand guidelines §1.1 the official 237×48 SVG button is
-    // an anchor pointing at the OAuth init route — not a `<button>`.
+  test("the wizard offers the official Connect button", async ({ page }) => {
+    // Per Strava brand guidelines §1.1 the official 237×48 SVG button is an
+    // anchor pointing at the OAuth init route — not a `<button>`. It now lives
+    // inside the get-started wizard rather than on the landing itself.
+    await openWizard(page);
     const connect = page.getByRole("link", CONNECT_BUTTON);
     await expect(connect).toBeVisible();
     await expect(connect).toHaveAttribute("href", "/api/strava/authorize");
-    // Auto-focused so pressing Enter from the landing page triggers OAuth.
-    await expect(connect).toBeFocused();
   });
 
   test("footer always renders 'Compatible with Strava'", async ({ page }) => {
@@ -43,7 +41,7 @@ test.describe("strava OAuth + picker", () => {
   });
 
   test("OAuth round-trip lands on the picker", async ({ page }) => {
-    await page.getByRole("link", CONNECT_BUTTON).click();
+    await connectStrava(page);
 
     // After the mock approves and the callback exchanges the code, the app
     // redirects to /?strava=connected and auto-opens the picker.
@@ -63,16 +61,17 @@ test.describe("strava OAuth + picker", () => {
     ).toBeVisible();
   });
 
-  test("after connecting, the empty state offers 'Pick from Strava'", async ({
+  test("after connecting, the wizard offers 'Pick from Strava'", async ({
     page,
   }) => {
-    await page.getByRole("link", CONNECT_BUTTON).click();
+    await connectStrava(page);
     await page.waitForURL(/\/$/);
     await expect(
       page.getByRole("heading", { name: /your recent/i })
     ).toBeVisible();
 
-    // Back to empty state — connection cookie is still set.
+    // The picker is a dialog over the wizard; "Back" closes it and reveals the
+    // wizard underneath, which now offers "Pick from Strava" (still connected).
     await page.getByRole("button", { name: /^back$/i }).click();
     await expect(
       page.getByRole("button", { name: /pick from strava/i })
@@ -84,11 +83,13 @@ test.describe("strava OAuth + picker", () => {
   test("picking an activity opens the editor with a 'View on Strava' link", async ({
     page,
   }) => {
-    await page.getByRole("link", CONNECT_BUTTON).click();
+    await connectStrava(page);
     await page.waitForURL(/\/$/);
     await page
       .getByRole("button", { name: /saturday in the elbsandstein/i })
       .click();
+    // Picking returns to the wizard (now on the photo step); hand off to edit.
+    await page.getByRole("button", { name: /open the editor/i }).click();
 
     await expect(page.getByTestId("export-action")).toBeVisible();
 
@@ -123,7 +124,7 @@ test.describe("strava OAuth + picker", () => {
   test("multi-select combines two activities and renders per-segment View on Strava links", async ({
     page,
   }) => {
-    await page.getByRole("link", CONNECT_BUTTON).click();
+    await connectStrava(page);
     await page.waitForURL(/\/$/);
     await expect(
       page.getByRole("heading", { name: /your recent/i })
@@ -137,6 +138,8 @@ test.describe("strava OAuth + picker", () => {
     await page.getByRole("button", { name: /föhrer westwind/i }).click();
 
     await page.getByRole("button", { name: /^combine 2 activities$/i }).click();
+    // Combining returns to the wizard (photo step); hand off to the editor.
+    await page.getByRole("button", { name: /open the editor/i }).click();
 
     await expect(page.getByTestId("export-action")).toBeVisible();
     await expect(
@@ -158,7 +161,7 @@ test.describe("strava OAuth + picker", () => {
   });
 
   test("pagination renders page numbers and advances", async ({ page }) => {
-    await page.getByRole("link", CONNECT_BUTTON).click();
+    await connectStrava(page);
     await page.waitForURL(/\/$/);
     await expect(
       page.getByRole("heading", { name: /your recent/i })
@@ -189,7 +192,7 @@ test.describe("strava OAuth + picker", () => {
   test("multi-select shows sport icons + checkboxes; clicking the row toggles", async ({
     page,
   }) => {
-    await page.getByRole("link", CONNECT_BUTTON).click();
+    await connectStrava(page);
     await page.waitForURL(/\/$/);
     await expect(
       page.getByRole("heading", { name: /your recent/i })
@@ -211,11 +214,13 @@ test.describe("strava OAuth + picker", () => {
   test("Swap on a Strava activity reopens the picker, not the file dialog", async ({
     page,
   }) => {
-    await page.getByRole("link", CONNECT_BUTTON).click();
+    await connectStrava(page);
     await page.waitForURL(/\/$/);
     await page
       .getByRole("button", { name: /saturday in the elbsandstein/i })
       .click();
+    // Picking returns to the wizard (photo step); hand off to the editor.
+    await page.getByRole("button", { name: /open the editor/i }).click();
     await expect(page.getByTestId("export-action")).toBeVisible();
 
     // Swap now lives in the ACTIVITY section.
@@ -230,7 +235,7 @@ test.describe("strava OAuth + picker", () => {
   test("Disconnect lives in the Strava picker and clears the connection", async ({
     page,
   }) => {
-    await page.getByRole("link", CONNECT_BUTTON).click();
+    await connectStrava(page);
     await page.waitForURL(/\/$/);
     // The picker header carries the connection status + Disconnect — the
     // single home for it now that the app chrome no longer does.
@@ -240,8 +245,10 @@ test.describe("strava OAuth + picker", () => {
     // Connection cleared → "Connected as" disappears.
     await expect(page.getByText(/connected as/i)).toHaveCount(0);
 
-    // Reload to confirm the cookies are actually gone.
+    // Reload to confirm the cookies are actually gone. The Connect button now
+    // lives in the wizard, so open it before asserting.
     await page.reload();
+    await openWizard(page);
     await expect(page.getByRole("link", CONNECT_BUTTON)).toBeVisible();
   });
 
@@ -284,7 +291,7 @@ test.describe("strava OAuth + picker", () => {
   test("502 from /api/strava/activity surfaces an upstream alert", async ({
     page,
   }) => {
-    await page.getByRole("link", CONNECT_BUTTON).click();
+    await connectStrava(page);
     await page.waitForURL(/\/$/);
     await expect(
       page.getByRole("heading", { name: /your recent/i })
@@ -315,7 +322,7 @@ test.describe("strava OAuth + picker", () => {
         body: JSON.stringify({ error: "rate_limited", retryAfter: 30 }),
       })
     );
-    await page.getByRole("link", CONNECT_BUTTON).click();
+    await connectStrava(page);
     await page.waitForURL(/\/$/);
 
     await expect(page.getByText(/strava is rate-limiting us/i)).toBeVisible();
@@ -325,13 +332,14 @@ test.describe("strava OAuth + picker", () => {
     await expect(page.getByRole("button", { name: /^retry$/i })).toBeDisabled();
   });
 
-  test("502 from /api/strava/me surfaces a server-broken alert in empty state", async ({
+  test("502 from /api/strava/me surfaces a server-broken alert in the wizard", async ({
     page,
   }) => {
     await page.route("**/api/strava/me", (route) =>
       route.fulfill({ status: 502, body: "server down" })
     );
     await page.reload();
+    await openWizard(page);
 
     await expect(
       page.getByText(/we can.?t reach the Effort server/i)
