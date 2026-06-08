@@ -16,6 +16,11 @@ import { heroStat, planSlideStats } from "@/lib/carousel/stats";
 import type { CarouselThemeId, PanelKind } from "@/lib/carousel/theme-tokens";
 import { SLIDE_H, SLIDE_W, type Slide } from "@/lib/carousel/types";
 import type { ImageTransform } from "@/lib/image-transform";
+import {
+  isMultiActivity,
+  segmentProfiles,
+  segmentRoutes,
+} from "@/lib/multi-activity";
 import type { PaletteTheme } from "@/lib/palette";
 import { filterCss, NO_EFFECTS, type PhotoEffects } from "@/lib/photo-effects";
 import { DEFAULT_VISIBILITY, type Visibility } from "@/lib/visibility";
@@ -26,6 +31,37 @@ import { PressPanel } from "./panels/press-panel";
 import { RouteLine } from "./route-line";
 import { TEMPLATES } from "./templates";
 import type { TemplateProps } from "./templates/shared";
+
+// Multi-activity project: route/elevation geometry lives per-segment, so the
+// hero layers overlay every leg instead of reading the (absent) top-level
+// fields. The Ascent (elevation) signature still requires real elevation legs —
+// never pace data drawn as a mountain range.
+function resolveHeroGeometry(
+  data: ActivityData,
+  heroLayer: EffectiveStyle["heroLayer"],
+  picked: { mode: "elevation" | "pace"; profile: number[] | undefined }
+) {
+  const multi = isMultiActivity(data);
+  const segProf = multi ? segmentProfiles(data) : null;
+  const heroRoutes = multi ? segmentRoutes(data).map((r) => r.coords) : [];
+  let showElevationHero =
+    heroLayer === "elevation" &&
+    picked.mode === "elevation" &&
+    (picked.profile?.length ?? 0) > 1;
+  if (multi) {
+    showElevationHero =
+      heroLayer === "elevation" &&
+      Boolean(segProf?.useElevation) &&
+      (segProf?.profiles.length ?? 0) > 0;
+  }
+  return {
+    multi,
+    segProf,
+    heroRoutes,
+    showElevationHero,
+    showRouteHero: heroLayer === "route",
+  };
+}
 
 function panelFor(
   kind: PanelKind,
@@ -81,17 +117,16 @@ export function SeamlessCanvas({
   const photoFilter = filterCss(photoEffects.filter);
 
   const { profile, mode: profileMode } = pickProfile(data);
+  const { multi, segProf, heroRoutes, showElevationHero, showRouteHero } =
+    resolveHeroGeometry(data, style.heroLayer, {
+      profile,
+      mode: profileMode,
+    });
 
-  // The Ascent signature is specifically the elevation range. pickProfile can
-  // fall back to the pace curve when elevation is absent (or hidden via the
-  // viz toggle); require a real elevation profile so we never draw pace data as
-  // the mountain range.
-  const showElevationHero =
-    style.heroLayer === "elevation" &&
-    profileMode === "elevation" &&
-    (profile?.length ?? 0) > 1;
-  const showRouteHero = style.heroLayer === "route";
-
+  // The elevation hero only renders when the project's metric is elevation
+  // (see resolveHeroGeometry), but derive the mode rather than hardcoding it so
+  // the band never normalises pace data as elevation if that gate ever changes.
+  const heroBandMode = segProf?.useElevation ? "elevation" : "pace";
   const heroInk = showPhoto && style.dark ? "#ffffff" : style.ink;
 
   const statOpts = { distance: visibility.distance, time: visibility.time };
@@ -167,9 +202,11 @@ export function SeamlessCanvas({
             markerColor={heroInk}
             markerFont={style.fonts.mono}
             markers
-            mode={profileMode}
+            mode={multi ? heroBandMode : profileMode}
             profile={profile}
+            profiles={multi ? segProf?.profiles : undefined}
             w={width}
+            weights={multi ? segProf?.distances : undefined}
           />
         </div>
       ) : null}
@@ -198,6 +235,7 @@ export function SeamlessCanvas({
             ink={heroInk}
             overPhoto={showPhoto}
             pad={60}
+            routes={multi ? heroRoutes : undefined}
             showMarkers
             strokeWidth={8}
             style={style.routeStyle}

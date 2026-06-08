@@ -3,8 +3,13 @@
 // mono labels — borderless, so they sit cleanly over the image.
 
 import type { ActivityData } from "@/components/app/sample-data";
-import { pickProfile } from "@/lib/carousel/profile";
+import { bandModeFor, pickProfile } from "@/lib/carousel/profile";
 import type { FontPair } from "@/lib/carousel/theme-tokens";
+import {
+  isMultiActivity,
+  segmentProfiles,
+  segmentRoutes,
+} from "@/lib/multi-activity";
 import { ElevationBand } from "./elevation-band";
 import { RouteLine } from "./route-line";
 
@@ -23,6 +28,11 @@ interface DetailVizProps {
 }
 
 function hasKind(data: ActivityData, kind: DetailVizKind): boolean {
+  if (isMultiActivity(data)) {
+    return kind === "route"
+      ? segmentRoutes(data).length > 0
+      : segmentProfiles(data).profiles.length > 0;
+  }
   if (kind === "route") {
     return (data.routeCoordinates?.length ?? 0) > 1;
   }
@@ -42,6 +52,7 @@ function Chart({
   kind: DetailVizKind;
   w: number;
 }) {
+  const multi = isMultiActivity(data);
   if (kind === "route") {
     return (
       <RouteLine
@@ -51,6 +62,7 @@ function Chart({
         h={h}
         ink={color}
         pad={10}
+        routes={multi ? segmentRoutes(data).map((r) => r.coords) : undefined}
         showMarkers={false}
         strokeWidth={4}
         style="poster"
@@ -59,13 +71,17 @@ function Chart({
     );
   }
   const { profile, mode } = pickProfile(data);
+  const seg = multi ? segmentProfiles(data) : null;
+  const bandMode = bandModeFor(seg, mode);
   return (
     <ElevationBand
       colors={{ line: color, fillFrom: color, fillTo: "transparent" }}
       h={h}
-      mode={mode}
+      mode={bandMode}
       profile={profile}
+      profiles={multi ? seg?.profiles : undefined}
       w={w}
+      weights={multi ? seg?.distances : undefined}
     />
   );
 }

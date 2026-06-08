@@ -6,6 +6,11 @@
 
 import { useId } from "react";
 import type { ElevationColors } from "@/lib/carousel/theme-tokens";
+import {
+  type OverlayPath,
+  sequencePaths,
+  sequenceProfiles,
+} from "@/lib/chart-helpers";
 
 interface ElevationBandProps {
   colors: ElevationColors;
@@ -18,11 +23,18 @@ interface ElevationBandProps {
   markers?: boolean;
   mode?: "elevation" | "pace";
   profile: number[] | undefined;
+  /** Multi-activity project: every leg's profile, laid out side by side on one
+   *  shared scale (distance-weighted widths, no gaps). Overrides `profile`. */
+  profiles?: number[][];
   w: number;
+  /** Per-leg distances (index-aligned with `profiles`) → width weighting. */
+  weights?: number[];
 }
 
 export function ElevationBand({
   profile,
+  profiles,
+  weights,
   w,
   h,
   colors,
@@ -33,6 +45,24 @@ export function ElevationBand({
   markerFont = "monospace",
 }: ElevationBandProps) {
   const areaId = useId();
+
+  // Multi-activity project: overlay every leg, sharing one vertical scale.
+  if (profiles && profiles.length > 0) {
+    const reach = Math.min(1, Math.max(0.3, 0.7 * exaggeration));
+    const curves = sequenceProfiles(
+      profiles,
+      weights ?? profiles.map(() => undefined),
+      mode === "elevation"
+    );
+    const paths = sequencePaths(curves, w, h, reach);
+    if (paths.length === 0) {
+      return null;
+    }
+    return (
+      <MultiBand areaId={areaId} colors={colors} h={h} paths={paths} w={w} />
+    );
+  }
+
   if (!profile || profile.length < 2) {
     return null;
   }
@@ -114,6 +144,56 @@ export function ElevationBand({
           </text>
         </g>
       ))}
+    </svg>
+  );
+}
+
+// The sequenced-leg variant: each leg's profile laid out side by side along the
+// width (shared scale), sharing one gradient fill. No high/low markers (they'd
+// be ambiguous across legs on a shared scale).
+function MultiBand({
+  paths,
+  w,
+  h,
+  colors,
+  areaId,
+}: {
+  areaId: string;
+  colors: ElevationColors;
+  h: number;
+  paths: OverlayPath[];
+  w: number;
+}) {
+  return (
+    <svg
+      aria-hidden="true"
+      preserveAspectRatio="none"
+      style={{ width: "100%", height: "100%", display: "block" }}
+      viewBox={`0 0 ${w} ${h}`}
+    >
+      <title>Elevation profiles</title>
+      <defs>
+        <linearGradient id={areaId} x1="0%" x2="0%" y1="0%" y2="100%">
+          <stop offset="0%" stopColor={colors.fillFrom} stopOpacity={0.55} />
+          <stop offset="100%" stopColor={colors.fillTo} stopOpacity={0.04} />
+        </linearGradient>
+      </defs>
+      {paths.map((p, i) => {
+        const key = `band-${i}-${p.line}`;
+        return (
+          <g key={key}>
+            <path d={p.area} fill={`url(#${areaId})`} stroke="none" />
+            <path
+              d={p.line}
+              fill="none"
+              stroke={colors.line}
+              strokeLinejoin="round"
+              strokeWidth={4}
+              style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.35))" }}
+            />
+          </g>
+        );
+      })}
     </svg>
   );
 }

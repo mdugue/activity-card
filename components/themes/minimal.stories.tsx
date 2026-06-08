@@ -1,6 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import type { ComponentProps } from "react";
-import { SAMPLE_RIDE, SAMPLE_RUN } from "@/components/app/sample-data";
+import {
+  SAMPLE_RIDE,
+  SAMPLE_RUN,
+  SAMPLE_TRI,
+} from "@/components/app/sample-data";
 import {
   type BackgroundArgs,
   backgroundArgTypes,
@@ -22,3 +26,4 @@ type Story = StoryObj<typeof meta>;
 // bad profile / route), so no play is needed.
 export const NoPhoto: Story = { args: { data: SAMPLE_RUN } };
 export const RideProfile: Story = { args: { data: SAMPLE_RIDE } };
+export const Triathlon: Story = { args: { data: SAMPLE_TRI } };

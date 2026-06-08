@@ -2,7 +2,7 @@
 // Type: Cormorant Garamond (display) + Manrope (body)
 // Palette: warm off-white paper, deep ink, single rust accent
 
-import { abstractLanes, routePath } from "@/lib/chart-helpers";
+import { abstractLanes, accentShades, routePath } from "@/lib/chart-helpers";
 import {
   formatDateUpper,
   formatDuration,
@@ -10,12 +10,25 @@ import {
   formatPaceMin,
   formatPaceSec,
 } from "@/lib/format";
+import {
+  isMultiActivity,
+  type SegmentRoute,
+  segmentRoutes,
+} from "@/lib/multi-activity";
+import { OverlayRoute } from "./overlay-route";
 import { PhotoBackdrop } from "./photo-backdrop";
 import type { ActivityCardProps } from "./types";
+
+const INK = "#1a1714";
+const ACCENT = "#c45a2c";
+const ROUTE_W = 900;
+const ROUTE_H = 720;
 
 export function ThemePath({ data, photoUrl }: ActivityCardProps) {
   const isPool = data.sport === "swim";
   const sport = data.sport;
+  const multi = isMultiActivity(data);
+  const routes = multi ? segmentRoutes(data) : [];
 
   let sportLabel = "A TRIATHLON";
   if (sport === "ride") {
@@ -161,33 +174,12 @@ export function ThemePath({ data, photoUrl }: ActivityCardProps) {
               x="0"
               y="0"
             />
-            {isPool ? (
-              <g>
-                {abstractLanes(900, 720, 6, 60).map((l, i) => (
-                  <g key={`path-lane-${i}-${l.y}`}>
-                    <line
-                      stroke="#1a1714"
-                      strokeDasharray="4 14"
-                      strokeOpacity={0.15}
-                      strokeWidth={1}
-                      x1={l.x}
-                      x2={l.x + l.w}
-                      y1={l.y + l.h / 2}
-                      y2={l.y + l.h / 2}
-                    />
-                    <path
-                      d={`M${l.x} ${l.y + l.h / 2} Q${l.x + l.w / 4} ${l.y + l.h / 2 - 18}, ${l.x + l.w / 2} ${l.y + l.h / 2} T${l.x + l.w} ${l.y + l.h / 2}`}
-                      fill="none"
-                      stroke="#c45a2c"
-                      strokeOpacity={0.55 - i * 0.05}
-                      strokeWidth={2.5}
-                    />
-                  </g>
-                ))}
-              </g>
-            ) : (
-              <PathRoute coords={data.routeCoordinates} />
-            )}
+            <RouteHero
+              coords={data.routeCoordinates}
+              isPool={isPool}
+              multi={multi}
+              routes={routes}
+            />
           </svg>
         </div>
 
@@ -257,6 +249,56 @@ export function ThemePath({ data, photoUrl }: ActivityCardProps) {
   );
 }
 
+// The route hero: pool lanes for a swim, every leg overlaid for a project,
+// otherwise a single silhouette.
+function RouteHero({
+  isPool,
+  multi,
+  routes,
+  coords,
+}: {
+  coords?: [number, number][];
+  isPool: boolean;
+  multi: boolean;
+  routes: SegmentRoute[];
+}) {
+  if (isPool) {
+    return <PoolLanes />;
+  }
+  if (multi) {
+    return <MultiPathRoute routes={routes} />;
+  }
+  return <PathRoute coords={coords} />;
+}
+
+function PoolLanes() {
+  return (
+    <g>
+      {abstractLanes(ROUTE_W, ROUTE_H, 6, 60).map((l, i) => (
+        <g key={`path-lane-${i}-${l.y}`}>
+          <line
+            stroke={INK}
+            strokeDasharray="4 14"
+            strokeOpacity={0.15}
+            strokeWidth={1}
+            x1={l.x}
+            x2={l.x + l.w}
+            y1={l.y + l.h / 2}
+            y2={l.y + l.h / 2}
+          />
+          <path
+            d={`M${l.x} ${l.y + l.h / 2} Q${l.x + l.w / 4} ${l.y + l.h / 2 - 18}, ${l.x + l.w / 2} ${l.y + l.h / 2} T${l.x + l.w} ${l.y + l.h / 2}`}
+            fill="none"
+            stroke={ACCENT}
+            strokeOpacity={0.55 - i * 0.05}
+            strokeWidth={2.5}
+          />
+        </g>
+      ))}
+    </g>
+  );
+}
+
 function PathRoute({ coords }: { coords?: [number, number][] }) {
   if (!coords || coords.length === 0) {
     return null;
@@ -269,8 +311,8 @@ function PathRoute({ coords }: { coords?: [number, number][] }) {
   const maxY = Math.max(...ys);
   const dx = maxX - minX || 1;
   const dy = maxY - minY || 1;
-  const innerW = 900 - 120;
-  const innerH = 720 - 120;
+  const innerW = ROUTE_W - 120;
+  const innerH = ROUTE_H - 120;
   const scale = Math.min(innerW / dx, innerH / dy);
   const offX = 60 + (innerW - dx * scale) / 2;
   const offY = 60 + (innerH - dy * scale) / 2;
@@ -283,13 +325,13 @@ function PathRoute({ coords }: { coords?: [number, number][] }) {
     offX + (last[0] - minX) * scale,
     offY + (last[1] - minY) * scale,
   ];
-  const d = routePath(coords, 900, 720, 60);
+  const d = routePath(coords, ROUTE_W, ROUTE_H, 60);
   return (
     <g>
       <path
         d={d}
         fill="none"
-        stroke="#1a1714"
+        stroke={INK}
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeOpacity={0.08}
@@ -298,13 +340,38 @@ function PathRoute({ coords }: { coords?: [number, number][] }) {
       <path
         d={d}
         fill="none"
-        stroke="#1a1714"
+        stroke={INK}
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth={4}
       />
-      <circle cx={start[0]} cy={start[1]} fill="#c45a2c" r={9} />
-      <circle cx={end[0]} cy={end[1]} fill="#1a1714" r={9} />
+      <circle cx={start[0]} cy={start[1]} fill={ACCENT} r={9} />
+      <circle cx={end[0]} cy={end[1]} fill={INK} r={9} />
     </g>
+  );
+}
+
+// A multi-activity project (triathlon, brick, …): every leg's route drawn in
+// the SAME coordinate system — one shared bbox + uniform scale — so the legs
+// keep their true positions relative to one another, each tinted a different
+// shade of the accent so they read apart without leaving the palette. Delegates
+// the projection + per-leg draw to the shared OverlayRoute.
+function MultiPathRoute({ routes }: { routes: SegmentRoute[] }) {
+  if (routes.length === 0) {
+    return null;
+  }
+  return (
+    <OverlayRoute
+      colors={accentShades(ACCENT, routes.length)}
+      h={ROUTE_H}
+      // soft ink halo keeps every leg legible over a photo backdrop
+      halo={{ color: "rgba(26,23,20,0.07)", width: 16 }}
+      markerRadius={9}
+      markers
+      pad={60}
+      routes={routes.map((r) => r.coords)}
+      strokeWidth={4.5}
+      w={ROUTE_W}
+    />
   );
 }

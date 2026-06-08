@@ -5,8 +5,20 @@
 // When no photo is loaded we fall back to a deep neutral gradient so the route
 // and elevation still read while the user is choosing an image.
 
-import { routePath } from "@/lib/chart-helpers";
+import {
+  routePath,
+  sequencePaths,
+  sequenceProfiles,
+  whiteRamp,
+} from "@/lib/chart-helpers";
 import type { ImageTransform } from "@/lib/image-transform";
+import {
+  isMultiActivity,
+  type SegmentRoute,
+  segmentProfiles,
+  segmentRoutes,
+} from "@/lib/multi-activity";
+import { OverlayRoute } from "./overlay-route";
 import { PhotoLayer } from "./photo-layer";
 import type { ActivityCardProps } from "./types";
 
@@ -144,15 +156,78 @@ function RouteOverlay({ coords }: { coords?: [number, number][] }) {
   );
 }
 
+// Every leg of a project traced in ONE shared coordinate system, white at a
+// gentle opacity ramp with a soft halo + a start dot per leg.
+function MultiRouteOverlay({ routes }: { routes: SegmentRoute[] }) {
+  if (routes.length < 1) {
+    return null;
+  }
+  return (
+    <svg
+      aria-hidden="true"
+      style={{
+        position: "absolute",
+        top: "11%",
+        left: "13%",
+        width: "74%",
+        height: "52%",
+        filter: "drop-shadow(0 2px 16px rgba(0,0,0,0.55))",
+      }}
+      viewBox={`0 0 ${ROUTE_W} ${ROUTE_H}`}
+    >
+      <title>Routes</title>
+      <OverlayRoute
+        colors={whiteRamp(routes.length)}
+        h={ROUTE_H}
+        halo={{ color: "rgba(0,0,0,0.35)", width: 12 }}
+        markerRadius={11}
+        markers
+        pad={40}
+        routes={routes.map((r) => r.coords)}
+        strokeWidth={5}
+        w={ROUTE_W}
+      />
+    </svg>
+  );
+}
+
+function renderRoute(
+  multi: boolean,
+  routes: SegmentRoute[],
+  coords: [number, number][] | undefined
+) {
+  if (multi) {
+    return <MultiRouteOverlay routes={routes} />;
+  }
+  return <RouteOverlay coords={coords} />;
+}
+
 export function ThemeMinimal({
   data,
   photoUrl,
   imageTransform,
 }: ThemeMinimalProps) {
   const isPool = data.sport === "swim";
-  const profile = data.elevationProfile ?? data.paceProfile;
-  const bars = sampleBars(profile, BAR_COUNT);
-  const curve = curvePaths(profile, 1000, 150);
+  const multi = isMultiActivity(data);
+  const routes = multi ? segmentRoutes(data) : [];
+  const segProf = multi ? segmentProfiles(data) : null;
+  const curves =
+    segProf && segProf.profiles.length > 0
+      ? sequenceProfiles(
+          segProf.profiles,
+          segProf.distances,
+          segProf.useElevation
+        )
+      : [];
+
+  // Single activity: full-width curve + bar texture. Project: the legs laid out
+  // side by side (the bars assume one profile, so they sit out for a project).
+  const singleProfile = data.elevationProfile ?? data.paceProfile;
+  const bars = multi ? [] : sampleBars(singleProfile, BAR_COUNT);
+  const curve = multi ? null : curvePaths(singleProfile, 1000, 150);
+  const overlay = multi ? sequencePaths(curves, 1000, 150) : [];
+  const overlayShades = whiteRamp(overlay.length);
+  const hasStrip = multi ? overlay.length > 0 : bars.length > 0;
 
   return (
     <div
@@ -182,10 +257,10 @@ export function ThemeMinimal({
         }}
       />
 
-      {isPool ? null : <RouteOverlay coords={data.routeCoordinates} />}
+      {isPool ? null : renderRoute(multi, routes, data.routeCoordinates)}
 
       {/* Elevation strip — quiet, glued to the bottom edge. */}
-      {bars.length > 0 ? (
+      {hasStrip ? (
         <div
           style={{
             position: "absolute",
@@ -222,8 +297,10 @@ export function ThemeMinimal({
             ))}
           </div>
 
-          {/* Curve over the bars */}
-          {curve ? (
+          {/* Curve(s) over the bars — one for a single activity, every leg laid
+              out side by side (shared scale, distance-weighted width) for a
+              project. */}
+          {curve || overlay.length > 0 ? (
             <svg
               aria-hidden="true"
               preserveAspectRatio="none"
@@ -244,16 +321,33 @@ export function ThemeMinimal({
                   <stop offset="100%" stopColor="#ffffff" stopOpacity="0.02" />
                 </linearGradient>
               </defs>
-              <path d={curve.area} fill="url(#min-elev-fill)" />
-              <path
-                d={curve.line}
-                fill="none"
-                stroke="#ffffff"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeOpacity={0.92}
-                strokeWidth={2.5}
-              />
+              {curve ? (
+                <>
+                  <path d={curve.area} fill="url(#min-elev-fill)" />
+                  <path
+                    d={curve.line}
+                    fill="none"
+                    stroke="#ffffff"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeOpacity={0.92}
+                    strokeWidth={2.5}
+                  />
+                </>
+              ) : null}
+              {overlay.map((op, i) => (
+                <g key={`curve-${i}-${op.endX.toFixed(0)}`}>
+                  <path d={op.area} fill="url(#min-elev-fill)" />
+                  <path
+                    d={op.line}
+                    fill="none"
+                    stroke={overlayShades[i]}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2.5}
+                  />
+                </g>
+              ))}
             </svg>
           ) : null}
 

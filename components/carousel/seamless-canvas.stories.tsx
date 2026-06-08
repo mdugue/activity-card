@@ -1,7 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import type { ComponentProps } from "react";
 import { expect } from "storybook/test";
-import { SAMPLE_RIDE } from "@/components/app/sample-data";
+import {
+  SAMPLE_BRICK,
+  SAMPLE_RIDE,
+  SAMPLE_TRI,
+} from "@/components/app/sample-data";
 import {
   CAROUSEL_THEME_TOKENS,
   type CarouselThemeId,
@@ -67,3 +71,34 @@ export const AscentDusk: Story = { args: themeArgs("ascentDusk") };
 export const Exposure: Story = { args: themeArgs("exposure") };
 export const Frame: Story = { args: themeArgs("frame") };
 export const Press: Story = { args: themeArgs("press") };
+
+// Multi-activity project: every leg's route/elevation overlays in the hero
+// signature (Trace = route, Ascent = elevation range) and in the detail nods
+// (Exposure's photo-hero deck).
+export const TraceTriathlon: Story = {
+  args: { ...themeArgs("traceDawn"), data: SAMPLE_TRI },
+};
+export const AscentTriathlon: Story = {
+  args: { ...themeArgs("ascentDawn"), data: SAMPLE_TRI },
+};
+export const ExposureTriathlon: Story = {
+  args: { ...themeArgs("exposure"), data: SAMPLE_TRI },
+};
+
+// Two-leg brick (bike + a small run) — the run is much smaller than the bike, so
+// these check both legs survive in the route signature / detail viz.
+export const TraceBrick: Story = {
+  args: { ...themeArgs("traceDawn"), data: SAMPLE_BRICK },
+};
+export const AscentBrick: Story = {
+  args: { ...themeArgs("ascentDawn"), data: SAMPLE_BRICK },
+};
+export const ExposureBrick: Story = {
+  args: { ...themeArgs("exposure"), data: SAMPLE_BRICK },
+};
+export const FrameBrick: Story = {
+  args: { ...themeArgs("frame"), data: SAMPLE_BRICK },
+};
+export const PressBrick: Story = {
+  args: { ...themeArgs("press"), data: SAMPLE_BRICK },
+};

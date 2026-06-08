@@ -1,7 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import type { ComponentProps } from "react";
 import { expect } from "storybook/test";
-import { SAMPLE_RIDE, SAMPLE_RUN } from "@/components/app/sample-data";
+import {
+  SAMPLE_RIDE,
+  SAMPLE_RUN,
+  SAMPLE_TRI,
+} from "@/components/app/sample-data";
 import {
   type BackgroundArgs,
   backgroundArgTypes,
@@ -31,3 +35,4 @@ export const Ride: Story = {
 };
 
 export const Run: Story = { args: { data: SAMPLE_RUN } };
+export const Triathlon: Story = { args: { data: SAMPLE_TRI } };

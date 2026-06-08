@@ -12,6 +12,11 @@ import {
   type StatItem,
   speedSeries,
 } from "@/lib/carousel/stats";
+import {
+  isMultiActivity,
+  segmentRoutes,
+  segmentSeries,
+} from "@/lib/multi-activity";
 import { ElevationBand } from "../elevation-band";
 import { RouteLine } from "../route-line";
 import {
@@ -25,6 +30,110 @@ import {
 const SPARK_W = 900;
 const SPARK_H = 132;
 
+const bandColors = (color: string) => ({
+  line: color,
+  fillFrom: color,
+  fillTo: "transparent",
+});
+
+/** Route silhouette spark — every leg for a project, the single route otherwise. */
+function FrameRouteSpark({
+  data,
+  color,
+}: {
+  color: string;
+  data: ActivityData;
+}) {
+  const multi = isMultiActivity(data);
+  const routes = multi ? segmentRoutes(data).map((r) => r.coords) : [];
+  const coords = multi ? undefined : routeSeries(data);
+  if (multi ? routes.length === 0 : !coords) {
+    return null;
+  }
+  return (
+    <RouteLine
+      accent={color}
+      accent2={color}
+      coords={coords}
+      h={SPARK_H}
+      ink={color}
+      pad={10}
+      routes={multi ? routes : undefined}
+      showMarkers={false}
+      strokeWidth={4}
+      style="poster"
+      w={SPARK_W}
+    />
+  );
+}
+
+/** Pick the single-activity series for a non-route datum. */
+function frameSeries(
+  data: ActivityData,
+  statKey: string
+): number[] | undefined {
+  if (statKey === "elevation") {
+    return elevationSeries(data);
+  }
+  if (statKey === "avgSpeed" || statKey === "maxSpeed") {
+    return speedSeries(data);
+  }
+  if (statKey === "power") {
+    return powerSeries(data);
+  }
+  if (statKey === "pace") {
+    return paceSeries(data);
+  }
+  return;
+}
+
+/** Band spark (elevation / pace / speed / power) — legs side by side for a project. */
+function FrameBandSpark({
+  data,
+  color,
+  statKey,
+}: {
+  color: string;
+  data: ActivityData;
+  statKey: string;
+}) {
+  const mode: "elevation" | "pace" = statKey === "pace" ? "pace" : "elevation";
+  const multi = isMultiActivity(data);
+
+  if (multi && (statKey === "elevation" || statKey === "pace")) {
+    const field = statKey === "pace" ? "paceProfile" : "elevationProfile";
+    const { profiles, distances } = segmentSeries(data, field);
+    if (profiles.length === 0) {
+      return null;
+    }
+    return (
+      <ElevationBand
+        colors={bandColors(color)}
+        h={SPARK_H}
+        mode={mode}
+        profile={undefined}
+        profiles={profiles}
+        w={SPARK_W}
+        weights={distances}
+      />
+    );
+  }
+
+  const series = frameSeries(data, statKey);
+  if (!series) {
+    return null;
+  }
+  return (
+    <ElevationBand
+      colors={bandColors(color)}
+      h={SPARK_H}
+      mode={mode}
+      profile={series}
+      w={SPARK_W}
+    />
+  );
+}
+
 /** The matching sparkline for a Frame datum, or null when the metric has no
  *  series. Route renders as the silhouette; everything else as a band. */
 function FrameSpark({
@@ -37,47 +146,9 @@ function FrameSpark({
   statKey: string;
 }) {
   if (statKey === "distance") {
-    const coords = routeSeries(data);
-    return coords ? (
-      <RouteLine
-        accent={color}
-        accent2={color}
-        coords={coords}
-        h={SPARK_H}
-        ink={color}
-        pad={10}
-        showMarkers={false}
-        strokeWidth={4}
-        style="poster"
-        w={SPARK_W}
-      />
-    ) : null;
+    return <FrameRouteSpark color={color} data={data} />;
   }
-
-  let series: number[] | undefined;
-  let mode: "elevation" | "pace" = "elevation";
-  if (statKey === "elevation") {
-    series = elevationSeries(data);
-  } else if (statKey === "avgSpeed" || statKey === "maxSpeed") {
-    series = speedSeries(data);
-  } else if (statKey === "power") {
-    series = powerSeries(data);
-  } else if (statKey === "pace") {
-    series = paceSeries(data);
-    mode = "pace";
-  }
-  if (!series) {
-    return null;
-  }
-  return (
-    <ElevationBand
-      colors={{ line: color, fillFrom: color, fillTo: "transparent" }}
-      h={SPARK_H}
-      mode={mode}
-      profile={series}
-      w={SPARK_W}
-    />
-  );
+  return <FrameBandSpark color={color} data={data} statKey={statKey} />;
 }
 
 function Rule({ color }: { color: string }) {

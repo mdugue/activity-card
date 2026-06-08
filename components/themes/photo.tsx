@@ -7,7 +7,7 @@
 // extraction is in flight or when no photo is loaded.
 
 import { paletteToCssVars } from "@/hooks/use-image-palette";
-import { routePath } from "@/lib/chart-helpers";
+import { routePath, whiteRamp } from "@/lib/chart-helpers";
 import {
   formatDateUpper,
   formatDuration,
@@ -16,7 +16,9 @@ import {
   formatPaceSec,
 } from "@/lib/format";
 import type { ImageTransform } from "@/lib/image-transform";
+import { isMultiActivity, segmentRoutes } from "@/lib/multi-activity";
 import type { PaletteTheme } from "@/lib/palette";
+import { OverlayRoute } from "./overlay-route";
 import { PhotoLayer } from "./photo-layer";
 import type { ActivityCardProps } from "./types";
 
@@ -80,6 +82,8 @@ export function ThemePhoto({
 }: ThemePhotoProps) {
   const sport = data.sport;
   const isPool = sport === "swim";
+  const multi = isMultiActivity(data);
+  const routes = multi ? segmentRoutes(data) : [];
 
   const cssVars = paletteTheme
     ? paletteToCssVars(paletteTheme)
@@ -255,15 +259,27 @@ export function ThemePhoto({
           viewBox="0 0 400 300"
         >
           <title>Route trace</title>
-          <path
-            d={routePath(data.routeCoordinates, 400, 300, 20)}
-            fill="none"
-            stroke="#ffffff"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2.5}
-            style={{ filter: "drop-shadow(0 0 12px rgba(0,0,0,0.4))" }}
-          />
+          {multi ? (
+            <OverlayRoute
+              colors={whiteRamp(routes.length)}
+              h={300}
+              pad={20}
+              routes={routes.map((r) => r.coords)}
+              shadow="drop-shadow(0 0 12px rgba(0,0,0,0.4))"
+              strokeWidth={2.5}
+              w={400}
+            />
+          ) : (
+            <path
+              d={routePath(data.routeCoordinates, 400, 300, 20)}
+              fill="none"
+              stroke="#ffffff"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2.5}
+              style={{ filter: "drop-shadow(0 0 12px rgba(0,0,0,0.4))" }}
+            />
+          )}
         </svg>
       )}
 

@@ -230,6 +230,13 @@ const swimRouteCoords = ((): Coord[] => {
   return out;
 })();
 
+/** Shift a shape by (dx, dy) — used to place a project's legs in distinct
+ * spots, the way real GPS legs sit apart (swim by the shore, bike out in the
+ * country, run near the finish) so a shared-coordinate render shows them all. */
+function translate(coords: Coord[], dx: number, dy: number): Coord[] {
+  return coords.map(([x, y]): Coord => [x + dx, y + dy]);
+}
+
 const triSwimRouteCoords = ((): Coord[] => {
   const out: Coord[] = [];
   for (let i = 0; i < 60; i++) {
@@ -362,7 +369,9 @@ export const SAMPLE_TRI: ActivityData = {
       distanceKm: 1.9,
       durationSec: 34 * 60 + 12,
       avgPacePer100m: 60 + 48,
-      routeCoordinates: triSwimRouteCoords,
+      // Legs are offset into distinct spots (as real GPS legs are) so the
+      // shared-coordinate route render shows all three, not one on top of another.
+      routeCoordinates: translate(triSwimRouteCoords, 0, -1.5),
     },
     {
       sport: "bike",
@@ -370,7 +379,7 @@ export const SAMPLE_TRI: ActivityData = {
       durationSec: 2 * 3600 + 41 * 60,
       avgSpeedKmh: 33.5,
       elevationGainM: 920,
-      routeCoordinates: genLoop(0.7, 140),
+      routeCoordinates: translate(genLoop(0.7, 140), -0.2, 0.45),
       elevationProfile: genElevation(0.7, 140, 20, 720),
     },
     {
@@ -379,7 +388,8 @@ export const SAMPLE_TRI: ActivityData = {
       durationSec: 1 * 3600 + 38 * 60,
       avgPaceMinPerKm: 4 + 38 / 60,
       elevationGainM: 60,
-      routeCoordinates: genOutBack(2.1, 100),
+      routeCoordinates: translate(genOutBack(2.1, 100), 1.7, -0.6),
+      elevationProfile: genElevation(2.1, 100, 6, 70),
       paceProfile: genPace(2.1, 100, 278, 18),
     },
   ],
@@ -387,4 +397,48 @@ export const SAMPLE_TRI: ActivityData = {
     { name: "T1", durationSec: 2 * 60 + 14 },
     { name: "T2", durationSec: 1 * 60 + 48 },
   ],
+};
+
+// A two-leg project (bike + run) — the common "brick" session. The run is a
+// small loop near the end of the bike (a realistic relative size/position), to
+// exercise multi-route rendering where one leg is much smaller than the other.
+const brickBike = translate(genLoop(1.1, 160), 0, 0);
+const brickRun = translate(
+  genOutBack(3.3, 90).map(([x, y]): Coord => [x * 0.34, y * 0.34]),
+  1.45,
+  -0.15
+);
+
+export const SAMPLE_BRICK: ActivityData = {
+  sport: "triathlon",
+  title: "Brick session",
+  date: "2026-06-05",
+  location: "Sächsische Schweiz, Germany",
+  athleteName: "Manuel",
+  distanceKm: 71.6,
+  durationSec: 3 * 3600 + 9 * 60,
+  elevationGainM: 477,
+  avgHeartRate: 148,
+  segments: [
+    {
+      sport: "bike",
+      distanceKm: 60,
+      durationSec: 2 * 3600 + 28 * 60,
+      avgSpeedKmh: 24.3,
+      elevationGainM: 430,
+      routeCoordinates: brickBike,
+      elevationProfile: genElevation(1.1, 160, 120, 430),
+    },
+    {
+      sport: "run",
+      distanceKm: 11.6,
+      durationSec: 41 * 60,
+      avgPaceMinPerKm: 3 + 32 / 60,
+      elevationGainM: 47,
+      routeCoordinates: brickRun,
+      elevationProfile: genElevation(3.3, 90, 110, 60),
+      paceProfile: genPace(3.3, 90, 212, 14),
+    },
+  ],
+  transitions: [{ name: "T1", durationSec: 1 * 60 + 36 }],
 };
