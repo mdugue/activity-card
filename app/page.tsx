@@ -8,6 +8,7 @@ import { EditState } from "@/components/app/edit-state";
 import { EffortWordmark } from "@/components/app/effort-wordmark";
 import { EmptyState } from "@/components/app/empty-state";
 import { type CardMode, ModeToggle } from "@/components/app/mode-toggle";
+import type { OnboardingResult } from "@/components/app/onboarding-wizard";
 import type { ThemeId } from "@/components/app/render-theme";
 import {
   type ActivityData,
@@ -347,6 +348,25 @@ export default function Home() {
     }
   };
 
+  // The onboarding wizard hands back a parsed upload or a sample, plus an
+  // optional background photo, then drops the user into the editor pre-filled.
+  const handleOnboardingComplete = ({
+    parts,
+    photo,
+    sample,
+  }: OnboardingResult) => {
+    const next = parts ? adoptParts(parts, "upload") : sample;
+    if (!next) {
+      return;
+    }
+    setData(next);
+    if (photo) {
+      handlePhotoChange(photo);
+    }
+    carousel.regenerate();
+    setState("edit");
+  };
+
   // Switching carousel theme re-applies that theme's signature photo look,
   // unless there's no photo to affect.
   const handleCarouselThemeChange = (id: CarouselThemeId) => {
@@ -387,12 +407,12 @@ export default function Home() {
       {state === "edit" ? null : (
         <Header
           date={data?.date}
-          status={state === "empty" ? "STEP 01 / 03 · CONNECT" : undefined}
+          status={state === "empty" ? "TURN ANY EFFORT INTO A CARD" : undefined}
         />
       )}
       {state === "empty" ? (
         <EmptyState
-          onFilesLoaded={handleFilesLoaded}
+          onComplete={handleOnboardingComplete}
           onOpenStravaPicker={handleOpenStravaPicker}
         />
       ) : null}

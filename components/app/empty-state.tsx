@@ -1,16 +1,8 @@
 "use client";
 
-import {
-  FileArrowUpIcon,
-  MedalIcon,
-  PersonSimpleBikeIcon,
-  PersonSimpleRunIcon,
-  PersonSimpleSwimIcon,
-  WarningCircleIcon,
-} from "@phosphor-icons/react";
+import { ArrowRightIcon } from "@phosphor-icons/react";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { useRef, useState } from "react";
 import { EffortMark } from "@/components/app/effort-wordmark";
 import {
   IntroReplay,
@@ -21,13 +13,11 @@ import {
   RevealOverlay,
   useEmptyStateIntro,
 } from "@/components/app/empty-state-intro";
-import { StravaConnectButton } from "@/components/app/strava-connect-button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
+import {
+  type OnboardingResult,
+  OnboardingWizard,
+} from "@/components/app/onboarding-wizard";
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
-import { useStravaConnection } from "@/hooks/use-strava-connection";
-import { type ParsedActivity, parseActivityFiles } from "@/lib/parse-activity";
 import { cn } from "@/lib/utils";
 
 const PANEL_COUNT = 4;
@@ -35,15 +25,8 @@ const PANEL_COUNT = 4;
 // across the gutters and reads as one continuous photo.
 const PANEL_GAP = "16px";
 
-const SPORT_CHIPS = [
-  { Icon: PersonSimpleBikeIcon, label: "RIDE" },
-  { Icon: PersonSimpleRunIcon, label: "RUN" },
-  { Icon: PersonSimpleSwimIcon, label: "SWIM" },
-  { Icon: MedalIcon, label: "TRIATHLON" },
-] as const;
-
 interface EmptyStateProps {
-  onFilesLoaded: (parts: ParsedActivity[]) => void;
+  onComplete: (result: OnboardingResult) => void;
   onOpenStravaPicker: () => void;
 }
 
@@ -208,48 +191,13 @@ function ClaimPanel({
 }
 
 export function EmptyState({
-  onFilesLoaded,
+  onComplete,
   onOpenStravaPicker,
 }: EmptyStateProps) {
-  const strava = useStravaConnection();
   const intro = useEmptyStateIntro();
-  const inputRef = useRef<HTMLInputElement>(null);
   const railRef = useRef<HTMLDivElement>(null);
-  const connectBtnRef = useRef<HTMLAnchorElement>(null);
-  const pickBtnRef = useRef<HTMLButtonElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isParsing, setIsParsing] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
-
-  // Focus whichever CTA just resolved so the landing is keyboard-ready and
-  // Enter triggers the right action. `preventScroll` keeps the action bar from
-  // yanking the viewport away from the intro on shorter screens.
-  useEffect(() => {
-    if (strava.loading) {
-      return;
-    }
-    if (strava.connected) {
-      pickBtnRef.current?.focus({ preventScroll: true });
-    } else {
-      connectBtnRef.current?.focus({ preventScroll: true });
-    }
-  }, [strava.loading, strava.connected]);
-
-  const handleFiles = async (fileList: FileList | File[]) => {
-    if (isParsing) {
-      return;
-    }
-    setIsParsing(true);
-    try {
-      onFilesLoaded(await parseActivityFiles(fileList));
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not read that file.");
-    } finally {
-      setIsParsing(false);
-    }
-  };
-
-  const openFilePicker = () => inputRef.current?.click();
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   // Track the centred slide on the touch rail so the dots reflect the swipe.
   // (No-op on desktop, where the grid doesn't scroll and the dots are hidden.)
@@ -264,69 +212,8 @@ export function EmptyState({
     setActiveSlide(index);
   };
 
-  const showOverlay = isDragging || isParsing;
-  const hasError = strava.error === "fetch_failed";
-
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: drag-drop augments the explicit "drop a file" control; not the only path
-    // biome-ignore lint/a11y/noNoninteractiveElementInteractions: drag-drop augments the explicit "drop a file" control; not the only path
-    <section
-      className="relative flex flex-1 flex-col items-center justify-center gap-5 px-6 pt-20 pb-10 lg:gap-8 lg:pt-24 lg:pb-16"
-      onDragLeave={(e) => {
-        e.preventDefault();
-        // Ignore leaves that just cross into a child — only clear when the
-        // pointer actually exits the section, so the overlay doesn't flicker.
-        if (
-          e.relatedTarget instanceof Node &&
-          e.currentTarget.contains(e.relatedTarget)
-        ) {
-          return;
-        }
-        setIsDragging(false);
-      }}
-      onDragOver={(e) => {
-        e.preventDefault();
-        setIsDragging(true);
-      }}
-      onDrop={(e) => {
-        e.preventDefault();
-        setIsDragging(false);
-        if (e.dataTransfer.files.length) {
-          handleFiles(e.dataTransfer.files);
-        }
-      }}
-    >
-      <input
-        accept=".gpx,.fit"
-        className="hidden"
-        multiple
-        onChange={(e) => {
-          if (e.target.files?.length) {
-            handleFiles(e.target.files);
-          }
-        }}
-        ref={inputRef}
-        type="file"
-      />
-
-      {showOverlay ? (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/85 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-3 border-2 border-primary border-dashed px-12 py-10">
-            {isParsing ? (
-              <Spinner className="size-6 text-primary" />
-            ) : (
-              <FileArrowUpIcon
-                className="size-6 text-primary"
-                weight="duotone"
-              />
-            )}
-            <span className="font-mono font-semibold text-primary text-xs uppercase tracking-[0.28em]">
-              {isParsing ? "Reading…" : "Drop to read"}
-            </span>
-          </div>
-        </div>
-      ) : null}
-
+    <section className="relative flex flex-1 flex-col items-center justify-center gap-5 px-6 pt-20 pb-10 lg:gap-8 lg:pt-24 lg:pb-16">
       <p className="caption-label w-full text-left lg:text-center">
         {intro.eyebrow}
       </p>
@@ -366,88 +253,47 @@ export function EmptyState({
         ))}
       </div>
 
-      {hasError ? (
-        <Alert
-          className="w-full max-w-md text-left"
-          role="status"
-          variant="destructive"
-        >
-          <WarningCircleIcon weight="duotone" />
-          <AlertTitle>We can&apos;t reach the Effort server.</AlertTitle>
-          <AlertDescription>
-            Strava sign-in is unavailable right now. Refresh in a moment, or
-            drop a file below in the meantime.
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
-      {/* Action tier — the orange button sits alone on ink so it reads as the
-          focal point instead of clashing with the rust accent. */}
+      {/* Action bar — a single GET STARTED CTA opens the two-step wizard. The
+          orange button sits alone on ink so it reads as the focal point. */}
       <div className="flex w-full max-w-[64rem] flex-col gap-4 bg-foreground p-5 text-background shadow-2xl shadow-foreground/20 lg:mx-auto lg:flex-row lg:items-center lg:gap-8 lg:px-8 lg:py-7">
         <div className="hidden lg:block">
-          <p className="font-mono text-[11px] text-background/55 uppercase tracking-[0.2em]">
-            Step 01 — Connect
+          <p className="font-medium font-mono text-[11px] text-background/55 uppercase tracking-[0.2em]">
+            Ready in two steps
           </p>
           <p className="mt-1.5 font-heading text-3xl uppercase leading-none">
-            Fill the slides
+            Make your card
           </p>
         </div>
 
-        <div className="flex justify-center lg:block">
-          {strava.loading ? (
-            <div className="flex h-12 w-[237px] items-center justify-center">
-              <Spinner className="text-background/50" />
-            </div>
-          ) : null}
-          {strava.connected && !strava.loading ? (
-            <Button
-              className="h-12 w-full justify-center px-8 lg:w-auto"
-              onClick={onOpenStravaPicker}
-              ref={pickBtnRef}
-              size="lg"
-            >
-              Pick from Strava
-              {strava.athlete?.firstname
-                ? ` · ${strava.athlete.firstname}`
-                : ""}
-            </Button>
-          ) : null}
-          {strava.loading || strava.connected ? null : (
-            <StravaConnectButton
-              className="shadow-primary/50 shadow-xl hover:-translate-y-0.5"
-              ref={connectBtnRef}
-            />
-          )}
-        </div>
+        <Button
+          className="h-auto justify-center px-8 py-4 font-heading text-2xl uppercase tracking-wide shadow-primary/50 shadow-xl hover:-translate-y-0.5"
+          onClick={() => setWizardOpen(true)}
+          size="lg"
+        >
+          Get started
+          <ArrowRightIcon className="size-5" weight="bold" />
+        </Button>
 
-        <div className="flex items-center justify-between gap-3 lg:ml-auto lg:block lg:text-right">
-          <p className="font-mono text-[11px] text-background/55 uppercase tracking-[0.2em]">
-            OAuth · Read-only · Revoke anytime
-          </p>
-          <p className="text-background/65 text-sm lg:mt-2">
-            or{" "}
-            <button
-              className="underline underline-offset-4 hover:text-background"
-              onClick={openFilePicker}
-              type="button"
-            >
-              drop a .gpx / .fit
-            </button>
-          </p>
+        <div className="flex items-center justify-between gap-4 lg:ml-auto lg:block lg:text-right">
+          <div className="flex items-center gap-2 font-medium font-mono text-[11px] text-background/60 uppercase tracking-[0.14em] lg:justify-end">
+            <span className="size-1.5 bg-primary" />
+            Add activity
+          </div>
+          <div className="flex items-center gap-2 font-medium font-mono text-[11px] text-background/60 uppercase tracking-[0.14em] lg:mt-2 lg:justify-end">
+            <span className="size-1.5 bg-primary" />
+            Add a photo
+          </div>
         </div>
-      </div>
-
-      {/* Supported sports — the card types Effort can render. */}
-      <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
-        {SPORT_CHIPS.map(({ Icon, label }) => (
-          <Badge key={label}>
-            <Icon aria-hidden data-icon="inline-start" weight="duotone" />
-            {label}
-          </Badge>
-        ))}
       </div>
 
       {intro.showReplay ? <IntroReplay onReplay={intro.replay} /> : null}
+
+      <OnboardingWizard
+        onComplete={onComplete}
+        onOpenChange={setWizardOpen}
+        onOpenStravaPicker={onOpenStravaPicker}
+        open={wizardOpen}
+      />
     </section>
   );
 }
