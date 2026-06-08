@@ -2,7 +2,7 @@
 
 import { ArrowRightIcon } from "@phosphor-icons/react";
 import Image from "next/image";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EffortMark } from "@/components/app/effort-wordmark";
 import {
   IntroReplay,
@@ -26,8 +26,10 @@ const PANEL_COUNT = 4;
 const PANEL_GAP = "16px";
 
 interface EmptyStateProps {
+  /** After the Strava OAuth round-trip the page reloads already connected;
+   * this opens the wizard with the Strava picker showing. */
+  autoStravaPicker?: boolean;
   onComplete: (result: OnboardingResult) => void;
-  onOpenStravaPicker: () => void;
 }
 
 /** Abstract route squiggle — the "drop" slide's footer glyph. */
@@ -191,13 +193,22 @@ function ClaimPanel({
 }
 
 export function EmptyState({
+  autoStravaPicker = false,
   onComplete,
-  onOpenStravaPicker,
 }: EmptyStateProps) {
   const intro = useEmptyStateIntro();
   const railRef = useRef<HTMLDivElement>(null);
   const [activeSlide, setActiveSlide] = useState(0);
   const [wizardOpen, setWizardOpen] = useState(false);
+
+  // The OAuth round-trip lands back here already connected; open the wizard so
+  // its Strava picker (auto-opened via initialStravaPickerOpen) is visible.
+  useEffect(() => {
+    if (autoStravaPicker) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setWizardOpen(true);
+    }
+  }, [autoStravaPicker]);
 
   // Track the centred slide on the touch rail so the dots reflect the swipe.
   // (No-op on desktop, where the grid doesn't scroll and the dots are hidden.)
@@ -289,9 +300,9 @@ export function EmptyState({
       {intro.showReplay ? <IntroReplay onReplay={intro.replay} /> : null}
 
       <OnboardingWizard
+        initialStravaPickerOpen={autoStravaPicker}
         onComplete={onComplete}
         onOpenChange={setWizardOpen}
-        onOpenStravaPicker={onOpenStravaPicker}
         open={wizardOpen}
       />
     </section>

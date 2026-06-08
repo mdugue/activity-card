@@ -25,18 +25,36 @@ export async function selectSingleCard(page: Page): Promise<void> {
 }
 
 /**
- * Upload the default single-run fixture and wait for the edit state. Use
- * `enterEditViaUpload` for the common "clean session" path; call
- * `uploadActivity` directly when a test needs to keep localStorage state
+ * Open the get-started onboarding wizard from the landing. Activity + photo
+ * intake (file upload, Strava, samples) all live inside it now.
+ */
+export async function openWizard(page: Page): Promise<void> {
+  await page.getByRole("button", { name: /get started/i }).click();
+  // Sync point: the dialog must be open before callers interact with it.
+  await expect(page.getByRole("dialog")).toBeVisible();
+}
+
+/** Open the wizard and click the official "Connect with Strava" button. */
+export async function connectStrava(page: Page): Promise<void> {
+  await openWizard(page);
+  await page.getByRole("link", { name: /connect with strava/i }).click();
+}
+
+/**
+ * Upload the default single-run fixture through the wizard and wait for the
+ * edit state. Use `enterEditViaUpload` for the common "clean session" path;
+ * call `uploadActivity` directly when a test needs to keep localStorage state
  * (e.g. across a reload).
  */
 export async function uploadActivity(page: Page): Promise<void> {
+  await openWizard(page);
   const fileInput = page.locator('input[type="file"][accept=".gpx,.fit"]');
   await fileInput.setInputFiles({
     name: "sample-run.gpx",
     mimeType: "application/gpx+xml",
     buffer: Buffer.from(SINGLE_RUN_GPX),
   });
+  await page.getByRole("button", { name: /open the editor/i }).click();
   await expect(page.getByTestId("export-action")).toBeVisible();
 }
 

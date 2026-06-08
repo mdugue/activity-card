@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { SINGLE_RUN_GPX, TRIATHLON_FILES } from "./fixtures";
-import { selectSingleCard, selectTheme } from "./helpers";
+import { openWizard, selectSingleCard, selectTheme } from "./helpers";
 
 test.describe("upload", () => {
   test("single file → edit state with parsed activity", async ({ page }) => {
@@ -8,12 +8,14 @@ test.describe("upload", () => {
     await page.evaluate(() => localStorage.clear());
     await page.reload();
 
+    await openWizard(page);
     const fileInput = page.locator('input[type="file"][accept=".gpx,.fit"]');
     await fileInput.setInputFiles({
       name: "morning-run.gpx",
       mimeType: "application/gpx+xml",
       buffer: Buffer.from(SINGLE_RUN_GPX),
     });
+    await page.getByRole("button", { name: /open the editor/i }).click();
 
     // Edit state is recognisable by the export action; the source label lives
     // in the ACTIVITY section (always visible in the desktop sidebar).
@@ -29,6 +31,7 @@ test.describe("upload", () => {
     await page.evaluate(() => localStorage.clear());
     await page.reload();
 
+    await openWizard(page);
     const fileInput = page.locator('input[type="file"][accept=".gpx,.fit"]');
     await fileInput.setInputFiles([
       {
@@ -47,6 +50,7 @@ test.describe("upload", () => {
         buffer: Buffer.from(TRIATHLON_FILES.run),
       },
     ]);
+    await page.getByRole("button", { name: /open the editor/i }).click();
 
     // The combined-source label is in the ACTIVITY section.
     await expect(page.getByText(/3 files · assembled/i)).toBeVisible();
@@ -66,13 +70,18 @@ test.describe("upload", () => {
 
   test("rejects non-activity files with a clear error", async ({ page }) => {
     await page.goto("/");
+    await openWizard(page);
     const fileInput = page.locator('input[type="file"][accept=".gpx,.fit"]');
     await fileInput.setInputFiles({
       name: "not-an-activity.txt",
       mimeType: "text/plain",
       buffer: Buffer.from("hello"),
     });
-    await expect(page.getByText(/Drop a \.gpx or \.fit file/i)).toBeVisible();
+    // The error surfaces as a toast (scoped so it isn't confused with the
+    // dropzone's own "Drop a .gpx or .fit file" hint).
+    await expect(page.locator("[data-sonner-toast]").first()).toContainText(
+      /drop a \.gpx or \.fit file/i
+    );
     // Should NOT have advanced to the edit state.
     await expect(page.getByTestId("export-action")).not.toBeVisible();
   });

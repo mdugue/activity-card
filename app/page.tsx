@@ -103,6 +103,9 @@ function loadPersistedUi(): Partial<PersistedUi> {
 
 export default function Home() {
   const [state, setState] = useState<AppState>("empty");
+  // Set after the Strava OAuth round-trip so the empty state opens the wizard
+  // with the Strava picker showing (instead of a separate full-screen state).
+  const [autoStravaPicker, setAutoStravaPicker] = useState(false);
   const [data, setData] = useState<ActivityData | null>(null);
   const [theme, setTheme] = useState<ThemeId>("path");
   // Carousel themes have their own id space (Dawn/Dusk pairs etc.), so the
@@ -233,7 +236,8 @@ export default function Home() {
     switch (flag) {
       case "connected":
         toast.success("Connected to Strava");
-        setState((prev) => (prev === "empty" ? "picking-strava" : prev));
+        // Stay on the empty state; the wizard + its Strava picker open instead.
+        setAutoStravaPicker(true);
         break;
       case "denied":
         toast.error("You declined to connect Strava. You can try again.");
@@ -304,6 +308,7 @@ export default function Home() {
   };
 
   const handleCancelStravaPicker = () => {
+    setAutoStravaPicker(false);
     setState("empty");
   };
 
@@ -354,8 +359,9 @@ export default function Home() {
     parts,
     photo,
     sample,
+    source,
   }: OnboardingResult) => {
-    const next = parts ? adoptParts(parts, "upload") : sample;
+    const next = parts ? adoptParts(parts, source) : sample;
     if (!next) {
       return;
     }
@@ -397,6 +403,7 @@ export default function Home() {
     setPhotoUrl(null);
     setImageTransform(IDENTITY_TRANSFORM);
     setPhotoEffects(NO_EFFECTS);
+    setAutoStravaPicker(false);
     setState("empty");
   };
 
@@ -412,8 +419,8 @@ export default function Home() {
       )}
       {state === "empty" ? (
         <EmptyState
+          autoStravaPicker={autoStravaPicker}
           onComplete={handleOnboardingComplete}
-          onOpenStravaPicker={handleOpenStravaPicker}
         />
       ) : null}
       {state === "picking-strava" ? (
