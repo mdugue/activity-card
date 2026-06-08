@@ -6,6 +6,7 @@ import { ThemeEditorial } from "./editorial";
 import { ThemeMinimal } from "./minimal";
 import { ThemePath } from "./path";
 import { ThemePhoto } from "./photo";
+import { ThemeStrata } from "./strata";
 import { ThemeTriathlon } from "./triathlon";
 
 export const THEMES = {
@@ -16,6 +17,7 @@ export const THEMES = {
   data: ThemeData,
   editorial: ThemeEditorial,
   triathlon: ThemeTriathlon,
+  strata: ThemeStrata,
 } as const;
 
 export type ThemeId = keyof typeof THEMES;
@@ -110,6 +112,16 @@ export const THEME_META: Record<ThemeId, ThemeMeta> = {
     usesHeartRate: false,
     usesSplits: true,
   },
+  strata: {
+    id: "strata",
+    label: "STRATA",
+    tagline: "woven topography",
+    photoMode: "none",
+    usesAthleteName: false,
+    usesLocation: true,
+    usesHeartRate: false,
+    usesSplits: false,
+  },
 };
 
 export const THEME_ORDER: ThemeId[] = [
@@ -120,6 +132,7 @@ export const THEME_ORDER: ThemeId[] = [
   "data",
   "editorial",
   "triathlon",
+  "strata",
 ];
 
 /**
