@@ -9,10 +9,10 @@ import {
   abstractLanes,
   accentShades,
   elevationPath,
-  normalizeOverlay,
-  overlayPaths,
   pacePath,
   routePath,
+  sequencePaths,
+  sequenceProfiles,
 } from "@/lib/chart-helpers";
 import {
   formatClock,
@@ -164,7 +164,7 @@ export function ThemeData({ data }: ActivityCardProps) {
   const segProf = multi ? segmentProfiles(data) : null;
   const elevCurves =
     segProf && segProf.profiles.length > 0
-      ? normalizeOverlay(
+      ? sequenceProfiles(
           segProf.profiles,
           segProf.distances,
           segProf.useElevation
@@ -463,7 +463,7 @@ export function ThemeData({ data }: ActivityCardProps) {
               />
             ))}
             {multi
-              ? overlayPaths(elevCurves, 460, 200).map((op, i) => {
+              ? sequencePaths(elevCurves, 460, 200).map((op, i) => {
                   const shade = accentShades(ACCENT, elevCurves.length)[i];
                   return (
                     <g key={`elev-${i}-${op.endX.toFixed(0)}`}>

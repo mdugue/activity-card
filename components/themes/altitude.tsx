@@ -24,7 +24,7 @@ import {
 import {
   type Coord,
   type NormalizedCurve,
-  normalizeOverlay,
+  sequenceProfiles,
 } from "@/lib/chart-helpers";
 import { formatDateUpper } from "@/lib/format";
 import type { ImageTransform } from "@/lib/image-transform";
@@ -163,15 +163,13 @@ function hashId(s: string): string {
 
 /**
  * Full-width hero text, sized + wrapped by `layout`. `cut` splits it along the
- * overlaid `curves` and draws a white line on each seam; otherwise it's solid
- * with a soft dark drop for legibility.
+ * `curves` and draws a white line on each seam; otherwise it's solid with a soft
+ * dark drop for legibility.
  *
- * With one curve (a single activity) the type is opaque above the line and
- * fades to `belowOpacity` below it. With several curves (a multi-activity
- * project) the cut is graduated: a copy of the type is clipped above each curve
- * and the copies compound, so a point's opacity grows with how many curves sit
- * below it — opaque above the topmost, `belowOpacity` below the lowest, relative
- * steps between.
+ * The type is opaque above each curve and fades to `belowOpacity` below it. A
+ * single activity is one curve across the full width; a project lays its legs
+ * side by side, each cutting only its own slice of the type (with a vertical
+ * step in the seam where two legs meet).
  */
 function ClaimText({
   layout,
@@ -242,22 +240,14 @@ function ClaimText({
             (p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`
           )
           .join(" ");
-        // A leg shorter than the longest ends before the full width; close the
-        // clip at its own right edge so it only cuts the type it spans.
+        // Each leg occupies its own slice of the width; close the clip between
+        // its own left and right edges so it only cuts the type it spans.
+        const startX = mapped[0]?.[0] ?? 0;
         const endX = mapped.at(-1)?.[0] ?? CONTENT_W;
-        const aboveD = `${lineD} L${endX.toFixed(1)} ${topY.toFixed(1)} L0 ${topY.toFixed(1)} Z`;
+        const aboveD = `${lineD} L${endX.toFixed(1)} ${topY.toFixed(1)} L${startX.toFixed(1)} ${topY.toFixed(1)} Z`;
         return { lineD, aboveD };
       })
     : [];
-
-  // Per-layer opacity, picked so the area above all `n` curves composites to
-  // ~opaque while a single curve stays effectively solid above the line.
-  const n = seams.length;
-  const remain = Math.max(0.001, 1 - belowOpacity);
-  const layerOpacity = Math.max(
-    0,
-    Math.min(1, 1 - (0.015 / remain) ** (1 / Math.max(1, n)))
-  );
 
   return (
     <svg
@@ -275,12 +265,12 @@ function ClaimText({
               </clipPath>
             ))}
           </defs>
-          {/* faint base everywhere → shows through below the lowest seam */}
+          {/* faint base everywhere → shows through below each leg's seam */}
           {textLines(belowOpacity)}
-          {/* one clipped copy per curve; the opacities compound upward */}
+          {/* opaque copy above each leg's seam (legs don't overlap in x) */}
           {seams.map((_, k) => (
             <g clipPath={`url(#${uid}-a${k})`} key={`above-${k}`}>
-              {textLines(layerOpacity)}
+              {textLines(1)}
             </g>
           ))}
           {/* white line on each seam */}
@@ -316,9 +306,9 @@ function ClaimText({
 }
 
 /**
- * Decorative elevation band (stacked treatment + the no-claim hero). Renders
- * every overlaid curve — one for a single activity, several for a project —
- * sharing one vertical scale and left-aligned, with the longest leg full-width.
+ * Decorative elevation band (stacked treatment + the no-claim hero). Renders one
+ * curve for a single activity, or — for a project — every leg laid out side by
+ * side on a shared scale (no gaps, a vertical step where two legs meet).
  */
 function MultiLineBand({
   curves,
@@ -350,12 +340,10 @@ function MultiLineBand({
       viewBox={`0 0 ${W} 100`}
     >
       <title>Elevation lines</title>
-      {curves.map((c, i) => {
+      {curves.map((c) => {
         const d = toD(c);
-        // Fade successive legs slightly so overlaps stay readable.
-        const op = Math.max(0.5, 1 - i * 0.26);
         return (
-          <g key={`band-${i}`}>
+          <g key={d}>
             <path
               d={d}
               fill="none"
@@ -371,7 +359,6 @@ function MultiLineBand({
               stroke="#fff"
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeOpacity={op}
               strokeWidth={strokeWidth}
               vectorEffect="non-scaling-stroke"
             />
@@ -471,21 +458,21 @@ export function ThemeAltitude({
     ? supportingStats(data, claim?.key ?? null)
     : [];
 
-  // One curve for a single activity; several (shared scale, left-aligned,
-  // longest leg full-width) for a multi-activity project.
+  // One curve for a single activity; for a project, every leg laid out side by
+  // side on a shared scale (no gaps, vertical step at each seam).
   const multi = isMultiActivity(data);
   const curves = ((): NormalizedCurve[] => {
     if (multi) {
       const seg = segmentProfiles(data);
       return seg.profiles.length
-        ? normalizeOverlay(seg.profiles, seg.distances, seg.useElevation)
+        ? sequenceProfiles(seg.profiles, seg.distances, seg.useElevation)
         : [];
     }
     const profile = data.elevationProfile ?? data.paceProfile;
     if (!profile || profile.length <= 1) {
       return [];
     }
-    return normalizeOverlay(
+    return sequenceProfiles(
       [profile],
       [undefined],
       Boolean(data.elevationProfile?.length)

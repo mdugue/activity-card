@@ -7,9 +7,9 @@
 import { useId } from "react";
 import type { ElevationColors } from "@/lib/carousel/theme-tokens";
 import {
-  normalizeOverlay,
   type OverlayPath,
-  overlayPaths,
+  sequencePaths,
+  sequenceProfiles,
 } from "@/lib/chart-helpers";
 
 interface ElevationBandProps {
@@ -49,12 +49,12 @@ export function ElevationBand({
   // Multi-activity project: overlay every leg, sharing one vertical scale.
   if (profiles && profiles.length > 0) {
     const reach = Math.min(1, Math.max(0.3, 0.7 * exaggeration));
-    const curves = normalizeOverlay(
+    const curves = sequenceProfiles(
       profiles,
       weights ?? profiles.map(() => undefined),
       mode === "elevation"
     );
-    const paths = overlayPaths(curves, w, h, reach);
+    const paths = sequencePaths(curves, w, h, reach);
     if (paths.length === 0) {
       return null;
     }
@@ -148,9 +148,9 @@ export function ElevationBand({
   );
 }
 
-// The overlaid-leg variant: shared gradient fill, one line per leg fading
-// slightly so overlaps stay readable. No high/low markers (they'd be ambiguous
-// across legs on a shared scale).
+// The sequenced-leg variant: each leg's profile laid out side by side along the
+// width (shared scale), sharing one gradient fill. No high/low markers (they'd
+// be ambiguous across legs on a shared scale).
 function MultiBand({
   paths,
   w,
@@ -178,7 +178,7 @@ function MultiBand({
           <stop offset="100%" stopColor={colors.fillTo} stopOpacity={0.04} />
         </linearGradient>
       </defs>
-      {paths.map((p, i) => (
+      {paths.map((p) => (
         <g key={p.line}>
           <path d={p.area} fill={`url(#${areaId})`} stroke="none" />
           <path
@@ -186,7 +186,6 @@ function MultiBand({
             fill="none"
             stroke={colors.line}
             strokeLinejoin="round"
-            strokeOpacity={Math.max(0.5, 1 - i * 0.26)}
             strokeWidth={4}
             style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.35))" }}
           />

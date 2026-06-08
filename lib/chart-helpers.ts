@@ -200,30 +200,32 @@ export function projectRoutes(
 
 export interface NormalizedCurve {
   /**
-   * Fractional points. `x ∈ [0, widthFrac]` runs left→right (every curve starts
-   * at 0); `y ∈ [0, 1]` where 1 is the highest value (drawn toward the top).
+   * Fractional points. `x ∈ [offset, offset + widthFrac]` — each leg occupies
+   * its own slice of the [0,1] axis, laid out left→right with no gaps; `y ∈
+   * [0, 1]` where 1 is the highest value (drawn toward the top).
    */
   pts: Coord[];
-  /** Share of the full width this curve occupies (the longest leg = 1). */
+  /** Share of the full width this leg occupies (all legs sum to 1). */
   widthFrac: number;
 }
 
 /**
- * Normalise several profiles into overlaid curves that share one vertical scale
- * and one horizontal axis — for stacking a multi-activity project's elevation
- * (or pace) profiles in a single frame.
+ * Lay several profiles out **side by side** along one horizontal axis — for a
+ * multi-activity project's elevation (or pace) legs shown end-to-end in a single
+ * frame (swim · bike · run reading left→right), not stacked on top of each other.
  *
- * - **Shared height scale:** every curve is normalised against the global
- *   min/max across *all* profiles, so a flat leg reads flat next to a hilly one.
- * - **Left-aligned, distance-proportional width:** all curves start at x=0; the
- *   leg with the largest `weight` (distance) spans the full width, shorter legs
- *   span proportionally less.
+ * - **Shared height scale:** every leg is normalised against the global min/max
+ *   across *all* profiles, so they're directly comparable and the seam between
+ *   two legs can jump (a high climb meeting a flat run reads as a real step).
+ * - **Shared width scale, no gaps:** each leg's width is proportional to its
+ *   `weight` (distance) at one constant scale, and the legs abut — their widths
+ *   sum to the full axis. A 90 km ride is ~4× as wide as a 21 km run.
  *
  * `weights[i]` is typically each leg's distance; when absent the point count is
  * used as a stand-in. Profiles with fewer than two points are dropped (and so
  * are their weights), keeping the result tight rather than index-aligned.
  */
-export function normalizeOverlay(
+export function sequenceProfiles(
   profiles: number[][],
   weights: (number | undefined)[],
   useElevation = true
@@ -249,12 +251,15 @@ export function normalizeOverlay(
   const dv = max - min || 1;
   const widthOf = (e: { p: number[]; weight?: number }) =>
     e.weight !== undefined && e.weight > 0 ? e.weight : e.p.length;
-  const maxW = Math.max(...valid.map(widthOf));
+  const total = valid.reduce((sum, e) => sum + widthOf(e), 0) || 1;
+  let cursor = 0;
   return valid.map((e) => {
-    const widthFrac = maxW > 0 ? widthOf(e) / maxW : 1;
+    const widthFrac = widthOf(e) / total;
+    const offset = cursor;
+    cursor += widthFrac;
     const n = e.p.length;
     const pts: Coord[] = e.p.map((v, i) => {
-      const tx = n > 1 ? (i / (n - 1)) * widthFrac : 0;
+      const tx = offset + (n > 1 ? (i / (n - 1)) * widthFrac : 0);
       // 1 = highest point. Pace is "lower is better", so invert it.
       const ty = useElevation ? (v - min) / dv : (max - v) / dv;
       return [tx, ty];
@@ -264,9 +269,9 @@ export function normalizeOverlay(
 }
 
 export interface OverlayPath {
-  /** Filled-area path (line closed down to the baseline at its own right edge). */
+  /** Filled-area path (line closed down to the baseline within the leg's slice). */
   area: string;
-  /** This curve's right edge in box coordinates (shorter legs end before `w`). */
+  /** This leg's right edge in box coordinates. */
   endX: number;
   /** Open line path. */
   line: string;
@@ -274,13 +279,13 @@ export interface OverlayPath {
 }
 
 /**
- * Map normalised overlay curves into `line` + filled `area` path strings inside
- * a w×h box (y grows downward, the curve's highest point near the top). `reach`
- * is a vertical-exaggeration factor (1 = use the full height). Each area closes
- * down to the baseline at the curve's own right edge, so a short leg's fill
- * doesn't smear across the rest of the width.
+ * Map sequenced curves into `line` + filled `area` path strings inside a w×h box
+ * (y grows downward, the curve's highest point near the top). `reach` is a
+ * vertical-exaggeration factor (1 = use the full height). Each area closes down
+ * to the baseline between the leg's own left and right edges, so adjacent legs
+ * abut cleanly (with a vertical step at the seam) rather than smearing fills.
  */
-export function overlayPaths(
+export function sequencePaths(
   curves: NormalizedCurve[],
   w: number,
   h: number,
@@ -296,8 +301,9 @@ export function overlayPaths(
         (p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`
       )
       .join(" ");
+    const startX = pts[0]?.[0] ?? 0;
     const endX = pts.at(-1)?.[0] ?? w;
-    const area = `${line} L${endX.toFixed(1)} ${h.toFixed(1)} L0 ${h.toFixed(1)} Z`;
+    const area = `${line} L${endX.toFixed(1)} ${h.toFixed(1)} L${startX.toFixed(1)} ${h.toFixed(1)} Z`;
     return { line, area, endX, widthFrac: c.widthFrac };
   });
 }

@@ -5,7 +5,11 @@
 // When no photo is loaded we fall back to a deep neutral gradient so the route
 // and elevation still read while the user is choosing an image.
 
-import { normalizeOverlay, overlayPaths, routePath } from "@/lib/chart-helpers";
+import {
+  routePath,
+  sequencePaths,
+  sequenceProfiles,
+} from "@/lib/chart-helpers";
 import type { ImageTransform } from "@/lib/image-transform";
 import {
   isMultiActivity,
@@ -216,26 +220,20 @@ export function ThemeMinimal({
   const segProf = multi ? segmentProfiles(data) : null;
   const curves =
     segProf && segProf.profiles.length > 0
-      ? normalizeOverlay(
+      ? sequenceProfiles(
           segProf.profiles,
           segProf.distances,
           segProf.useElevation
         )
       : [];
 
-  // Bars are a single-profile texture; over a project, sample the longest leg.
-  const longestProfile = (() => {
-    if (!(segProf && segProf.profiles.length > 0)) {
-      return data.elevationProfile ?? data.paceProfile;
-    }
-    const maxDist = Math.max(...segProf.distances);
-    const idx = Math.max(0, segProf.distances.indexOf(maxDist));
-    return segProf.profiles[idx];
-  })();
-  const bars = sampleBars(longestProfile, BAR_COUNT);
-  const curve = multi ? null : curvePaths(longestProfile, 1000, 150);
-  const overlay = multi ? overlayPaths(curves, 1000, 150) : [];
-  const hasStrip = bars.length > 0;
+  // Single activity: full-width curve + bar texture. Project: the legs laid out
+  // side by side (the bars assume one profile, so they sit out for a project).
+  const singleProfile = data.elevationProfile ?? data.paceProfile;
+  const bars = multi ? [] : sampleBars(singleProfile, BAR_COUNT);
+  const curve = multi ? null : curvePaths(singleProfile, 1000, 150);
+  const overlay = multi ? sequencePaths(curves, 1000, 150) : [];
+  const hasStrip = multi ? overlay.length > 0 : bars.length > 0;
 
   return (
     <div
