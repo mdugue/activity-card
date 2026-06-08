@@ -230,6 +230,13 @@ const swimRouteCoords = ((): Coord[] => {
   return out;
 })();
 
+/** Shift a shape by (dx, dy) — used to place a project's legs in distinct
+ * spots, the way real GPS legs sit apart (swim by the shore, bike out in the
+ * country, run near the finish) so a shared-coordinate render shows them all. */
+function translate(coords: Coord[], dx: number, dy: number): Coord[] {
+  return coords.map(([x, y]): Coord => [x + dx, y + dy]);
+}
+
 const triSwimRouteCoords = ((): Coord[] => {
   const out: Coord[] = [];
   for (let i = 0; i < 60; i++) {
@@ -362,7 +369,9 @@ export const SAMPLE_TRI: ActivityData = {
       distanceKm: 1.9,
       durationSec: 34 * 60 + 12,
       avgPacePer100m: 60 + 48,
-      routeCoordinates: triSwimRouteCoords,
+      // Legs are offset into distinct spots (as real GPS legs are) so the
+      // shared-coordinate route render shows all three, not one on top of another.
+      routeCoordinates: translate(triSwimRouteCoords, 0, -1.5),
     },
     {
       sport: "bike",
@@ -370,7 +379,7 @@ export const SAMPLE_TRI: ActivityData = {
       durationSec: 2 * 3600 + 41 * 60,
       avgSpeedKmh: 33.5,
       elevationGainM: 920,
-      routeCoordinates: genLoop(0.7, 140),
+      routeCoordinates: translate(genLoop(0.7, 140), -0.2, 0.45),
       elevationProfile: genElevation(0.7, 140, 20, 720),
     },
     {
@@ -379,7 +388,7 @@ export const SAMPLE_TRI: ActivityData = {
       durationSec: 1 * 3600 + 38 * 60,
       avgPaceMinPerKm: 4 + 38 / 60,
       elevationGainM: 60,
-      routeCoordinates: genOutBack(2.1, 100),
+      routeCoordinates: translate(genOutBack(2.1, 100), 1.7, -0.6),
       elevationProfile: genElevation(2.1, 100, 6, 70),
       paceProfile: genPace(2.1, 100, 278, 18),
     },
