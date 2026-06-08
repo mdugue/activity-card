@@ -7,7 +7,7 @@
 // extraction is in flight or when no photo is loaded.
 
 import { paletteToCssVars } from "@/hooks/use-image-palette";
-import { routePath } from "@/lib/chart-helpers";
+import { routePath, whiteRamp } from "@/lib/chart-helpers";
 import {
   formatDateUpper,
   formatDuration,
@@ -21,14 +21,6 @@ import type { PaletteTheme } from "@/lib/palette";
 import { OverlayRoute } from "./overlay-route";
 import { PhotoLayer } from "./photo-layer";
 import type { ActivityCardProps } from "./types";
-
-/** White legs at a gentle opacity ramp — distinguishes overlaid routes while
- * staying legible over an arbitrary photo. */
-function whiteRamp(n: number): string[] {
-  return Array.from({ length: n }, (_, i) =>
-    n <= 1 ? "#ffffff" : `rgba(255,255,255,${Math.max(0.5, 1 - i * 0.26)})`
-  );
-}
 
 interface ThemePhotoProps extends ActivityCardProps {
   imageTransform?: ImageTransform | null;

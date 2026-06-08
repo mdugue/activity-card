@@ -23,8 +23,8 @@ interface ElevationBandProps {
   markers?: boolean;
   mode?: "elevation" | "pace";
   profile: number[] | undefined;
-  /** Multi-activity project: every leg's profile, overlaid on one shared scale,
-   *  left-aligned with the longest leg full-width. Overrides `profile`. */
+  /** Multi-activity project: every leg's profile, laid out side by side on one
+   *  shared scale (distance-weighted widths, no gaps). Overrides `profile`. */
   profiles?: number[][];
   w: number;
   /** Per-leg distances (index-aligned with `profiles`) → width weighting. */
@@ -178,19 +178,22 @@ function MultiBand({
           <stop offset="100%" stopColor={colors.fillTo} stopOpacity={0.04} />
         </linearGradient>
       </defs>
-      {paths.map((p) => (
-        <g key={p.line}>
-          <path d={p.area} fill={`url(#${areaId})`} stroke="none" />
-          <path
-            d={p.line}
-            fill="none"
-            stroke={colors.line}
-            strokeLinejoin="round"
-            strokeWidth={4}
-            style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.35))" }}
-          />
-        </g>
-      ))}
+      {paths.map((p, i) => {
+        const key = `band-${i}-${p.line}`;
+        return (
+          <g key={key}>
+            <path d={p.area} fill={`url(#${areaId})`} stroke="none" />
+            <path
+              d={p.line}
+              fill="none"
+              stroke={colors.line}
+              strokeLinejoin="round"
+              strokeWidth={4}
+              style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.35))" }}
+            />
+          </g>
+        );
+      })}
     </svg>
   );
 }

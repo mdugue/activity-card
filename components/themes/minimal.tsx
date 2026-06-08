@@ -9,6 +9,7 @@ import {
   routePath,
   sequencePaths,
   sequenceProfiles,
+  whiteRamp,
 } from "@/lib/chart-helpers";
 import type { ImageTransform } from "@/lib/image-transform";
 import {
@@ -27,14 +28,6 @@ interface ThemeMinimalProps extends ActivityCardProps {
 
 const ROUTE_W = 720;
 const ROUTE_H = 720;
-
-/** White legs at a gentle opacity ramp — distinguishes overlaid routes/curves
- * while staying legible over a photo. */
-function whiteRamp(n: number): string[] {
-  return Array.from({ length: n }, (_, i) =>
-    n <= 1 ? "#ffffff" : `rgba(255,255,255,${Math.max(0.5, 1 - i * 0.24)})`
-  );
-}
 
 // Number of bars in the elevation strip. Sampled down from the raw profile.
 const BAR_COUNT = 56;
@@ -233,6 +226,7 @@ export function ThemeMinimal({
   const bars = multi ? [] : sampleBars(singleProfile, BAR_COUNT);
   const curve = multi ? null : curvePaths(singleProfile, 1000, 150);
   const overlay = multi ? sequencePaths(curves, 1000, 150) : [];
+  const overlayShades = whiteRamp(overlay.length);
   const hasStrip = multi ? overlay.length > 0 : bars.length > 0;
 
   return (
@@ -303,8 +297,8 @@ export function ThemeMinimal({
             ))}
           </div>
 
-          {/* Curve(s) over the bars — one for a single activity, every leg
-              overlaid (shared scale, left-aligned, longest full-width) for a
+          {/* Curve(s) over the bars — one for a single activity, every leg laid
+              out side by side (shared scale, distance-weighted width) for a
               project. */}
           {curve || overlay.length > 0 ? (
             <svg
@@ -347,7 +341,7 @@ export function ThemeMinimal({
                   <path
                     d={op.line}
                     fill="none"
-                    stroke={whiteRamp(overlay.length)[i]}
+                    stroke={overlayShades[i]}
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2.5}

@@ -170,6 +170,7 @@ export function ThemeData({ data }: ActivityCardProps) {
           segProf.useElevation
         )
       : [];
+  const elevShades = accentShades(ACCENT, elevCurves.length);
 
   let cells: ReactNode = null;
   if (sport === "ride") {
@@ -464,7 +465,7 @@ export function ThemeData({ data }: ActivityCardProps) {
             ))}
             {multi
               ? sequencePaths(elevCurves, 460, 200).map((op, i) => {
-                  const shade = accentShades(ACCENT, elevCurves.length)[i];
+                  const shade = elevShades[i];
                   return (
                     <g key={`elev-${i}-${op.endX.toFixed(0)}`}>
                       <path d={op.area} fill={shade} fillOpacity={0.18} />

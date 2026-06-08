@@ -3,7 +3,7 @@
 // glyph (Ascent / Exposure). Just enough to nod at the other dimension.
 
 import type { ActivityData } from "@/components/app/sample-data";
-import { pickProfile } from "@/lib/carousel/profile";
+import { bandModeFor, pickProfile } from "@/lib/carousel/profile";
 import type {
   CrossViz as CrossVizKind,
   FontPair,
@@ -59,10 +59,7 @@ export function CrossViz({
   const multi = isMultiActivity(data);
   const seg = multi ? segmentProfiles(data) : null;
   const routes = multi ? segmentRoutes(data) : [];
-  let bandMode = mode;
-  if (seg) {
-    bandMode = seg.useElevation ? "elevation" : "pace";
-  }
+  const bandMode = bandModeFor(seg, mode);
 
   return (
     <div style={{ width: w }}>

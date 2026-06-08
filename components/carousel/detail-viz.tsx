@@ -3,7 +3,7 @@
 // mono labels — borderless, so they sit cleanly over the image.
 
 import type { ActivityData } from "@/components/app/sample-data";
-import { pickProfile } from "@/lib/carousel/profile";
+import { bandModeFor, pickProfile } from "@/lib/carousel/profile";
 import type { FontPair } from "@/lib/carousel/theme-tokens";
 import {
   isMultiActivity,
@@ -72,10 +72,7 @@ function Chart({
   }
   const { profile, mode } = pickProfile(data);
   const seg = multi ? segmentProfiles(data) : null;
-  let bandMode = mode;
-  if (seg) {
-    bandMode = seg.useElevation ? "elevation" : "pace";
-  }
+  const bandMode = bandModeFor(seg, mode);
   return (
     <ElevationBand
       colors={{ line: color, fillFrom: color, fillTo: "transparent" }}

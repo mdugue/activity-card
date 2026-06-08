@@ -340,10 +340,10 @@ function MultiLineBand({
       viewBox={`0 0 ${W} 100`}
     >
       <title>Elevation lines</title>
-      {curves.map((c) => {
+      {curves.map((c, i) => {
         const d = toD(c);
         return (
-          <g key={d}>
+          <g key={`${i}-${d}`}>
             <path
               d={d}
               fill="none"

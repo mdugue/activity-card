@@ -121,9 +121,13 @@ export function RouteLine({
         viewBox={`0 0 ${w} ${h}`}
       >
         <title>Routes</title>
-        {projected.map((pr, i) =>
-          pr.d ? (
-            <g key={pr.d}>
+        {projected.map((pr, i) => {
+          if (!pr.d) {
+            return null;
+          }
+          const key = `leg-${i}-${pr.d}`;
+          return (
+            <g key={key}>
               {style === "poster" && !overPhoto ? (
                 <path
                   d={pr.d}
@@ -145,8 +149,8 @@ export function RouteLine({
                 style={{ filter: shadow }}
               />
             </g>
-          ) : null
-        )}
+          );
+        })}
         {showMarkers && lead ? (
           <g style={{ filter: shadow }}>
             <StartArrow color={ink} points={lead.points} size={arrowSize} />

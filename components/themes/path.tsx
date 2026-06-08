@@ -2,12 +2,7 @@
 // Type: Cormorant Garamond (display) + Manrope (body)
 // Palette: warm off-white paper, deep ink, single rust accent
 
-import {
-  abstractLanes,
-  accentShades,
-  projectRoutes,
-  routePath,
-} from "@/lib/chart-helpers";
+import { abstractLanes, accentShades, routePath } from "@/lib/chart-helpers";
 import {
   formatDateUpper,
   formatDuration,
@@ -20,6 +15,7 @@ import {
   type SegmentRoute,
   segmentRoutes,
 } from "@/lib/multi-activity";
+import { OverlayRoute } from "./overlay-route";
 import { PhotoBackdrop } from "./photo-backdrop";
 import type { ActivityCardProps } from "./types";
 
@@ -358,52 +354,24 @@ function PathRoute({ coords }: { coords?: [number, number][] }) {
 // A multi-activity project (triathlon, brick, …): every leg's route drawn in
 // the SAME coordinate system — one shared bbox + uniform scale — so the legs
 // keep their true positions relative to one another, each tinted a different
-// shade of the accent so they read apart without leaving the palette.
+// shade of the accent so they read apart without leaving the palette. Delegates
+// the projection + per-leg draw to the shared OverlayRoute.
 function MultiPathRoute({ routes }: { routes: SegmentRoute[] }) {
   if (routes.length === 0) {
     return null;
   }
-  const projected = projectRoutes(
-    routes.map((r) => r.coords),
-    ROUTE_W,
-    ROUTE_H,
-    60
-  );
-  const shades = accentShades(ACCENT, routes.length);
   return (
-    <g>
-      {projected.map((pr, i) =>
-        pr.d ? (
-          <g key={`${routes[i].sport}-${i}`}>
-            {/* soft ink halo keeps every leg legible over a photo backdrop */}
-            <path
-              d={pr.d}
-              fill="none"
-              stroke={INK}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeOpacity={0.07}
-              strokeWidth={16}
-            />
-            <path
-              d={pr.d}
-              fill="none"
-              stroke={shades[i]}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={4.5}
-            />
-            {pr.start ? (
-              <circle
-                cx={pr.start[0]}
-                cy={pr.start[1]}
-                fill={shades[i]}
-                r={9}
-              />
-            ) : null}
-          </g>
-        ) : null
-      )}
-    </g>
+    <OverlayRoute
+      colors={accentShades(ACCENT, routes.length)}
+      h={ROUTE_H}
+      // soft ink halo keeps every leg legible over a photo backdrop
+      halo={{ color: "rgba(26,23,20,0.07)", width: 16 }}
+      markerRadius={9}
+      markers
+      pad={60}
+      routes={routes.map((r) => r.coords)}
+      strokeWidth={4.5}
+      w={ROUTE_W}
+    />
   );
 }

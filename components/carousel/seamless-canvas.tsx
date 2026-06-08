@@ -123,6 +123,10 @@ export function SeamlessCanvas({
       mode: profileMode,
     });
 
+  // The elevation hero only renders when the project's metric is elevation
+  // (see resolveHeroGeometry), but derive the mode rather than hardcoding it so
+  // the band never normalises pace data as elevation if that gate ever changes.
+  const heroBandMode = segProf?.useElevation ? "elevation" : "pace";
   const heroInk = showPhoto && style.dark ? "#ffffff" : style.ink;
 
   const statOpts = { distance: visibility.distance, time: visibility.time };
@@ -198,7 +202,7 @@ export function SeamlessCanvas({
             markerColor={heroInk}
             markerFont={style.fonts.mono}
             markers
-            mode={multi ? "elevation" : profileMode}
+            mode={multi ? heroBandMode : profileMode}
             profile={profile}
             profiles={multi ? segProf?.profiles : undefined}
             w={width}

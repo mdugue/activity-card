@@ -355,3 +355,14 @@ export function accentShades(accent: string, n: number): string[] {
   const dark = mixHex(accent, "#000000", 0.4);
   return Array.from({ length: n }, (_, i) => mixHex(light, dark, i / (n - 1)));
 }
+
+/**
+ * White legs at a gentle opacity ramp — the "over a photo" analogue of
+ * `accentShades`, for distinguishing several overlaid routes/curves while staying
+ * legible on an arbitrary image. `n <= 1` is solid white.
+ */
+export function whiteRamp(n: number): string[] {
+  return Array.from({ length: n }, (_, i) =>
+    n <= 1 ? "#ffffff" : `rgba(255,255,255,${Math.max(0.5, 1 - i * 0.25)})`
+  );
+}

@@ -4,7 +4,7 @@
 // nameplate) rather than a soft scrim, so it reads like a pasted-up poster.
 
 import type { ActivityData } from "@/components/app/sample-data";
-import { pickProfile } from "@/lib/carousel/profile";
+import { bandModeFor, pickProfile } from "@/lib/carousel/profile";
 import type { EffectiveStyle } from "@/lib/carousel/resolve";
 import { formatDateUpper } from "@/lib/format";
 import {
@@ -253,10 +253,7 @@ function VizCard({
   const multi = isMultiActivity(data);
   const routes = multi ? segmentRoutes(data).map((r) => r.coords) : [];
   const seg = multi ? segmentProfiles(data) : null;
-  let bandMode = mode;
-  if (seg) {
-    bandMode = seg.useElevation ? "elevation" : "pace";
-  }
+  const bandMode = bandModeFor(seg, mode);
   return (
     <div
       style={{
