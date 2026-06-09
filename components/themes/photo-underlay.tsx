@@ -10,6 +10,8 @@ import {
   type ImageTransform,
   transformToCss,
 } from "@/lib/image-transform";
+import { effectsTransformSuffix, filterCss } from "@/lib/photo-effects";
+import { usePhotoEffects } from "./photo-fx";
 
 interface PhotoUnderlayProps {
   imageTransform?: ImageTransform | null;
@@ -20,6 +22,8 @@ export function PhotoUnderlay({
   photoUrl,
   imageTransform,
 }: PhotoUnderlayProps) {
+  const fx = usePhotoEffects();
+  const userFilter = fx ? filterCss(fx.filter) : "";
   return (
     <div
       aria-hidden
@@ -38,9 +42,9 @@ export function PhotoUnderlay({
           backgroundImage: `url(${photoUrl})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
-          transform: transformToCss(imageTransform ?? IDENTITY_TRANSFORM),
+          transform: `${transformToCss(imageTransform ?? IDENTITY_TRANSFORM)}${effectsTransformSuffix(fx)}`,
           transformOrigin: "center center",
-          filter: "saturate(0.92)",
+          filter: `saturate(0.92) ${userFilter}`.trim(),
         }}
       />
       <div

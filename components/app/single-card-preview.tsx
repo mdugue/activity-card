@@ -3,8 +3,8 @@
 // The Single Card preview: a static render of the active theme at full size,
 // scaled into its container. The theme itself is chosen from the THEME tool in
 // the ControlDeck, so the preview no longer doubles as a theme switcher — it
-// just shows the result, the way the focused-toolbar design intends. Hero photo
-// themes still get an in-place "Adjust" affordance for pan/zoom.
+// just shows the result, the way the focused-toolbar design intends. Any theme
+// showing a background photo gets an in-place "Adjust" affordance for pan/zoom.
 
 import { ArrowsOutCardinalIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
@@ -12,22 +12,20 @@ import { CardStage } from "@/components/app/card-stage";
 import { ImageAdjustOverlay } from "@/components/app/image-adjust-overlay";
 import { RenderTheme, type ThemeId } from "@/components/app/render-theme";
 import type { ActivityData } from "@/components/app/sample-data";
-import { THEME_META } from "@/components/themes/index";
 import { Badge } from "@/components/ui/badge";
-import type { AltitudeConfig } from "@/lib/altitude";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme } from "@/lib/palette";
-import type { StrataConfig } from "@/lib/strata";
+import type { PhotoEffects } from "@/lib/photo-effects";
 
 interface SingleCardPreviewProps {
-  altitudeConfig: AltitudeConfig;
+  config: Record<string, unknown>;
   data: ActivityData;
   imageTransform: ImageTransform;
   onImageTransformChange: (next: ImageTransform) => void;
   photoBackdropEnabled: boolean;
+  photoEffects: PhotoEffects;
   photoPaletteTheme: PaletteTheme | null;
   photoUrl: string | null;
-  strataConfig: StrataConfig;
   theme: ThemeId;
 }
 
@@ -36,22 +34,18 @@ export function SingleCardPreview({
   theme,
   photoUrl,
   photoBackdropEnabled,
-  altitudeConfig,
-  strataConfig,
+  config,
+  photoEffects,
   photoPaletteTheme,
   imageTransform,
   onImageTransformChange,
 }: SingleCardPreviewProps) {
   const [adjusting, setAdjusting] = useState(false);
 
-  // Repositioning is offered wherever the photo is actually on screen — hero
-  // themes always, "supports" themes (incl. STRATA / Data / Triathlon) when the
-  // backdrop is toggled on. Drop out of adjust mode if it stops being shown.
-  const meta = THEME_META[theme];
-  const adjustAvailable =
-    photoUrl !== null &&
-    (meta.photoMode === "hero" ||
-      (meta.photoMode === "supports" && photoBackdropEnabled));
+  // Repositioning is offered wherever the photo is actually on screen — any
+  // theme, whenever the backdrop is toggled on. Drop out of adjust mode if it
+  // stops being shown.
+  const adjustAvailable = photoUrl !== null && photoBackdropEnabled;
   useEffect(() => {
     if (adjusting && !adjustAvailable) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -71,13 +65,13 @@ export function SingleCardPreview({
           }}
         >
           <RenderTheme
-            altitudeConfig={altitudeConfig}
+            config={config}
             data={data}
             imageTransform={imageTransform}
             photoBackdropEnabled={photoBackdropEnabled}
+            photoEffects={photoEffects}
             photoPaletteTheme={photoPaletteTheme}
             photoUrl={photoUrl}
-            strataConfig={strataConfig}
             theme={theme}
           />
         </div>

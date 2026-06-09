@@ -1,85 +1,70 @@
 import type { ActivityData } from "@/components/app/sample-data";
-import { THEME_META, THEMES, type ThemeId } from "@/components/themes";
+import { THEMES, type ThemeId } from "@/components/themes";
 import { ThemeAltitude } from "@/components/themes/altitude";
 import { ThemePhoto } from "@/components/themes/photo";
+import { PhotoEffectsProvider } from "@/components/themes/photo-fx";
 import { ThemeStrata } from "@/components/themes/strata";
 import type { AltitudeConfig } from "@/lib/altitude";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme } from "@/lib/palette";
+import type { PhotoEffects } from "@/lib/photo-effects";
 import type { StrataConfig } from "@/lib/strata";
 
 export type { ThemeId } from "@/components/themes";
 
 interface RenderThemeProps {
-  altitudeConfig?: AltitudeConfig;
+  /** the active theme's coerced parameter config (StrataConfig / AltitudeConfig
+   *  for those themes; ignored by the rest) */
+  config?: Record<string, unknown>;
   data: ActivityData;
   /** Pan/zoom applied to the background photo, wherever a theme shows one. */
   imageTransform?: ImageTransform | null;
+  /** Whether the background photo shows (the `photoBackdrop` visibility flag). */
   photoBackdropEnabled?: boolean;
+  /** Filter / grain / mirror, provided to every theme's photo layer via context. */
+  photoEffects?: PhotoEffects | null;
   /** Photo theme: pre-resolved palette extracted from the photo, if available. */
   photoPaletteTheme?: PaletteTheme | null;
   photoUrl?: string | null;
-  strataConfig?: StrataConfig;
   theme: ThemeId;
 }
 
-/**
- * Compute the effective photo URL handed to a theme. `hero` themes always get
- * the photo; `supports` themes only get it if the user hasn't disabled the
- * backdrop; `none` themes never get it.
- */
-function effectivePhotoUrl(
-  theme: ThemeId,
-  photoUrl: string | null | undefined,
-  backdropEnabled: boolean
-): string | null {
-  if (!photoUrl) {
-    return null;
-  }
-  const meta = THEME_META[theme];
-  if (meta.photoMode === "hero") {
-    return photoUrl;
-  }
-  if (meta.photoMode === "supports" && backdropEnabled) {
-    return photoUrl;
-  }
-  return null;
-}
-
-/** Dispatcher: picks the right theme component for the given id. */
+/** Dispatcher: picks the right theme component for the given id and provides the
+ *  shared photo-effects context. Every theme now accepts a background photo,
+ *  gated only by the `photoBackdrop` visibility flag. */
 export function RenderTheme({
   theme,
   data,
   photoUrl,
   photoBackdropEnabled = true,
-  altitudeConfig,
-  strataConfig,
+  config,
   photoPaletteTheme = null,
+  photoEffects = null,
   imageTransform = null,
 }: RenderThemeProps) {
-  const photo = effectivePhotoUrl(theme, photoUrl, photoBackdropEnabled);
+  const photo = photoBackdropEnabled ? (photoUrl ?? null) : null;
+
+  let inner: React.ReactNode;
   if (theme === "strata") {
-    return (
+    inner = (
       <ThemeStrata
-        config={strataConfig}
+        config={config as StrataConfig | undefined}
         data={data}
         imageTransform={imageTransform}
         photoUrl={photo}
       />
     );
-  }
-  if (theme === "altitude") {
-    return (
+  } else if (theme === "altitude") {
+    inner = (
       <ThemeAltitude
-        config={altitudeConfig}
+        config={config as AltitudeConfig | undefined}
         data={data}
         imageTransform={imageTransform}
         photoUrl={photo}
       />
     );
-  }
-  if (theme === "photo") {
-    return (
+  } else if (theme === "photo") {
+    inner = (
       <ThemePhoto
         data={data}
         imageTransform={imageTransform}
@@ -87,9 +72,14 @@ export function RenderTheme({
         photoUrl={photo}
       />
     );
+  } else {
+    const Theme = THEMES[theme];
+    inner = (
+      <Theme data={data} imageTransform={imageTransform} photoUrl={photo} />
+    );
   }
-  // Minimal, Path, Editorial, Data, Triathlon take exactly { data, photoUrl,
-  // imageTransform } — the generic path. Only the cases above need extra props.
-  const Theme = THEMES[theme];
-  return <Theme data={data} imageTransform={imageTransform} photoUrl={photo} />;
+
+  return (
+    <PhotoEffectsProvider value={photoEffects}>{inner}</PhotoEffectsProvider>
+  );
 }

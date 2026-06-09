@@ -10,6 +10,8 @@ import {
   type ImageTransform,
   transformToCss,
 } from "@/lib/image-transform";
+import { effectsTransformSuffix, filterCss } from "@/lib/photo-effects";
+import { GrainOverlay, usePhotoEffects } from "./photo-fx";
 
 interface PhotoLayerProps {
   imageTransform?: ImageTransform | null;
@@ -18,6 +20,8 @@ interface PhotoLayerProps {
 
 export function PhotoLayer({ photoUrl, imageTransform }: PhotoLayerProps) {
   const t = imageTransform ?? IDENTITY_TRANSFORM;
+  const fx = usePhotoEffects();
+  const filter = fx ? filterCss(fx.filter) : "";
   return (
     <div
       aria-hidden
@@ -36,10 +40,12 @@ export function PhotoLayer({ photoUrl, imageTransform }: PhotoLayerProps) {
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
-          transform: transformToCss(t),
+          filter: filter || undefined,
+          transform: `${transformToCss(t)}${effectsTransformSuffix(fx)}`,
           transformOrigin: "center center",
         }}
       />
+      {fx?.grain ? <GrainOverlay /> : null}
     </div>
   );
 }

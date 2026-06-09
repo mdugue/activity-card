@@ -80,6 +80,24 @@ function grainDataUri(baseFrequency: number): string {
 /** Default grain texture (medium size). */
 export const GRAIN_BG = grainDataUri(0.82);
 
+/** The rotate/flip suffix to append to a photo's pan/zoom `transform`. */
+export function effectsTransformSuffix(e?: PhotoEffects | null): string {
+  if (!e) {
+    return "";
+  }
+  const parts: string[] = [];
+  if (e.rotate) {
+    parts.push(`rotate(${e.rotate}deg)`);
+  }
+  if (e.flipH) {
+    parts.push("scaleX(-1)");
+  }
+  if (e.flipV) {
+    parts.push("scaleY(-1)");
+  }
+  return parts.length ? ` ${parts.join(" ")}` : "";
+}
+
 export function nextRotation(deg: RotateDeg): RotateDeg {
   return ((deg + 90) % 360) as RotateDeg;
 }

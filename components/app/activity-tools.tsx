@@ -1,25 +1,25 @@
 "use client";
 
 // Builds the shared list of editor categories (the `ControlTool[]` the
-// ControlDeck renders) from the activity + handlers. Every overlay element has a
-// switch here, grouped by category; a switch is disabled when the activity has
-// no data for it (`available`), and distance/time are locked on for the Single
-// Card (its irreducible core). Both editors consume this hook, so the Single
-// Card and Carousel control sets stay literally the same building blocks — they
-// differ only in the mode-specific slots they pass in (theme picker, photo
-// filter/effects, mood, marks).
+// ControlDeck renders) from the activity + the active theme's parameter schema.
+// The per-theme knobs are no longer special-cased: each theme declares `ParamDef`s
+// (see `lib/params/`) and they render generically via `ThemeParamGroup`, filed
+// into the category each param names (STYLE · LAYOUT · MARKS). Shared controls —
+// the theme rail, accent, photo, text, stats, marks, activity — round out the
+// groups. Both editors consume this hook; they differ only in the params they
+// pass and a couple of mode flags (carousel marks, photo rotate).
 
 import {
   ArrowCounterClockwiseIcon,
   ChartBarIcon,
   ImageIcon,
+  LayoutIcon,
   MedalIcon,
+  PaletteIcon,
   PersonSimpleBikeIcon,
   PersonSimpleRunIcon,
   PersonSimpleSwimIcon,
-  SquaresFourIcon,
   StarIcon,
-  SunHorizonIcon,
   TextAaIcon,
 } from "@phosphor-icons/react";
 import { useId } from "react";
@@ -27,7 +27,9 @@ import type { ControlTool } from "@/components/app/control-deck";
 import type { CardMode } from "@/components/app/mode-toggle";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import type { ParamCtx, ParamDef } from "@/lib/params/kinds";
 import type { ParsedActivity } from "@/lib/parse-activity";
+import type { PhotoEffects } from "@/lib/photo-effects";
 import { cn } from "@/lib/utils";
 import type { Visibility } from "@/lib/visibility";
 import { ActivitySource } from "./activity-source";
@@ -39,7 +41,12 @@ import {
   type RichSelectOption,
   ToggleRow,
 } from "./control-primitives";
+import {
+  PhotoFilterControl,
+  PhotoTransformControls,
+} from "./photo-effects-controls";
 import type { ActivityData, Sport } from "./sample-data";
+import { ThemeParamGroup, themeDeclaresGroup } from "./theme-params";
 
 // Shared by the section headers and the rich sport picker below — duotone glyph
 // at a calm, consistent size.
@@ -133,12 +140,8 @@ interface UseActivityToolsProps {
   data: ActivityData;
   /** the current theme's default accent (target of the Reset control) */
   defaultAccent: string;
-  /** photo filter (carousel); rendered in the PHOTO section, omit to drop it */
-  filterControl?: React.ReactNode;
   location: string;
   mode: CardMode;
-  /** MOOD category body (single-card altitude/photo mood); omit to drop it */
-  moodControl?: React.ReactNode;
   onAccentChange: (accent: string) => void;
   onAthleteNameChange: (name: string) => void;
   /** swap by uploading a new file (ACTIVITY section) */
@@ -147,17 +150,25 @@ interface UseActivityToolsProps {
   /** swap by reopening the Strava picker (ACTIVITY section) */
   onOpenStravaPicker: () => void;
   onPhotoChange: (file: File | null) => void;
+  onPhotoEffectsChange: (next: PhotoEffects) => void;
   onSportChange: (sport: Sport) => void;
+  onThemeConfigChange: (next: Record<string, unknown>) => void;
   onTitleChange: (title: string) => void;
   onVisibilityChange: (visibility: Visibility) => void;
-  /** rendered inside the photo block (effects / reposition hint) */
+  /** the active theme's parameter context (data + extracted palette) */
+  paramCtx: ParamCtx;
+  /** rotate is geometry-correct on the carousel panorama; off on the single card */
+  photoAllowRotate: boolean;
+  photoEffects: PhotoEffects;
+  /** editor-specific photo extras (backdrop switch / reposition hint) */
   photoExtras?: React.ReactNode;
-  photoSupported: boolean;
   photoUrl: string | null;
-  /** the theme rail for this mode (rendered at the top of the THEME section) */
+  /** the active theme's coerced config */
+  themeConfig: Record<string, unknown>;
+  /** the theme rail for this mode (rendered at the top of the STYLE section) */
   themeControl: React.ReactNode;
-  /** label used in "<theme> has no room for a photo" copy */
-  themeLabel: string;
+  /** the active theme's parameter schema */
+  themeParams: ParamDef[];
   /** raw (unstripped) title for the editable input */
   title: string;
   visibility: Visibility;
@@ -167,8 +178,11 @@ export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
   const {
     data,
     mode,
-    themeLabel,
     themeControl,
+    themeParams,
+    themeConfig,
+    onThemeConfigChange,
+    paramCtx,
     athleteName,
     location,
     visibility,
@@ -176,7 +190,8 @@ export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
     accent,
     defaultAccent,
     photoUrl,
-    photoSupported,
+    photoEffects,
+    photoAllowRotate,
     onTitleChange,
     onSportChange,
     onAthleteNameChange,
@@ -184,11 +199,10 @@ export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
     onVisibilityChange,
     onAccentChange,
     onPhotoChange,
+    onPhotoEffectsChange,
     onFilesLoaded,
     onOpenStravaPicker,
     photoExtras,
-    filterControl,
-    moodControl,
     title,
   } = props;
   const titleId = useId();
@@ -223,96 +237,116 @@ export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
     );
   };
 
+  const paramGroup = (
+    group: Parameters<typeof ThemeParamGroup>[0]["group"]
+  ) => (
+    <ThemeParamGroup
+      config={themeConfig}
+      ctx={paramCtx}
+      group={group}
+      onChange={onThemeConfigChange}
+      params={themeParams}
+    />
+  );
+
   const tools: ControlTool[] = [];
 
-  // THEME leads: the scrolling theme rail, then the accent swatches under it —
-  // the two "what does this card look like" choices live together.
+  // STYLE leads: the theme rail, the accent swatches, then any STYLE params the
+  // theme exposes (atmosphere / colour). The "what does this card look like"
+  // choices live together.
   tools.push({
-    id: "theme",
-    label: "THEME",
-    icon: <SquaresFourIcon {...ICON_PROPS} />,
+    id: "style",
+    label: "STYLE",
+    icon: <PaletteIcon {...ICON_PROPS} />,
     content: (
-      <ControlBlock label="THEME">
-        {themeControl}
-        <div className="caption-micro mt-4 mb-2">ACCENT</div>
-        <div className="flex flex-wrap items-center gap-2">
-          <ToggleGroup
-            aria-label="Accent colour"
-            className="flex flex-wrap gap-2"
-            onValueChange={(values) => {
-              if (values[0]) {
-                onAccentChange(values[0]);
-              }
-            }}
-            spacing={2}
-            value={[accent]}
-          >
-            {ACCENTS.map((c) => (
-              <ToggleGroupItem
-                aria-label={`Accent ${c}`}
-                className={cn(
-                  "size-8 rounded-full border-2 border-transparent p-0 outline-none transition-transform",
-                  "ring-foreground ring-offset-2 ring-offset-background",
-                  "data-pressed:ring-2"
-                )}
-                key={c}
-                style={{ background: c }}
-                value={c}
-              />
-            ))}
-          </ToggleGroup>
-          <Button
-            className="ml-auto"
-            disabled={accent === defaultAccent}
-            onClick={() => onAccentChange(defaultAccent)}
-            size="sm"
-            type="button"
-            variant="ghost"
-          >
-            <ArrowCounterClockwiseIcon weight="duotone" />
-            Reset
-          </Button>
-        </div>
-      </ControlBlock>
+      <div className="flex flex-col gap-5">
+        <ControlBlock label="THEME">
+          {themeControl}
+          <div className="caption-micro mt-4 mb-2">ACCENT</div>
+          <div className="flex flex-wrap items-center gap-2">
+            <ToggleGroup
+              aria-label="Accent colour"
+              className="flex flex-wrap gap-2"
+              onValueChange={(values) => {
+                if (values[0]) {
+                  onAccentChange(values[0]);
+                }
+              }}
+              spacing={2}
+              value={[accent]}
+            >
+              {ACCENTS.map((c) => (
+                <ToggleGroupItem
+                  aria-label={`Accent ${c}`}
+                  className={cn(
+                    "size-8 rounded-full border-2 border-transparent p-0 outline-none transition-transform",
+                    "ring-foreground ring-offset-2 ring-offset-background",
+                    "data-pressed:ring-2"
+                  )}
+                  key={c}
+                  style={{ background: c }}
+                  value={c}
+                />
+              ))}
+            </ToggleGroup>
+            <Button
+              className="ml-auto"
+              disabled={accent === defaultAccent}
+              onClick={() => onAccentChange(defaultAccent)}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              <ArrowCounterClockwiseIcon weight="duotone" />
+              Reset
+            </Button>
+          </div>
+        </ControlBlock>
+        {paramGroup("style")}
+      </div>
     ),
   });
 
-  // The photo is the most important control — lead with it, and make the empty
-  // state inviting.
+  // The photo is a prominent control — every theme can show one, adjustable via
+  // the same filter / grain / transform presets as the carousel.
   tools.push({
     id: "photo",
     label: "PHOTO",
     icon: <ImageIcon {...ICON_PROPS} />,
     content: (
       <ControlBlock label="BACKGROUND PHOTO">
-        <PhotoControl
-          disabled={!photoSupported}
-          onChange={onPhotoChange}
-          photoUrl={photoUrl}
-          prominent={photoSupported}
-        />
-        {photoSupported ? null : (
-          <p className="caption-micro mt-2">
-            {themeLabel} theme has no room for a photo
-          </p>
-        )}
+        <PhotoControl onChange={onPhotoChange} photoUrl={photoUrl} prominent />
         {photoExtras}
-        {filterControl ? (
-          <div className="mt-3">
-            <div className="caption-micro mb-1.5">FILTER</div>
-            {filterControl}
-          </div>
+        {photoUrl ? (
+          <>
+            <div className="mt-3">
+              <div className="caption-micro mb-1.5">FILTER</div>
+              <PhotoFilterControl
+                effects={photoEffects}
+                onChange={onPhotoEffectsChange}
+              />
+            </div>
+            <PhotoTransformControls
+              allowRotate={photoAllowRotate}
+              effects={photoEffects}
+              onChange={onPhotoEffectsChange}
+            />
+          </>
         ) : null}
       </ControlBlock>
     ),
   });
 
-  if (moodControl) {
+  // LAYOUT — composition & type knobs the theme exposes (headline / font /
+  // position / treatment / density). Only present when the theme has any.
+  if (themeDeclaresGroup(themeParams, "layout")) {
     tools.push({
-      id: "mood",
-      label: "MOOD",
-      icon: <SunHorizonIcon {...ICON_PROPS} />,
-      content: <ControlBlock label="MOOD">{moodControl}</ControlBlock>,
+      id: "layout",
+      label: "LAYOUT",
+      icon: <LayoutIcon {...ICON_PROPS} />,
+      content: (
+        <ControlBlock label="LAYOUT">{paramGroup("layout")}</ControlBlock>
+      ),
     });
   }
 
@@ -378,17 +412,29 @@ export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
     ),
   });
 
-  if (mode === "carousel") {
+  // MARKS — annotations: carousel chrome (effort mark, page numbers) plus any
+  // MARKS params the theme exposes (e.g. STRATA's peak/direction legend).
+  const hasMarkParams = themeDeclaresGroup(themeParams, "marks");
+  if (mode === "carousel" || hasMarkParams) {
     tools.push({
       id: "marks",
       label: "MARKS",
       icon: <StarIcon {...ICON_PROPS} />,
       content: (
-        <ControlBlock label="CAROUSEL MARKS">
-          <div className="mt-2 flex flex-col gap-2.5">
-            {CAROUSEL_TOGGLES.map(renderToggle)}
-          </div>
-        </ControlBlock>
+        <div className="flex flex-col gap-5">
+          {mode === "carousel" ? (
+            <ControlBlock label="CAROUSEL MARKS">
+              <div className="mt-2 flex flex-col gap-2.5">
+                {CAROUSEL_TOGGLES.map(renderToggle)}
+              </div>
+            </ControlBlock>
+          ) : null}
+          {hasMarkParams ? (
+            <ControlBlock label="MARKERS">
+              <div className="mt-2">{paramGroup("marks")}</div>
+            </ControlBlock>
+          ) : null}
+        </div>
       ),
     });
   }

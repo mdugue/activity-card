@@ -19,6 +19,7 @@
 import type { ActivityData } from "@/components/app/sample-data";
 import type { Coord } from "@/lib/chart-helpers";
 import { isMultiActivity } from "@/lib/multi-activity";
+import type { ParamDef } from "@/lib/params/kinds";
 
 /* ----------------------------- configuration ----------------------------- */
 
@@ -28,7 +29,9 @@ export type StrataMood = "paper" | "dawn" | "dusk" | "midnight" | "alpine";
 /** How finely the route is woven down into the profile (the layer count). */
 export type StrataDensity = "fine" | "woven" | "bold";
 
-export interface StrataConfig {
+// Extends Record so the config flows through the generic param registry /
+// coercer without casts; declared keys keep their precise types.
+export interface StrataConfig extends Record<string, unknown> {
   /** How finely the field is woven — the number of strata layers. */
   density: StrataDensity;
   /** Mark the peak height + a direction arrow on the field. */
@@ -186,6 +189,53 @@ export const STRATA_DENSITY_BLURBS: Record<StrataDensity, string> = {
   woven: "the balanced weave",
   bold: "a few bare ridges",
 };
+
+/* ---------------------------- parameter schema ---------------------------- */
+// The editor renders these generically (grouped by `group`). Atmosphere is a
+// STYLE choice; density is a LAYOUT choice; the legend markers file under MARKS.
+
+const MOOD_ORDER: StrataMood[] = [
+  "paper",
+  "dawn",
+  "dusk",
+  "midnight",
+  "alpine",
+];
+const DENSITY_ORDER: StrataDensity[] = ["fine", "woven", "bold"];
+
+export const STRATA_PARAMS: ParamDef[] = [
+  {
+    id: "mood",
+    group: "style",
+    label: "ATMOSPHERE",
+    kind: "segmented",
+    default: DEFAULT_STRATA_CONFIG.mood,
+    options: MOOD_ORDER.map((m) => ({
+      id: m,
+      label: STRATA_MOOD_LABELS[m],
+      blurb: STRATA_MOOD_BLURBS[m],
+    })),
+  },
+  {
+    id: "density",
+    group: "layout",
+    label: "DENSITY",
+    kind: "segmented",
+    default: DEFAULT_STRATA_CONFIG.density,
+    options: DENSITY_ORDER.map((d) => ({
+      id: d,
+      label: STRATA_DENSITY_LABELS[d],
+      blurb: STRATA_DENSITY_BLURBS[d],
+    })),
+  },
+  {
+    id: "legend",
+    group: "marks",
+    label: "Peak height & direction arrow",
+    kind: "toggle",
+    default: DEFAULT_STRATA_CONFIG.legend,
+  },
+];
 
 /* --------------------------- source resolution ---------------------------- */
 

@@ -149,31 +149,36 @@ Render the area as a filled `<path>` and the line as a stroked `<path>` on top.
 
 ## Theme component contract
 
-Every theme implements the same interface:
+Every single-card theme implements `ActivityCardProps`
+(`components/themes/types.ts`):
 
 ```ts
-// app/_components/themes/types.ts
-export type ActivityCardProps = {
-  activity: Activity
-  accentColor?: string // user-overridable
-  visibleStats?: StatKey[] // user-toggleable
-}
-
-export type ActivityCardTheme = React.FC<ActivityCardProps>
-```
-
-Each theme file exports a default component with this signature. The editor maps a `themeId` to a component:
-
-```ts
-const themes: Record<ThemeId, ActivityCardTheme> = {
-  path: PathTheme,
-  altitude: AltitudeTheme,
-  photo: PhotoTheme,
-  data: DataTheme,
-  editorial: EditorialTheme,
-  triathlon: TriathlonTheme,
+export interface ActivityCardProps {
+  data: ActivityData;            // the normalised activity (visibility already applied)
+  imageTransform?: ImageTransform | null; // pan/zoom for the background photo
+  photoUrl?: string | null;      // null when the photo is toggled off
 }
 ```
+
+Each theme is a **named export** (`ThemeName`) registered in
+`components/themes/index.ts` (`THEMES` / `ThemeId`). The dispatcher
+`components/app/render-theme.tsx` maps a `theme` id to its component and provides
+the photo-effects context (below). Three themes take one extra prop beyond the
+contract — `config` (Strata / Altitude, their coerced parameter config) or
+`paletteTheme` (Photo) — passed by `RenderTheme`; the rest take exactly the
+contract. A theme's adjustable knobs are **not** props: they're declared as data
+(`ParamDef[]`) and rendered generically — see the `theme-params` skill.
+
+### Photo effects
+
+`PhotoEffects` (filter preset, grain, mirror, rotate) are provided once by
+`RenderTheme` via a React context (`components/themes/photo-fx.tsx`) and read by
+the shared photo layers (`PhotoLayer` / `PhotoBackdrop` / `PhotoUnderlay`) and
+Strata's inline photo. So every theme's background is adjustable without threading
+the effects through each component. Apply them as inline CSS (`filterCss`,
+`effectsTransformSuffix`, `GRAIN_BG`) — never `backdrop-filter`, which
+html-to-image mishandles. Rendered without the provider (e.g. in a story) the
+layers see `null` and render unfiltered.
 
 ### Theme dimensions
 

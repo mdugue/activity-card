@@ -47,7 +47,7 @@ export const TopDistance: Story = {
   },
 };
 export const NoClaim: Story = {
-  args: { config: { ...DEFAULT_ALTITUDE_CONFIG, claim: null } },
+  args: { config: { ...DEFAULT_ALTITUDE_CONFIG, claim: "none" } },
 };
 export const Ride: Story = { args: { data: SAMPLE_RIDE } };
 
@@ -63,6 +63,6 @@ export const TriathlonStacked: Story = {
 export const TriathlonNoClaim: Story = {
   args: {
     data: SAMPLE_TRI,
-    config: { ...DEFAULT_ALTITUDE_CONFIG, claim: null },
+    config: { ...DEFAULT_ALTITUDE_CONFIG, claim: "none" },
   },
 };

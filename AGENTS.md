@@ -79,6 +79,14 @@ separate; never cross-import a single-card theme into the carousel or vice-versa
 | Contract       | `ActivityCardProps` — see `card-rendering` skill       | theme tokens/levers — see `carousel-themes` skill                   |
 | Story          | `components/themes/<name>.stories.tsx`                 | a story in `components/carousel/seamless-canvas.stories.tsx`        |
 
+Both families share **one editor parameter system** (`lib/params/`): a theme's
+adjustable knobs are declared as data (`ParamDef[]`) and rendered generically —
+there are no per-theme control components. A theme's config lives in one coerced
+slot keyed by theme id, and the editor groups controls by category
+(STYLE · LAYOUT · PHOTO · TEXT · STATS · MARKS · ACTIVITY). Every theme can show a
+background photo (filter / grain / mirror via the same presets as the carousel).
+See the `theme-params` skill before adding or changing a theme's knobs.
+
 ## Storybook
 
 Stories live **colocated** with the component as `<name>.stories.tsx`
@@ -132,6 +140,8 @@ components/
 hooks/                Shared client hooks. (`use-mobile.ts` is shadcn-vendor.)
 lib/                  Utilities (`cn`, parsers, formatters). `lib/carousel/` holds the
                       carousel theme tokens, deck + stat planning, and resolve logic.
+                      `lib/params/` holds the editor parameter schema (`ParamDef`),
+                      the per-theme registry, and `resolveThemeConfig` coercion.
 public/               Static assets.
 .storybook/           Storybook config + the shared preview, background presets,
                       and the background-photo decorator.
@@ -159,6 +169,10 @@ public/               Static assets.
 - **A new carousel theme** → a token row in `lib/carousel/theme-tokens.ts` (add
   the id to `CarouselThemeId` + `CAROUSEL_THEME_ORDER`), **plus a story for it in
   `components/carousel/seamless-canvas.stories.tsx`**. See the `carousel-themes` skill.
+- **A new adjustable knob on a theme** → add a `ParamDef` to the theme's
+  `*_PARAMS` spec (pure data in `lib/<theme>.ts`) and, for a new theme, a row in
+  `THEME_PARAM_SPECS` (`lib/params/registry.ts`). It renders generically — no new
+  control component, app-state field, or dispatch arm. See the `theme-params` skill.
 - **A new shadcn primitive** → `bunx shadcn add <name>` (lands in `components/ui/`, untouched).
 - **A new shared utility** → `lib/<name>.ts`.
 

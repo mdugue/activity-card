@@ -25,7 +25,7 @@ function make(partial: Partial<ActivityData>): ActivityData {
 
 describe("resolveClaim", () => {
   test("returns null when no claim is selected", () => {
-    expect(resolveClaim(null, make({}))).toBeNull();
+    expect(resolveClaim("none", make({}))).toBeNull();
   });
 
   test("formats the requested metric with its unit", () => {

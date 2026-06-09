@@ -27,10 +27,10 @@ import {
   clampCoverTransform,
   type ImageTransform,
 } from "@/lib/image-transform";
-import type { PaletteTheme } from "@/lib/palette";
+import type { ExtractedPalette, PaletteTheme } from "@/lib/palette";
+import type { ParamDef } from "@/lib/params/kinds";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import { isQuarterTurn, type PhotoEffects } from "@/lib/photo-effects";
-
 import type { StrataConfig } from "@/lib/strata";
 import { cn } from "@/lib/utils";
 import type { Visibility } from "@/lib/visibility";
@@ -38,13 +38,8 @@ import { useActivityTools } from "./activity-tools";
 import { CardStage } from "./card-stage";
 import { ControlDeck, PANEL_MOTION } from "./control-deck";
 import { ImageAdjustOverlay } from "./image-adjust-overlay";
-import {
-  PhotoFilterControl,
-  PhotoTransformControls,
-} from "./photo-effects-controls";
 import type { ActivityData, Sport } from "./sample-data";
 import { SlideStrip } from "./slide-strip";
-import { StrataControls } from "./strata-controls";
 import { ThemeRail } from "./theme-rail";
 
 interface CarouselEditStateProps {
@@ -52,11 +47,15 @@ interface CarouselEditStateProps {
   athleteName: string;
   available: Record<keyof Visibility, boolean>;
   carousel: CarouselController;
+  /** the active carousel theme's coerced parameter config (StrataConfig for the
+   *  STRATA carousel; {} for the rest) */
+  config: Record<string, unknown>;
   data: ActivityData;
   imageTransform: ImageTransform;
   location: string;
   onAccentChange: (accent: string) => void;
   onAthleteNameChange: (name: string) => void;
+  onConfigChange: (next: Record<string, unknown>) => void;
   onFilesLoaded: (parts: ParsedActivity[]) => void;
   onImageTransformChange: (next: ImageTransform) => void;
   onLocationChange: (location: string) => void;
@@ -64,15 +63,17 @@ interface CarouselEditStateProps {
   onPhotoChange: (file: File | null) => void;
   onPhotoEffectsChange: (next: PhotoEffects) => void;
   onSportChange: (sport: Sport) => void;
-  onStrataConfigChange: (config: StrataConfig) => void;
   onThemeChange: (theme: CarouselThemeId) => void;
   onTitleChange: (title: string) => void;
   onVisibilityChange: (visibility: Visibility) => void;
+  /** all five palette presets, for any photo-strategy param swatches */
+  paramPalette: ExtractedPalette | null;
   photoEffects: PhotoEffects;
   photoPaletteTheme: PaletteTheme | null;
   photoUrl: string | null;
-  strataConfig: StrataConfig;
   theme: CarouselThemeId;
+  /** the active carousel theme's parameter schema */
+  themeParams: ParamDef[];
   title: string;
   visibility: Visibility;
 }
@@ -241,22 +242,10 @@ export function CarouselEditState(props: CarouselEditStateProps) {
     photoTheme: photoPaletteTheme,
     photoUrl,
     slides,
-    strataConfig: props.strataConfig,
+    strataConfig: props.config as StrataConfig,
     theme,
     visibility: props.visibility,
   };
-
-  const photoEditable = photoUrl !== null && photoSupported;
-
-  // STRATA carousel exposes the same mood / density / legend panel as the
-  // single card; other carousel themes have no per-theme parameters.
-  const moodControl =
-    theme === "strata" ? (
-      <StrataControls
-        config={props.strataConfig}
-        onChange={props.onStrataConfigChange}
-      />
-    ) : undefined;
 
   const tools = useActivityTools({
     accent: props.accent,
@@ -264,12 +253,6 @@ export function CarouselEditState(props: CarouselEditStateProps) {
     available: props.available,
     data,
     defaultAccent: CAROUSEL_THEME_TOKENS[theme].accent,
-    filterControl: photoEditable ? (
-      <PhotoFilterControl
-        effects={photoEffects}
-        onChange={props.onPhotoEffectsChange}
-      />
-    ) : undefined,
     location: props.location,
     mode: "carousel",
     onAccentChange: props.onAccentChange,
@@ -277,20 +260,17 @@ export function CarouselEditState(props: CarouselEditStateProps) {
     onFilesLoaded: props.onFilesLoaded,
     onLocationChange: props.onLocationChange,
     onOpenStravaPicker: props.onOpenStravaPicker,
-    moodControl,
     onPhotoChange: props.onPhotoChange,
+    onPhotoEffectsChange: props.onPhotoEffectsChange,
     onSportChange: props.onSportChange,
+    onThemeConfigChange: props.onConfigChange,
     onTitleChange: props.onTitleChange,
     onVisibilityChange: props.onVisibilityChange,
-    photoExtras: photoEditable ? (
-      <PhotoTransformControls
-        allowRotate
-        effects={photoEffects}
-        onChange={props.onPhotoEffectsChange}
-      />
-    ) : null,
-    photoSupported,
+    paramCtx: { data, palette: props.paramPalette },
+    photoAllowRotate: true,
+    photoEffects,
     photoUrl,
+    themeConfig: props.config,
     themeControl: (
       <ThemeRail
         labels={CAROUSEL_THEME_LABELS}
@@ -299,7 +279,7 @@ export function CarouselEditState(props: CarouselEditStateProps) {
         theme={theme}
       />
     ),
-    themeLabel: CAROUSEL_THEME_LABELS[theme].label,
+    themeParams: props.themeParams,
     title: props.title,
     visibility: props.visibility,
   });
@@ -399,7 +379,7 @@ export function CarouselEditState(props: CarouselEditStateProps) {
           photoUrl={photoUrl}
           selectedId={selectedId}
           slides={slides}
-          strataConfig={props.strataConfig}
+          strataConfig={props.config as StrataConfig}
           theme={theme}
           visibility={props.visibility}
         />

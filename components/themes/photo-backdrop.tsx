@@ -15,6 +15,8 @@ import {
   type ImageTransform,
   transformToCss,
 } from "@/lib/image-transform";
+import { effectsTransformSuffix, filterCss } from "@/lib/photo-effects";
+import { usePhotoEffects } from "./photo-fx";
 
 export type BackdropTreatment = "path" | "editorial";
 
@@ -29,7 +31,10 @@ export function PhotoBackdrop({
   treatment,
   imageTransform,
 }: PhotoBackdropProps) {
-  const transform = transformToCss(imageTransform ?? IDENTITY_TRANSFORM);
+  const fx = usePhotoEffects();
+  const userFilter = fx ? filterCss(fx.filter) : "";
+  const suffix = effectsTransformSuffix(fx);
+  const transform = `${transformToCss(imageTransform ?? IDENTITY_TRANSFORM)}${suffix}`;
   if (treatment === "path") {
     // Paper-tone overlay multiplies down the photo so the route ink stays the
     // hero. 14px blur softens any detail the eye might catch.
@@ -53,7 +58,7 @@ export function PhotoBackdrop({
             backgroundPosition: "center",
             transform,
             transformOrigin: "center center",
-            filter: "blur(14px) saturate(0.85)",
+            filter: `blur(14px) saturate(0.85) ${userFilter}`.trim(),
             opacity: 0.55,
           }}
         />
@@ -101,7 +106,8 @@ export function PhotoBackdrop({
           backgroundPosition: "center",
           transform,
           transformOrigin: "center center",
-          filter: "blur(10px) saturate(0.7) contrast(0.95)",
+          filter:
+            `blur(10px) saturate(0.7) contrast(0.95) ${userFilter}`.trim(),
           opacity: 0.22,
         }}
       />

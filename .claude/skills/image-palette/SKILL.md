@@ -34,7 +34,12 @@ Don't ship one fixed mapping — auto-color is delightful when it hits and jarri
 - **spectrum** — headline pulls LightVibrant, body pulls LightMuted, accent pulls Vibrant, and a *second* accent (`accent2`) is set to the complementary rotation of the primary. Themes can paint different elements with `accent` vs `accent2` (or use them together in a gradient) so a Spectrum card visibly carries two hues at once. The wildest of the moods by design.
 - **pure** — ignores the swatches entirely and returns fixed white type with a white accent. The photo still shows as background; the type stays neutral so the image speaks for itself. Use this as the "opt out" — when the extracted colours don't land or the user wants the original look.
 
-`buildPaletteFromImage()` returns all five pre-built. The caller picks one and the hook returns `themes[variant]`.
+`buildPaletteFromImage()` returns all five pre-built (`ExtractedPalette.themes`).
+The caller picks one and the hook returns `themes[variant]`. Because all five are
+pre-built in one pass, the editor's colour-strategy picker previews **each
+strategy's real accent swatch** for free (`themes[v].accent`) — exposed as the
+Photo theme's `palette` parameter (a calculated `options(ctx)` over
+`ctx.palette`; see the `theme-params` skill).
 
 ## Why OKLCH (not HSL)
 

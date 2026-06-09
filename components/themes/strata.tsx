@@ -19,6 +19,11 @@ import {
 } from "@/lib/format";
 import { IDENTITY_TRANSFORM, transformToCss } from "@/lib/image-transform";
 import {
+  effectsTransformSuffix,
+  filterCss,
+  GRAIN_BG,
+} from "@/lib/photo-effects";
+import {
   buildStrata,
   DEFAULT_STRATA_CONFIG,
   resolveStrataSource,
@@ -29,6 +34,7 @@ import {
   strataDirectionArrow,
   strataPeakMarker,
 } from "@/lib/strata";
+import { usePhotoEffects } from "./photo-fx";
 import type { ActivityCardProps } from "./types";
 
 const DISPLAY = "var(--font-syne), sans-serif";
@@ -282,6 +288,7 @@ export function ThemeStrata({
   const stats = statRow(data);
   const statText = tokens.inkStat ? tokens.text : "#fff";
   const overPhoto = Boolean(photoUrl);
+  const fx = usePhotoEffects();
   const metaParts = [
     (data.location || "").toUpperCase(),
     formatDateUpper(data.date),
@@ -320,10 +327,26 @@ export function ThemeStrata({
               backgroundImage: `url(${photoUrl})`,
               backgroundSize: "cover",
               backgroundPosition: "center",
-              transform: transformToCss(imageTransform ?? IDENTITY_TRANSFORM),
+              filter: fx ? filterCss(fx.filter) || undefined : undefined,
+              transform: `${transformToCss(imageTransform ?? IDENTITY_TRANSFORM)}${effectsTransformSuffix(fx)}`,
               transformOrigin: "center center",
             }}
           />
+          {fx?.grain ? (
+            <div
+              aria-hidden
+              style={{
+                position: "absolute",
+                inset: 0,
+                zIndex: -1,
+                backgroundImage: GRAIN_BG,
+                backgroundRepeat: "repeat",
+                backgroundSize: "180px 180px",
+                mixBlendMode: "overlay",
+                opacity: 0.5,
+              }}
+            />
+          ) : null}
           <div
             aria-hidden
             style={{

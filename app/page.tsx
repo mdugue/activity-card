@@ -22,7 +22,6 @@ import { StravaPicker } from "@/components/app/strava-picker";
 import { THEME_META, themeVisibilityAvailable } from "@/components/themes";
 import { useCarousel } from "@/hooks/use-carousel";
 import { useImagePalette } from "@/hooks/use-image-palette";
-import { type AltitudeConfig, DEFAULT_ALTITUDE_CONFIG } from "@/lib/altitude";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
 import { carouselVisibilityAvailable } from "@/lib/carousel/stats";
 import {
@@ -32,10 +31,10 @@ import {
 } from "@/lib/carousel/theme-tokens";
 import { formatDateUpper } from "@/lib/format";
 import { IDENTITY_TRANSFORM, type ImageTransform } from "@/lib/image-transform";
-import type { PhotoMood } from "@/lib/palette";
+import { resolveThemeConfig, themeParams } from "@/lib/params/registry";
 import type { ParsedActivity } from "@/lib/parse-activity";
+import type { PhotoConfig } from "@/lib/photo-config";
 import { NO_EFFECTS, type PhotoEffects } from "@/lib/photo-effects";
-import { DEFAULT_STRATA_CONFIG, type StrataConfig } from "@/lib/strata";
 import { cn } from "@/lib/utils";
 import {
   applyVisibility,
@@ -48,13 +47,17 @@ const STORAGE_KEY = "effort:ui:v1";
 
 interface PersistedUi {
   accent: string;
-  altitudeConfig: AltitudeConfig;
+  // Legacy keys (pre-param-schema): read once on load and migrated into
+  // `themeConfigs`, then dropped on the next save.
+  altitudeConfig?: unknown;
   athleteName?: string;
   carouselTheme: CarouselThemeId;
   mode: CardMode;
-  photoMood: PhotoMood;
-  strataConfig: StrataConfig;
+  photoMood?: unknown;
+  strataConfig?: unknown;
   theme: ThemeId;
+  /** per-theme parameter configs, keyed by theme/config key */
+  themeConfigs: Record<string, unknown>;
   visibility: Visibility;
 }
 
@@ -104,6 +107,25 @@ function loadPersistedUi(): Partial<PersistedUi> {
   }
 }
 
+/** The persisted theme configs, with any legacy single-key configs (pre-param-
+ *  schema) folded in so existing users keep their tuned themes. Each value is
+ *  coerced on read by `resolveThemeConfig`, so raw migration is safe. */
+function migrateThemeConfigs(
+  persisted: Partial<PersistedUi>
+): Record<string, unknown> {
+  const configs: Record<string, unknown> = { ...persisted.themeConfigs };
+  if (persisted.altitudeConfig && configs.altitude === undefined) {
+    configs.altitude = persisted.altitudeConfig;
+  }
+  if (persisted.strataConfig && configs.strata === undefined) {
+    configs.strata = persisted.strataConfig;
+  }
+  if (persisted.photoMood && configs.photo === undefined) {
+    configs.photo = { palette: persisted.photoMood };
+  }
+  return configs;
+}
+
 export default function Home() {
   const [state, setState] = useState<AppState>("empty");
   // Set after the Strava OAuth round-trip so the empty state opens the wizard
@@ -126,19 +148,33 @@ export default function Home() {
   const [photoEffects, setPhotoEffects] = useState<PhotoEffects>(NO_EFFECTS);
   const [accent, setAccent] = useState<string>("#c45a2c");
   const [visibility, setVisibility] = useState<Visibility>(DEFAULT_VISIBILITY);
-  const [altitudeConfig, setAltitudeConfig] = useState<AltitudeConfig>(
-    DEFAULT_ALTITUDE_CONFIG
-  );
-  const [strataConfig, setStrataConfig] = useState<StrataConfig>(
-    DEFAULT_STRATA_CONFIG
-  );
-  const [photoMood, setPhotoMood] = useState<PhotoMood>("vibrant");
+  // Per-theme parameter configs, keyed by theme/config key (e.g. "altitude",
+  // "strata", "photo"). One generic slot replaces the per-theme config states;
+  // `resolveThemeConfig` coerces each read so stale/garbage values are safe.
+  const [themeConfigs, setThemeConfigs] = useState<Record<string, unknown>>({});
   // Carousel is the headline mode, so it's the default for a fresh session.
   const [mode, setMode] = useState<CardMode>("carousel");
   const carousel = useCarousel(carouselTheme);
   // Held outside `data` so it survives between activities and can seed
   // `adoptParsed` when the parsed file lacks an athlete name.
   const persistedAthleteNameRef = useRef<string | undefined>(undefined);
+
+  // The active theme's config + schema (the single card uses `theme`; the
+  // carousel uses `carouselTheme` — both index the same "strata" key).
+  const activeConfigKey = mode === "carousel" ? carouselTheme : theme;
+  const activeConfig = resolveThemeConfig(
+    activeConfigKey,
+    themeConfigs[activeConfigKey]
+  );
+  const activeThemeParams = themeParams(activeConfigKey);
+  const setActiveConfig = (next: Record<string, unknown>) =>
+    setThemeConfigs((prev) => ({ ...prev, [activeConfigKey]: next }));
+
+  // The Photo theme's colour strategy drives the palette extraction (which also
+  // powers the picker's per-strategy swatches).
+  const photoMood = (
+    resolveThemeConfig("photo", themeConfigs.photo) as PhotoConfig
+  ).palette;
 
   // One palette extraction for the whole app, regardless of how many copies
   // of the photo theme are mounted (preview + offscreen export mount).
@@ -168,17 +204,9 @@ export default function Home() {
     if (persisted.visibility) {
       setVisibility({ ...DEFAULT_VISIBILITY, ...persisted.visibility });
     }
-    if (persisted.altitudeConfig) {
-      setAltitudeConfig({
-        ...DEFAULT_ALTITUDE_CONFIG,
-        ...persisted.altitudeConfig,
-      });
-    }
-    if (persisted.strataConfig) {
-      setStrataConfig({ ...DEFAULT_STRATA_CONFIG, ...persisted.strataConfig });
-    }
-    if (persisted.photoMood) {
-      setPhotoMood(persisted.photoMood);
+    const configs = migrateThemeConfigs(persisted);
+    if (Object.keys(configs).length > 0) {
+      setThemeConfigs(configs);
     }
     if (persisted.mode) {
       setMode(persisted.mode);
@@ -200,9 +228,7 @@ export default function Home() {
       carouselTheme,
       accent,
       visibility,
-      altitudeConfig,
-      strataConfig,
-      photoMood,
+      themeConfigs,
       mode,
       athleteName: data?.athleteName || persistedAthleteNameRef.current,
     };
@@ -216,9 +242,7 @@ export default function Home() {
     carouselTheme,
     accent,
     visibility,
-    altitudeConfig,
-    strataConfig,
-    photoMood,
+    themeConfigs,
     mode,
     data?.athleteName,
   ]);
@@ -359,7 +383,7 @@ export default function Home() {
       // flag, so setting it here is harmless in that mode.)
       setVisibility((v) => ({
         ...v,
-        photoBackdrop: THEME_META[theme].photoBackdropDefaultOn,
+        photoBackdrop: THEME_META[theme].photoDefaultOn,
       }));
     }
     if (file && mode === "carousel") {
@@ -381,7 +405,7 @@ export default function Home() {
     setTheme(next);
     setVisibility((v) => ({
       ...v,
-      photoBackdrop: THEME_META[next].photoBackdropDefaultOn,
+      photoBackdrop: THEME_META[next].photoDefaultOn,
     }));
   };
 
@@ -482,11 +506,13 @@ export default function Home() {
               athleteName={data.athleteName}
               available={carouselVisibilityAvailable(data, carouselTheme)}
               carousel={carousel}
+              config={activeConfig}
               data={visibleData}
               imageTransform={imageTransform}
               location={data.location}
               onAccentChange={setAccent}
               onAthleteNameChange={handleAthleteNameChange}
+              onConfigChange={setActiveConfig}
               onFilesLoaded={handleFilesLoaded}
               onImageTransformChange={setImageTransform}
               onLocationChange={handleLocationChange}
@@ -494,48 +520,47 @@ export default function Home() {
               onPhotoChange={handlePhotoChange}
               onPhotoEffectsChange={setPhotoEffects}
               onSportChange={handleSportChange}
-              onStrataConfigChange={setStrataConfig}
               onThemeChange={handleCarouselThemeChange}
               onTitleChange={handleTitleChange}
               onVisibilityChange={setVisibility}
+              paramPalette={photoPalette.palette}
               photoEffects={photoEffects}
               photoPaletteTheme={photoPalette.theme}
               photoUrl={photoUrl}
-              strataConfig={strataConfig}
               theme={carouselTheme}
+              themeParams={activeThemeParams}
               title={data.title}
               visibility={visibility}
             />
           ) : (
             <EditState
               accent={accent}
-              altitudeConfig={altitudeConfig}
               athleteName={data.athleteName}
               available={themeVisibilityAvailable(data, theme)}
+              config={activeConfig}
               data={visibleData}
               imageTransform={imageTransform}
               location={data.location}
               onAccentChange={setAccent}
-              onAltitudeConfigChange={setAltitudeConfig}
               onAthleteNameChange={handleAthleteNameChange}
+              onConfigChange={setActiveConfig}
               onDownload={handleDownload}
               onFilesLoaded={handleFilesLoaded}
               onImageTransformChange={setImageTransform}
               onLocationChange={handleLocationChange}
               onOpenStravaPicker={handleOpenStravaPicker}
               onPhotoChange={handlePhotoChange}
-              onPhotoMoodChange={setPhotoMood}
+              onPhotoEffectsChange={setPhotoEffects}
               onSportChange={handleSportChange}
-              onStrataConfigChange={setStrataConfig}
               onThemeChange={handleSingleThemeChange}
               onTitleChange={handleTitleChange}
               onVisibilityChange={setVisibility}
-              photoMood={photoMood}
-              photoPaletteStatus={photoPalette.status}
+              paramPalette={photoPalette.palette}
+              photoEffects={photoEffects}
               photoPaletteTheme={photoPalette.theme}
               photoUrl={photoUrl}
-              strataConfig={strataConfig}
               theme={theme}
+              themeParams={activeThemeParams}
               title={data.title}
               visibility={visibility}
             />
@@ -544,15 +569,15 @@ export default function Home() {
       ) : null}
       {state === "download" && visibleData ? (
         <DownloadState
-          altitudeConfig={altitudeConfig}
+          config={activeConfig}
           data={visibleData}
           imageTransform={imageTransform}
           onKeepEditing={handleKeepEditing}
           onNew={handleNew}
           photoBackdropEnabled={visibility.photoBackdrop}
+          photoEffects={photoEffects}
           photoPaletteTheme={photoPalette.theme}
           photoUrl={photoUrl}
-          strataConfig={strataConfig}
           theme={theme}
         />
       ) : null}
