@@ -158,7 +158,11 @@ function DataRoute({
   );
 }
 
-export function ThemeData({ data, photoUrl }: ActivityCardProps) {
+export function ThemeData({
+  data,
+  photoUrl,
+  imageTransform,
+}: ActivityCardProps) {
   const sport = data.sport;
   const multi = isMultiActivity(data);
   const routes = multi ? segmentRoutes(data) : [];
@@ -317,7 +321,9 @@ export function ThemeData({ data, photoUrl }: ActivityCardProps) {
         flexDirection: "column",
       }}
     >
-      {photoUrl ? <PhotoUnderlay photoUrl={photoUrl} /> : null}
+      {photoUrl ? (
+        <PhotoUnderlay imageTransform={imageTransform} photoUrl={photoUrl} />
+      ) : null}
       <div
         style={{
           display: "flex",

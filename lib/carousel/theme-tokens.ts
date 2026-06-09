@@ -348,7 +348,9 @@ export const CAROUSEL_THEME_TOKENS: Record<
     panelKind: "standard",
     deck: DECK_3,
     detailViz: false,
-    photoSupported: false,
+    // A background photo is optional: the woven field rides over it, the same
+    // way the single card composes the field on a photo.
+    photoSupported: true,
     usesPhotoPalette: false,
     defaultFilter: "none",
     defaultGrain: false,

@@ -5,11 +5,21 @@
 // subtle wash. background-image + inline `filter` (never backdrop-filter) so
 // html-to-image captures it faithfully.
 
+import {
+  IDENTITY_TRANSFORM,
+  type ImageTransform,
+  transformToCss,
+} from "@/lib/image-transform";
+
 interface PhotoUnderlayProps {
+  imageTransform?: ImageTransform | null;
   photoUrl: string;
 }
 
-export function PhotoUnderlay({ photoUrl }: PhotoUnderlayProps) {
+export function PhotoUnderlay({
+  photoUrl,
+  imageTransform,
+}: PhotoUnderlayProps) {
   return (
     <div
       aria-hidden
@@ -28,6 +38,8 @@ export function PhotoUnderlay({ photoUrl }: PhotoUnderlayProps) {
           backgroundImage: `url(${photoUrl})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
+          transform: transformToCss(imageTransform ?? IDENTITY_TRANSFORM),
+          transformOrigin: "center center",
           filter: "saturate(0.92)",
         }}
       />

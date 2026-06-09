@@ -17,6 +17,7 @@ import {
   formatPaceMin,
   formatPaceSec,
 } from "@/lib/format";
+import { IDENTITY_TRANSFORM, transformToCss } from "@/lib/image-transform";
 import {
   buildStrata,
   DEFAULT_STRATA_CONFIG,
@@ -268,6 +269,7 @@ function sportLabel(sport: ActivityData["sport"]): string {
 export function ThemeStrata({
   data,
   photoUrl,
+  imageTransform,
   config = DEFAULT_STRATA_CONFIG,
 }: ThemeStrataProps) {
   const tokens = STRATA_MOODS[config.mood];
@@ -312,6 +314,8 @@ export function ThemeStrata({
               backgroundImage: `url(${photoUrl})`,
               backgroundSize: "cover",
               backgroundPosition: "center",
+              transform: transformToCss(imageTransform ?? IDENTITY_TRANSFORM),
+              transformOrigin: "center center",
             }}
           />
           <div

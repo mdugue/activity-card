@@ -40,6 +40,8 @@ interface StrataCanvasProps {
   legend: boolean;
   /** base opacity of the woven in-between layers */
   lineAlpha?: number;
+  /** firmer hero halos so the ridges read over a background photo */
+  overPhoto?: boolean;
   /** route ridge (top hero) colour */
   routeColor: string;
   /** `r,g,b` tone for marker halos */
@@ -57,6 +59,7 @@ export function StrataCanvas({
   legend,
   ink,
   scrim,
+  overPhoto = false,
   lineAlpha = 0.4,
 }: StrataCanvasProps) {
   const source = resolveStrataSource(data);
@@ -81,6 +84,7 @@ export function StrataCanvas({
   }
   const heroW = 7;
   const haloW = heroW + 7;
+  const haloOpacity = overPhoto ? 0.36 : 0.22;
 
   // Markers, revealed by `legend` — sized for the wide panorama viewBox.
   const peak = legend ? strataPeakMarker(elevPts, source.elevMax) : null;
@@ -131,7 +135,7 @@ export function StrataCanvas({
         stroke={elevColor}
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeOpacity={0.22}
+        strokeOpacity={haloOpacity}
         strokeWidth={haloW}
       />
       <path
@@ -149,7 +153,7 @@ export function StrataCanvas({
         stroke={routeColor}
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeOpacity={0.22}
+        strokeOpacity={haloOpacity}
         strokeWidth={haloW}
       />
       <path
@@ -234,10 +238,13 @@ export function StrataHero({
   w,
   h,
   style,
+  overPhoto = false,
 }: {
   cfg: StrataConfig | null;
   data: ActivityData;
   h: number;
+  /** firmer hero halos when the field rides over a background photo */
+  overPhoto?: boolean;
   style: EffectiveStyle;
   w: number;
 }) {
@@ -255,6 +262,7 @@ export function StrataHero({
           h={h}
           ink={style.ink}
           legend={cfg.legend}
+          overPhoto={overPhoto}
           routeColor={style.accent}
           scrim={mood.scrim}
           w={w}

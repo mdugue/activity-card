@@ -24,7 +24,11 @@ const ACCENT = "#c45a2c";
 const ROUTE_W = 900;
 const ROUTE_H = 720;
 
-export function ThemePath({ data, photoUrl }: ActivityCardProps) {
+export function ThemePath({
+  data,
+  photoUrl,
+  imageTransform,
+}: ActivityCardProps) {
   const isPool = data.sport === "swim";
   const sport = data.sport;
   const multi = isMultiActivity(data);
@@ -82,7 +86,13 @@ export function ThemePath({ data, photoUrl }: ActivityCardProps) {
         overflow: "hidden",
       }}
     >
-      {photoUrl ? <PhotoBackdrop photoUrl={photoUrl} treatment="path" /> : null}
+      {photoUrl ? (
+        <PhotoBackdrop
+          imageTransform={imageTransform}
+          photoUrl={photoUrl}
+          treatment="path"
+        />
+      ) : null}
       {/* Content sits above the backdrop layer. */}
       <div
         style={{

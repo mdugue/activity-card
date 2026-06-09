@@ -107,7 +107,11 @@ function EditorialRoute({
   );
 }
 
-export function ThemeEditorial({ data, photoUrl }: ActivityCardProps) {
+export function ThemeEditorial({
+  data,
+  photoUrl,
+  imageTransform,
+}: ActivityCardProps) {
   const sport = data.sport;
   const multi = isMultiActivity(data);
   const routes = multi ? segmentRoutes(data) : [];
@@ -167,7 +171,11 @@ export function ThemeEditorial({ data, photoUrl }: ActivityCardProps) {
       }}
     >
       {photoUrl ? (
-        <PhotoBackdrop photoUrl={photoUrl} treatment="editorial" />
+        <PhotoBackdrop
+          imageTransform={imageTransform}
+          photoUrl={photoUrl}
+          treatment="editorial"
+        />
       ) : null}
       {/* Content sits above the backdrop layer. */}
       <div

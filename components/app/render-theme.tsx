@@ -60,7 +60,14 @@ export function RenderTheme({
 }: RenderThemeProps) {
   const photo = effectivePhotoUrl(theme, photoUrl, photoBackdropEnabled);
   if (theme === "strata") {
-    return <ThemeStrata config={strataConfig} data={data} photoUrl={photo} />;
+    return (
+      <ThemeStrata
+        config={strataConfig}
+        data={data}
+        imageTransform={imageTransform}
+        photoUrl={photo}
+      />
+    );
   }
   if (theme === "altitude") {
     return (
@@ -92,5 +99,5 @@ export function RenderTheme({
     );
   }
   const Theme = THEMES[theme];
-  return <Theme data={data} photoUrl={photo} />;
+  return <Theme data={data} imageTransform={imageTransform} photoUrl={photo} />;
 }

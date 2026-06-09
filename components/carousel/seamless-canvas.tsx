@@ -304,6 +304,7 @@ export function SeamlessCanvas({
         cfg={strataCfg}
         data={data}
         h={SLIDE_H}
+        overPhoto={showPhoto}
         style={style}
         w={width}
       />

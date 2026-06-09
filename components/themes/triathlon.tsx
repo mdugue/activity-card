@@ -83,7 +83,11 @@ function heroFor(seg: TriSegment): string {
   return `${formatPaceMin(seg.avgPaceMinPerKm)} /km`;
 }
 
-export function ThemeTriathlon({ data, photoUrl }: ActivityCardProps) {
+export function ThemeTriathlon({
+  data,
+  photoUrl,
+  imageTransform,
+}: ActivityCardProps) {
   const sports = data.segments || [];
   const transitions = data.transitions || [];
 
@@ -170,7 +174,9 @@ export function ThemeTriathlon({ data, photoUrl }: ActivityCardProps) {
         flexDirection: "column",
       }}
     >
-      {photoUrl ? <PhotoUnderlay photoUrl={photoUrl} /> : null}
+      {photoUrl ? (
+        <PhotoUnderlay imageTransform={imageTransform} photoUrl={photoUrl} />
+      ) : null}
       <div
         style={{
           display: "flex",

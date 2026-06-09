@@ -43,11 +43,14 @@ export function SingleCardPreview({
 }: SingleCardPreviewProps) {
   const [adjusting, setAdjusting] = useState(false);
 
-  // Repositioning is only meaningful when the active theme shows the photo as
-  // its hero. Drop out of adjust mode if the photo is removed or the theme
-  // changes to one that doesn't feature it.
+  // Repositioning is offered wherever the photo is actually on screen — hero
+  // themes always, "supports" themes (incl. STRATA / Data / Triathlon) when the
+  // backdrop is toggled on. Drop out of adjust mode if it stops being shown.
+  const meta = THEME_META[theme];
   const adjustAvailable =
-    photoUrl !== null && THEME_META[theme].photoMode === "hero";
+    photoUrl !== null &&
+    (meta.photoMode === "hero" ||
+      (meta.photoMode === "supports" && photoBackdropEnabled));
   useEffect(() => {
     if (adjusting && !adjustAvailable) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
