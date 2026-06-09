@@ -36,6 +36,7 @@ import type { PhotoMood } from "@/lib/palette";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import { NO_EFFECTS, type PhotoEffects } from "@/lib/photo-effects";
 import { DEFAULT_STRATA_CONFIG, type StrataConfig } from "@/lib/strata";
+import { cn } from "@/lib/utils";
 import {
   applyVisibility,
   DEFAULT_VISIBILITY,
@@ -441,7 +442,17 @@ export default function Home() {
   const visibleData = data ? applyVisibility(data, visibility) : data;
 
   return (
-    <div className="relative flex min-h-screen flex-col overflow-hidden bg-background text-foreground">
+    <div
+      className={cn(
+        "relative flex flex-col overflow-hidden bg-background text-foreground",
+        // The editor is a non-scrolling app-shell pinned to the dynamic viewport
+        // on mobile (panels scroll internally, the page doesn't); every other
+        // screen — and desktop — keeps its natural, scrollable height.
+        state === "edit"
+          ? "h-[100dvh] lg:h-auto lg:min-h-screen"
+          : "min-h-screen"
+      )}
+    >
       {state === "edit" ? null : (
         <Header
           date={data?.date}
@@ -462,7 +473,7 @@ export default function Home() {
         />
       ) : null}
       {state === "edit" && visibleData && data ? (
-        <div className="flex flex-1 flex-col">
+        <div className="flex flex-1 flex-col max-lg:min-h-0">
           <EditTopBar mode={mode} onModeChange={setMode} />
           {mode === "carousel" ? (
             <CarouselEditState
