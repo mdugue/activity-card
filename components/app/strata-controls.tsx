@@ -28,9 +28,9 @@ interface StrataControlsProps {
 export function StrataControls({ config, onChange }: StrataControlsProps) {
   return (
     <>
-      <ControlBlock label="MOOD">
+      <ControlBlock label="ATMOSPHERE">
         <ToggleGroup
-          aria-label="Mood"
+          aria-label="Atmosphere"
           className="mt-2 grid w-full grid-cols-3 gap-2"
           onValueChange={(values) => {
             if (values[0]) {

@@ -18,11 +18,7 @@
 
 import type { ActivityData } from "@/components/app/sample-data";
 import type { Coord } from "@/lib/chart-helpers";
-import {
-  isMultiActivity,
-  segmentProfiles,
-  segmentRoutes,
-} from "@/lib/multi-activity";
+import { isMultiActivity } from "@/lib/multi-activity";
 
 /* ----------------------------- configuration ----------------------------- */
 
@@ -35,7 +31,7 @@ export type StrataDensity = "fine" | "woven" | "bold";
 export interface StrataConfig {
   /** How finely the field is woven — the number of strata layers. */
   density: StrataDensity;
-  /** Draw the cartographic captions (ROUTE · ELEVATION) onto the field. */
+  /** Mark the peak height + a direction arrow on the field. */
   legend: boolean;
   /** Atmosphere preset: palette gradient and the two highlight colours. */
   mood: StrataMood;
@@ -63,8 +59,6 @@ export interface StrataMoodTokens {
   label: string;
   /** Base opacity of the woven in-between layers. */
   lineAlpha: number;
-  /** Start-dot / finish-arrow colour. */
-  marker: string;
   /** Stroke width of the woven in-between layers. */
   midW: number;
   /** The top hero: the real route. */
@@ -87,7 +81,6 @@ export const STRATA_MOODS: Record<StrataMood, StrataMoodTokens> = {
     lineAlpha: 0.3,
     heroW: 4.5,
     midW: 1.35,
-    marker: "#c45a2c",
     scrim: "243,237,226",
     statBg: "rgba(255,253,248,0.7)",
     statBorder: "rgba(26,23,20,0.2)",
@@ -103,7 +96,6 @@ export const STRATA_MOODS: Record<StrataMood, StrataMoodTokens> = {
     lineAlpha: 0.34,
     heroW: 4.5,
     midW: 1.4,
-    marker: "#e0823a",
     scrim: "246,221,194",
     statBg: "rgba(255,252,247,0.66)",
     statBorder: "rgba(42,34,64,0.16)",
@@ -119,7 +111,6 @@ export const STRATA_MOODS: Record<StrataMood, StrataMoodTokens> = {
     lineAlpha: 0.4,
     heroW: 4.5,
     midW: 1.5,
-    marker: "#ffd98a",
     scrim: "16,8,24",
     statBg: "rgba(26,10,22,0.4)",
     statBorder: "rgba(248,234,215,0.2)",
@@ -135,7 +126,6 @@ export const STRATA_MOODS: Record<StrataMood, StrataMoodTokens> = {
     lineAlpha: 0.42,
     heroW: 4.5,
     midW: 1.5,
-    marker: "#82e3e0",
     scrim: "6,11,28",
     statBg: "rgba(6,11,28,0.5)",
     statBorder: "rgba(231,237,255,0.16)",
@@ -151,7 +141,6 @@ export const STRATA_MOODS: Record<StrataMood, StrataMoodTokens> = {
     lineAlpha: 0.32,
     heroW: 4.5,
     midW: 1.4,
-    marker: "#1f5a6b",
     scrim: "223,234,240",
     statBg: "rgba(255,255,255,0.66)",
     statBorder: "rgba(22,36,44,0.16)",
@@ -234,38 +223,56 @@ function pickProfile(data: ActivityData): PickedProfile | null {
 
 /**
  * Resolve the two source curves the field morphs between. A single activity uses
- * its top-level route + profile; a multi-activity project (triathlon, brick)
- * keeps its geometry on the segments, so we concatenate the legs into one route
- * and one profile — the field then weaves the whole effort instead of rendering
- * empty. Returns `null` when there isn't enough geometry for a morph.
+ * its top-level route + profile (both indexed by the same progress). A
+ * multi-activity project (triathlon, brick) keeps its geometry on the segments,
+ * so it pairs each leg's route with that SAME leg's profile and concatenates in
+ * order — see `resolveMultiStrataSource`. Returns `null` without enough geometry.
  */
 export function resolveStrataSource(data: ActivityData): StrataSource | null {
-  let routeCoords = data.routeCoordinates ?? [];
-  let picked = pickProfile(data);
-
+  const route = data.routeCoordinates;
+  const picked = pickProfile(data);
+  if (route && route.length > 1 && picked) {
+    return { routeCoords: route, ...picked };
+  }
   if (isMultiActivity(data)) {
-    if (routeCoords.length < 2) {
-      routeCoords = segmentRoutes(data).flatMap((r) => r.coords);
-    }
-    if (!picked) {
-      const seg = segmentProfiles(data);
-      const profile = seg.profiles.flat();
-      if (profile.length > 1) {
-        picked = seg.useElevation
-          ? {
-              profile,
-              profileLabel: "ELEVATION",
-              elevMax: Math.round(Math.max(...profile)),
-            }
-          : { profile, profileLabel: "PACE", elevMax: null };
+    return resolveMultiStrataSource(data);
+  }
+  return null;
+}
+
+/**
+ * Multi-activity: keep only legs that carry BOTH a route and the project's
+ * chosen profile metric (elevation when any leg has it, else pace), and
+ * concatenate them in order. Pairing each route with its own leg's profile keeps
+ * the morph progress-aligned — a swim leg with a route but no elevation is
+ * skipped rather than smearing the route's swim third against the bike's climb.
+ */
+function resolveMultiStrataSource(data: ActivityData): StrataSource | null {
+  const segs = data.segments ?? [];
+  const useElevation = segs.some((s) => (s.elevationProfile?.length ?? 0) > 1);
+  const routeCoords: Coord[] = [];
+  const profile: number[] = [];
+  for (const s of segs) {
+    const prof = useElevation ? s.elevationProfile : s.paceProfile;
+    const legRoute = s.routeCoordinates;
+    if (legRoute && legRoute.length > 1 && prof && prof.length > 1) {
+      for (const c of legRoute) {
+        routeCoords.push(c);
+      }
+      for (const v of prof) {
+        profile.push(v);
       }
     }
   }
-
-  if (routeCoords.length < 2 || !picked) {
+  if (routeCoords.length < 2 || profile.length < 2) {
     return null;
   }
-  return { routeCoords, ...picked };
+  return {
+    routeCoords,
+    profile,
+    profileLabel: useElevation ? "ELEVATION" : "PACE",
+    elevMax: useElevation ? Math.round(Math.max(...profile)) : null,
+  };
 }
 
 /* ------------------------------ morph maths ------------------------------- */
@@ -534,7 +541,12 @@ export function strataDirectionArrow(
   const i = bestI;
   const a = routePts[Math.max(0, i - gap)];
   const b = routePts[Math.min(n - 1, i + gap)];
-  const tl = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+  const tl = Math.hypot(b[0] - a[0], b[1] - a[1]);
+  // A (near-)stationary track has no meaningful heading — skip the arrow rather
+  // than draw one with an arbitrary angle at a single point.
+  if (tl < 1e-6) {
+    return null;
+  }
   const ux = (b[0] - a[0]) / tl;
   const uy = (b[1] - a[1]) / tl;
 

@@ -1,7 +1,6 @@
 import type { ActivityData } from "@/components/app/sample-data";
 import { THEME_META, THEMES, type ThemeId } from "@/components/themes";
 import { ThemeAltitude } from "@/components/themes/altitude";
-import { ThemeMinimal } from "@/components/themes/minimal";
 import { ThemePhoto } from "@/components/themes/photo";
 import { ThemeStrata } from "@/components/themes/strata";
 import type { AltitudeConfig } from "@/lib/altitude";
@@ -14,7 +13,7 @@ export type { ThemeId } from "@/components/themes";
 interface RenderThemeProps {
   altitudeConfig?: AltitudeConfig;
   data: ActivityData;
-  /** Pan/zoom applied to the background photo in "hero" themes. */
+  /** Pan/zoom applied to the background photo, wherever a theme shows one. */
   imageTransform?: ImageTransform | null;
   photoBackdropEnabled?: boolean;
   /** Photo theme: pre-resolved palette extracted from the photo, if available. */
@@ -89,15 +88,8 @@ export function RenderTheme({
       />
     );
   }
-  if (theme === "minimal") {
-    return (
-      <ThemeMinimal
-        data={data}
-        imageTransform={imageTransform}
-        photoUrl={photo}
-      />
-    );
-  }
+  // Minimal, Path, Editorial, Data, Triathlon take exactly { data, photoUrl,
+  // imageTransform } — the generic path. Only the cases above need extra props.
   const Theme = THEMES[theme];
   return <Theme data={data} imageTransform={imageTransform} photoUrl={photo} />;
 }

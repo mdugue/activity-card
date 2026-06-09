@@ -25,6 +25,9 @@ interface DownloadStateProps {
   imageTransform: ImageTransform;
   onKeepEditing: () => void;
   onNew: () => void;
+  /** Single-card backdrop toggle — must match the editor so the celebration
+   *  thumbnail and the "Share" re-export agree with the downloaded PNG. */
+  photoBackdropEnabled: boolean;
   photoPaletteTheme: PaletteTheme | null;
   photoUrl: string | null;
   strataConfig: StrataConfig;
@@ -35,6 +38,7 @@ export function DownloadState({
   data,
   theme,
   photoUrl,
+  photoBackdropEnabled,
   altitudeConfig,
   strataConfig,
   photoPaletteTheme,
@@ -81,6 +85,7 @@ export function DownloadState({
                   altitudeConfig={altitudeConfig}
                   data={data}
                   imageTransform={imageTransform}
+                  photoBackdropEnabled={photoBackdropEnabled}
                   photoPaletteTheme={photoPaletteTheme}
                   photoUrl={photoUrl}
                   strataConfig={strataConfig}
@@ -148,6 +153,7 @@ export function DownloadState({
           altitudeConfig={altitudeConfig}
           data={data}
           imageTransform={imageTransform}
+          photoBackdropEnabled={photoBackdropEnabled}
           photoPaletteTheme={photoPaletteTheme}
           photoUrl={photoUrl}
           strataConfig={strataConfig}

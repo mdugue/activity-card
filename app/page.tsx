@@ -537,6 +537,7 @@ export default function Home() {
           imageTransform={imageTransform}
           onKeepEditing={handleKeepEditing}
           onNew={handleNew}
+          photoBackdropEnabled={visibility.photoBackdrop}
           photoPaletteTheme={photoPalette.theme}
           photoUrl={photoUrl}
           strataConfig={strataConfig}

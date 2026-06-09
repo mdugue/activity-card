@@ -85,6 +85,9 @@ export function StrataCanvas({
   const heroW = 7;
   const haloW = heroW + 7;
   const haloOpacity = overPhoto ? 0.36 : 0.22;
+  // One smoothed path per hero ridge, reused for both the halo and crisp stroke.
+  const dHero0 = smoothPath(hero0.pts);
+  const dHeroN = smoothPath(heroN.pts);
 
   // Markers, revealed by `legend` — sized for the wide panorama viewBox.
   const peak = legend ? strataPeakMarker(elevPts, source.elevMax) : null;
@@ -130,7 +133,7 @@ export function StrataCanvas({
 
       {/* HERO — elevation profile (bottom), soft halo for legibility. */}
       <path
-        d={smoothPath(heroN.pts)}
+        d={dHeroN}
         fill="none"
         stroke={elevColor}
         strokeLinecap="round"
@@ -139,7 +142,7 @@ export function StrataCanvas({
         strokeWidth={haloW}
       />
       <path
-        d={smoothPath(heroN.pts)}
+        d={dHeroN}
         fill="none"
         stroke={elevColor}
         strokeLinecap="round"
@@ -148,7 +151,7 @@ export function StrataCanvas({
       />
       {/* HERO — the real route (top). */}
       <path
-        d={smoothPath(hero0.pts)}
+        d={dHero0}
         fill="none"
         stroke={routeColor}
         strokeLinecap="round"
@@ -157,7 +160,7 @@ export function StrataCanvas({
         strokeWidth={haloW}
       />
       <path
-        d={smoothPath(hero0.pts)}
+        d={dHero0}
         fill="none"
         stroke={routeColor}
         strokeLinecap="round"
@@ -227,10 +230,12 @@ export function StrataCanvas({
 }
 
 /**
- * The full STRATA carousel hero: the spanning field plus a mood-tinted vertical
- * scrim so the standard panels stay legible over the weave. Returns `null` for
- * any non-STRATA deck (so the renderer can drop it in unconditionally). `style`
- * is the mood-resolved deck style (route = accent, elevation = accent2).
+ * The full STRATA carousel hero: the spanning field plus — over the mood
+ * gradient only — a mood-tinted vertical scrim so the standard panels stay
+ * legible. Over a background photo the canvas already applies the standard veil,
+ * so the scrim is dropped to avoid double-darkening the image. Returns `null`
+ * for any non-STRATA deck (so the renderer can drop it in unconditionally).
+ * `style` is the mood-resolved deck style (route = accent, elevation = accent2).
  */
 export function StrataHero({
   cfg,
@@ -268,14 +273,16 @@ export function StrataHero({
           w={w}
         />
       </div>
-      <div
-        aria-hidden
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: `linear-gradient(180deg, rgba(${mood.scrim},0.6) 0%, rgba(${mood.scrim},0.12) 24%, rgba(${mood.scrim},0) 46%, rgba(${mood.scrim},0.1) 66%, rgba(${mood.scrim},0.56) 100%)`,
-        }}
-      />
+      {overPhoto ? null : (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: `linear-gradient(180deg, rgba(${mood.scrim},0.6) 0%, rgba(${mood.scrim},0.12) 24%, rgba(${mood.scrim},0) 46%, rgba(${mood.scrim},0.1) 66%, rgba(${mood.scrim},0.56) 100%)`,
+          }}
+        />
+      )}
     </>
   );
 }

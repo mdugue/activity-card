@@ -78,8 +78,45 @@ describe("resolveStrataSource", () => {
   test("concatenates a multi-activity project's legs into one source", () => {
     const src = resolveStrataSource(SAMPLE_TRI);
     expect(src).not.toBeNull();
-    // Routes from every leg + elevation from the legs that carry it.
+    // Route + elevation come from the legs that carry both (bike, run); the
+    // swim leg has a route but no elevation, so it's dropped, not smeared.
     expect((src?.routeCoords.length ?? 0) > 2).toBe(true);
+    expect(src?.profileLabel).toBe("ELEVATION");
+  });
+
+  test("pairs each multi-activity leg's route with its OWN profile", () => {
+    const bikeRoute: Coord[] = [
+      [0, 0],
+      [1, 1],
+      [2, 0],
+      [3, 1],
+    ];
+    const data = make({
+      sport: "triathlon",
+      segments: [
+        {
+          sport: "bike",
+          distanceKm: 40,
+          durationSec: 3600,
+          routeCoordinates: bikeRoute,
+          elevationProfile: [10, 40, 25, 70],
+        },
+        {
+          // Route but NO elevation/pace → must be skipped, never concatenated
+          // (otherwise this leg's route would morph against the bike's climb).
+          sport: "run",
+          distanceKm: 10,
+          durationSec: 3000,
+          routeCoordinates: [
+            [5, 5],
+            [6, 6],
+            [7, 5],
+          ],
+        },
+      ],
+    });
+    const src = resolveStrataSource(data);
+    expect(src?.routeCoords.length).toBe(bikeRoute.length);
     expect(src?.profileLabel).toBe("ELEVATION");
   });
 

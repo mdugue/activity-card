@@ -70,7 +70,13 @@ function StrataField({
     return null;
   }
   const hero0 = curves[0];
-  const heroN = curves[curves.length - 1];
+  const heroN = curves.at(-1);
+  if (!heroN) {
+    return null;
+  }
+  // One smoothed path per hero ridge, reused for both the halo and crisp stroke.
+  const dHero0 = smoothPath(hero0.pts);
+  const dHeroN = smoothPath(heroN.pts);
   const haloW = tokens.heroW + 8;
   // Over a photo the heroes need a firmer halo and the markers an outline.
   const haloOpacity = overPhoto ? 0.34 : 0.18;
@@ -123,7 +129,7 @@ function StrataField({
 
       {/* HERO — the elevation / pace profile (bottom), with a soft halo. */}
       <path
-        d={smoothPath(heroN.pts)}
+        d={dHeroN}
         fill="none"
         stroke={tokens.elevColor}
         strokeLinecap="round"
@@ -132,7 +138,7 @@ function StrataField({
         strokeWidth={haloW}
       />
       <path
-        d={smoothPath(heroN.pts)}
+        d={dHeroN}
         fill="none"
         stroke={tokens.elevColor}
         strokeLinecap="round"
@@ -141,7 +147,7 @@ function StrataField({
       />
       {/* HERO — the real route (top). */}
       <path
-        d={smoothPath(hero0.pts)}
+        d={dHero0}
         fill="none"
         stroke={tokens.routeColor}
         strokeLinecap="round"
@@ -150,7 +156,7 @@ function StrataField({
         strokeWidth={haloW}
       />
       <path
-        d={smoothPath(hero0.pts)}
+        d={dHero0}
         fill="none"
         stroke={tokens.routeColor}
         strokeLinecap="round"
