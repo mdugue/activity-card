@@ -13,7 +13,10 @@ import {
   ArrowCounterClockwiseIcon,
   ChartBarIcon,
   ImageIcon,
+  MedalIcon,
+  PersonSimpleBikeIcon,
   PersonSimpleRunIcon,
+  PersonSimpleSwimIcon,
   SquaresFourIcon,
   StarIcon,
   SunHorizonIcon,
@@ -23,13 +26,6 @@ import { useId } from "react";
 import type { ControlTool } from "@/components/app/control-deck";
 import type { CardMode } from "@/components/app/mode-toggle";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import { cn } from "@/lib/utils";
@@ -39,15 +35,45 @@ import {
   ControlBlock,
   DetailField,
   PhotoControl,
+  RichSelect,
+  type RichSelectOption,
   ToggleRow,
 } from "./control-primitives";
 import type { ActivityData, Sport } from "./sample-data";
 
-const SPORT_OPTIONS: { value: Sport; label: string }[] = [
-  { value: "ride", label: "Ride" },
-  { value: "run", label: "Run" },
-  { value: "swim", label: "Swim" },
-  { value: "triathlon", label: "Triathlon" },
+// Shared by the section headers and the rich sport picker below — duotone glyph
+// at a calm, consistent size.
+const ICON_PROPS = {
+  "aria-hidden": true,
+  className: "size-5",
+  weight: "duotone",
+} as const;
+
+const SPORT_OPTIONS: RichSelectOption[] = [
+  {
+    value: "ride",
+    primary: "Ride",
+    hint: "Cycling",
+    icon: <PersonSimpleBikeIcon {...ICON_PROPS} />,
+  },
+  {
+    value: "run",
+    primary: "Run",
+    hint: "Running",
+    icon: <PersonSimpleRunIcon {...ICON_PROPS} />,
+  },
+  {
+    value: "swim",
+    primary: "Swim",
+    hint: "Swimming",
+    icon: <PersonSimpleSwimIcon {...ICON_PROPS} />,
+  },
+  {
+    value: "triathlon",
+    primary: "Triathlon",
+    hint: "Multi-sport",
+    icon: <MedalIcon {...ICON_PROPS} />,
+  },
 ];
 
 // Includes each carousel theme's signature accent so a Reset always lands on a
@@ -136,12 +162,6 @@ interface UseActivityToolsProps {
   title: string;
   visibility: Visibility;
 }
-
-const ICON_PROPS = {
-  "aria-hidden": true,
-  className: "size-5",
-  weight: "duotone",
-} as const;
 
 export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
   const {
@@ -387,21 +407,12 @@ export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
           onOpenStravaPicker={onOpenStravaPicker}
         />
         <div className="mt-4 flex flex-col gap-4">
-          <Select
+          <RichSelect
+            ariaLabel="Sport"
             onValueChange={(v) => onSportChange(v as Sport)}
+            options={SPORT_OPTIONS}
             value={data.sport}
-          >
-            <SelectTrigger aria-label="Sport" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SPORT_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          />
           <DetailField
             hint="Saved on this device"
             id={athleteId}

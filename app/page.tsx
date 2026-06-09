@@ -8,6 +8,7 @@ import { EditState } from "@/components/app/edit-state";
 import { EffortWordmark } from "@/components/app/effort-wordmark";
 import { EmptyState } from "@/components/app/empty-state";
 import { type CardMode, ModeToggle } from "@/components/app/mode-toggle";
+import type { OnboardingResult } from "@/components/app/onboarding-wizard";
 import type { ThemeId } from "@/components/app/render-theme";
 import {
   type ActivityData,
@@ -104,6 +105,9 @@ function loadPersistedUi(): Partial<PersistedUi> {
 
 export default function Home() {
   const [state, setState] = useState<AppState>("empty");
+  // Set after the Strava OAuth round-trip so the empty state opens the wizard
+  // with the Strava picker showing (instead of a separate full-screen state).
+  const [autoStravaPicker, setAutoStravaPicker] = useState(false);
   const [data, setData] = useState<ActivityData | null>(null);
   const [theme, setTheme] = useState<ThemeId>("path");
   // Carousel themes have their own id space (Dawn/Dusk pairs etc.), so the
@@ -242,7 +246,8 @@ export default function Home() {
     switch (flag) {
       case "connected":
         toast.success("Connected to Strava");
-        setState((prev) => (prev === "empty" ? "picking-strava" : prev));
+        // Stay on the empty state; the wizard + its Strava picker open instead.
+        setAutoStravaPicker(true);
         break;
       case "denied":
         toast.error("You declined to connect Strava. You can try again.");
@@ -313,6 +318,7 @@ export default function Home() {
   };
 
   const handleCancelStravaPicker = () => {
+    setAutoStravaPicker(false);
     setState("empty");
   };
 
@@ -378,6 +384,26 @@ export default function Home() {
     }));
   };
 
+  // The onboarding wizard hands back a parsed upload or a sample, plus an
+  // optional background photo, then drops the user into the editor pre-filled.
+  const handleOnboardingComplete = ({
+    parts,
+    photo,
+    sample,
+    source,
+  }: OnboardingResult) => {
+    const next = parts ? adoptParts(parts, source) : sample;
+    if (!next) {
+      return;
+    }
+    setData(next);
+    if (photo) {
+      handlePhotoChange(photo);
+    }
+    carousel.regenerate();
+    setState("edit");
+  };
+
   // Switching carousel theme re-applies that theme's signature photo look,
   // unless there's no photo to affect.
   const handleCarouselThemeChange = (id: CarouselThemeId) => {
@@ -408,6 +434,7 @@ export default function Home() {
     setPhotoUrl(null);
     setImageTransform(IDENTITY_TRANSFORM);
     setPhotoEffects(NO_EFFECTS);
+    setAutoStravaPicker(false);
     setState("empty");
   };
 
@@ -418,13 +445,13 @@ export default function Home() {
       {state === "edit" ? null : (
         <Header
           date={data?.date}
-          status={state === "empty" ? "STEP 01 / 03 · CONNECT" : undefined}
+          status={state === "empty" ? "TURN ANY EFFORT INTO A CARD" : undefined}
         />
       )}
       {state === "empty" ? (
         <EmptyState
-          onFilesLoaded={handleFilesLoaded}
-          onOpenStravaPicker={handleOpenStravaPicker}
+          autoStravaPicker={autoStravaPicker}
+          onComplete={handleOnboardingComplete}
         />
       ) : null}
       {state === "picking-strava" ? (

@@ -9,6 +9,7 @@ import {
   PersonSimpleSwimIcon,
 } from "@phosphor-icons/react";
 import { useEffect, useId, useState } from "react";
+import { StravaFooter } from "@/components/app/strava-footer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -35,6 +36,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { useStravaConnection } from "@/hooks/use-strava-connection";
 import type { ParsedActivity } from "@/lib/parse-activity";
+import { cn } from "@/lib/utils";
 
 interface StravaSummaryActivity {
   distance: number;
@@ -47,6 +49,9 @@ interface StravaSummaryActivity {
 }
 
 interface StravaPickerProps {
+  /** Rendered inside the onboarding wizard's dialog (vs. the full-screen
+   * editor-swap surface). Tightens the layout so it sits in a modal. */
+  embedded?: boolean;
   onActivityLoaded: (parts: ParsedActivity[]) => void;
   onCancel: () => void;
   onReauth: () => void;
@@ -222,6 +227,7 @@ type LoadState =
 const SKELETON_KEYS = ["a", "b", "c", "d", "e", "f"] as const;
 
 export function StravaPicker({
+  embedded = false,
   onActivityLoaded,
   onCancel,
   onReauth,
@@ -351,14 +357,26 @@ export function StravaPicker({
   const selectedCount = selected.size;
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-6 pt-20 pb-32 md:px-10 lg:pt-24">
+    <div
+      className={cn(
+        "flex w-full flex-col",
+        embedded
+          ? "px-6 py-6"
+          : "mx-auto max-w-2xl flex-1 px-6 pt-20 pb-32 md:px-10 lg:pt-24"
+      )}
+    >
       <div className="flex items-center justify-between gap-4">
         <div className="font-medium font-mono text-xs tracking-[0.32em] opacity-55">
-          STEP 02 / 03 · PICK FROM STRAVA
+          PICK FROM STRAVA
         </div>
         <PickerConnection />
       </div>
-      <h1 className="mt-7 font-heading text-5xl uppercase leading-[0.92] tracking-tight sm:text-6xl">
+      <h1
+        className={cn(
+          "mt-5 font-heading uppercase leading-[0.92] tracking-tight",
+          embedded ? "text-3xl sm:text-4xl" : "mt-7 text-5xl sm:text-6xl"
+        )}
+      >
         Your recent <span className="text-primary">efforts.</span>
       </h1>
       <p className="mt-4 max-w-lg text-base leading-relaxed opacity-65">
@@ -420,8 +438,18 @@ export function StravaPicker({
         </Button>
       </div>
 
+      {/* §4 "Compatible with Strava" attribution. The full-screen surface gets
+          it from the page chrome; the embedded (in-dialog) picker carries its
+          own, since the page footer is inert behind the modal. */}
+      {embedded ? <StravaFooter /> : null}
+
       {multiSelect && selectedCount > 0 ? (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-foreground/15 border-t bg-background/95 px-6 py-4 shadow-lg backdrop-blur md:px-10">
+        <div
+          className={cn(
+            "inset-x-0 bottom-0 z-20 border-foreground/15 border-t bg-background/95 px-6 py-4 shadow-lg backdrop-blur md:px-10",
+            embedded ? "sticky" : "fixed"
+          )}
+        >
           <div className="mx-auto flex max-w-2xl items-center justify-between gap-4">
             <div className="font-medium font-mono text-xs tracking-wide opacity-80">
               {selectedCount === 1

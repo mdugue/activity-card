@@ -8,6 +8,12 @@ import { useId, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
   Tooltip,
@@ -15,6 +21,91 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+
+/** One row in a {@link RichSelect}: a glyph, a first-class value, and a calm
+ * muted sidenote. `unit` rides next to the value (e.g. "1240" + "m"); `hint`
+ * is the metric or discipline name shown under it. */
+export interface RichSelectOption {
+  hint?: string;
+  icon: React.ReactNode;
+  primary: string;
+  unit?: string;
+  value: string;
+}
+
+/** Shared visual for a rich option — used by both the trigger (the current
+ * choice) and every item in the popup, so they read identically. */
+function RichOptionContent({ option }: { option: RichSelectOption }) {
+  return (
+    <span className="flex min-w-0 flex-1 items-center gap-3 text-left">
+      <span className="flex shrink-0 items-center text-foreground/75">
+        {option.icon}
+      </span>
+      <span className="flex min-w-0 flex-col">
+        <span className="flex items-baseline gap-1">
+          <span className="truncate font-heading text-lg leading-tight tracking-tight">
+            {option.primary}
+          </span>
+          {option.unit ? (
+            <span className="shrink-0 font-medium font-mono text-muted-foreground text-xs">
+              {option.unit}
+            </span>
+          ) : null}
+        </span>
+        {option.hint ? (
+          <span className="caption-micro mt-0.5 truncate">{option.hint}</span>
+        ) : null}
+      </span>
+    </span>
+  );
+}
+
+/** A calm, icon-led select where the chosen value is set first-class on the
+ * trigger (the actual number + unit, with the metric as a muted sidenote) and
+ * every option mirrors it. Built on the base Select so keyboard + a11y come for
+ * free; the trigger is a bordered tile to match the editor's toggle pickers. */
+export function RichSelect({
+  ariaLabel,
+  className,
+  onValueChange,
+  options,
+  value,
+}: {
+  ariaLabel: string;
+  className?: string;
+  onValueChange: (value: string) => void;
+  options: RichSelectOption[];
+  value: string;
+}) {
+  const selected = options.find((o) => o.value === value) ?? options[0];
+  return (
+    <Select
+      onValueChange={(v) => {
+        if (typeof v === "string") {
+          onValueChange(v);
+        }
+      }}
+      value={value}
+    >
+      <SelectTrigger
+        aria-label={ariaLabel}
+        className={cn(
+          "!h-auto w-full items-center gap-3 whitespace-normal border-input px-3 py-2.5 transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-foreground/35 data-[popup-open]:border-foreground data-[popup-open]:bg-muted/30",
+          className
+        )}
+      >
+        {selected ? <RichOptionContent option={selected} /> : null}
+      </SelectTrigger>
+      <SelectContent alignItemWithTrigger={false}>
+        {options.map((o) => (
+          <SelectItem className="py-2.5" key={o.value} value={o.value}>
+            <RichOptionContent option={o} />
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 export function ControlBlock({
   label,
