@@ -253,7 +253,7 @@ export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
                 className={cn(
                   "size-8 rounded-full border-2 border-transparent p-0 outline-none transition-transform",
                   "ring-foreground ring-offset-2 ring-offset-background",
-                  "data-[pressed]:scale-110 data-[pressed]:ring-2"
+                  "data-pressed:ring-2"
                 )}
                 key={c}
                 style={{ background: c }}
@@ -269,7 +269,7 @@ export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
             type="button"
             variant="ghost"
           >
-            <ArrowCounterClockwiseIcon className="size-3.5" weight="duotone" />
+            <ArrowCounterClockwiseIcon weight="duotone" />
             Reset
           </Button>
         </div>
