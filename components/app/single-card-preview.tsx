@@ -8,6 +8,7 @@
 
 import { ArrowsOutCardinalIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
+import { CardStage } from "@/components/app/card-stage";
 import { ImageAdjustOverlay } from "@/components/app/image-adjust-overlay";
 import { RenderTheme, type ThemeId } from "@/components/app/render-theme";
 import type { ActivityData } from "@/components/app/sample-data";
@@ -59,7 +60,7 @@ export function SingleCardPreview({
   }, [adjusting, adjustAvailable]);
 
   return (
-    <div className="relative mx-auto w-full max-w-[400px] lg:max-w-[460px]">
+    <CardStage maxWidthClassName="max-w-[400px] lg:max-w-[460px]">
       <div className="@container relative aspect-[1080/1350] w-full overflow-hidden bg-white shadow-2xl">
         <div
           className="absolute inset-0 origin-top-left"
@@ -103,6 +104,6 @@ export function SingleCardPreview({
           />
         ) : null}
       </div>
-    </div>
+    </CardStage>
   );
 }

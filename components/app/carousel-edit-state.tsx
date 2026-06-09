@@ -30,10 +30,13 @@ import {
 import type { PaletteTheme } from "@/lib/palette";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import { isQuarterTurn, type PhotoEffects } from "@/lib/photo-effects";
+
 import type { StrataConfig } from "@/lib/strata";
+import { cn } from "@/lib/utils";
 import type { Visibility } from "@/lib/visibility";
 import { useActivityTools } from "./activity-tools";
-import { ControlDeck } from "./control-deck";
+import { CardStage } from "./card-stage";
+import { ControlDeck, PANEL_MOTION } from "./control-deck";
 import { ImageAdjustOverlay } from "./image-adjust-overlay";
 import {
   PhotoFilterControl,
@@ -99,6 +102,9 @@ export function CarouselEditState(props: CarouselEditStateProps) {
   // redirect selection.
   const programmatic = useRef(false);
   const targetLeft = useRef(0);
+  // Latest selected index, read by the ResizeObserver below without making it a
+  // dependency (re-subscribing on every selection change would be wasteful).
+  const selectedIndexRef = useRef(selectedIndex);
   const [isExporting, setIsExporting] = useState(false);
   const [adjusting, setAdjusting] = useState(false);
 
@@ -136,6 +142,7 @@ export function CarouselEditState(props: CarouselEditStateProps) {
   // the scroll handler ignores the animation; a fallback timeout clears the
   // flag in case the smooth scroll never lands exactly on target.
   useEffect(() => {
+    selectedIndexRef.current = selectedIndex;
     const vp = viewportRef.current;
     if (!vp) {
       return;
@@ -152,6 +159,37 @@ export function CarouselEditState(props: CarouselEditStateProps) {
     }, 700);
     return () => clearTimeout(t);
   }, [selectedIndex]);
+
+  // Keep the selected slide pinned to its snap point when the preview window
+  // resizes — opening/closing the focused toolbar changes its width, and the
+  // scroll offset is in pixels, so a width change otherwise strands it between
+  // slides. Re-pin instantly (we're mid layout change, not navigating).
+  useEffect(() => {
+    const vp = viewportRef.current;
+    if (!vp) {
+      return;
+    }
+    let lastWidth = vp.clientWidth;
+    const ro = new ResizeObserver(() => {
+      const width = vp.clientWidth;
+      if (width === 0 || width === lastWidth) {
+        return;
+      }
+      lastWidth = width;
+      // Deliberately DON'T flag this as a programmatic scroll. A re-pin only ever
+      // moves to the *already selected* slide, so the scroll it triggers makes
+      // handleScroll settle on that same slide — a no-op select. Setting the
+      // `programmatic` guard here was fragile: if the resulting scrollLeft never
+      // landed exactly on target (sub-pixel snap on touch, or a 0→0 no-op on
+      // slide 0) the flag stayed stuck and every later swipe was ignored.
+      const left = selectedIndexRef.current * width;
+      if (Math.abs(vp.scrollLeft - left) > 1) {
+        vp.scrollLeft = left;
+      }
+    });
+    ro.observe(vp);
+    return () => ro.disconnect();
+  }, []);
 
   // A manual swipe selects the slide it settles on (debounced). Ignored while a
   // programmatic scroll is in flight (cleared once it reaches its target).
@@ -267,9 +305,12 @@ export function CarouselEditState(props: CarouselEditStateProps) {
   });
 
   const preview = (
-    <div className="flex min-w-0 flex-col gap-5">
-      {/* Scroll-snap window onto the seamless canvas. */}
-      <div className="relative mx-auto w-full max-w-[360px]">
+    // Fill the preview area on the mobile app-shell so the seamless window can
+    // scale to fit the space it's given; on desktop it's a fixed-width column.
+    <div className="flex min-w-0 flex-col gap-3 max-lg:min-h-0 max-lg:flex-1 lg:gap-5">
+      {/* The scroll-snap window onto the seamless canvas is the card box; the
+          stage scales it to fit the toolbar-shrunk space on mobile. */}
+      <CardStage maxWidthClassName="max-w-[360px]">
         <div
           className="@container relative aspect-[1080/1350] w-full overflow-x-auto overflow-y-hidden bg-white shadow-[0_24px_50px_-14px_rgba(26,23,20,0.3)]"
           data-testid="carousel-preview"
@@ -332,23 +373,37 @@ export function CarouselEditState(props: CarouselEditStateProps) {
             transform={imageTransform}
           />
         ) : null}
-      </div>
+      </CardStage>
 
-      <SlideStrip
-        accent={props.accent}
-        data={data}
-        imageSize={imageSize}
-        imageTransform={imageTransform}
-        onSelect={carousel.select}
-        photoEffects={photoEffects}
-        photoTheme={photoPaletteTheme}
-        photoUrl={photoUrl}
-        selectedId={selectedId}
-        slides={slides}
-        strataConfig={props.strataConfig}
-        theme={theme}
-        visibility={props.visibility}
-      />
+      {/* Slide rail — collapses (fades + zips up) while a control panel is open
+          on mobile, and is hidden outright in landscape where the short viewport
+          has no room for both it and a decent-sized card (you can still swipe the
+          preview to navigate). Always shown on desktop. Visibility flips after
+          the collapse so the hidden thumbnails aren't focusable/clickable. */}
+      <div
+        className={cn(
+          "shrink-0 max-lg:visible max-lg:max-h-36 max-lg:overflow-hidden max-lg:opacity-100",
+          PANEL_MOTION,
+          "max-lg:landscape:hidden",
+          "group-data-[open]/deck:max-lg:invisible group-data-[open]/deck:max-lg:max-h-0 group-data-[open]/deck:max-lg:opacity-0"
+        )}
+      >
+        <SlideStrip
+          accent={props.accent}
+          data={data}
+          imageSize={imageSize}
+          imageTransform={imageTransform}
+          onSelect={carousel.select}
+          photoEffects={photoEffects}
+          photoTheme={photoPaletteTheme}
+          photoUrl={photoUrl}
+          selectedId={selectedId}
+          slides={slides}
+          strataConfig={props.strataConfig}
+          theme={theme}
+          visibility={props.visibility}
+        />
+      </div>
     </div>
   );
 
