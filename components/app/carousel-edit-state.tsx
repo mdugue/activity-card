@@ -30,6 +30,7 @@ import {
 import type { PaletteTheme } from "@/lib/palette";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import { isQuarterTurn, type PhotoEffects } from "@/lib/photo-effects";
+import type { StrataConfig } from "@/lib/strata";
 import type { Visibility } from "@/lib/visibility";
 import { useActivityTools } from "./activity-tools";
 import { ControlDeck } from "./control-deck";
@@ -40,6 +41,7 @@ import {
 } from "./photo-effects-controls";
 import type { ActivityData, Sport } from "./sample-data";
 import { SlideStrip } from "./slide-strip";
+import { StrataControls } from "./strata-controls";
 import { ThemeRail } from "./theme-rail";
 
 interface CarouselEditStateProps {
@@ -59,12 +61,14 @@ interface CarouselEditStateProps {
   onPhotoChange: (file: File | null) => void;
   onPhotoEffectsChange: (next: PhotoEffects) => void;
   onSportChange: (sport: Sport) => void;
+  onStrataConfigChange: (config: StrataConfig) => void;
   onThemeChange: (theme: CarouselThemeId) => void;
   onTitleChange: (title: string) => void;
   onVisibilityChange: (visibility: Visibility) => void;
   photoEffects: PhotoEffects;
   photoPaletteTheme: PaletteTheme | null;
   photoUrl: string | null;
+  strataConfig: StrataConfig;
   theme: CarouselThemeId;
   title: string;
   visibility: Visibility;
@@ -199,11 +203,22 @@ export function CarouselEditState(props: CarouselEditStateProps) {
     photoTheme: photoPaletteTheme,
     photoUrl,
     slides,
+    strataConfig: props.strataConfig,
     theme,
     visibility: props.visibility,
   };
 
   const photoEditable = photoUrl !== null && photoSupported;
+
+  // STRATA carousel exposes the same mood / density / legend panel as the
+  // single card; other carousel themes have no per-theme parameters.
+  const moodControl =
+    theme === "strata" ? (
+      <StrataControls
+        config={props.strataConfig}
+        onChange={props.onStrataConfigChange}
+      />
+    ) : undefined;
 
   const tools = useActivityTools({
     accent: props.accent,
@@ -224,6 +239,7 @@ export function CarouselEditState(props: CarouselEditStateProps) {
     onFilesLoaded: props.onFilesLoaded,
     onLocationChange: props.onLocationChange,
     onOpenStravaPicker: props.onOpenStravaPicker,
+    moodControl,
     onPhotoChange: props.onPhotoChange,
     onSportChange: props.onSportChange,
     onTitleChange: props.onTitleChange,
@@ -329,6 +345,7 @@ export function CarouselEditState(props: CarouselEditStateProps) {
         photoUrl={photoUrl}
         selectedId={selectedId}
         slides={slides}
+        strataConfig={props.strataConfig}
         theme={theme}
         visibility={props.visibility}
       />

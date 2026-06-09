@@ -88,11 +88,11 @@ export function StrataControls({ config, onChange }: StrataControlsProps) {
         </ToggleGroup>
       </ControlBlock>
 
-      <ControlBlock label="LEGEND">
+      <ControlBlock label="MARKERS">
         <div className="mt-2">
           <ToggleRow
             checked={config.legend}
-            label="Name the ridges (ROUTE · ELEVATION)"
+            label="Peak height & direction arrow"
             onCheckedChange={(c) => onChange({ ...config, legend: c })}
           />
         </div>

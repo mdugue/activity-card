@@ -7,7 +7,13 @@ import {
   SAMPLE_SWIM,
   SAMPLE_TRI,
 } from "@/components/app/sample-data";
-import { buildStrata, resolveStrataSource, smoothPath } from "@/lib/strata";
+import {
+  buildStrata,
+  resolveStrataSource,
+  smoothPath,
+  strataDirectionArrow,
+  strataPeakMarker,
+} from "@/lib/strata";
 
 function make(partial: Partial<ActivityData>): ActivityData {
   return {
@@ -137,5 +143,67 @@ describe("smoothPath", () => {
     ]);
     expect(d.startsWith("M0.0 0.0")).toBe(true);
     expect(d).toContain("C");
+  });
+});
+
+describe("strataPeakMarker", () => {
+  test("returns null without an elevation max", () => {
+    expect(
+      strataPeakMarker(
+        [
+          [0, 0],
+          [1, 1],
+        ],
+        null
+      )
+    ).toBeNull();
+  });
+
+  test("pins the label at the highest (smallest-y) point", () => {
+    const pts: Coord[] = [
+      [0, 50],
+      [10, 10],
+      [20, 80],
+    ];
+    const m = strataPeakMarker(pts, 302);
+    expect(m).toMatchObject({ x: 10, y: 10, label: "302 M" });
+  });
+});
+
+describe("strataDirectionArrow", () => {
+  test("returns null for too few points", () => {
+    expect(
+      strataDirectionArrow(
+        [
+          [0, 0],
+          [1, 1],
+          [2, 2],
+        ],
+        100,
+        100,
+        10
+      )
+    ).toBeNull();
+  });
+
+  test("sits beside the path, inside the field, pointing along travel", () => {
+    // A horizontal route across the middle: the arrow offsets vertically off it.
+    const route: Coord[] = Array.from(
+      { length: 40 },
+      (_, i): Coord => [i * 2, 50]
+    );
+    const a = strataDirectionArrow(route, 100, 100, 12);
+    expect(a).not.toBeNull();
+    if (a) {
+      expect(a.x).toBeGreaterThanOrEqual(0);
+      expect(a.x).toBeLessThanOrEqual(100);
+      expect(a.y).toBeGreaterThanOrEqual(0);
+      expect(a.y).toBeLessThanOrEqual(100);
+      // Off the line (y=50), and heading roughly horizontal.
+      expect(Math.abs(a.y - 50)).toBeGreaterThan(1);
+      const horiz =
+        Math.abs(a.angle) < 1 || Math.abs(Math.abs(a.angle) - 180) < 1;
+      expect(horiz).toBe(true);
+    }
   });
 });

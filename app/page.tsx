@@ -455,12 +455,14 @@ export default function Home() {
               onPhotoChange={handlePhotoChange}
               onPhotoEffectsChange={setPhotoEffects}
               onSportChange={handleSportChange}
+              onStrataConfigChange={setStrataConfig}
               onThemeChange={handleCarouselThemeChange}
               onTitleChange={handleTitleChange}
               onVisibilityChange={setVisibility}
               photoEffects={photoEffects}
               photoPaletteTheme={photoPalette.theme}
               photoUrl={photoUrl}
+              strataConfig={strataConfig}
               theme={carouselTheme}
               title={data.title}
               visibility={visibility}

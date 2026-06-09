@@ -25,6 +25,8 @@ import {
   STRATA_MOODS,
   type StrataConfig,
   smoothPath,
+  strataDirectionArrow,
+  strataPeakMarker,
 } from "@/lib/strata";
 import type { ActivityCardProps } from "./types";
 
@@ -56,7 +58,7 @@ function StrataField({
     return null;
   }
 
-  const { curves } = buildStrata({
+  const { curves, routePts, elevPts } = buildStrata({
     routeCoords: source.routeCoords,
     profile: source.profile,
     W: FIELD_W,
@@ -68,17 +70,20 @@ function StrataField({
   }
   const hero0 = curves[0];
   const heroN = curves[curves.length - 1];
-  const rStart = hero0.pts[0];
-  const rEnd = hero0.pts[hero0.pts.length - 1];
-  if (!(rStart && rEnd)) {
-    return null;
-  }
-
-  const routeTopY = Math.min(...hero0.pts.map((p) => p[1]));
-  const elevBotY = Math.max(...heroN.pts.map((p) => p[1]));
   const haloW = tokens.heroW + 8;
-  // Over a photo the heroes need a firmer halo and the captions an outline.
+  // Over a photo the heroes need a firmer halo and the markers an outline.
   const haloOpacity = overPhoto ? 0.34 : 0.18;
+
+  // Markers, revealed by `legend`: the peak height beside the highest point of
+  // the elevation ridge, and a direction arrow set beside the route.
+  const peak = config.legend ? strataPeakMarker(elevPts, source.elevMax) : null;
+  const arrow = config.legend
+    ? strataDirectionArrow(routePts, FIELD_W, FIELD_H, 30)
+    : null;
+  const peakHalfW = peak ? peak.label.length * 6.5 : 0;
+  const peakLabelX = peak
+    ? Math.max(12 + peakHalfW, Math.min(FIELD_W - 12 - peakHalfW, peak.x))
+    : 0;
 
   return (
     <svg
@@ -152,27 +157,62 @@ function StrataField({
         strokeWidth={tokens.heroW}
       />
 
-      {/* Start dot + finish arrow ride on the real route. */}
-      <circle cx={rStart[0]} cy={rStart[1]} fill={tokens.routeColor} r={9} />
-      <g transform={`translate(${rEnd[0]}, ${rEnd[1]})`}>
-        <path d="M-4 -8 L10 0 L-4 8 Z" fill={tokens.marker} />
-      </g>
-
-      {config.legend ? (
+      {/* Direction arrow, set beside the route (toggled by `legend`). A clean
+          line + chevron — never on the path, in the clearest open spot. */}
+      {arrow ? (
         <g
-          fill={tokens.text}
-          fontFamily={MONO}
-          fontWeight={600}
-          paintOrder="stroke"
-          stroke={overPhoto ? `rgba(${tokens.scrim},0.7)` : "none"}
-          strokeWidth={overPhoto ? 4 : 0}
+          transform={`translate(${arrow.x} ${arrow.y}) rotate(${arrow.angle})`}
         >
-          <text fontSize={22} letterSpacing={3} x={6} y={routeTopY - 16}>
-            ROUTE
-          </text>
-          <text fontSize={22} letterSpacing={3} x={6} y={elevBotY + 36}>
-            {source.profileLabel}
-            {source.elevMax ? `  ·  ${source.elevMax} M` : ""}
+          <g
+            fill="none"
+            stroke={`rgba(${tokens.scrim},0.5)`}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={7}
+          >
+            <path d="M-15 0 L8 0" />
+            <path d="M0 -7 L9 0 L0 7" />
+          </g>
+          <g
+            fill="none"
+            stroke={tokens.routeColor}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={3}
+          >
+            <path d="M-15 0 L8 0" />
+            <path d="M0 -7 L9 0 L0 7" />
+          </g>
+        </g>
+      ) : null}
+
+      {/* Peak height, pinned beside the highest point of the elevation ridge,
+          with a short tick to the exact peak (kept inside the frame). */}
+      {peak ? (
+        <g>
+          <line
+            stroke={tokens.elevColor}
+            strokeLinecap="round"
+            strokeWidth={2.5}
+            x1={peak.x}
+            x2={peak.x}
+            y1={peak.y - 3}
+            y2={peak.y - 16}
+          />
+          <text
+            fill={tokens.text}
+            fontFamily={MONO}
+            fontSize={21}
+            fontWeight={600}
+            letterSpacing={1}
+            paintOrder="stroke"
+            stroke={`rgba(${tokens.scrim},0.72)`}
+            strokeWidth={4}
+            textAnchor="middle"
+            x={peakLabelX}
+            y={peak.y - 24}
+          >
+            {peak.label}
           </text>
         </g>
       ) : null}

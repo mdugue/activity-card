@@ -11,7 +11,11 @@
 import type { ActivityData } from "@/components/app/sample-data";
 import type { ImageSize } from "@/hooks/use-image-natural-size";
 import { pickProfile } from "@/lib/carousel/profile";
-import { type EffectiveStyle, resolveDeckStyle } from "@/lib/carousel/resolve";
+import {
+  type EffectiveStyle,
+  readableOn,
+  resolveDeckStyle,
+} from "@/lib/carousel/resolve";
 import { heroStat, planSlideStats } from "@/lib/carousel/stats";
 import type { CarouselThemeId, PanelKind } from "@/lib/carousel/theme-tokens";
 import { SLIDE_H, SLIDE_W, type Slide } from "@/lib/carousel/types";
@@ -23,13 +27,18 @@ import {
 } from "@/lib/multi-activity";
 import type { PaletteTheme } from "@/lib/palette";
 import { filterCss, NO_EFFECTS, type PhotoEffects } from "@/lib/photo-effects";
+import {
+  DEFAULT_STRATA_CONFIG,
+  STRATA_MOODS,
+  type StrataConfig,
+} from "@/lib/strata";
 import { DEFAULT_VISIBILITY, type Visibility } from "@/lib/visibility";
 import { CarouselPhoto } from "./carousel-photo";
 import { ElevationBand } from "./elevation-band";
 import { FramePanel } from "./panels/frame-panel";
 import { PressPanel } from "./panels/press-panel";
 import { RouteLine } from "./route-line";
-import { StrataCanvas } from "./strata-canvas";
+import { StrataHero } from "./strata-canvas";
 import { TEMPLATES } from "./templates";
 import type { TemplateProps } from "./templates/shared";
 
@@ -77,6 +86,38 @@ function panelFor(
   return TEMPLATES[template];
 }
 
+/** The STRATA config (mood / density / legend) for this deck, or `null` for any
+ *  other carousel theme — so the renderer can branch on one value. */
+function strataConfigFor(
+  theme: CarouselThemeId,
+  cfg: StrataConfig | undefined
+): StrataConfig | null {
+  return theme === "strata" ? (cfg ?? DEFAULT_STRATA_CONFIG) : null;
+}
+
+/** STRATA's mood swaps the whole carousel palette (background gradient, ink, the
+ *  two ridge colours, light/dark) so it reads like the single card's moods, not
+ *  a fixed token. Any other theme (cfg `null`) passes through untouched. */
+function withStrataMood(
+  base: EffectiveStyle,
+  cfg: StrataConfig | null
+): EffectiveStyle {
+  if (!cfg) {
+    return base;
+  }
+  const m = STRATA_MOODS[cfg.mood];
+  return {
+    ...base,
+    background: m.bg,
+    ink: m.text,
+    mutedInk: m.faint,
+    accent: m.routeColor,
+    accent2: m.elevColor,
+    onAccent: readableOn(m.routeColor),
+    dark: !m.inkStat,
+  };
+}
+
 interface SeamlessCanvasProps {
   accent: string;
   data: ActivityData;
@@ -87,6 +128,8 @@ interface SeamlessCanvasProps {
   photoTheme?: PaletteTheme | null;
   photoUrl?: string | null;
   slides: Slide[];
+  /** STRATA only: mood / density / legend (mood drives the whole palette). */
+  strataConfig?: StrataConfig;
   theme: CarouselThemeId;
   /** deck-wide element visibility (toggled in the sidebar) */
   visibility?: Visibility;
@@ -102,11 +145,18 @@ export function SeamlessCanvas({
   imageSize = null,
   photoEffects = NO_EFFECTS,
   photoTheme = null,
+  strataConfig,
   visibility = DEFAULT_VISIBILITY,
 }: SeamlessCanvasProps) {
   const total = slides.length;
   const width = total * SLIDE_W;
-  const style: EffectiveStyle = resolveDeckStyle(theme, accent, photoTheme);
+  // STRATA carousel is mood-driven (see withStrataMood); other themes use the
+  // fixed token palette.
+  const strataCfg = strataConfigFor(theme, strataConfig);
+  const style: EffectiveStyle = withStrataMood(
+    resolveDeckStyle(theme, accent, photoTheme),
+    strataCfg
+  );
   const hasPhoto = Boolean(photoUrl);
 
   // Every photo-capable theme now shows the photo full-bleed (no faint-texture
@@ -248,28 +298,15 @@ export function SeamlessCanvas({
       {/* Strata signature — the woven morph-field spans the whole strip (route
           ridge top, elevation ridge bottom), with a vertical scrim so the panel
           text stays legible over the weave. */}
-      {style.heroLayer === "strata" ? (
-        <>
-          <div style={{ position: "absolute", inset: 0 }}>
-            <StrataCanvas
-              data={data}
-              elevColor={style.accent2}
-              h={SLIDE_H}
-              routeColor={style.accent}
-              w={width}
-            />
-          </div>
-          <div
-            aria-hidden
-            style={{
-              position: "absolute",
-              inset: 0,
-              background:
-                "linear-gradient(180deg, rgba(10,6,16,0.62) 0%, rgba(10,6,16,0.12) 24%, rgba(10,6,16,0) 46%, rgba(10,6,16,0.1) 66%, rgba(10,6,16,0.58) 100%)",
-            }}
-          />
-        </>
-      ) : null}
+      {/* STRATA signature — the woven field + a mood-tinted scrim. Renders null
+          for any non-STRATA deck. */}
+      <StrataHero
+        cfg={strataCfg}
+        data={data}
+        h={SLIDE_H}
+        style={style}
+        w={width}
+      />
 
       {/* Per-panel foreground. The wrap-up cross-viz is drawn inside the
           editorial template (centred), not here. */}

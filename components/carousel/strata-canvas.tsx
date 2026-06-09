@@ -14,18 +14,36 @@
 // continuous weave across the strip — so it fills the width by design.
 
 import type { ActivityData } from "@/components/app/sample-data";
+import type { EffectiveStyle } from "@/lib/carousel/resolve";
 import { mixHex } from "@/lib/chart-helpers";
-import { buildStrata, resolveStrataSource, smoothPath } from "@/lib/strata";
+import {
+  buildStrata,
+  resolveStrataSource,
+  STRATA_DENSITY_K,
+  STRATA_MOODS,
+  type StrataConfig,
+  smoothPath,
+  strataDirectionArrow,
+  strataPeakMarker,
+} from "@/lib/strata";
 
 interface StrataCanvasProps {
   data: ActivityData;
+  /** number of woven in-between layers (the density lever) */
+  densityK: number;
   /** elevation ridge (bottom hero) colour */
   elevColor: string;
   h: number;
+  /** peak-label fill colour */
+  ink: string;
+  /** reveal the peak-height + direction markers */
+  legend: boolean;
   /** base opacity of the woven in-between layers */
   lineAlpha?: number;
   /** route ridge (top hero) colour */
   routeColor: string;
+  /** `r,g,b` tone for marker halos */
+  scrim: string;
   w: number;
 }
 
@@ -35,18 +53,22 @@ export function StrataCanvas({
   h,
   routeColor,
   elevColor,
+  densityK,
+  legend,
+  ink,
+  scrim,
   lineAlpha = 0.4,
 }: StrataCanvasProps) {
   const source = resolveStrataSource(data);
   if (!source) {
     return null;
   }
-  const { curves } = buildStrata({
+  const { curves, routePts, elevPts } = buildStrata({
     routeCoords: source.routeCoords,
     profile: source.profile,
     W: w,
     H: h,
-    K: 26,
+    K: densityK,
     stretch: true,
   });
   if (curves.length < 2) {
@@ -59,6 +81,14 @@ export function StrataCanvas({
   }
   const heroW = 7;
   const haloW = heroW + 7;
+
+  // Markers, revealed by `legend` — sized for the wide panorama viewBox.
+  const peak = legend ? strataPeakMarker(elevPts, source.elevMax) : null;
+  const arrow = legend ? strataDirectionArrow(routePts, w, h, 52) : null;
+  const peakHalfW = peak ? peak.label.length * 9.5 : 0;
+  const peakLabelX = peak
+    ? Math.max(20 + peakHalfW, Math.min(w - 20 - peakHalfW, peak.x))
+    : 0;
 
   return (
     <svg
@@ -130,6 +160,114 @@ export function StrataCanvas({
         strokeLinejoin="round"
         strokeWidth={heroW}
       />
+
+      {/* Direction arrow beside the route — a clean line + chevron. */}
+      {arrow ? (
+        <g
+          transform={`translate(${arrow.x} ${arrow.y}) rotate(${arrow.angle})`}
+        >
+          <g
+            fill="none"
+            stroke={`rgba(${scrim},0.5)`}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={11}
+          >
+            <path d="M-24 0 L13 0" />
+            <path d="M0 -11 L15 0 L0 11" />
+          </g>
+          <g
+            fill="none"
+            stroke={routeColor}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={4.5}
+          >
+            <path d="M-24 0 L13 0" />
+            <path d="M0 -11 L15 0 L0 11" />
+          </g>
+        </g>
+      ) : null}
+
+      {/* Peak height pinned beside the highest point of the elevation ridge. */}
+      {peak ? (
+        <g>
+          <line
+            stroke={elevColor}
+            strokeLinecap="round"
+            strokeWidth={3.5}
+            x1={peak.x}
+            x2={peak.x}
+            y1={peak.y - 5}
+            y2={peak.y - 26}
+          />
+          <text
+            fill={ink}
+            fontFamily="var(--font-mono), monospace"
+            fontSize={32}
+            fontWeight={600}
+            letterSpacing={1}
+            paintOrder="stroke"
+            stroke={`rgba(${scrim},0.72)`}
+            strokeWidth={6}
+            textAnchor="middle"
+            x={peakLabelX}
+            y={peak.y - 38}
+          >
+            {peak.label}
+          </text>
+        </g>
+      ) : null}
     </svg>
+  );
+}
+
+/**
+ * The full STRATA carousel hero: the spanning field plus a mood-tinted vertical
+ * scrim so the standard panels stay legible over the weave. Returns `null` for
+ * any non-STRATA deck (so the renderer can drop it in unconditionally). `style`
+ * is the mood-resolved deck style (route = accent, elevation = accent2).
+ */
+export function StrataHero({
+  cfg,
+  data,
+  w,
+  h,
+  style,
+}: {
+  cfg: StrataConfig | null;
+  data: ActivityData;
+  h: number;
+  style: EffectiveStyle;
+  w: number;
+}) {
+  if (!cfg) {
+    return null;
+  }
+  const mood = STRATA_MOODS[cfg.mood];
+  return (
+    <>
+      <div style={{ position: "absolute", inset: 0 }}>
+        <StrataCanvas
+          data={data}
+          densityK={STRATA_DENSITY_K[cfg.density]}
+          elevColor={style.accent2}
+          h={h}
+          ink={style.ink}
+          legend={cfg.legend}
+          routeColor={style.accent}
+          scrim={mood.scrim}
+          w={w}
+        />
+      </div>
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: `linear-gradient(180deg, rgba(${mood.scrim},0.6) 0%, rgba(${mood.scrim},0.12) 24%, rgba(${mood.scrim},0) 46%, rgba(${mood.scrim},0.1) 66%, rgba(${mood.scrim},0.56) 100%)`,
+        }}
+      />
+    </>
   );
 }

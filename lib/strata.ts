@@ -441,3 +441,124 @@ export function buildStrata(opts: BuildStrataOptions): StrataGeometry {
   }
   return { curves, routePts, elevPts };
 }
+
+/* ------------------------------- markers ---------------------------------- */
+// Subtle annotations the `legend` toggle reveals: the peak height pinned beside
+// the highest point of the elevation ridge, and a direction arrow set beside the
+// route. Pure geometry (the SVG is drawn by each theme family) so both the
+// single card and the carousel place them identically.
+
+export interface StrataPeak {
+  /** e.g. "302 M" */
+  label: string;
+  x: number;
+  y: number;
+}
+
+/**
+ * The highest point of the elevation ridge + its label, or `null` when there's
+ * no elevation peak to mark (pace / lap-pace profiles carry no metre height).
+ */
+export function strataPeakMarker(
+  elevPts: Coord[],
+  elevMax: number | null
+): StrataPeak | null {
+  if (elevMax === null || elevPts.length === 0) {
+    return null;
+  }
+  let peak = elevPts[0];
+  for (const p of elevPts) {
+    if (p[1] < peak[1]) {
+      peak = p;
+    }
+  }
+  return { x: peak[0], y: peak[1], label: `${elevMax} M` };
+}
+
+export interface StrataArrow {
+  /** rotation in degrees, aligned with the direction of travel */
+  angle: number;
+  x: number;
+  y: number;
+}
+
+/**
+ * A direction arrow placed BESIDE the route (offset perpendicular, pointing
+ * along travel). Picks the clearest of a few candidate progress points — the one
+ * whose neighbourhood is least crowded by other parts of the track, so the
+ * arrow's relation to the path reads cleanly — and falls back to `preferredT`
+ * (default 30%). The anchor is clamped to stay inside the W×H field.
+ */
+export function strataDirectionArrow(
+  routePts: Coord[],
+  w: number,
+  h: number,
+  offset: number,
+  preferredT = 0.3
+): StrataArrow | null {
+  const n = routePts.length;
+  if (n < 4) {
+    return null;
+  }
+  const gap = Math.max(4, Math.floor(n * 0.07));
+  const idxOf = (t: number) =>
+    Math.max(gap, Math.min(n - 1 - gap, Math.round(t * (n - 1))));
+
+  const clearanceAt = (i: number): number => {
+    const p = routePts[i];
+    let min = Number.POSITIVE_INFINITY;
+    for (let j = 0; j < n; j++) {
+      if (Math.abs(j - i) < gap) {
+        continue;
+      }
+      const d = Math.hypot(routePts[j][0] - p[0], routePts[j][1] - p[1]);
+      if (d < min) {
+        min = d;
+      }
+    }
+    return min;
+  };
+
+  // Prefer the requested point, but take a clearly more open one if offered.
+  let bestI = idxOf(preferredT);
+  let best = clearanceAt(bestI);
+  for (const t of [0.45, 0.6, 0.25, 0.7, 0.5, 0.38]) {
+    const i = idxOf(t);
+    const c = clearanceAt(i);
+    if (c > best * 1.15) {
+      best = c;
+      bestI = i;
+    }
+  }
+
+  const i = bestI;
+  const a = routePts[Math.max(0, i - gap)];
+  const b = routePts[Math.min(n - 1, i + gap)];
+  const tl = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+  const ux = (b[0] - a[0]) / tl;
+  const uy = (b[1] - a[1]) / tl;
+
+  // Perpendicular, pointing away from the route's centre so the arrow lands in
+  // the open space beside the path rather than over it.
+  let nx = -uy;
+  let ny = ux;
+  let cx = 0;
+  let cy = 0;
+  for (const p of routePts) {
+    cx += p[0];
+    cy += p[1];
+  }
+  cx /= n;
+  cy /= n;
+  const anchor = routePts[i];
+  if ((anchor[0] - cx) * nx + (anchor[1] - cy) * ny < 0) {
+    nx = -nx;
+    ny = -ny;
+  }
+  const margin = offset + 16;
+  return {
+    x: Math.max(margin, Math.min(w - margin, anchor[0] + nx * offset)),
+    y: Math.max(margin, Math.min(h - margin, anchor[1] + ny * offset)),
+    angle: (Math.atan2(uy, ux) * 180) / Math.PI,
+  };
+}
