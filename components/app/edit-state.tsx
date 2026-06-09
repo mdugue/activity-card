@@ -13,6 +13,7 @@ import { defaultFilename, exportCard } from "@/lib/export-card";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme, PhotoMood } from "@/lib/palette";
 import type { ParsedActivity } from "@/lib/parse-activity";
+import type { StrataConfig } from "@/lib/strata";
 import type { Visibility } from "@/lib/visibility";
 import { useActivityTools } from "./activity-tools";
 import { AltitudeControls } from "./altitude-controls";
@@ -20,6 +21,7 @@ import { ControlDeck } from "./control-deck";
 import { RenderTheme, type ThemeId } from "./render-theme";
 import type { ActivityData, Sport } from "./sample-data";
 import { SingleCardPreview } from "./single-card-preview";
+import { StrataControls } from "./strata-controls";
 import { ThemeRail } from "./theme-rail";
 
 const PHOTO_MOODS: { id: PhotoMood; label: string; sub: string }[] = [
@@ -52,6 +54,7 @@ interface EditStateProps {
   onPhotoChange: (file: File | null) => void;
   onPhotoMoodChange: (mood: PhotoMood) => void;
   onSportChange: (sport: Sport) => void;
+  onStrataConfigChange: (config: StrataConfig) => void;
   onThemeChange: (theme: ThemeId) => void;
   onTitleChange: (title: string) => void;
   onVisibilityChange: (visibility: Visibility) => void;
@@ -59,6 +62,7 @@ interface EditStateProps {
   photoPaletteStatus: PaletteStatus;
   photoPaletteTheme: PaletteTheme | null;
   photoUrl: string | null;
+  strataConfig: StrataConfig;
   theme: ThemeId;
   title: string;
   visibility: Visibility;
@@ -78,6 +82,8 @@ export function EditState(props: EditStateProps) {
     onImageTransformChange,
     onVisibilityChange,
     onAltitudeConfigChange,
+    strataConfig,
+    onStrataConfigChange,
     photoMood,
     onPhotoMoodChange,
     photoPaletteStatus,
@@ -105,6 +111,7 @@ export function EditState(props: EditStateProps) {
   const showBackdropSwitch = meta.photoMode === "supports";
   const showRepositionHint = meta.photoMode === "hero" && photoUrl !== null;
   const showAltitudeMood = theme === "altitude";
+  const showStrataMood = theme === "strata";
   const showPhotoMood = theme === "photo" && photoUrl !== null;
 
   const photoExtras = (
@@ -142,6 +149,10 @@ export function EditState(props: EditStateProps) {
         data={data}
         onChange={onAltitudeConfigChange}
       />
+    );
+  } else if (showStrataMood) {
+    moodControl = (
+      <StrataControls config={strataConfig} onChange={onStrataConfigChange} />
     );
   } else if (showPhotoMood) {
     moodControl = (
@@ -243,6 +254,7 @@ export function EditState(props: EditStateProps) {
             photoBackdropEnabled={visibility.photoBackdrop}
             photoPaletteTheme={photoPaletteTheme}
             photoUrl={photoUrl}
+            strataConfig={strataConfig}
             theme={theme}
           />
         }
@@ -264,6 +276,7 @@ export function EditState(props: EditStateProps) {
             photoBackdropEnabled={visibility.photoBackdrop}
             photoPaletteTheme={photoPaletteTheme}
             photoUrl={photoUrl}
+            strataConfig={strataConfig}
             theme={theme}
           />
         </div>

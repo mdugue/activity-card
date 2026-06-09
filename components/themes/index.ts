@@ -6,6 +6,7 @@ import { ThemeEditorial } from "./editorial";
 import { ThemeMinimal } from "./minimal";
 import { ThemePath } from "./path";
 import { ThemePhoto } from "./photo";
+import { ThemeStrata } from "./strata";
 import { ThemeTriathlon } from "./triathlon";
 
 export const THEMES = {
@@ -16,6 +17,7 @@ export const THEMES = {
   data: ThemeData,
   editorial: ThemeEditorial,
   triathlon: ThemeTriathlon,
+  strata: ThemeStrata,
 } as const;
 
 export type ThemeId = keyof typeof THEMES;
@@ -31,6 +33,13 @@ export type PhotoMode = "hero" | "supports" | "none";
 export interface ThemeMeta {
   id: ThemeId;
   label: string;
+  /**
+   * Whether an uploaded photo shows by default when this theme is selected.
+   * Only meaningful for `photoMode: "supports"` (hero themes always show it;
+   * `none` never does). STRATA and the dense Data/Triathlon themes opt in but
+   * default OFF so their designed look shows first.
+   */
+  photoBackdropDefaultOn: boolean;
   photoMode: PhotoMode;
   tagline: string;
   usesAthleteName: boolean;
@@ -45,6 +54,7 @@ export const THEME_META: Record<ThemeId, ThemeMeta> = {
     label: "PATH",
     tagline: "route is the hero",
     photoMode: "supports",
+    photoBackdropDefaultOn: true,
     usesAthleteName: true,
     usesLocation: true,
     usesHeartRate: false,
@@ -55,6 +65,7 @@ export const THEME_META: Record<ThemeId, ThemeMeta> = {
     label: "ALTITUDE",
     tagline: "elevation as headline",
     photoMode: "hero",
+    photoBackdropDefaultOn: true,
     usesAthleteName: false,
     usesLocation: true,
     usesHeartRate: true,
@@ -65,6 +76,7 @@ export const THEME_META: Record<ThemeId, ThemeMeta> = {
     label: "PHOTO",
     tagline: "magazine cover",
     photoMode: "hero",
+    photoBackdropDefaultOn: true,
     usesAthleteName: true,
     usesLocation: true,
     usesHeartRate: false,
@@ -75,6 +87,7 @@ export const THEME_META: Record<ThemeId, ThemeMeta> = {
     label: "MINIMAL",
     tagline: "photo, pure",
     photoMode: "hero",
+    photoBackdropDefaultOn: true,
     usesAthleteName: false,
     usesLocation: false,
     usesHeartRate: false,
@@ -84,7 +97,8 @@ export const THEME_META: Record<ThemeId, ThemeMeta> = {
     id: "data",
     label: "DATA",
     tagline: "dashboard poster",
-    photoMode: "none",
+    photoMode: "supports",
+    photoBackdropDefaultOn: false,
     usesAthleteName: true,
     usesLocation: true,
     usesHeartRate: true,
@@ -95,6 +109,7 @@ export const THEME_META: Record<ThemeId, ThemeMeta> = {
     label: "EDITORIAL",
     tagline: "typography led",
     photoMode: "supports",
+    photoBackdropDefaultOn: true,
     usesAthleteName: true,
     usesLocation: true,
     usesHeartRate: true,
@@ -104,11 +119,23 @@ export const THEME_META: Record<ThemeId, ThemeMeta> = {
     id: "triathlon",
     label: "TRIATHLON",
     tagline: "multi-sport",
-    photoMode: "none",
+    photoMode: "supports",
+    photoBackdropDefaultOn: false,
     usesAthleteName: true,
     usesLocation: true,
     usesHeartRate: false,
     usesSplits: true,
+  },
+  strata: {
+    id: "strata",
+    label: "STRATA",
+    tagline: "woven topography",
+    photoMode: "supports",
+    photoBackdropDefaultOn: false,
+    usesAthleteName: false,
+    usesLocation: true,
+    usesHeartRate: false,
+    usesSplits: false,
   },
 };
 
@@ -120,6 +147,7 @@ export const THEME_ORDER: ThemeId[] = [
   "data",
   "editorial",
   "triathlon",
+  "strata",
 ];
 
 /**

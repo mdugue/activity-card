@@ -18,7 +18,7 @@ export type SlideTemplate = "hero" | "statRow" | "statGrid" | "editorial";
 export type RouteStyle = "poster" | "desaturated" | "highlighter";
 
 /** Display/label font pairing — chosen per theme. */
-export type FontPairId = "bold" | "grotesk" | "magazine" | "serif";
+export type FontPairId = "bold" | "grotesk" | "magazine" | "serif" | "syne";
 
 export interface Slide {
   id: string;

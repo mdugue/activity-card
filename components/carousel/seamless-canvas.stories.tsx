@@ -71,6 +71,22 @@ export const AscentDusk: Story = { args: themeArgs("ascentDusk") };
 export const Exposure: Story = { args: themeArgs("exposure") };
 export const Frame: Story = { args: themeArgs("frame") };
 export const Press: Story = { args: themeArgs("press") };
+// Strata — the woven morph-field spans all three slides (route ridge top,
+// elevation ridge bottom), the swipe walking across the whole topography.
+// Mood / density / legend are editable in the app; here are a few presets.
+export const Strata: Story = { args: themeArgs("strata") };
+export const StrataPaper: Story = {
+  args: {
+    ...themeArgs("strata"),
+    strataConfig: { mood: "paper", density: "fine", legend: true },
+  },
+};
+export const StrataMidnightClean: Story = {
+  args: {
+    ...themeArgs("strata"),
+    strataConfig: { mood: "midnight", density: "bold", legend: false },
+  },
+};
 
 // Multi-activity project: every leg's route/elevation overlays in the hero
 // signature (Trace = route, Ascent = elevation range) and in the detail nods

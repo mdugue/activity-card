@@ -13,6 +13,7 @@ import { defaultFilename, exportCard } from "@/lib/export-card";
 import { formatDateUpper } from "@/lib/format";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme } from "@/lib/palette";
+import type { StrataConfig } from "@/lib/strata";
 import { RenderTheme, type ThemeId } from "./render-theme";
 import type { ActivityData } from "./sample-data";
 
@@ -24,8 +25,12 @@ interface DownloadStateProps {
   imageTransform: ImageTransform;
   onKeepEditing: () => void;
   onNew: () => void;
+  /** Single-card backdrop toggle — must match the editor so the celebration
+   *  thumbnail and the "Share" re-export agree with the downloaded PNG. */
+  photoBackdropEnabled: boolean;
   photoPaletteTheme: PaletteTheme | null;
   photoUrl: string | null;
+  strataConfig: StrataConfig;
   theme: ThemeId;
 }
 
@@ -33,7 +38,9 @@ export function DownloadState({
   data,
   theme,
   photoUrl,
+  photoBackdropEnabled,
   altitudeConfig,
+  strataConfig,
   photoPaletteTheme,
   imageTransform,
   onKeepEditing,
@@ -78,8 +85,10 @@ export function DownloadState({
                   altitudeConfig={altitudeConfig}
                   data={data}
                   imageTransform={imageTransform}
+                  photoBackdropEnabled={photoBackdropEnabled}
                   photoPaletteTheme={photoPaletteTheme}
                   photoUrl={photoUrl}
+                  strataConfig={strataConfig}
                   theme={theme}
                 />
               </div>
@@ -144,8 +153,10 @@ export function DownloadState({
           altitudeConfig={altitudeConfig}
           data={data}
           imageTransform={imageTransform}
+          photoBackdropEnabled={photoBackdropEnabled}
           photoPaletteTheme={photoPaletteTheme}
           photoUrl={photoUrl}
+          strataConfig={strataConfig}
           theme={theme}
         />
       </div>

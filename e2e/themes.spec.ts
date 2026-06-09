@@ -9,6 +9,7 @@ const THEMES = [
   "DATA",
   "EDITORIAL",
   "TRIATHLON",
+  "STRATA",
 ] as const;
 
 test.describe("themes", () => {

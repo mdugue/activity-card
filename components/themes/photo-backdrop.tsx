@@ -10,14 +10,26 @@
 //   unreliable inside html-to-image's clone tree and broken in iOS Safari for
 //   our export path.
 
+import {
+  IDENTITY_TRANSFORM,
+  type ImageTransform,
+  transformToCss,
+} from "@/lib/image-transform";
+
 export type BackdropTreatment = "path" | "editorial";
 
 interface PhotoBackdropProps {
+  imageTransform?: ImageTransform | null;
   photoUrl: string;
   treatment: BackdropTreatment;
 }
 
-export function PhotoBackdrop({ photoUrl, treatment }: PhotoBackdropProps) {
+export function PhotoBackdrop({
+  photoUrl,
+  treatment,
+  imageTransform,
+}: PhotoBackdropProps) {
+  const transform = transformToCss(imageTransform ?? IDENTITY_TRANSFORM);
   if (treatment === "path") {
     // Paper-tone overlay multiplies down the photo so the route ink stays the
     // hero. 14px blur softens any detail the eye might catch.
@@ -39,6 +51,8 @@ export function PhotoBackdrop({ photoUrl, treatment }: PhotoBackdropProps) {
             backgroundImage: `url(${photoUrl})`,
             backgroundSize: "cover",
             backgroundPosition: "center",
+            transform,
+            transformOrigin: "center center",
             filter: "blur(14px) saturate(0.85)",
             opacity: 0.55,
           }}
@@ -85,6 +99,8 @@ export function PhotoBackdrop({ photoUrl, treatment }: PhotoBackdropProps) {
           backgroundImage: `url(${photoUrl})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
+          transform,
+          transformOrigin: "center center",
           filter: "blur(10px) saturate(0.7) contrast(0.95)",
           opacity: 0.22,
         }}

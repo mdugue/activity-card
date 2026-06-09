@@ -30,7 +30,8 @@ export type CarouselThemeId =
   | "ascentDusk"
   | "exposure"
   | "frame"
-  | "press";
+  | "press"
+  | "strata";
 
 export const DEFAULT_CAROUSEL_THEME: CarouselThemeId = "traceDawn";
 
@@ -78,6 +79,14 @@ export const FONT_PAIRS: Record<FontPairId, FontPair> = {
     numeralWeight: 600,
     mono: "var(--font-geist-mono), monospace",
   },
+  // Syne — the STRATA face: geometric display + JetBrains Mono cartography.
+  syne: {
+    display: "var(--font-syne), sans-serif",
+    displayWeight: 800,
+    numeral: "var(--font-syne), sans-serif",
+    numeralWeight: 700,
+    mono: "var(--font-mono), monospace",
+  },
 };
 
 export interface ElevationColors {
@@ -86,7 +95,7 @@ export interface ElevationColors {
   line: string;
 }
 
-export type HeroLayer = "elevation" | "none" | "photo" | "route";
+export type HeroLayer = "elevation" | "none" | "photo" | "route" | "strata";
 export type HeroMetric = "distance" | "elevation";
 export type PanelKind = "frame" | "press" | "standard";
 export type CrossViz = "elevation" | "route";
@@ -315,6 +324,37 @@ export const CAROUSEL_THEME_TOKENS: Record<
     defaultFilter: "mono",
     defaultGrain: true,
   },
+  // Strata — the generative woven morph-field is the spanning hero: the route
+  // ridge runs along the top, the elevation ridge along the bottom, the
+  // abstraction fills the middle, and the swipe walks across the whole
+  // topography. No photo — the activity itself is the artwork. Dusk palette,
+  // Syne display.
+  strata: {
+    label: "STRATA",
+    tagline: "woven topography",
+    dark: true,
+    background:
+      "linear-gradient(180deg, #241335 0%, #5e2450 32%, #b1402c 64%, #ec8a3c 100%)",
+    ink: "#f8ead7",
+    mutedInk: "rgba(248,234,215,0.62)",
+    accent: "#ffd98a",
+    accent2: "#ff6a3a",
+    onAccent: "#241335",
+    fontPair: "syne",
+    routeStyle: "poster",
+    elevation: { line: "#ff6a3a", fillFrom: "#ff6a3a", fillTo: "#241335" },
+    heroLayer: "strata",
+    heroMetric: "distance",
+    panelKind: "standard",
+    deck: DECK_3,
+    detailViz: false,
+    // A background photo is optional: the woven field rides over it, the same
+    // way the single card composes the field on a photo.
+    photoSupported: true,
+    usesPhotoPalette: false,
+    defaultFilter: "none",
+    defaultGrain: false,
+  },
 };
 
 /** Picker order — Dawn/Dusk pairs first, then the type-led themes. */
@@ -326,6 +366,7 @@ export const CAROUSEL_THEME_ORDER: CarouselThemeId[] = [
   "exposure",
   "frame",
   "press",
+  "strata",
 ];
 
 /** Carousel-facing label + tagline for the theme picker. */

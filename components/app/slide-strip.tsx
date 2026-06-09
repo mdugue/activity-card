@@ -14,6 +14,7 @@ import type { Slide } from "@/lib/carousel/types";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme } from "@/lib/palette";
 import type { PhotoEffects } from "@/lib/photo-effects";
+import type { StrataConfig } from "@/lib/strata";
 import { cn } from "@/lib/utils";
 import type { Visibility } from "@/lib/visibility";
 
@@ -32,6 +33,7 @@ interface SlideStripProps {
   photoUrl?: string | null;
   selectedId: string | null;
   slides: Slide[];
+  strataConfig?: StrataConfig;
   theme: CarouselThemeId;
   visibility?: Visibility;
 }
@@ -51,6 +53,7 @@ export function SlideStrip(props: SlideStripProps) {
       photoTheme={props.photoTheme}
       photoUrl={props.photoUrl}
       slides={slides}
+      strataConfig={props.strataConfig}
       theme={props.theme}
       visibility={props.visibility}
     />

@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import type { AltitudeConfig } from "@/lib/altitude";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme } from "@/lib/palette";
+import type { StrataConfig } from "@/lib/strata";
 
 interface SingleCardPreviewProps {
   altitudeConfig: AltitudeConfig;
@@ -25,6 +26,7 @@ interface SingleCardPreviewProps {
   photoBackdropEnabled: boolean;
   photoPaletteTheme: PaletteTheme | null;
   photoUrl: string | null;
+  strataConfig: StrataConfig;
   theme: ThemeId;
 }
 
@@ -34,17 +36,21 @@ export function SingleCardPreview({
   photoUrl,
   photoBackdropEnabled,
   altitudeConfig,
+  strataConfig,
   photoPaletteTheme,
   imageTransform,
   onImageTransformChange,
 }: SingleCardPreviewProps) {
   const [adjusting, setAdjusting] = useState(false);
 
-  // Repositioning is only meaningful when the active theme shows the photo as
-  // its hero. Drop out of adjust mode if the photo is removed or the theme
-  // changes to one that doesn't feature it.
+  // Repositioning is offered wherever the photo is actually on screen — hero
+  // themes always, "supports" themes (incl. STRATA / Data / Triathlon) when the
+  // backdrop is toggled on. Drop out of adjust mode if it stops being shown.
+  const meta = THEME_META[theme];
   const adjustAvailable =
-    photoUrl !== null && THEME_META[theme].photoMode === "hero";
+    photoUrl !== null &&
+    (meta.photoMode === "hero" ||
+      (meta.photoMode === "supports" && photoBackdropEnabled));
   useEffect(() => {
     if (adjusting && !adjustAvailable) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -70,6 +76,7 @@ export function SingleCardPreview({
             photoBackdropEnabled={photoBackdropEnabled}
             photoPaletteTheme={photoPaletteTheme}
             photoUrl={photoUrl}
+            strataConfig={strataConfig}
             theme={theme}
           />
         </div>
