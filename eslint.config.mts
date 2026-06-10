@@ -1,6 +1,7 @@
 // For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
 
 import remotion from "@remotion/eslint-plugin";
+import type { Linter } from "eslint";
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
@@ -38,7 +39,11 @@ const eslintConfig = defineConfig([
     // Gitignored Storybook build output — minified vendor bundles.
     "storybook-static/**",
   ]),
-  ...storybook.configs["flat/recommended"],
+  // eslint-plugin-storybook declares its rules with RuleModule types from an
+  // older typescript-eslint whose RuleContext shape no longer matches
+  // eslint/config's RuleDefinition. The clash is type-only — runtime is fine —
+  // so we cast the recommended config to the flat-config element type.
+  ...(storybook.configs["flat/recommended"] as Linter.Config[]),
 ]);
 
 export default eslintConfig;
