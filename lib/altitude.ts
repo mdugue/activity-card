@@ -10,7 +10,7 @@
  * directly. English/metric formatting, consistent with every other theme.
  */
 
-import type { ActivityData, Sport } from "@/components/app/sample-data";
+import type { ActivityData, Sport } from "@/lib/activity";
 import {
   formatDuration,
   formatNumber,

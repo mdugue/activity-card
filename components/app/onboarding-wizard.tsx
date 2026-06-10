@@ -12,8 +12,6 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
-  type ActivityData,
-  type ActivitySource,
   SAMPLE_RIDE,
   SAMPLE_RUN,
   SAMPLE_SWIM,
@@ -42,6 +40,7 @@ import {
   type UseStravaConnection,
   useStravaConnection,
 } from "@/hooks/use-strava-connection";
+import type { ActivityData, ActivitySource } from "@/lib/activity";
 import { formatDuration, formatNumber } from "@/lib/format";
 import {
   ACTIVITY_FILE_RE,

@@ -6,6 +6,7 @@ import { THEME_META, THEME_ORDER } from "@/components/themes/index";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import type { ActivityData, Sport } from "@/lib/activity";
 import { defaultFilename, exportCard } from "@/lib/export-card";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { ExtractedPalette, PaletteTheme } from "@/lib/palette";
@@ -16,7 +17,6 @@ import type { Visibility } from "@/lib/visibility";
 import { useActivityTools } from "./activity-tools";
 import { ControlDeck } from "./control-deck";
 import { RenderTheme, type ThemeId } from "./render-theme";
-import type { ActivityData, Sport } from "./sample-data";
 import { SingleCardPreview } from "./single-card-preview";
 import { ThemeRail } from "./theme-rail";
 

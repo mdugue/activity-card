@@ -10,11 +10,7 @@
  * JSX-free and pure so the selection logic is unit-testable.
  */
 
-import type {
-  ActivityData,
-  Coord,
-  TriSegment,
-} from "@/components/app/sample-data";
+import type { ActivityData, Coord, TriSegment } from "@/lib/activity";
 
 /** A project carries two or more segments to combine. */
 export function isMultiActivity(data: ActivityData): boolean {

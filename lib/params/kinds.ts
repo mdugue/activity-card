@@ -10,7 +10,7 @@
 // `options` only on the choice variant — a discriminated union on `kind`, so an
 // invalid combination can't be expressed.
 
-import type { ActivityData } from "@/components/app/sample-data";
+import type { ActivityData } from "@/lib/activity";
 import type { ExtractedPalette } from "@/lib/palette";
 
 /** Editor category a parameter files itself into (drives the toolbar grouping).

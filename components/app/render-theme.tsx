@@ -1,9 +1,9 @@
-import type { ActivityData } from "@/components/app/sample-data";
 import { THEMES, type ThemeId } from "@/components/themes";
-import { ThemeAltitude } from "@/components/themes/altitude";
-import { ThemePhoto } from "@/components/themes/photo";
-import { PhotoEffectsProvider } from "@/components/themes/photo-fx";
-import { ThemeStrata } from "@/components/themes/strata";
+import { PhotoEffectsProvider } from "@/components/themes/shared/photo-fx";
+import { ThemeAltitude } from "@/components/themes/single-card/altitude";
+import { ThemePhoto } from "@/components/themes/single-card/photo";
+import { ThemeStrata } from "@/components/themes/single-card/strata";
+import type { ActivityData } from "@/lib/activity";
 import type { AltitudeConfig } from "@/lib/altitude";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme } from "@/lib/palette";

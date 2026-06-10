@@ -5,10 +5,10 @@
 // always agree. Click a thumbnail to bring it into the preview. The deck
 // (chosen elsewhere) defines which slides exist; the strip is just navigation.
 
-import type { ActivityData } from "@/components/app/sample-data";
-import { SeamlessCanvas } from "@/components/carousel/seamless-canvas";
-import { TEMPLATE_META } from "@/components/carousel/templates";
+import { SeamlessCanvas } from "@/components/themes/carousel/seamless-canvas";
+import { TEMPLATE_META } from "@/components/themes/carousel/templates";
 import type { ImageSize } from "@/hooks/use-image-natural-size";
+import type { ActivityData } from "@/lib/activity";
 import type { CarouselThemeId } from "@/lib/carousel/theme-tokens";
 import type { Slide } from "@/lib/carousel/types";
 import type { ImageTransform } from "@/lib/image-transform";

@@ -1,8 +1,4 @@
-import type {
-  ActivityData,
-  Transition,
-  TriSegment,
-} from "@/components/app/sample-data";
+import type { ActivityData, Transition, TriSegment } from "@/lib/activity";
 import type { ParsedActivity } from "./parse-activity";
 
 /**

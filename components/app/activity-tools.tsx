@@ -27,6 +27,7 @@ import type { ControlTool } from "@/components/app/control-deck";
 import type { CardMode } from "@/components/app/mode-toggle";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import type { ActivityData, Sport } from "@/lib/activity";
 import type { ParamCtx, ParamDef } from "@/lib/params/kinds";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import type { PhotoEffects } from "@/lib/photo-effects";
@@ -45,7 +46,6 @@ import {
   PhotoFilterControl,
   PhotoTransformControls,
 } from "./photo-effects-controls";
-import type { ActivityData, Sport } from "./sample-data";
 import { ThemeParamGroup, themeDeclaresGroup } from "./theme-params";
 
 // Shared by the section headers and the rich sport picker below — duotone glyph

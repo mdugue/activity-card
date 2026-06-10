@@ -6,7 +6,7 @@
  * those stats across a deck so no two slides repeat the same number.
  */
 
-import type { ActivityData, Coord } from "@/components/app/sample-data";
+import type { ActivityData, Coord } from "@/lib/activity";
 import {
   formatDuration,
   formatNumber,

@@ -1,6 +1,7 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
-import { type ActivityData, SAMPLE_RIDE } from "@/components/app/sample-data";
+import { SAMPLE_RIDE } from "@/components/app/sample-data";
+import type { ActivityData } from "@/lib/activity";
 import { pickProfile } from "@/lib/carousel/profile";
 
 function withProfiles(

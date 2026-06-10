@@ -1,13 +1,13 @@
-import type { ActivityData } from "@/components/app/sample-data";
+import type { ActivityData } from "@/lib/activity";
 import { availableVisibility, type Visibility } from "@/lib/visibility";
-import { ThemeAltitude } from "./altitude";
-import { ThemeData } from "./data";
-import { ThemeEditorial } from "./editorial";
-import { ThemeMinimal } from "./minimal";
-import { ThemePath } from "./path";
-import { ThemePhoto } from "./photo";
-import { ThemeStrata } from "./strata";
-import { ThemeTriathlon } from "./triathlon";
+import { ThemeAltitude } from "./single-card/altitude";
+import { ThemeData } from "./single-card/data";
+import { ThemeEditorial } from "./single-card/editorial";
+import { ThemeMinimal } from "./single-card/minimal";
+import { ThemePath } from "./single-card/path";
+import { ThemePhoto } from "./single-card/photo";
+import { ThemeStrata } from "./single-card/strata";
+import { ThemeTriathlon } from "./single-card/triathlon";
 
 export const THEMES = {
   path: ThemePath,

@@ -1,6 +1,6 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
-import type { ActivityData } from "@/components/app/sample-data";
+import type { ActivityData } from "@/lib/activity";
 import {
   isMultiActivity,
   segmentProfiles,

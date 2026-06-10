@@ -4,7 +4,7 @@
 // the length check lives here rather than in a bare `??` at each call site
 // (the seamless hero band and the wrap-up cross-viz both consume this).
 
-import type { ActivityData } from "@/components/app/sample-data";
+import type { ActivityData } from "@/lib/activity";
 
 export interface PickedProfile {
   mode: "elevation" | "pace";

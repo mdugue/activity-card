@@ -11,11 +11,12 @@
 
 import { ArrowsOutCardinalIcon, ImagesIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
-import { SeamlessCanvas } from "@/components/carousel/seamless-canvas";
+import { SeamlessCanvas } from "@/components/themes/carousel/seamless-canvas";
 import { Badge } from "@/components/ui/badge";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CarouselController } from "@/hooks/use-carousel";
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
+import type { ActivityData, Sport } from "@/lib/activity";
 import {
   CAROUSEL_THEME_LABELS,
   CAROUSEL_THEME_ORDER,
@@ -38,7 +39,6 @@ import { useActivityTools } from "./activity-tools";
 import { CardStage } from "./card-stage";
 import { ControlDeck, PANEL_MOTION } from "./control-deck";
 import { ImageAdjustOverlay } from "./image-adjust-overlay";
-import type { ActivityData, Sport } from "./sample-data";
 import { SlideStrip } from "./slide-strip";
 import { ThemeRail } from "./theme-rail";
 

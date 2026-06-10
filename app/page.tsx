@@ -10,18 +10,13 @@ import { EmptyState } from "@/components/app/empty-state";
 import { type CardMode, ModeToggle } from "@/components/app/mode-toggle";
 import type { OnboardingResult } from "@/components/app/onboarding-wizard";
 import type { ThemeId } from "@/components/app/render-theme";
-import {
-  type ActivityData,
-  type ActivitySource,
-  SAMPLE_RIDE,
-  SAMPLE_RUN,
-  type Sport,
-} from "@/components/app/sample-data";
+import { SAMPLE_RIDE, SAMPLE_RUN } from "@/components/app/sample-data";
 import { StravaFooter } from "@/components/app/strava-footer";
 import { StravaPicker } from "@/components/app/strava-picker";
 import { THEME_META, themeVisibilityAvailable } from "@/components/themes";
 import { useCarousel } from "@/hooks/use-carousel";
 import { useImagePalette } from "@/hooks/use-image-palette";
+import type { ActivityData, ActivitySource, Sport } from "@/lib/activity";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
 import { carouselVisibilityAvailable } from "@/lib/carousel/stats";
 import {

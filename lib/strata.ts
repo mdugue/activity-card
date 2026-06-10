@@ -16,7 +16,7 @@
  * layers between are the abstraction.
  */
 
-import type { ActivityData } from "@/components/app/sample-data";
+import type { ActivityData } from "@/lib/activity";
 import type { Coord } from "@/lib/chart-helpers";
 import { isMultiActivity } from "@/lib/multi-activity";
 import type { ParamDef } from "@/lib/params/kinds";

@@ -1,4 +1,4 @@
-import type { ActivityData } from "@/components/app/sample-data";
+import type { ActivityData } from "@/lib/activity";
 
 /**
  * Per-element visibility. Every overlay the card can show has a switch here.
