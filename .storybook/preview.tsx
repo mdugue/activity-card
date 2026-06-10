@@ -1,15 +1,26 @@
-import type { Preview } from "@storybook/nextjs-vite";
+import type { Decorator, Preview } from "@storybook/nextjs-vite";
 // The app's global stylesheet: Tailwind layer + the OKLCH theme tokens
 // (--primary, --foreground, …) every card and chrome component reads.
 // Importing it here is what makes stories render with the real styles.
 import "../app/globals.css";
+// The app loads its fonts on <html> in app/layout.tsx, which Storybook never
+// renders — so without this every theme's `var(--font-*)` would fall back to a
+// system face. Apply the same variable set on a wrapper around every story.
+import { fontVariables } from "../lib/fonts";
 import { backgroundGlobalTypes, DEFAULT_BACKGROUND } from "./backgrounds";
 import { withBackground } from "./with-background";
 
+const withFonts: Decorator = (Story) => (
+  <div className={fontVariables}>
+    <Story />
+  </div>
+);
+
 const preview: Preview = {
-  // Resolves the toolbar Background preset / per-story upload into a `photoUrl`
-  // for every theme story. Harmless on stories that don't render a photo.
-  decorators: [withBackground],
+  // `withFonts` defines the `--font-*` variables on a common ancestor; then
+  // `withBackground` resolves the toolbar Background preset / per-story upload
+  // into a `photoUrl` for every theme story (harmless on non-photo stories).
+  decorators: [withFonts, withBackground],
   globalTypes: backgroundGlobalTypes,
   initialGlobals: { background: DEFAULT_BACKGROUND },
   parameters: {
