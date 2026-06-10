@@ -78,8 +78,8 @@ strip).
 | -------------- | ------------------------------------------------------ | ------------------------------------------------------------------- |
 | Output         | one 1080×1350 poster                                   | an n×1080 × 1350 seamless strip, sliced into slides                 |
 | A theme is…    | **a `defineTheme` descriptor** (component + declaration) | **a `defineCarouselTheme` descriptor** (`canvas?` + `panels[]`)   |
-| Lives in       | `components/themes/single-card/<name>.tsx`             | descriptor: `components/themes/carousel/registry.ts` · look tokens: `lib/carousel/theme-tokens.ts` |
-| Id space       | `ThemeId` (`components/themes/index.ts`)               | `CarouselThemeId` (`lib/carousel/theme-tokens.ts`)                  |
+| Lives in       | `components/themes/single-card/<name>.tsx`             | `components/themes/carousel/registry.ts` (descriptor incl. its `look`)  |
+| Id space       | `ThemeId` (`components/themes/index.ts`)               | `CarouselThemeId` (`components/themes/carousel/registry.ts`)        |
 | Registered in  | `SINGLE_CARD_THEMES` (descriptor registry)             | `CAROUSEL_THEMES` (`registry.ts`) · `CAROUSEL_THEME_ORDER`          |
 | Renderer       | the theme component itself                             | one shared `components/themes/carousel/deck.tsx` (`CarouselDeck`)   |
 | Contract       | `ThemeProps` + capability declaration — see `card-rendering` + `theme-params` skills | `CanvasProps` / `PanelProps` + canvas/panels — see `carousel-themes` skill |
@@ -159,8 +159,8 @@ components/
                       built via `define-theme.ts`) composed by one shared renderer
                       (`deck.tsx`, `CarouselDeck`). A theme is a `canvas?` (spanning
                       signature, under `canvas/`) + `panels[]` (slide components,
-                      under `templates/` + `panels/`); its look tokens live in
-                      `lib/carousel/theme-tokens.ts`.
+                      under `templates/` + `panels/`) + an inline `look`; the look
+                      vocabulary (types, font pairs) is `lib/carousel/theme-tokens.ts`.
     shared/           Rendering utilities both card kinds build on (photo layers,
                       cover-photo geometry, photo-fx context, overlay-route).
                       (Stories colocate next to components as `<name>.stories.tsx`.)
@@ -169,8 +169,8 @@ lib/                  Utilities (`cn`, parsers, formatters). `lib/activity.ts` i
                       canonical ActivityData model. `lib/theme-contract.ts` holds the
                       single-card descriptor contract (capabilities, ThemeData,
                       defineTheme); `lib/colors.ts` the ColorScheme/ColorChoice model.
-                      `lib/carousel/` holds the carousel look tokens, the per-slide
-                      stat helpers, and the deck-style resolve logic (the
+                      `lib/carousel/` holds the carousel look vocabulary, the
+                      per-slide stat helpers, and the deck-style resolve logic (the
                       `CAROUSEL_THEMES` descriptor registry lives in the component
                       layer). `lib/params/` holds the editor parameter schema
                       (`ParamDef`) and `coerceConfig` coercion; param specs live on the
@@ -201,9 +201,9 @@ public/               Static assets.
   photo policy, params); add it to `SINGLE_CARD_THEMES` + `THEME_ORDER`
   (`components/themes/index.ts`), **plus a colocated
   `components/themes/single-card/<name>.stories.tsx`**.
-- **A new carousel theme** → a look row in `lib/carousel/theme-tokens.ts` (add
-  the id to `CarouselThemeId` + `CAROUSEL_THEME_ORDER`) + a `STRATEGY` entry
-  (`canvas?` + `panels`) in `components/themes/carousel/registry.ts`, **plus a
+- **A new carousel theme** → one `defineCarouselTheme` entry in
+  `components/themes/carousel/registry.ts` (id in `CarouselThemeId` +
+  `CAROUSEL_THEME_ORDER`; `canvas?` + `panels` + inline `look`), **plus a
   colocated `components/themes/carousel/<theme>.stories.tsx`**. See the
   `carousel-themes` skill.
 - **A new adjustable knob on a theme** → add a `ParamDef` to the theme's

@@ -4,6 +4,7 @@
 // never stretched per-axis. A multi-activity project overlays every leg.
 
 import type { CanvasProps } from "@/components/themes/carousel/define-theme";
+import { heroInk } from "@/lib/carousel/resolve";
 import { isMultiActivity, segmentRoutes } from "@/lib/multi-activity";
 import { RouteLine } from "../route-line";
 
@@ -12,7 +13,7 @@ export function RouteCanvas({ data, style, w, h, overPhoto }: CanvasProps) {
   const heroRoutes = multi
     ? segmentRoutes(data).map((r) => r.coords)
     : undefined;
-  const ink = overPhoto && style.dark ? "#ffffff" : style.ink;
+  const ink = heroInk(style, overPhoto);
 
   return (
     <div

@@ -2,14 +2,13 @@
 
 // Slide thumbnails — each is a *slice* of the one CarouselDeck (the same render
 // the large preview and export use), so the strip, preview and output always
-// agree. Click a thumbnail to bring it into the preview. The deck (chosen
-// elsewhere) defines how many slides exist; the strip is just navigation.
+// agree. Click a thumbnail to bring it into the preview. The theme defines how
+// many slides exist (its panel count); the strip is just navigation.
 
 import { CarouselDeck } from "@/components/themes/carousel/deck";
 import type { CarouselTheme } from "@/components/themes/carousel/define-theme";
 import type { ImageSize } from "@/hooks/use-image-natural-size";
 import type { ActivityData } from "@/lib/activity";
-import type { Slide } from "@/lib/carousel/types";
 import type { ColorScheme } from "@/lib/colors";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PhotoEffects } from "@/lib/photo-effects";
@@ -26,17 +25,17 @@ interface SlideStripProps {
   data: ActivityData;
   imageSize?: ImageSize | null;
   imageTransform?: ImageTransform | null;
-  onSelect: (id: string) => void;
+  onSelect: (index: number) => void;
   photoEffects?: PhotoEffects;
   photoUrl?: string | null;
-  selectedId: string | null;
-  slides: Slide[];
+  selectedIndex: number;
   theme: CarouselTheme;
   visibility?: Visibility;
 }
 
 export function SlideStrip(props: SlideStripProps) {
-  const { slides, selectedId, onSelect, theme } = props;
+  const { selectedIndex, onSelect, theme } = props;
+  const total = theme.panels.length;
 
   // Each thumb renders the full strip and windows onto its own slice, so the
   // strip, large preview and export are guaranteed to show the same pixels.
@@ -56,10 +55,14 @@ export function SlideStrip(props: SlideStripProps) {
 
   return (
     <div className="flex items-stretch justify-center gap-2">
-      {slides.map((slide, i) => {
-        const active = slide.id === selectedId;
+      {Array.from({ length: total }, (_, i) => {
+        const active = i === selectedIndex;
         return (
-          <div className="flex flex-col items-center gap-1" key={slide.id}>
+          <div
+            className="flex flex-col items-center gap-1"
+            // biome-ignore lint/suspicious/noArrayIndexKey: slides are positional — the index IS the identity (fixed count, never reordered)
+            key={`slide-${i}`}
+          >
             <button
               aria-label={`Slide ${i + 1}: ${theme.label}`}
               aria-pressed={active}
@@ -69,14 +72,14 @@ export function SlideStrip(props: SlideStripProps) {
                   ? "border-foreground shadow-md"
                   : "border-foreground/15 opacity-80 hover:opacity-100"
               )}
-              onClick={() => onSelect(slide.id)}
+              onClick={() => onSelect(i)}
               style={{ width: THUMB_W, height: THUMB_H }}
               type="button"
             >
               <div
                 className="origin-top-left"
                 style={{
-                  width: 1080 * slides.length,
+                  width: 1080 * total,
                   height: 1350,
                   transform: `translateX(${-(i * THUMB_W)}px) scale(${SCALE})`,
                 }}

@@ -8,7 +8,7 @@ import { detailStats, statOptsFor } from "@/lib/carousel/stats";
 import { DetailViz } from "../detail-viz";
 import { Stat } from "../stat-block";
 import { MetaBand } from "./parts";
-import { contentAnchor, type PanelProps, SLIDE_PAD, slideText } from "./shared";
+import { type PanelProps, SLIDE_PAD, slideText } from "./shared";
 
 interface StatLayoutProps extends PanelProps {
   /** gridTemplateColumns — content-sized columns (e.g. "max-content max-content") */
@@ -30,7 +30,7 @@ export function StatLayout({
   titleSize,
 }: StatLayoutProps) {
   const colors = slideText(style, hasPhoto);
-  const anchor = contentAnchor(style);
+  const anchor = style.contentAnchor;
   // Every stat except the one the hero slide headlines (no repeated big number).
   const stats = detailStats(data, style.heroMetric, statOptsFor(visibility));
 

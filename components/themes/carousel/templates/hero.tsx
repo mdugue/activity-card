@@ -5,7 +5,7 @@
 
 import { heroStat, statOptsFor } from "@/lib/carousel/stats";
 import { MetaBand } from "./parts";
-import { contentAnchor, type PanelProps, SLIDE_PAD, slideText } from "./shared";
+import { type PanelProps, SLIDE_PAD, slideText } from "./shared";
 
 export function HeroSlide({
   data,
@@ -17,7 +17,7 @@ export function HeroSlide({
   showPageNumber,
 }: PanelProps) {
   const colors = slideText(style, hasPhoto);
-  const anchor = contentAnchor(style);
+  const anchor = style.contentAnchor;
   const hero = heroStat(data, style.heroMetric, statOptsFor(visibility));
 
   const block = (

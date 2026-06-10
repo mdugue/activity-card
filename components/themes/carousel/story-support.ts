@@ -6,9 +6,8 @@
 // (`photoUrl` / `imageSize`) is injected by the global `withBackground`
 // decorator, so it isn't set here.
 
-import type { CarouselThemeId } from "@/lib/carousel/theme-tokens";
 import { NO_EFFECTS } from "@/lib/photo-effects";
-import { CAROUSEL_THEMES } from "./registry";
+import { CAROUSEL_THEMES, type CarouselThemeId } from "./registry";
 
 export function carouselArgs(id: CarouselThemeId) {
   const theme = CAROUSEL_THEMES[id];

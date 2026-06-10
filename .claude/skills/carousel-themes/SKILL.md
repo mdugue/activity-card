@@ -7,16 +7,16 @@ description: Use when designing, editing, or adding a Carousel Post theme — th
 
 How the Carousel Post themes are designed. The carousel is its own medium — its
 themes are **not** the single-card themes. They live in their own id space
-(`CarouselThemeId` in `lib/carousel/theme-tokens.ts`), independent of the
-single-card `ThemeId`, so the set can grow freely.
+(`CarouselThemeId` in `components/themes/carousel/registry.ts`), independent of
+the single-card `ThemeId`, so the set can grow freely.
 
 ## A carousel theme is a descriptor (canvas + panels)
 
 Like a single-card theme, a carousel theme is a `ThemeBase` descriptor (identity,
-colour/photo policy, params, **`uses`** capabilities) — built by
-`defineCarouselTheme` and registered in `components/themes/carousel/registry.ts`
+colour/photo policy, params, **`uses`** capabilities) — one self-contained
+`defineCarouselTheme` entry in `components/themes/carousel/registry.ts`
 (`CAROUSEL_THEMES`, the carousel peer of `SINGLE_CARD_THEMES`). It adds a render
-strategy of two fields:
+strategy — two component fields plus the inline `look` they render with:
 
 - **`canvas?`** — the spanning signature component, drawn **once** across the
   whole n×1080 × 1350 strip and bled across every slide edge. Optional: photo-led
@@ -34,11 +34,13 @@ One shared renderer composes them — `components/themes/carousel/deck.tsx`
 renderer; a theme *is* its canvas + panels. The editor windows onto the deck, the
 thumbnails slice it, and the export slices it — preview === output.
 
-## The look tokens
+## The look
 
-Each theme's look is a row in `CAROUSEL_THEME_TOKENS`
-(`lib/carousel/theme-tokens.ts`); `defineCarouselTheme` derives the colour/photo
-policy + params from it. The levers:
+Each theme's `look` (a `CarouselLook`, vocabulary in
+`lib/carousel/theme-tokens.ts`) lives inline on its descriptor;
+`defineCarouselTheme` derives the colour/photo policy from it, and
+`resolveDeckStyle` spreads it (plus the resolved colours + fonts) into the one
+`EffectiveStyle` every canvas/panel receives. The levers:
 
 - **`heroMetric`** — the number the intro slide headlines: `distance` or
   `elevation` (Ascent leads with total climb).
@@ -49,22 +51,22 @@ policy + params from it. The levers:
 - **`fontPair`** — `serif` (Cormorant, light pairs), `bold` (Anton, dark pairs),
   `magazine` (Playfair, Exposure/Press), `grotesk` (Space Grotesk, Frame),
   `syne` (Strata).
-- **`heroLayer`** / **`panelKind`** — style **hints** the panels read
-  (`contentAnchor` anchors content above an `elevation` signature; the veil is
-  drawn only for `panelKind === "standard"`). They no longer dispatch the
-  renderer — the `canvas`/`panels` fields do — so keep them in sync with the
-  strategy you wire in the registry.
+- **`contentAnchor`** — where slide content sits: `"top"` above an
+  elevation-range canvas (Ascent), `"bottom"` everywhere else.
+- **`veil`** — whether the deck draws the light legibility wash between photo
+  and panels; type-led themes (Frame / Press) set `false` and protect their own
+  text (shadows / opaque boxes).
 - **`dark`**, colours (`background`, `ink`, `mutedInk`, `accent`, `accent2`),
   `routeStyle`, `elevation`/`elevationAccent`, `defaultFilter` + `defaultGrain`
-  (the photo look applied when the theme is chosen), an optional
-  `defaultColorChoice` (Exposure starts photo-derived), and optional
-  `params`/`defaults` (Strata's mood/density/legend).
+  (the photo look applied when the theme is chosen), and an optional
+  `defaultColorChoice` (Exposure starts photo-derived). Knobs (Strata's
+  mood/density/legend) are `params`/`defaults` on the descriptor entry itself.
 
 Colour flows through the shared model (`lib/colors.ts`): the deck renders with a
-resolved `ColorScheme` — `resolveDeckStyle(theme.look, scheme)` → `EffectiveStyle`
-— where the user's `ColorChoice` (preset or photo-derived) overrides the token
-accents. A theme may post-process that style via an optional `resolveStyle(base,
-config)` (Strata's mood swaps the whole palette).
+resolved `ColorScheme` — `resolveDeckStyle(theme.look, theme.label, scheme)` →
+`EffectiveStyle` — where the user's `ColorChoice` (preset or photo-derived)
+overrides the look's accents. A theme may post-process that style via an
+optional `resolveStyle(base, config)` (Strata's mood swaps the whole palette).
 
 ## The themes
 
@@ -101,16 +103,16 @@ signature viz only. Legibility comes from, in order of preference:
    `noir`/`mono` darken for light-text themes) — `lib/photo-effects.ts`,
 2. **dual text-shadows** (`slideText` in `templates/shared.ts` returns a light
    halo for light themes, a dark drop for dark themes),
-3. a **light veil** (standard panels only, `panelKind === "standard"`: ~26% white
-   for light themes, ~34% black for dark) — Frame uses shadows only; Press uses
-   its opaque boxes.
+3. a **light veil** (themes with `look.veil: true`: ~26% white for light
+   themes, ~34% black for dark) — Frame uses shadows only; Press uses its
+   opaque boxes.
 
 The panorama itself is the shared natural-size-aware `CoverPhoto`
 (`components/themes/shared/cover-photo.tsx`, wrapped by `carousel-photo.tsx`):
 quarter-turn rotations swap the element's width/height so the strip stays
 covered. Optional **film grain** survives html-to-image because it's decoded as
 an image, not a live filter. Default-on for the art-print themes via the token
-row's photo look.
+look's photo fields.
 
 ## Route geometry — never stretch
 
@@ -148,17 +150,18 @@ Athlete name, the "made with effort" mark, and page numbers default OFF.
 
 ## Adding a theme
 
-1. Add an id to `CarouselThemeId` + `CAROUSEL_THEME_ORDER` and a look row to
-   `CAROUSEL_THEME_TOKENS` (`lib/carousel/theme-tokens.ts`).
-2. Wire the **render strategy** in `components/themes/carousel/registry.ts`: add a
-   `STRATEGY[id]` entry with its `canvas?` (reuse `RouteCanvas` /
-   `ElevationCanvas` / `StrataCanvas`, or add one under `canvas/`) and `panels`
-   (reuse `STANDARD_PANELS`, or compose new per-slide panel components). Add a
-   `resolveStyle` only if the theme post-processes the palette (Strata's mood).
-3. Keep the contract: a `canvas` owns its own placement and renders **null** when
+1. Add the id to `CarouselThemeId` + `CAROUSEL_THEME_ORDER` and one
+   self-contained `defineCarouselTheme` entry in
+   `components/themes/carousel/registry.ts`: identity, the `canvas?` (reuse
+   `RouteCanvas` / `ElevationCanvas` / `StrataCanvas`, or add one under
+   `canvas/`), the `panels` (reuse `STANDARD_PANELS`, or compose new per-slide
+   panel components), and the inline `look`. Add `params`/`defaults` for knobs
+   and a `resolveStyle` only if the theme post-processes the palette (Strata's
+   mood); `uses` defaults to `CAROUSEL_CAPABILITIES`.
+2. Keep the contract: a `canvas` owns its own placement and renders **null** when
    its metric is absent; panels render foreground only and self-derive their
    stats from `data`. The deck owns the photo + veil.
-4. **Add a story** — a `<theme>.stories.tsx` next to the registry that renders
+3. **Add a story** — a `<theme>.stories.tsx` next to the registry that renders
    `<CarouselDeck theme={CAROUSEL_THEMES[id]} …>` with `backgroundArgTypes` (use
    the `carouselArgs` helper in `story-support.ts`). Every carousel theme must
    have a story — enforced in `AGENTS.md`. Verify with `bun run build-storybook`.
@@ -166,13 +169,13 @@ Athlete name, the "made with effort" mark, and page numbers default OFF.
 ## File map
 
 ```
-lib/carousel/theme-tokens.ts   look tokens + levers + CarouselThemeId + CAROUSEL_CAPABILITIES
-lib/carousel/resolve.ts        look tokens + ColorScheme → EffectiveStyle
+lib/carousel/theme-tokens.ts   the look vocabulary — CarouselLook · font pairs · CAROUSEL_CAPABILITIES
+lib/carousel/resolve.ts        look + ColorScheme → EffectiveStyle · heroInk
 lib/carousel/stats.ts          buildStats · heroStat · detailStats · frameStats · pressSlideStats · series
-lib/carousel/types.ts          Slide · buildSlides · SLIDE_W/H
-hooks/use-carousel.ts          panel count → slides + selection
+lib/carousel/types.ts          SLIDE_W/H · RouteStyle · FontPairId
+hooks/use-carousel.ts          panel count → clamped slide selection (one index)
 components/themes/carousel/define-theme.ts   defineCarouselTheme · CarouselTheme · CanvasProps
-components/themes/carousel/registry.ts       CAROUSEL_THEMES (the descriptor registry)
+components/themes/carousel/registry.ts       CAROUSEL_THEMES + CarouselThemeId (one entry per theme, look inline)
 components/themes/carousel/deck.tsx          CarouselDeck — the shared renderer
 components/themes/carousel/canvas/           RouteCanvas · ElevationCanvas · StrataCanvas
 components/themes/carousel/templates/        standard panels (Hero/StatGrid/Editorial) + PanelProps

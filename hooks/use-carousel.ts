@@ -1,48 +1,27 @@
-// Carousel slide-state manager. The deck (slide count) is fixed per theme — most
-// themes are 3 slides, Frame/Press are 4 — so the user doesn't pick a deck;
-// switching theme switches the count. This hook derives the slides from the
-// chosen theme's panel count and tracks which slide is selected for the preview.
+// Carousel slide-selection state. The slide count is fixed per theme (it's the
+// theme's panel count — most are 3, Frame/Press are 4), so the user doesn't
+// pick a deck; switching theme switches the count. A slide is just an index
+// into the seamless strip, so selection is one clamped integer.
 
 import { useCallback, useState } from "react";
-import { buildSlides, type Slide } from "@/lib/carousel/types";
 
 export interface CarouselController {
+  /** number of slides — the active theme's panel count */
+  count: number;
   /** reset selection to the first slide (e.g. when a new activity loads) */
   regenerate: () => void;
-  select: (id: string) => void;
-  selectedId: string | null;
+  select: (index: number) => void;
   selectedIndex: number;
-  slides: Slide[];
 }
 
-export function useCarousel(slideCount: number): CarouselController {
-  // Deterministic, so this is stable across renders without memoisation.
-  const slides = buildSlides(slideCount);
-  const [selectedId, setSelectedId] = useState<string | null>(
-    () => slides[0]?.id ?? null
-  );
+export function useCarousel(count: number): CarouselController {
+  const [selected, setSelected] = useState(0);
+  // Switching to a theme with fewer slides clamps the selection, so downstream
+  // consumers never see an out-of-range index.
+  const selectedIndex = Math.max(0, Math.min(selected, count - 1));
 
-  // Switching theme can change the count, invalidating the stored selection;
-  // normalise to the first slide so downstream consumers never see a stale id.
-  const validId = slides.some((s) => s.id === selectedId)
-    ? selectedId
-    : (slides[0]?.id ?? null);
-  const selectedIndex = Math.max(
-    0,
-    slides.findIndex((s) => s.id === validId)
-  );
+  const select = useCallback((index: number) => setSelected(index), []);
+  const regenerate = useCallback(() => setSelected(0), []);
 
-  const select = useCallback((id: string) => setSelectedId(id), []);
-  const regenerate = useCallback(
-    () => setSelectedId(slides[0]?.id ?? null),
-    [slides]
-  );
-
-  return {
-    slides,
-    selectedId: validId,
-    selectedIndex,
-    select,
-    regenerate,
-  };
+  return { count, selectedIndex, select, regenerate };
 }

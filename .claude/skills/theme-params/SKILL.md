@@ -11,9 +11,8 @@ How a theme describes itself to the app. EVERY theme — single-card or carousel
 families add only their render strategy: a single-card theme is a `defineTheme`
 descriptor with a bespoke `Component` (+ capability declaration), collected in
 `SINGLE_CARD_THEMES` (`components/themes/index.ts`); a carousel theme is a
-`defineCarouselTheme` descriptor (a `canvas?` + `panels[]`, look tokens derived
-from `lib/carousel/theme-tokens.ts`), collected in `CAROUSEL_THEMES`
-(`components/themes/carousel/registry.ts`). Everything the editor shows (which toggles
+`defineCarouselTheme` descriptor (a `canvas?` + `panels[]` + an inline `look`),
+collected in `CAROUSEL_THEMES` (`components/themes/carousel/registry.ts`). Everything the editor shows (which toggles
 exist, which knobs render, whether the colour control appears, the photo
 defaults) derives from the descriptor; there are no parallel metadata tables
 and no per-theme control components. `app/page.tsx` treats both modes through
@@ -80,14 +79,13 @@ choice persists so re-adding a photo restores it. `coerceColorChoice` makes
 persisted values safe (hex-validated).
 
 App state is one nullable `colorChoice` (`null` = active theme's default);
-carousel themes get their policy from their token row via
-`carouselColorPolicy`.
+`defineCarouselTheme` derives a carousel theme's policy from its `look`.
 
 ### Photo policy
 
 `photo: { defaultOn, defaultFilter?, defaultGrain? }` — whether an uploaded
 photo shows by default and the signature filter/grain look applied when one is
-added (carousel: `carouselPhotoPolicy` from the token row). Display is gated by
+added (carousel: derived from the descriptor's `look`). Display is gated by
 the shared `photoBackdrop` visibility toggle in **both** modes; the filter /
 grain / mirror / rotate controls render only while the photo is shown. See the
 `card-rendering` skill for the photo-fx context + `CoverPhoto` geometry.

@@ -232,31 +232,36 @@ core (`defineCarouselTheme`) plus a render strategy: an optional **`canvas`**
 (`components/themes/carousel/deck.tsx`, `CarouselDeck`) composes them. Deep
 dive: the `carousel-themes` skill.
 
-1. **Add the id** to `CarouselThemeId` + `CAROUSEL_THEME_ORDER` and a **look
-   row** to `CAROUSEL_THEME_TOKENS` (`lib/carousel/theme-tokens.ts`). The look
-   levers: `heroMetric`, `crossViz`, `detailViz`, `fontPair`, the colours
-   (`background/ink/mutedInk/accent/accent2/onAccent`, `dark`), `routeStyle` /
-   `elevation`, the photo look (`defaultFilter`, `defaultGrain`), and the
-   `heroLayer` / `panelKind` style hints (content anchor + veil). A photo-first
-   theme may set `defaultColorChoice: { kind: "photo", variant: "vibrant" }`;
-   knobs go in `params` / `defaults` on the row.
-2. **Wire the strategy** in `components/themes/carousel/registry.ts`: add a
-   `STRATEGY[id]` entry with its `canvas?` (reuse `RouteCanvas` /
-   `ElevationCanvas` / `StrataCanvas`, or add one under `canvas/`) and `panels`
-   (reuse `STANDARD_PANELS`, or compose new per-slide panels under
-   `panels/`). Panels receive the shared `PanelProps` bag (pre-resolved style +
-   `index`/`total` + `visibility`) and **self-derive** their stats from `data`
-   (`heroStat` / `detailStats` / `frameStats` / `pressSlideStats`). A `canvas`
-   owns its placement and returns null when its metric is absent. Add a
-   `resolveStyle` only to post-process the palette (Strata's mood).
+1. **Add one `defineCarouselTheme` entry** to
+   `components/themes/carousel/registry.ts` (add the id to `CarouselThemeId` +
+   `CAROUSEL_THEME_ORDER`). The entry is self-contained: identity (`id`,
+   `label`, `tagline`), the render strategy (`canvas?` — reuse `RouteCanvas` /
+   `ElevationCanvas` / `StrataCanvas` or add one under `canvas/`; `panels` —
+   reuse `STANDARD_PANELS` or compose new per-slide panels under `panels/`),
+   and the inline **`look`** (`CarouselLook`,
+   `lib/carousel/theme-tokens.ts`): `heroMetric`, `crossViz`, `detailViz`,
+   `fontPair`, the colours (`background/ink/mutedInk/accent/accent2/onAccent`,
+   `dark`), `routeStyle` / `elevation`, `contentAnchor` ("top" above an
+   elevation-range canvas), `veil` (false for type-led themes that protect
+   their own text), and the photo look (`defaultFilter`, `defaultGrain`). A
+   photo-first theme may set
+   `defaultColorChoice: { kind: "photo", variant: "vibrant" }`. `uses`
+   defaults to the shared `CAROUSEL_CAPABILITIES`; knobs go in
+   `params` / `defaults` on the entry, with a `resolveStyle` only to
+   post-process the palette (Strata's mood).
+2. **Keep the contract**: panels receive the shared `PanelProps` bag
+   (pre-resolved style + `index`/`total` + `visibility`) and **self-derive**
+   their stats from `data` (`heroStat` / `detailStats` / `frameStats` /
+   `pressSlideStats`). A `canvas` owns its placement and returns null when its
+   metric is absent; the deck owns the photo + veil.
 3. **Add a story** — a `<theme>.stories.tsx` next to the registry rendering
    `<CarouselDeck theme={CAROUSEL_THEMES[id]} …>` via the `carouselArgs` helper
    in `story-support.ts`, with `backgroundArgTypes`.
 4. **Verify** as above; `e2e/carousel.spec.ts` covers the deck mechanics.
 
 Colour and photo behaviour come for free: every carousel theme is
-colour-adjustable (policy derived from its look tokens) and shows the photo via
-the deck's shared photo layer + the "Use as background" toggle.
+colour-adjustable (policy derived from its look) and shows the photo via the
+deck's shared photo layer + the "Use as background" toggle.
 
 ---
 
@@ -299,6 +304,6 @@ components/themes/shared/                 PhotoLayer · PhotoBackdrop · PhotoUn
 components/themes/carousel/define-theme.ts defineCarouselTheme · CarouselTheme · canvas/panels
 components/themes/carousel/registry.ts     CAROUSEL_THEMES (carousel descriptor registry)
 components/themes/carousel/deck.tsx        CarouselDeck — the shared renderer
-lib/carousel/theme-tokens.ts              carousel look tokens + CarouselThemeId
+lib/carousel/theme-tokens.ts              carousel look vocabulary (CarouselLook · font pairs)
 components/app/editor-session.ts          the one object the editors share
 ```

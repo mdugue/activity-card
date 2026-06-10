@@ -1,7 +1,7 @@
 "use client";
 
 // Carousel editor. The large preview is a horizontally scroll-snapped window
-// onto the single SeamlessCanvas — it shows one slide at a time and swiping
+// onto the single CarouselDeck — it shows one slide at a time and swiping
 // reveals the neighbours with the seamless bleed, exactly like an Instagram /
 // Strava carousel. The slide strip below windows onto the same canvas, and the
 // off-screen full-width mount feeds the slicing export — so preview, thumbnails
@@ -12,15 +12,15 @@
 import { ArrowsOutCardinalIcon, ImagesIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { CarouselDeck } from "@/components/themes/carousel/deck";
-import { CAROUSEL_THEMES } from "@/components/themes/carousel/registry";
+import {
+  CAROUSEL_THEME_ORDER,
+  CAROUSEL_THEMES,
+  type CarouselThemeId,
+} from "@/components/themes/carousel/registry";
 import { Badge } from "@/components/ui/badge";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CarouselController } from "@/hooks/use-carousel";
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
-import {
-  CAROUSEL_THEME_ORDER,
-  type CarouselThemeId,
-} from "@/lib/carousel/theme-tokens";
 import { carouselBaseName, exportCarousel } from "@/lib/export-carousel";
 import {
   clampCoverTransform,
@@ -50,7 +50,7 @@ export function CarouselEditState({
   onThemeChange,
 }: CarouselEditStateProps) {
   const { data, visibility, color, config, photo } = session;
-  const { slides, selectedId, selectedIndex } = carousel;
+  const { count, selectedIndex } = carousel;
   const descriptor = CAROUSEL_THEMES[theme];
 
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -71,7 +71,7 @@ export function CarouselEditState({
   // the wide strip's real vertical overflow. A quarter-turn swaps the photo's
   // width/height, so the clamp must use the rotated dimensions.
   const imageSize = useImageNaturalSize(photo.url);
-  const stripW = slides.length * 1080;
+  const stripW = count * 1080;
   const quarter = isQuarterTurn(photo.effects.rotate);
   const coverClamp = imageSize
     ? (t: ImageTransform) =>
@@ -168,9 +168,8 @@ export function CarouselEditState({
     }
     settleTimer.current = setTimeout(() => {
       const idx = Math.round(vp.scrollLeft / vp.clientWidth);
-      const id = slides[idx]?.id;
-      if (id) {
-        carousel.select(id);
+      if (idx >= 0 && idx < count) {
+        carousel.select(idx);
       }
     }, 120);
   };
@@ -183,7 +182,7 @@ export function CarouselEditState({
     try {
       await exportCarousel(
         wideRef.current,
-        slides.length,
+        count,
         carouselBaseName(data.sport, data.date)
       );
     } finally {
@@ -235,12 +234,12 @@ export function CarouselEditState({
         >
           <div
             className="relative h-full"
-            style={{ width: `calc(100cqw * ${slides.length})` }}
+            style={{ width: `calc(100cqw * ${count})` }}
           >
             <div
               className="absolute top-0 left-0 origin-top-left"
               style={{
-                width: 1080 * slides.length,
+                width: 1080 * count,
                 height: 1350,
                 transform: "scale(calc(100cqw / 1080px))",
               }}
@@ -248,10 +247,11 @@ export function CarouselEditState({
               <CarouselDeck {...deckProps} />
             </div>
             <div className="absolute inset-0 flex">
-              {slides.map((s) => (
+              {Array.from({ length: count }, (_, i) => (
                 <div
                   aria-hidden
-                  key={s.id}
+                  // biome-ignore lint/suspicious/noArrayIndexKey: slides are positional — the index IS the identity (fixed count, never reordered)
+                  key={`snap-${i}`}
                   style={{
                     flex: "0 0 100cqw",
                     width: "100cqw",
@@ -309,8 +309,7 @@ export function CarouselEditState({
           onSelect={carousel.select}
           photoEffects={photo.effects}
           photoUrl={photo.url}
-          selectedId={selectedId}
-          slides={slides}
+          selectedIndex={selectedIndex}
           theme={descriptor}
           visibility={visibility}
         />
@@ -325,7 +324,7 @@ export function CarouselEditState({
           icon: <ImagesIcon aria-hidden className="size-5" weight="duotone" />,
           isBusy: isExporting,
           label: "Export carousel",
-          meta: `${slides.length} × 1080×1350`,
+          meta: `${count} × 1080×1350`,
           onAction: handleExport,
         }}
         preview={preview}
@@ -337,10 +336,7 @@ export function CarouselEditState({
           className="pointer-events-none fixed top-0 left-0 -z-10"
           style={{ transform: "translateX(-200%)" }}
         >
-          <div
-            ref={wideRef}
-            style={{ width: slides.length * 1080, height: 1350 }}
-          >
+          <div ref={wideRef} style={{ width: count * 1080, height: 1350 }}>
             <CarouselDeck {...deckProps} />
           </div>
         </div>

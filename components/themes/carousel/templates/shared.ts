@@ -72,13 +72,6 @@ export function slideText(
   };
 }
 
-/** Where a slide's content sits vertically. Elevation themes anchor content to
- *  the top (the range fills the bottom); everything else anchors low (under the
- *  route / over the photo scrim). */
-export function contentAnchor(style: EffectiveStyle): "bottom" | "top" {
-  return style.heroLayer === "elevation" ? "top" : "bottom";
-}
-
 /** "01 / 05" slide index, zero-padded. */
 export function slideNumber(index: number, total: number): string {
   const pad = (n: number) => String(n).padStart(2, "0");

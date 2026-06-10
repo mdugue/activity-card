@@ -6,6 +6,7 @@
 
 import type { CanvasProps } from "@/components/themes/carousel/define-theme";
 import { pickProfile } from "@/lib/carousel/profile";
+import { heroInk } from "@/lib/carousel/resolve";
 import { isMultiActivity, segmentProfiles } from "@/lib/multi-activity";
 import { ElevationBand } from "../elevation-band";
 
@@ -13,7 +14,7 @@ export function ElevationCanvas({ data, style, w, h, overPhoto }: CanvasProps) {
   const multi = isMultiActivity(data);
   const segProf = multi ? segmentProfiles(data) : null;
   const { profile, mode } = pickProfile(data);
-  const ink = overPhoto && style.dark ? "#ffffff" : style.ink;
+  const ink = heroInk(style, overPhoto);
 
   const hasElevation = multi
     ? Boolean(segProf?.useElevation) && (segProf?.profiles.length ?? 0) > 0

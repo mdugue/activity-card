@@ -15,16 +15,15 @@ import { SAMPLE_RIDE, SAMPLE_RUN } from "@/components/app/sample-data";
 import { StravaFooter } from "@/components/app/strava-footer";
 import { StravaPicker } from "@/components/app/strava-picker";
 import { SINGLE_CARD_THEMES } from "@/components/themes";
-import { CAROUSEL_THEMES } from "@/components/themes/carousel/registry";
+import {
+  CAROUSEL_THEMES,
+  type CarouselThemeId,
+  DEFAULT_CAROUSEL_THEME,
+} from "@/components/themes/carousel/registry";
 import { useCarousel } from "@/hooks/use-carousel";
 import { useImagePalette } from "@/hooks/use-image-palette";
 import type { ActivityData, ActivitySource, Sport } from "@/lib/activity";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
-import {
-  CAROUSEL_THEME_TOKENS,
-  type CarouselThemeId,
-  DEFAULT_CAROUSEL_THEME,
-} from "@/lib/carousel/theme-tokens";
 import {
   type ColorChoice,
   coerceColorChoice,
@@ -35,7 +34,11 @@ import { IDENTITY_TRANSFORM, type ImageTransform } from "@/lib/image-transform";
 import { coerceConfig } from "@/lib/params/resolve";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import { NO_EFFECTS, type PhotoEffects } from "@/lib/photo-effects";
-import { effectiveChoiceFor, type ThemeBase } from "@/lib/theme-contract";
+import {
+  effectiveChoiceFor,
+  type ThemeBase,
+  type ThemePhotoPolicy,
+} from "@/lib/theme-contract";
 import { cn } from "@/lib/utils";
 import {
   applyVisibility,
@@ -237,10 +240,7 @@ export default function Home() {
     if (persisted.theme && persisted.theme in SINGLE_CARD_THEMES) {
       setTheme(persisted.theme);
     }
-    if (
-      persisted.carouselTheme &&
-      persisted.carouselTheme in CAROUSEL_THEME_TOKENS
-    ) {
+    if (persisted.carouselTheme && persisted.carouselTheme in CAROUSEL_THEMES) {
       setCarouselTheme(persisted.carouselTheme);
     }
     const migratedChoice = migrateColorChoice(persisted);
@@ -412,6 +412,27 @@ export default function Home() {
 
   const activePhotoPolicy = activeTheme.photo;
 
+  /** A theme's photo effects (its signature filter + grain) over a base. */
+  const policyEffects = (
+    policy: ThemePhotoPolicy,
+    base: PhotoEffects
+  ): PhotoEffects => ({
+    ...base,
+    filter: policy.defaultFilter ?? "none",
+    grain: policy.defaultGrain ?? false,
+  });
+
+  // Selecting a theme (either family) applies its photo policy: its default
+  // backdrop state (STRATA / Data / Triathlon default OFF; the photo-led
+  // themes default ON) and — when there's a photo to affect — its signature
+  // filter + grain. The user can still change both afterwards.
+  const applyThemePhotoPolicy = (policy: ThemePhotoPolicy) => {
+    setVisibility((v) => ({ ...v, photoBackdrop: policy.defaultOn }));
+    if (photoUrl) {
+      setPhotoEffects((prev) => policyEffects(policy, prev));
+    }
+  };
+
   const handlePhotoChange = (file: File | null) => {
     setPhotoUrl((prev) => {
       if (prev) {
@@ -420,34 +441,23 @@ export default function Home() {
       return file ? URL.createObjectURL(file) : null;
     });
     // A new (or removed) photo invalidates any previous pan/zoom. A fresh photo
-    // adopts the active theme's photo policy: its default backdrop state (the
-    // designed, photo-free look may lead) and its signature filter + grain. The
-    // user can still change both afterwards.
+    // adopts the active theme's photo policy from scratch (effects reset, not
+    // carried over from the previous photo).
     setImageTransform(IDENTITY_TRANSFORM);
     if (file) {
       setVisibility((v) => ({
         ...v,
         photoBackdrop: activePhotoPolicy.defaultOn,
       }));
-      setPhotoEffects({
-        ...NO_EFFECTS,
-        filter: activePhotoPolicy.defaultFilter ?? "none",
-        grain: activePhotoPolicy.defaultGrain ?? false,
-      });
+      setPhotoEffects(policyEffects(activePhotoPolicy, NO_EFFECTS));
     } else {
       setPhotoEffects(NO_EFFECTS);
     }
   };
 
-  // Selecting a single-card theme applies that theme's default backdrop state
-  // (STRATA / Data / Triathlon default OFF; the photo-led themes default ON).
-  // The photo can still be toggled for the current theme afterwards.
   const handleSingleThemeChange = (next: ThemeId) => {
     setTheme(next);
-    setVisibility((v) => ({
-      ...v,
-      photoBackdrop: SINGLE_CARD_THEMES[next].photo.defaultOn,
-    }));
+    applyThemePhotoPolicy(SINGLE_CARD_THEMES[next].photo);
   };
 
   // The onboarding wizard hands back a parsed upload or a sample, plus an
@@ -470,18 +480,9 @@ export default function Home() {
     setState("edit");
   };
 
-  // Switching carousel theme re-applies that theme's signature photo look,
-  // unless there's no photo to affect.
   const handleCarouselThemeChange = (id: CarouselThemeId) => {
     setCarouselTheme(id);
-    if (photoUrl) {
-      const policy = CAROUSEL_THEMES[id].photo;
-      setPhotoEffects((prev) => ({
-        ...prev,
-        filter: policy.defaultFilter ?? "none",
-        grain: policy.defaultGrain ?? false,
-      }));
-    }
+    applyThemePhotoPolicy(CAROUSEL_THEMES[id].photo);
   };
 
   const handleDownload = () => {

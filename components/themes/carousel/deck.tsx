@@ -52,9 +52,9 @@ export function CarouselDeck({
   const total = theme.panels.length;
   const width = total * SLIDE_W;
 
-  // One deck-wide style: the look tokens + the resolved accent trio, then the
+  // One deck-wide style: the look + the resolved accent trio, then the
   // theme's optional post-processor (STRATA's mood swaps the whole palette).
-  const baseStyle = resolveDeckStyle(theme.look, colors);
+  const baseStyle = resolveDeckStyle(theme.look, theme.label, colors);
   const style = theme.resolveStyle
     ? theme.resolveStyle(baseStyle, config)
     : baseStyle;
@@ -64,9 +64,7 @@ export function CarouselDeck({
   // themes. The deck-wide "Use as background" switch gates it — the same flag as
   // the single card. (Data is already visibility-stripped upstream.)
   const showPhoto = Boolean(photoUrl) && visibility.photoBackdrop;
-  // Type-led themes (Frame / Press) protect their own text (shadows / opaque
-  // boxes), so they skip the veil.
-  const veiled = showPhoto && style.panelKind === "standard";
+  const veiled = showPhoto && style.veil;
   const desaturate = showPhoto && style.routeStyle === "desaturated";
 
   const Canvas = theme.canvas;
