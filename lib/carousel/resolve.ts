@@ -26,7 +26,14 @@ export interface EffectiveStyle
 
 /** Black or white, whichever reads better on a solid hex fill. */
 export function readableOn(hex: string): string {
-  const c = hex.replace("#", "");
+  // Normalise to 6 digits first: expand 3-digit shorthand (#abc → #aabbcc); a
+  // longer value (8-digit #rrggbbaa) reads its first three channels, ignoring
+  // alpha. Without this a dark 3-digit primary would fall through as "too
+  // short" and wrongly get a dark text colour.
+  let c = hex.replace("#", "");
+  if (c.length === 3) {
+    c = `${c[0]}${c[0]}${c[1]}${c[1]}${c[2]}${c[2]}`;
+  }
   if (c.length < 6) {
     return "#0a0a0a";
   }

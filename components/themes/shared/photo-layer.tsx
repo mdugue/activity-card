@@ -9,7 +9,11 @@ import {
   type ImageTransform,
   transformToCss,
 } from "@/lib/image-transform";
-import { effectsTransformSuffix, filterCss } from "@/lib/photo-effects";
+import {
+  effectsTransformSuffix,
+  filterCss,
+  isQuarterTurn,
+} from "@/lib/photo-effects";
 import { CoverPhoto } from "./cover-photo";
 import { GrainOverlay, usePhotoEffects, usePhotoImageSize } from "./photo-fx";
 
@@ -42,6 +46,10 @@ export function PhotoLayer({ photoUrl, imageTransform }: PhotoLayerProps) {
   // Natural size unknown (loading, or rendered without the provider — e.g. a
   // bare story): plain CSS cover with the effects as a transform suffix.
   const filter = fx ? filterCss(fx.filter) : "";
+  // A quarter-turn rotates a portrait cover box into a landscape footprint that
+  // no longer fills the box vertically; over-size the layer so the corners stay
+  // covered (matching PhotoBackdrop / PhotoUnderlay) until CoverPhoto takes over.
+  const bleed = fx && isQuarterTurn(fx.rotate) ? -160 : 0;
   return (
     <div
       aria-hidden
@@ -55,7 +63,7 @@ export function PhotoLayer({ photoUrl, imageTransform }: PhotoLayerProps) {
       <div
         style={{
           position: "absolute",
-          inset: 0,
+          inset: bleed,
           backgroundImage: `url(${photoUrl})`,
           backgroundSize: "cover",
           backgroundPosition: "center",

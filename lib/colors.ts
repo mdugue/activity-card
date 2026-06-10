@@ -64,8 +64,10 @@ export const VARIANT_LABELS: Record<PaletteVariant, string> = {
   pure: "Pure",
 };
 
-/** The scheme a photo-derived variant would produce, or null until the palette
- *  is extracted — drives the live swatches in the colour control. */
+/** The scheme a photo-derived variant produces from an extracted palette —
+ *  drives the live swatches in the colour control. The "no palette yet" case
+ *  is handled by callers (`resolveColors` falls back to the theme default), so
+ *  this always returns a scheme. */
 export function schemeFromPalette(
   palette: ExtractedPalette,
   variant: PaletteVariant
