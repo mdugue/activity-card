@@ -1,13 +1,13 @@
 "use client";
 
 // Builds the shared list of editor categories (the `ControlTool[]` the
-// ControlDeck renders) from the activity + the active theme's parameter schema.
-// The per-theme knobs are no longer special-cased: each theme declares `ParamDef`s
-// (see `lib/params/`) and they render generically via `ThemeParamGroup`, filed
-// into the category each param names (STYLE · LAYOUT · MARKS). Shared controls —
-// the theme rail, accent, photo, text, stats, marks, activity — round out the
-// groups. Both editors consume this hook; they differ only in the params they
-// pass and a couple of mode flags (carousel marks, photo rotate).
+// ControlDeck renders) from the EditorSession + the active theme's parameter
+// schema. The per-theme knobs are not special-cased: each theme declares
+// `ParamDef`s (see `lib/params/`) and they render generically via
+// `ThemeParamGroup`, filed into the category each param names
+// (STYLE · LAYOUT · MARKS). Shared controls — the theme rail, colour, photo,
+// text, stats, marks, activity — round out the groups. Both editors consume
+// this hook; they differ only in `mode` and the theme rail they pass.
 
 import {
   ChartBarIcon,
@@ -24,11 +24,8 @@ import {
 import { useId } from "react";
 import type { ControlTool } from "@/components/app/control-deck";
 import type { CardMode } from "@/components/app/mode-toggle";
-import type { ActivityData, Sport } from "@/lib/activity";
-import type { ColorChoice } from "@/lib/colors";
-import type { ParamCtx, ParamDef } from "@/lib/params/kinds";
-import type { ParsedActivity } from "@/lib/parse-activity";
-import type { PhotoEffects } from "@/lib/photo-effects";
+import type { Sport } from "@/lib/activity";
+import type { ParamCtx } from "@/lib/params/kinds";
 import type { Visibility } from "@/lib/visibility";
 import { ActivitySource } from "./activity-source";
 import { ColorControl } from "./color-control";
@@ -40,6 +37,7 @@ import {
   type RichSelectOption,
   ToggleRow,
 } from "./control-primitives";
+import type { EditorSession } from "./editor-session";
 import {
   PhotoFilterControl,
   PhotoTransformControls,
@@ -116,80 +114,36 @@ const CAROUSEL_TOGGLES: ToggleDef[] = [
 ];
 
 interface UseActivityToolsProps {
-  athleteName: string;
-  /** which switches address data the current activity actually has */
-  available: Record<keyof Visibility, boolean>;
-  /** show the COLOUR control (hidden for fixed-palette themes) */
-  colorAdjustable: boolean;
-  /** the effective colour choice (theme default until the user picks) */
-  colorChoice: ColorChoice;
-  /** true while the user hasn't customised — disables the colour Reset */
-  colorIsDefault: boolean;
-  data: ActivityData;
-  location: string;
   mode: CardMode;
-  onAthleteNameChange: (name: string) => void;
-  /** `null` resets the colour to the theme's default choice */
-  onColorChoiceChange: (choice: ColorChoice | null) => void;
-  /** swap by uploading a new file (ACTIVITY section) */
-  onFilesLoaded: (parts: ParsedActivity[]) => void;
-  onLocationChange: (location: string) => void;
-  /** swap by reopening the Strava picker (ACTIVITY section) */
-  onOpenStravaPicker: () => void;
-  onPhotoChange: (file: File | null) => void;
-  onPhotoEffectsChange: (next: PhotoEffects) => void;
-  onSportChange: (sport: Sport) => void;
-  onThemeConfigChange: (next: Record<string, unknown>) => void;
-  onTitleChange: (title: string) => void;
-  onVisibilityChange: (visibility: Visibility) => void;
-  /** the active theme's parameter context (data + extracted palette) */
-  paramCtx: ParamCtx;
-  photoEffects: PhotoEffects;
-  /** editor-specific photo extras (backdrop switch / reposition hint) */
-  photoExtras?: React.ReactNode;
-  photoUrl: string | null;
-  /** the active theme's coerced config */
-  themeConfig: Record<string, unknown>;
+  session: EditorSession;
   /** the theme rail for this mode (rendered at the top of the STYLE section) */
   themeControl: React.ReactNode;
-  /** the active theme's parameter schema */
-  themeParams: ParamDef[];
-  /** raw (unstripped) title for the editable input */
-  title: string;
-  visibility: Visibility;
 }
 
-export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
+export function useActivityTools({
+  mode,
+  session,
+  themeControl,
+}: UseActivityToolsProps): ControlTool[] {
   const {
     data,
-    mode,
-    themeControl,
-    themeParams,
-    themeConfig,
-    onThemeConfigChange,
-    paramCtx,
-    athleteName,
+    title,
     location,
-    visibility,
+    athleteName,
     available,
-    colorAdjustable,
-    colorChoice,
-    colorIsDefault,
-    onColorChoiceChange,
-    photoUrl,
-    photoEffects,
+    visibility,
     onTitleChange,
-    onSportChange,
-    onAthleteNameChange,
     onLocationChange,
+    onAthleteNameChange,
+    onSportChange,
     onVisibilityChange,
-    onPhotoChange,
-    onPhotoEffectsChange,
     onFilesLoaded,
     onOpenStravaPicker,
-    photoExtras,
-    title,
-  } = props;
+    color,
+    config,
+    photo,
+  } = session;
+  const paramCtx: ParamCtx = { data, palette: config.palette };
   const titleId = useId();
   const athleteId = useId();
   const locationId = useId();
@@ -226,11 +180,11 @@ export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
     group: Parameters<typeof ThemeParamGroup>[0]["group"]
   ) => (
     <ThemeParamGroup
-      config={themeConfig}
+      config={config.value}
       ctx={paramCtx}
       group={group}
-      onChange={onThemeConfigChange}
-      params={themeParams}
+      onChange={config.onChange}
+      params={config.params}
     />
   );
 
@@ -248,12 +202,12 @@ export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
       <div className="flex flex-col gap-5">
         <ControlBlock label="THEME">
           {themeControl}
-          {colorAdjustable ? (
+          {color.adjustable ? (
             <ColorControl
-              choice={colorChoice}
-              isDefault={colorIsDefault}
-              onChange={onColorChoiceChange}
-              palette={photoUrl ? paramCtx.palette : null}
+              choice={color.choice}
+              isDefault={color.isDefault}
+              onChange={color.onChange}
+              palette={photo.url ? config.palette : null}
             />
           ) : null}
         </ControlBlock>
@@ -266,15 +220,19 @@ export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
   // the same filter / grain / transform presets in both modes. The "Use as
   // background" switch is the shared `photoBackdrop` visibility flag; the
   // adjustment controls only show while the photo is actually displayed.
-  const photoActive = Boolean(photoUrl) && visibility.photoBackdrop;
+  const photoActive = Boolean(photo.url) && visibility.photoBackdrop;
   tools.push({
     id: "photo",
     label: "PHOTO",
     icon: <ImageIcon {...ICON_PROPS} />,
     content: (
       <ControlBlock label="BACKGROUND PHOTO">
-        <PhotoControl onChange={onPhotoChange} photoUrl={photoUrl} prominent />
-        {photoUrl ? (
+        <PhotoControl
+          onChange={photo.onChange}
+          photoUrl={photo.url}
+          prominent
+        />
+        {photo.url ? (
           <div className="mt-3">
             <ToggleRow
               checked={visibility.photoBackdrop}
@@ -283,20 +241,21 @@ export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
             />
           </div>
         ) : null}
-        {photoExtras}
         {photoActive ? (
           <>
+            <p className="caption-micro mt-2">
+              Tap “Adjust” on the preview to move &amp; zoom
+            </p>
             <div className="mt-3">
               <div className="caption-micro mb-1.5">FILTER</div>
               <PhotoFilterControl
-                effects={photoEffects}
-                onChange={onPhotoEffectsChange}
+                effects={photo.effects}
+                onChange={photo.onEffectsChange}
               />
             </div>
             <PhotoTransformControls
-              allowRotate
-              effects={photoEffects}
-              onChange={onPhotoEffectsChange}
+              effects={photo.effects}
+              onChange={photo.onEffectsChange}
             />
           </>
         ) : null}
@@ -306,7 +265,7 @@ export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
 
   // LAYOUT — composition & type knobs the theme exposes (headline / font /
   // position / treatment / density). Only present when the theme has any.
-  if (themeDeclaresGroup(themeParams, "layout")) {
+  if (themeDeclaresGroup(config.params, "layout")) {
     tools.push({
       id: "layout",
       label: "LAYOUT",
@@ -381,7 +340,7 @@ export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
 
   // MARKS — annotations: carousel chrome (effort mark, page numbers) plus any
   // MARKS params the theme exposes (e.g. STRATA's peak/direction legend).
-  const hasMarkParams = themeDeclaresGroup(themeParams, "marks");
+  const hasMarkParams = themeDeclaresGroup(config.params, "marks");
   if (mode === "carousel" || hasMarkParams) {
     tools.push({
       id: "marks",

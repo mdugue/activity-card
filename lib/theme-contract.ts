@@ -12,7 +12,7 @@
 
 import type { FC } from "react";
 import type { ActivityData } from "@/lib/activity";
-import type { ColorScheme, ThemeColorPolicy } from "@/lib/colors";
+import type { ColorChoice, ColorScheme, ThemeColorPolicy } from "@/lib/colors";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { ParamDef } from "@/lib/params/kinds";
 
@@ -100,9 +100,14 @@ export interface ThemePhotoPolicy {
   defaultOn: boolean;
 }
 
-/** The erased registry-facing descriptor. */
-export interface SingleCardTheme {
-  Component: FC<ThemeProps>;
+/**
+ * The descriptor core EVERY theme shares, regardless of family: identity,
+ * colour policy, photo policy, and parameter specs. The families differ only
+ * in their render strategy — a single-card theme adds a bespoke `Component`
+ * (+ capability declaration); a carousel theme adds its `look` token row,
+ * interpreted by the one shared renderer. "Both are just themes."
+ */
+export interface ThemeBase {
   colors: ThemeColorPolicy;
   defaults: Record<string, unknown>;
   id: string;
@@ -110,6 +115,26 @@ export interface SingleCardTheme {
   params: ParamDef[];
   photo: ThemePhotoPolicy;
   tagline: string;
+}
+
+/** The user's effective colour choice for a theme: their pick, else the
+ *  theme's default choice (photo-first themes), else its own preset scheme. */
+export function effectiveChoiceFor(
+  theme: ThemeBase,
+  choice: ColorChoice | null
+): ColorChoice {
+  return (
+    choice ??
+    theme.colors.defaultChoice ?? {
+      kind: "preset",
+      scheme: theme.colors.default,
+    }
+  );
+}
+
+/** The erased registry-facing single-card descriptor. */
+export interface SingleCardTheme extends ThemeBase {
+  Component: FC<ThemeProps>;
   uses: readonly CapabilityKey[];
   usesWhen?: Partial<Record<CapabilityKey, (data: ActivityView) => boolean>>;
 }

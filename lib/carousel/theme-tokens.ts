@@ -20,6 +20,9 @@
  */
 
 import type { ColorChoice } from "@/lib/colors";
+import type { ParamDef } from "@/lib/params/kinds";
+import { DEFAULT_STRATA_CONFIG, STRATA_PARAMS } from "@/lib/strata";
+import type { ThemeBase } from "@/lib/theme-contract";
 import type { FontPairId, RouteStyle, SlideTemplate } from "./types";
 
 /** Carousel theme identifiers. Add new families here freely — nothing ties this
@@ -123,6 +126,8 @@ export interface CarouselThemeTokens {
   defaultFilter: string;
   /** film grain on by default for this theme */
   defaultGrain: boolean;
+  /** per-theme adjustable knobs (STRATA's mood/density/legend) */
+  defaults?: Record<string, unknown>;
   /** render small path + altitude graphics on the detail slide(s) — for themes
    *  whose hero layer isn't already the route or the elevation range */
   detailViz: boolean;
@@ -139,6 +144,7 @@ export interface CarouselThemeTokens {
   mutedInk: string;
   onAccent: string;
   panelKind: PanelKind;
+  params?: ParamDef[];
   routeStyle: RouteStyle;
   tagline: string;
 }
@@ -335,6 +341,8 @@ export const CAROUSEL_THEME_TOKENS: Record<
     panelKind: "standard",
     deck: DECK_3,
     detailViz: false,
+    params: STRATA_PARAMS,
+    defaults: DEFAULT_STRATA_CONFIG,
     // A background photo is optional: the woven field rides over it, the same
     // way the single card composes the field on a photo.
     defaultFilter: "none",
@@ -354,16 +362,44 @@ export const CAROUSEL_THEME_ORDER: CarouselThemeId[] = [
   "strata",
 ];
 
-/** Carousel-facing label + tagline for the theme picker. */
-export const CAROUSEL_THEME_LABELS: Record<
-  CarouselThemeId,
-  { label: string; tagline: string }
-> = Object.fromEntries(
-  CAROUSEL_THEME_ORDER.map((id) => [
-    id,
-    {
-      label: CAROUSEL_THEME_TOKENS[id].label,
-      tagline: CAROUSEL_THEME_TOKENS[id].tagline,
-    },
-  ])
-) as Record<CarouselThemeId, { label: string; tagline: string }>;
+/**
+ * A carousel theme expressed in the shared descriptor shape (`ThemeBase`) —
+ * identity + colour/photo policy + params — plus its `look` token row for the
+ * renderer. Derived from the rows above, so the tokens stay the single place a
+ * theme is authored while the app sees both families through one shape.
+ */
+export interface CarouselTheme extends ThemeBase {
+  look: CarouselThemeTokens;
+}
+
+export const CAROUSEL_THEMES: Record<CarouselThemeId, CarouselTheme> =
+  Object.fromEntries(
+    CAROUSEL_THEME_ORDER.map((id) => {
+      const look = CAROUSEL_THEME_TOKENS[id];
+      const theme: CarouselTheme = {
+        id,
+        label: look.label,
+        tagline: look.tagline,
+        colors: {
+          default: {
+            primary: look.accent,
+            secondary: look.accent2,
+            onPrimary: look.onAccent,
+          },
+          defaultChoice: look.defaultColorChoice,
+          // Every carousel theme is colour-adjustable; the tokens are the
+          // Reset target.
+          userAdjustable: true,
+        },
+        photo: {
+          defaultOn: true,
+          defaultFilter: look.defaultFilter,
+          defaultGrain: look.defaultGrain,
+        },
+        params: look.params ?? [],
+        defaults: look.defaults ?? {},
+        look,
+      };
+      return [id, theme];
+    })
+  ) as Record<CarouselThemeId, CarouselTheme>;

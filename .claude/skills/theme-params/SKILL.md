@@ -5,13 +5,19 @@ description: Use when adding or editing a single-card theme (the defineTheme des
 
 # theme-params
 
-How a theme describes itself to the app. A single-card theme is **one
-`defineTheme` descriptor** — component, capability declaration, colour policy,
-photo policy, and parameter specs — collected in `components/themes/index.ts`
-(`SINGLE_CARD_THEMES`). Everything the editor shows (which toggles exist, which
-knobs render, whether the colour control appears, the photo defaults) derives
-from the descriptor; there are no parallel metadata tables and no per-theme
-control components.
+How a theme describes itself to the app. EVERY theme — single-card or carousel
+— is expressed through one shared descriptor core, **`ThemeBase`**
+(`lib/theme-contract.ts`: identity, colour policy, photo policy, params). The
+families add only their render strategy: a single-card theme is a `defineTheme`
+descriptor with a bespoke `Component` (+ capability declaration), collected in
+`SINGLE_CARD_THEMES` (`components/themes/index.ts`); a carousel theme is a
+token row whose `ThemeBase` shape is derived into `CAROUSEL_THEMES`
+(`lib/carousel/theme-tokens.ts`). Everything the editor shows (which toggles
+exist, which knobs render, whether the colour control appears, the photo
+defaults) derives from the descriptor; there are no parallel metadata tables
+and no per-theme control components. `app/page.tsx` treats both modes through
+one `activeTheme: ThemeBase` lookup and hands the editors one shared
+`EditorSession` object (`components/app/editor-session.ts`).
 
 ## The descriptor (`lib/theme-contract.ts`)
 
@@ -107,11 +113,13 @@ space). Calculated *output* from a fixed choice needs no schema work — the
 component derives it at render.
 
 **Config**: per-theme configs live in one `themeConfigs: Record<string,
-unknown>` slot in `app/page.tsx`, keyed by a config key shared across families
-(single-card `strata` and carousel `strata` share `"strata"`). Reads go through
-`resolveThemeConfig(key, raw)` (`lib/params/registry.ts` →
-`coerceConfig`): wrong type, out-of-range slider, unknown option id → default;
-unknown keys dropped. Config interfaces `extends Record<string, unknown>`.
+unknown>` slot in `app/page.tsx`, keyed by theme id (single-card `strata` and
+carousel `strata` share `"strata"`, so the same knobs drive both). Reads go
+through `coerceConfig(activeTheme.defaults, activeTheme.params, raw)`
+(`lib/params/resolve.ts`): wrong type, out-of-range slider, unknown option id →
+default; unknown keys dropped. Param specs live on the theme descriptors —
+there is no separate spec registry. Config interfaces
+`extends Record<string, unknown>`.
 
 **Rendering**: `components/app/param-control.tsx` maps one `ParamDef` to a
 primitive; `components/app/theme-params.tsx` renders a theme's params for one
@@ -127,8 +135,9 @@ Full walkthrough with skeletons and checklists: `docs/creating-a-theme.md`.
    `SINGLE_CARD_THEMES` and `THEME_ORDER`; colocate a story. The compiler
    verifies the `uses` list against what the component reads.
 2. **New knob** — add a `ParamDef` to the theme's `*_PARAMS` spec (pure data in
-   `lib/<theme>.ts`, JSX-free and testable) and, for a new theme with knobs, a
-   row in `THEME_PARAM_SPECS` (`lib/params/registry.ts`). Nothing else to wire.
-3. **Tests** — pure logic in `lib/<theme>.test.ts`; contract invariants live in
-   `lib/theme-contract.test.ts`, `lib/params/registry.test.ts`,
-   `lib/colors.test.ts`.
+   `lib/<theme>.ts`, JSX-free and testable) and reference it from the theme's
+   descriptor (`defineTheme` `params`/`defaults`, or the carousel token row's
+   `params`/`defaults`). Nothing else to wire.
+3. **Tests** — pure logic in `lib/<theme>.test.ts`; registry/contract
+   invariants live in `lib/theme-registry.test.ts`,
+   `lib/theme-contract.test.ts`, `lib/colors.test.ts`.

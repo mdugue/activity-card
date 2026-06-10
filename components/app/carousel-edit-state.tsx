@@ -16,75 +16,41 @@ import { Badge } from "@/components/ui/badge";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CarouselController } from "@/hooks/use-carousel";
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
-import type { ActivityData, Sport } from "@/lib/activity";
 import {
-  CAROUSEL_THEME_LABELS,
   CAROUSEL_THEME_ORDER,
+  CAROUSEL_THEMES,
   type CarouselThemeId,
 } from "@/lib/carousel/theme-tokens";
-import type { ColorChoice, ColorScheme } from "@/lib/colors";
 import { carouselBaseName, exportCarousel } from "@/lib/export-carousel";
 import {
   clampCoverTransform,
   type ImageTransform,
 } from "@/lib/image-transform";
-import type { ExtractedPalette } from "@/lib/palette";
-import type { ParamDef } from "@/lib/params/kinds";
-import type { ParsedActivity } from "@/lib/parse-activity";
-import { isQuarterTurn, type PhotoEffects } from "@/lib/photo-effects";
+import { isQuarterTurn } from "@/lib/photo-effects";
 import type { StrataConfig } from "@/lib/strata";
 import { cn } from "@/lib/utils";
-import type { Visibility } from "@/lib/visibility";
 import { useActivityTools } from "./activity-tools";
 import { CardStage } from "./card-stage";
 import { ControlDeck, PANEL_MOTION } from "./control-deck";
+import type { EditorSession } from "./editor-session";
 import { ImageAdjustOverlay } from "./image-adjust-overlay";
 import { SlideStrip } from "./slide-strip";
 import { ThemeRail } from "./theme-rail";
 
 interface CarouselEditStateProps {
-  athleteName: string;
-  available: Record<keyof Visibility, boolean>;
   carousel: CarouselController;
-  /** the effective colour choice (theme default until the user picks) */
-  colorChoice: ColorChoice;
-  /** true while the user hasn't customised the colour */
-  colorIsDefault: boolean;
-  /** the resolved colour scheme the deck renders with */
-  colors: ColorScheme;
-  /** the active carousel theme's coerced parameter config (StrataConfig for the
-   *  STRATA carousel; {} for the rest) */
-  config: Record<string, unknown>;
-  data: ActivityData;
-  imageTransform: ImageTransform;
-  location: string;
-  onAthleteNameChange: (name: string) => void;
-  onColorChoiceChange: (choice: ColorChoice | null) => void;
-  onConfigChange: (next: Record<string, unknown>) => void;
-  onFilesLoaded: (parts: ParsedActivity[]) => void;
-  onImageTransformChange: (next: ImageTransform) => void;
-  onLocationChange: (location: string) => void;
-  onOpenStravaPicker: () => void;
-  onPhotoChange: (file: File | null) => void;
-  onPhotoEffectsChange: (next: PhotoEffects) => void;
-  onSportChange: (sport: Sport) => void;
   onThemeChange: (theme: CarouselThemeId) => void;
-  onTitleChange: (title: string) => void;
-  onVisibilityChange: (visibility: Visibility) => void;
-  /** all five palette presets — colour-control swatches + calculated params */
-  paramPalette: ExtractedPalette | null;
-  photoEffects: PhotoEffects;
-  photoUrl: string | null;
+  session: EditorSession;
   theme: CarouselThemeId;
-  /** the active carousel theme's parameter schema */
-  themeParams: ParamDef[];
-  title: string;
-  visibility: Visibility;
 }
 
-export function CarouselEditState(props: CarouselEditStateProps) {
-  const { carousel, data, theme, photoUrl, imageTransform, photoEffects } =
-    props;
+export function CarouselEditState({
+  carousel,
+  session,
+  theme,
+  onThemeChange,
+}: CarouselEditStateProps) {
+  const { data, visibility, color, config, photo } = session;
   const { slides, selectedId, selectedIndex } = carousel;
 
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -104,9 +70,9 @@ export function CarouselEditState(props: CarouselEditStateProps) {
   // Natural photo size → true-cover, pannable panorama + a clamp that respects
   // the wide strip's real vertical overflow. A quarter-turn swaps the photo's
   // width/height, so the clamp must use the rotated dimensions.
-  const imageSize = useImageNaturalSize(photoUrl);
+  const imageSize = useImageNaturalSize(photo.url);
   const stripW = slides.length * 1080;
-  const quarter = isQuarterTurn(photoEffects.rotate);
+  const quarter = isQuarterTurn(photo.effects.rotate);
   const coverClamp = imageSize
     ? (t: ImageTransform) =>
         clampCoverTransform(
@@ -122,7 +88,7 @@ export function CarouselEditState(props: CarouselEditStateProps) {
   // size — the pan/zoom clamp (coverClamp) is derived from imageSize, so
   // offering Adjust before it resolves would pan against the wrong bounds.
   const adjustAvailable =
-    photoUrl !== null && props.visibility.photoBackdrop && imageSize !== null;
+    photo.url !== null && visibility.photoBackdrop && imageSize !== null;
   useEffect(() => {
     if (adjusting && !adjustAvailable) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -226,53 +192,29 @@ export function CarouselEditState(props: CarouselEditStateProps) {
   };
 
   const canvasProps = {
-    colors: props.colors,
+    colors: color.scheme,
     data,
     imageSize,
-    imageTransform,
-    photoEffects,
-    photoUrl,
+    imageTransform: photo.transform,
+    photoEffects: photo.effects,
+    photoUrl: photo.url,
     slides,
-    strataConfig: props.config as StrataConfig,
+    strataConfig: config.value as StrataConfig,
     theme,
-    visibility: props.visibility,
+    visibility,
   };
 
   const tools = useActivityTools({
-    athleteName: props.athleteName,
-    available: props.available,
-    colorAdjustable: true,
-    colorChoice: props.colorChoice,
-    colorIsDefault: props.colorIsDefault,
-    data,
-    location: props.location,
     mode: "carousel",
-    onAthleteNameChange: props.onAthleteNameChange,
-    onColorChoiceChange: props.onColorChoiceChange,
-    onFilesLoaded: props.onFilesLoaded,
-    onLocationChange: props.onLocationChange,
-    onOpenStravaPicker: props.onOpenStravaPicker,
-    onPhotoChange: props.onPhotoChange,
-    onPhotoEffectsChange: props.onPhotoEffectsChange,
-    onSportChange: props.onSportChange,
-    onThemeConfigChange: props.onConfigChange,
-    onTitleChange: props.onTitleChange,
-    onVisibilityChange: props.onVisibilityChange,
-    paramCtx: { data, palette: props.paramPalette },
-    photoEffects,
-    photoUrl,
-    themeConfig: props.config,
+    session,
     themeControl: (
       <ThemeRail
-        labels={CAROUSEL_THEME_LABELS}
-        onThemeChange={props.onThemeChange}
+        labels={CAROUSEL_THEMES}
+        onThemeChange={onThemeChange}
         order={CAROUSEL_THEME_ORDER}
         theme={theme}
       />
     ),
-    themeParams: props.themeParams,
-    title: props.title,
-    visibility: props.visibility,
   });
 
   const preview = (
@@ -339,9 +281,9 @@ export function CarouselEditState(props: CarouselEditStateProps) {
         {adjusting ? (
           <ImageAdjustOverlay
             clamp={coverClamp}
-            onChange={props.onImageTransformChange}
+            onChange={photo.onTransformChange}
             onDone={() => setAdjusting(false)}
-            transform={imageTransform}
+            transform={photo.transform}
           />
         ) : null}
       </CardStage>
@@ -360,18 +302,18 @@ export function CarouselEditState(props: CarouselEditStateProps) {
         )}
       >
         <SlideStrip
-          colors={props.colors}
+          colors={color.scheme}
           data={data}
           imageSize={imageSize}
-          imageTransform={imageTransform}
+          imageTransform={photo.transform}
           onSelect={carousel.select}
-          photoEffects={photoEffects}
-          photoUrl={photoUrl}
+          photoEffects={photo.effects}
+          photoUrl={photo.url}
           selectedId={selectedId}
           slides={slides}
-          strataConfig={props.config as StrataConfig}
+          strataConfig={config.value as StrataConfig}
           theme={theme}
-          visibility={props.visibility}
+          visibility={visibility}
         />
       </div>
     </div>

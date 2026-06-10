@@ -5,19 +5,6 @@
 
 import type { ActivityData, Coord } from "@/lib/activity";
 
-// Re-export the domain types for any straggler imports; new code should import
-// from `@/lib/activity` directly.
-export type {
-  ActivityData,
-  ActivitySource,
-  Coord,
-  Split,
-  Sport,
-  Transition,
-  TriSegment,
-  Zone,
-} from "@/lib/activity";
-
 /* ------------- deterministic shape generators ------------- */
 
 export function genLoop(seed: number, n: number): Coord[] {

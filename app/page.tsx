@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { CarouselEditState } from "@/components/app/carousel-edit-state";
 import { DownloadState } from "@/components/app/download-state";
 import { EditState } from "@/components/app/edit-state";
+import type { EditorSession } from "@/components/app/editor-session";
 import { EffortWordmark } from "@/components/app/effort-wordmark";
 import { EmptyState } from "@/components/app/empty-state";
 import { type CardMode, ModeToggle } from "@/components/app/mode-toggle";
@@ -18,13 +19,10 @@ import { useCarousel } from "@/hooks/use-carousel";
 import { useImagePalette } from "@/hooks/use-image-palette";
 import type { ActivityData, ActivitySource, Sport } from "@/lib/activity";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
-import {
-  carouselColorPolicy,
-  carouselPhotoPolicy,
-} from "@/lib/carousel/resolve";
 import { carouselVisibilityAvailable } from "@/lib/carousel/stats";
 import {
   CAROUSEL_THEME_TOKENS,
+  CAROUSEL_THEMES,
   type CarouselThemeId,
   DEFAULT_CAROUSEL_THEME,
 } from "@/lib/carousel/theme-tokens";
@@ -35,9 +33,10 @@ import {
 } from "@/lib/colors";
 import { formatDateUpper } from "@/lib/format";
 import { IDENTITY_TRANSFORM, type ImageTransform } from "@/lib/image-transform";
-import { resolveThemeConfig, themeParams } from "@/lib/params/registry";
+import { coerceConfig } from "@/lib/params/resolve";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import { NO_EFFECTS, type PhotoEffects } from "@/lib/photo-effects";
+import { effectiveChoiceFor, type ThemeBase } from "@/lib/theme-contract";
 import { cn } from "@/lib/utils";
 import {
   applyVisibility,
@@ -129,26 +128,6 @@ function migrateThemeConfigs(
   return configs;
 }
 
-/** The active theme's colour policy + the choice in effect: the user's pick,
- *  else the theme's default choice (Exposure → photo:vibrant), else its own
- *  preset scheme. Pure, so Home stays simple. */
-function activeColorContext(
-  mode: CardMode,
-  theme: ThemeId,
-  carouselTheme: CarouselThemeId,
-  colorChoice: ColorChoice | null
-) {
-  const policy =
-    mode === "carousel"
-      ? carouselColorPolicy(carouselTheme)
-      : SINGLE_CARD_THEMES[theme].colors;
-  const effectiveChoice: ColorChoice = colorChoice ??
-    policy.defaultChoice ?? { kind: "preset", scheme: policy.default };
-  const paletteVariant =
-    effectiveChoice.kind === "photo" ? effectiveChoice.variant : "vibrant";
-  return { policy, effectiveChoice, paletteVariant };
-}
-
 /** The persisted colour choice, with legacy formats folded in: the pre-round-2
  *  `accent` hex becomes a preset choice; a Photo-theme user's PhotoMood (or its
  *  round-1 `themeConfigs.photo.palette` form) becomes a photo-derived choice. */
@@ -216,16 +195,21 @@ export default function Home() {
   // `adoptParsed` when the parsed file lacks an athlete name.
   const persistedAthleteNameRef = useRef<string | undefined>(undefined);
 
-  // The active theme's config + schema (the single card uses `theme`; the
-  // carousel uses `carouselTheme` — both index the same "strata" key).
-  const activeConfigKey = mode === "carousel" ? carouselTheme : theme;
-  const activeConfig = resolveThemeConfig(
-    activeConfigKey,
-    themeConfigs[activeConfigKey]
+  // Both families express a theme through the same descriptor core
+  // (`ThemeBase`): one lookup supplies identity, params, colour and photo
+  // policy for whichever mode is editing. The single-card `strata` and the
+  // carousel `strata` share the id, so they share one config slot.
+  const activeTheme: ThemeBase =
+    mode === "carousel"
+      ? CAROUSEL_THEMES[carouselTheme]
+      : SINGLE_CARD_THEMES[theme];
+  const activeConfig = coerceConfig(
+    activeTheme.defaults,
+    activeTheme.params,
+    themeConfigs[activeTheme.id]
   );
-  const activeThemeParams = themeParams(activeConfigKey);
   const setActiveConfig = (next: Record<string, unknown>) =>
-    setThemeConfigs((prev) => ({ ...prev, [activeConfigKey]: next }));
+    setThemeConfigs((prev) => ({ ...prev, [activeTheme.id]: next }));
 
   // Colour resolution: the active theme's policy supplies the default scheme
   // and (for photo-first themes like Exposure) a default photo-derived choice;
@@ -233,16 +217,12 @@ export default function Home() {
   // the extracted palette and falls back to the theme default while none is
   // available. One palette extraction serves the whole app (the colour
   // control's swatches + any photo-derived choice).
-  const {
-    policy: activeColorPolicy,
-    effectiveChoice: effectiveColorChoice,
-    paletteVariant,
-  } = activeColorContext(mode, theme, carouselTheme, colorChoice);
-  const photoPalette = useImagePalette(photoUrl, paletteVariant);
+  const effectiveColorChoice = effectiveChoiceFor(activeTheme, colorChoice);
+  const photoPalette = useImagePalette(photoUrl);
   const colors = resolveColors(
     effectiveColorChoice,
-    activeColorPolicy.default,
-    photoUrl ? photoPalette.palette : null
+    activeTheme.colors.default,
+    photoPalette
   );
 
   // Restore UI prefs (theme, accent, visibility, moods, athleteName) on mount.
@@ -430,12 +410,7 @@ export default function Home() {
     setData((prev) => (prev ? { ...prev, location } : prev));
   };
 
-  // The active theme's photo policy — default backdrop state + signature
-  // filter/grain look — for whichever mode is editing. One model, both modes.
-  const activePhotoPolicy =
-    mode === "carousel"
-      ? carouselPhotoPolicy(carouselTheme)
-      : SINGLE_CARD_THEMES[theme].photo;
+  const activePhotoPolicy = activeTheme.photo;
 
   const handlePhotoChange = (file: File | null) => {
     setPhotoUrl((prev) => {
@@ -500,7 +475,7 @@ export default function Home() {
   const handleCarouselThemeChange = (id: CarouselThemeId) => {
     setCarouselTheme(id);
     if (photoUrl) {
-      const policy = carouselPhotoPolicy(id);
+      const policy = CAROUSEL_THEMES[id].photo;
       setPhotoEffects((prev) => ({
         ...prev,
         filter: policy.defaultFilter ?? "none",
@@ -530,6 +505,51 @@ export default function Home() {
   };
 
   const visibleData = data ? applyVisibility(data, visibility) : data;
+
+  // Everything the editors share, in one object (see EditorSession). Built
+  // per render with the mode-appropriate availability + colour policy.
+  const session: EditorSession | null =
+    visibleData && data
+      ? {
+          data: visibleData,
+          title: data.title,
+          location: data.location,
+          athleteName: data.athleteName,
+          available:
+            mode === "carousel"
+              ? carouselVisibilityAvailable(data, carouselTheme)
+              : themeAvailability(data, SINGLE_CARD_THEMES[theme]),
+          visibility,
+          onVisibilityChange: setVisibility,
+          onTitleChange: handleTitleChange,
+          onLocationChange: handleLocationChange,
+          onAthleteNameChange: handleAthleteNameChange,
+          onSportChange: handleSportChange,
+          onFilesLoaded: handleFilesLoaded,
+          onOpenStravaPicker: handleOpenStravaPicker,
+          color: {
+            adjustable: activeTheme.colors.userAdjustable,
+            choice: effectiveColorChoice,
+            isDefault: colorChoice === null,
+            onChange: setColorChoice,
+            scheme: colors,
+          },
+          config: {
+            onChange: setActiveConfig,
+            palette: photoPalette,
+            params: activeTheme.params,
+            value: activeConfig,
+          },
+          photo: {
+            effects: photoEffects,
+            onChange: handlePhotoChange,
+            onEffectsChange: setPhotoEffects,
+            onTransformChange: setImageTransform,
+            transform: imageTransform,
+            url: photoUrl,
+          },
+        }
+      : null;
 
   return (
     <div
@@ -563,75 +583,22 @@ export default function Home() {
           onReauth={handleConnectStrava}
         />
       ) : null}
-      {state === "edit" && visibleData && data ? (
+      {state === "edit" && session ? (
         <div className="flex flex-1 flex-col max-lg:min-h-0">
           <EditTopBar mode={mode} onModeChange={setMode} />
           {mode === "carousel" ? (
             <CarouselEditState
-              athleteName={data.athleteName}
-              available={carouselVisibilityAvailable(data, carouselTheme)}
               carousel={carousel}
-              colorChoice={effectiveColorChoice}
-              colorIsDefault={colorChoice === null}
-              colors={colors}
-              config={activeConfig}
-              data={visibleData}
-              imageTransform={imageTransform}
-              location={data.location}
-              onAthleteNameChange={handleAthleteNameChange}
-              onColorChoiceChange={setColorChoice}
-              onConfigChange={setActiveConfig}
-              onFilesLoaded={handleFilesLoaded}
-              onImageTransformChange={setImageTransform}
-              onLocationChange={handleLocationChange}
-              onOpenStravaPicker={handleOpenStravaPicker}
-              onPhotoChange={handlePhotoChange}
-              onPhotoEffectsChange={setPhotoEffects}
-              onSportChange={handleSportChange}
               onThemeChange={handleCarouselThemeChange}
-              onTitleChange={handleTitleChange}
-              onVisibilityChange={setVisibility}
-              paramPalette={photoPalette.palette}
-              photoEffects={photoEffects}
-              photoUrl={photoUrl}
+              session={session}
               theme={carouselTheme}
-              themeParams={activeThemeParams}
-              title={data.title}
-              visibility={visibility}
             />
           ) : (
             <EditState
-              athleteName={data.athleteName}
-              available={themeAvailability(data, SINGLE_CARD_THEMES[theme])}
-              colorAdjustable={activeColorPolicy.userAdjustable}
-              colorChoice={effectiveColorChoice}
-              colorIsDefault={colorChoice === null}
-              colors={colors}
-              config={activeConfig}
-              data={visibleData}
-              imageTransform={imageTransform}
-              location={data.location}
-              onAthleteNameChange={handleAthleteNameChange}
-              onColorChoiceChange={setColorChoice}
-              onConfigChange={setActiveConfig}
               onDownload={handleDownload}
-              onFilesLoaded={handleFilesLoaded}
-              onImageTransformChange={setImageTransform}
-              onLocationChange={handleLocationChange}
-              onOpenStravaPicker={handleOpenStravaPicker}
-              onPhotoChange={handlePhotoChange}
-              onPhotoEffectsChange={setPhotoEffects}
-              onSportChange={handleSportChange}
               onThemeChange={handleSingleThemeChange}
-              onTitleChange={handleTitleChange}
-              onVisibilityChange={setVisibility}
-              paramPalette={photoPalette.palette}
-              photoEffects={photoEffects}
-              photoUrl={photoUrl}
+              session={session}
               theme={theme}
-              themeParams={activeThemeParams}
-              title={data.title}
-              visibility={visibility}
             />
           )}
         </div>

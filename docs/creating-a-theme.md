@@ -217,7 +217,7 @@ PLAYWRIGHT_BROWSERS_PATH=… bun run test:e2e e2e/themes.spec.ts
 - [ ] Colour policy chosen; adjustable themes consume `colors.primary`
 - [ ] Photo policy chosen; photo rendered via a shared layer
 - [ ] Registered in `SINGLE_CARD_THEMES` + `THEME_ORDER`
-- [ ] Knobs (if any) as `ParamDef`s in `lib/<name>.ts` + `THEME_PARAM_SPECS`
+- [ ] Knobs (if any) as `ParamDef`s in `lib/<name>.ts`, referenced from the descriptor
 - [ ] Colocated story, tagged `ai-generated`, with `backgroundArgTypes`
 - [ ] `bun lint && bun typecheck && bun run test && bun run build-storybook` green
 
@@ -268,9 +268,9 @@ Knobs are **data, not components** (`theme-params` skill has the full model):
    `visibleWhen(config)` makes a control conditional on another knob.
 2. Add the field to the theme's config interface
    (`extends Record<string, unknown>`) and its `DEFAULT_*_CONFIG`.
-3. For a theme gaining its first knobs: add a `{ defaults, params }` row to
-   `THEME_PARAM_SPECS` (`lib/params/registry.ts`) and pass
-   `params`/`defaults` in its `defineTheme` call.
+3. For a theme gaining its first knobs: pass `params`/`defaults` in its
+   `defineTheme` call (single card) or on its token row (carousel) — the
+   descriptors are the only spec source.
 4. Read the value off the component's typed `config` prop.
 5. Add a story variant exercising the knob, and a `bun:test` for any new pure
    logic. The control renders generically — there is nothing else to build.
@@ -282,7 +282,7 @@ Knobs are **data, not components** (`theme-params` skill has the full model):
 ```
 lib/theme-contract.ts                     defineTheme · capabilities · ThemeData · ThemeProps
 lib/colors.ts                             ColorScheme · ColorChoice · resolveColors
-lib/params/                               ParamDef model · registry · coercion
+lib/params/                               ParamDef model · coerceConfig coercion
 lib/activity.ts                           the ActivityData model
 lib/chart-helpers.ts                      route/elevation projection (uniform scale!)
 lib/<theme>.ts                            a theme's pure logic + *_PARAMS (bun-tested)
@@ -291,5 +291,6 @@ components/themes/single-card/<name>.tsx  a single-card theme (component + descr
 components/themes/shared/                 PhotoLayer · PhotoBackdrop · PhotoUnderlay ·
                                           CoverPhoto · photo-fx context · OverlayRoute
 components/themes/carousel/               the carousel renderer + templates/panels
-lib/carousel/theme-tokens.ts              carousel theme rows (CarouselThemeId)
+lib/carousel/theme-tokens.ts              carousel theme rows + derived CAROUSEL_THEMES
+components/app/editor-session.ts          the one object the editors share
 ```

@@ -66,10 +66,13 @@ roots to that script (and `bunfig.toml`'s note) if tests grow beyond `lib/`.
 
 ## Themes — two families
 
-Effort has **two independent theme systems**. They share the `ActivityData`
-model and the route/elevation geometry helpers (`lib/chart-helpers.ts`) but
-nothing else — separate id spaces, separate rendering models. Keep them
-separate; never cross-import a single-card theme into the carousel or vice-versa.
+Effort has **two theme families**. Every theme — either family — is expressed
+through the same descriptor core (`ThemeBase` in `lib/theme-contract.ts`:
+identity, colour policy, photo policy, params) and the same editor machinery;
+the families differ only in their **render strategy** and keep separate id
+spaces. Never cross-import a single-card theme into the carousel renderer or
+vice-versa — the renderers' guarantees differ (a bespoke poster vs the seamless
+strip).
 
 |                | Single card                                            | Carousel ("accordion")                                              |
 | -------------- | ------------------------------------------------------ | ------------------------------------------------------------------- |
@@ -163,10 +166,11 @@ lib/                  Utilities (`cn`, parsers, formatters). `lib/activity.ts` i
                       canonical ActivityData model. `lib/theme-contract.ts` holds the
                       single-card descriptor contract (capabilities, ThemeData,
                       defineTheme); `lib/colors.ts` the ColorScheme/ColorChoice model.
-                      `lib/carousel/` holds the carousel theme tokens, deck + stat
-                      planning, and resolve logic. `lib/params/` holds the editor
-                      parameter schema (`ParamDef`), the per-theme registry, and
-                      `resolveThemeConfig` coercion.
+                      `lib/carousel/` holds the carousel theme tokens (+ the derived
+                      `CAROUSEL_THEMES` ThemeBase registry), deck + stat planning, and
+                      resolve logic. `lib/params/` holds the editor parameter schema
+                      (`ParamDef`) and `coerceConfig` coercion; param specs live on the
+                      theme descriptors themselves.
 public/               Static assets.
 .storybook/           Storybook config + the shared preview, background presets,
                       and the background-photo decorator.
@@ -197,9 +201,10 @@ public/               Static assets.
   the id to `CarouselThemeId` + `CAROUSEL_THEME_ORDER`), **plus a story for it in
   `components/themes/carousel/seamless-canvas.stories.tsx`**. See the `carousel-themes` skill.
 - **A new adjustable knob on a theme** → add a `ParamDef` to the theme's
-  `*_PARAMS` spec (pure data in `lib/<theme>.ts`) and, for a new theme, a row in
-  `THEME_PARAM_SPECS` (`lib/params/registry.ts`). It renders generically — no new
-  control component, app-state field, or dispatch arm. See the `theme-params` skill.
+  `*_PARAMS` spec (pure data in `lib/<theme>.ts`) and reference it from the
+  theme's descriptor (`defineTheme` `params`/`defaults`, or the carousel token
+  row). It renders generically — no new control component, app-state field, or
+  dispatch arm. See the `theme-params` skill.
 - **A new shadcn primitive** → `bunx shadcn add <name>` (lands in `components/ui/`, untouched).
 - **A new shared utility** → `lib/<name>.ts`.
 
