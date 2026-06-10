@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { type RefObject, useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 
 // @remotion/player pulls in the Remotion runtime; keep it out of the landing
 // screen's initial bundle and off the server by loading it lazily + client-only.
@@ -34,31 +35,28 @@ function useInView(ref: RefObject<Element | null>): boolean {
 }
 
 /**
- * A small, secondary intro preview that sits well below the hero so it never
- * competes with the animated claim + panels. The clip itself is a placeholder
- * Remotion composition (rendered on-page through @remotion/player); the label
- * and its closing beat make clear the real walkthrough is still on the way.
+ * The placeholder intro clip — a Remotion composition rendered on-page through
+ * @remotion/player. Lazily mounted only once scrolled into view, and tagged with
+ * a "Coming soon" badge (its closing beat says the same) so it always reads as a
+ * stand-in until the real walkthrough is produced. The surrounding section copy
+ * lives at the call site.
  */
-export function IntroVideo() {
+export function IntroVideo({ className }: { className?: string }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const inView = useInView(frameRef);
   return (
-    <div className="mx-auto mt-16 flex w-full max-w-sm flex-col items-center lg:mt-24">
-      <div className="flex items-center gap-2.5">
-        <p className="caption-label">See how it works</p>
-        <span className="rounded-full bg-primary/15 px-2 py-0.5 font-medium font-mono text-[10px] text-primary uppercase tracking-[0.16em]">
-          Coming soon
-        </span>
-      </div>
-      <div
-        className="relative mt-3 aspect-video w-full overflow-hidden bg-foreground ring-1 ring-foreground/10"
-        ref={frameRef}
-      >
-        {inView ? <IntroPlayer /> : null}
-      </div>
-      <p className="mt-2.5 text-center font-medium font-mono text-[10px] text-foreground/40 uppercase tracking-[0.14em]">
-        Placeholder preview — the real walkthrough is on its way
-      </p>
+    <div
+      className={cn(
+        "relative aspect-video w-full overflow-hidden bg-foreground",
+        className
+      )}
+      ref={frameRef}
+    >
+      {inView ? <IntroPlayer /> : null}
+      <span className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 rounded-full bg-primary px-2.5 py-1 font-medium font-mono text-[10px] text-primary-foreground uppercase tracking-[0.16em] shadow-sm">
+        <span className="size-1.5 rounded-full bg-primary-foreground/80" />
+        Coming soon
+      </span>
     </div>
   );
 }
