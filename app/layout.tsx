@@ -32,7 +32,10 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: light)", color: "#faf8f5" },
     { media: "(prefers-color-scheme: dark)", color: "#1a1714" },
   ],
-  colorScheme: "light",
+  // Declare support for both so the browser themes native UI (scrollbars, form
+  // controls, the canvas) to the active scheme. Listed light-first so a browser
+  // with no/unknown preference falls back to the light theme.
+  colorScheme: "light dark",
 };
 
 export default function RootLayout({
