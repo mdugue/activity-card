@@ -34,33 +34,31 @@ function useInView(ref: RefObject<Element | null>): boolean {
 }
 
 /**
- * The empty-state "How it works" band: a short, looping intro that sits below
- * the action bar so the page reads value → CTA → see-it-in-action. The clip is
- * a Remotion composition (placeholder until the real walkthrough is produced),
- * rendered on-page through @remotion/player.
+ * A small, secondary intro preview that sits well below the hero so it never
+ * competes with the animated claim + panels. The clip itself is a placeholder
+ * Remotion composition (rendered on-page through @remotion/player); the label
+ * and its closing beat make clear the real walkthrough is still on the way.
  */
 export function IntroVideo() {
   const frameRef = useRef<HTMLDivElement>(null);
   const inView = useInView(frameRef);
   return (
-    <section className="w-full max-w-[64rem] lg:mx-auto">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <p className="caption-label">See it in action</p>
-          <p className="mt-1.5 font-heading text-2xl uppercase leading-none lg:text-3xl">
-            How it works
-          </p>
-        </div>
-        <p className="hidden font-medium font-mono text-[11px] text-foreground/45 uppercase tracking-[0.18em] sm:block">
-          ~5 sec
-        </p>
+    <div className="mx-auto mt-16 flex w-full max-w-sm flex-col items-center lg:mt-24">
+      <div className="flex items-center gap-2.5">
+        <p className="caption-label">See how it works</p>
+        <span className="rounded-full bg-primary/15 px-2 py-0.5 font-medium font-mono text-[10px] text-primary uppercase tracking-[0.16em]">
+          Coming soon
+        </span>
       </div>
       <div
-        className="mt-4 aspect-video w-full overflow-hidden bg-foreground ring-1 ring-foreground/10"
+        className="relative mt-3 aspect-video w-full overflow-hidden bg-foreground ring-1 ring-foreground/10"
         ref={frameRef}
       >
         {inView ? <IntroPlayer /> : null}
       </div>
-    </section>
+      <p className="mt-2.5 text-center font-medium font-mono text-[10px] text-foreground/40 uppercase tracking-[0.14em]">
+        Placeholder preview — the real walkthrough is on its way
+      </p>
+    </div>
   );
 }

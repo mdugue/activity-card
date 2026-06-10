@@ -143,6 +143,21 @@ export const EffortIntro: React.FC = () => (
         </span>
         <span style={{ backgroundColor: RUST, height: 2, width: 44 }} />
       </RiseIn>
+      {/* This clip is a placeholder; the closing beat says so outright. */}
+      <RiseIn delay={56} style={{ marginTop: 14 }}>
+        <div
+          style={{
+            color: PAPER,
+            fontSize: 19,
+            fontWeight: 600,
+            letterSpacing: 5,
+            opacity: 0.4,
+            textTransform: "uppercase",
+          }}
+        >
+          Full walkthrough coming soon
+        </div>
+      </RiseIn>
     </div>
   </AbsoluteFill>
 );

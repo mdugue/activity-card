@@ -217,84 +217,88 @@ export function EmptyState({
   };
 
   return (
-    <section className="relative flex flex-1 flex-col items-center justify-center gap-5 px-6 pt-20 pb-10 lg:gap-8 lg:pt-24 lg:pb-16">
-      <p
-        className="w-full max-w-[64rem] text-balance text-left font-medium text-foreground/70 text-lg leading-snug lg:mx-auto lg:text-center lg:text-xl"
-        style={claimStyle(intro.stage)}
-      >
-        {intro.claim}
-      </p>
-
-      {/* Claim panels: a swipe rail on touch, a 4-up grid from lg up. The
-          intro animation slices a seamless photo overlay into these slides. */}
-      <div className="relative w-full max-w-[64rem] lg:mx-auto">
-        <div
-          className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto lg:snap-none lg:overflow-x-visible"
-          onScroll={handleRailScroll}
-          ref={railRef}
+    <section className="relative flex flex-1 flex-col px-6 pt-20 pb-10 lg:pt-24 lg:pb-16">
+      {/* Hero — the animated claim, panels, and CTA, vertically centred so it
+          owns the page; the intro preview below stays clearly secondary. */}
+      <div className="flex flex-1 flex-col items-center justify-center gap-5 lg:gap-8">
+        <p
+          className="w-full max-w-[64rem] text-balance text-left font-medium text-foreground/70 text-lg leading-snug lg:mx-auto lg:text-center lg:text-xl"
+          style={claimStyle(intro.stage)}
         >
+          {intro.claim}
+        </p>
+
+        {/* Claim panels: a swipe rail on touch, a 4-up grid from lg up. The
+          intro animation slices a seamless photo overlay into these slides. */}
+        <div className="relative w-full max-w-[64rem] lg:mx-auto">
+          <div
+            className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto lg:snap-none lg:overflow-x-visible"
+            onScroll={handleRailScroll}
+            ref={railRef}
+          >
+            {PANELS.map((p, i) => (
+              <ClaimPanel
+                glyph={p.glyph}
+                index={i}
+                key={p.word}
+                stage={intro.stage}
+                word={p.word}
+                wordClass={p.wordClass}
+              />
+            ))}
+          </div>
+          <RevealOverlay photoSrc="/images/dunes.webp" stage={intro.stage} />
+        </div>
+
+        {/* Swipe affordance — touch only; tracks the centred slide. */}
+        <div className="flex gap-1.5 lg:hidden">
           {PANELS.map((p, i) => (
-            <ClaimPanel
-              glyph={p.glyph}
-              index={i}
+            <span
+              className={cn(
+                "h-1.5 rounded-full transition-all",
+                i === activeSlide ? "w-4 bg-primary" : "w-1.5 bg-foreground/25"
+              )}
               key={p.word}
-              stage={intro.stage}
-              word={p.word}
-              wordClass={p.wordClass}
             />
           ))}
         </div>
-        <RevealOverlay photoSrc="/images/dunes.webp" stage={intro.stage} />
-      </div>
 
-      {/* Swipe affordance — touch only; tracks the centred slide. */}
-      <div className="flex gap-1.5 lg:hidden">
-        {PANELS.map((p, i) => (
-          <span
-            className={cn(
-              "h-1.5 rounded-full transition-all",
-              i === activeSlide ? "w-4 bg-primary" : "w-1.5 bg-foreground/25"
-            )}
-            key={p.word}
-          />
-        ))}
-      </div>
-
-      {/* Action bar — a single GET STARTED CTA opens the two-step wizard. The
+        {/* Action bar — a single GET STARTED CTA opens the two-step wizard. The
           orange button sits alone on ink so it reads as the focal point. */}
-      <div className="flex w-full max-w-[64rem] flex-col gap-4 bg-foreground p-5 text-background shadow-2xl shadow-foreground/20 lg:mx-auto lg:flex-row lg:items-center lg:gap-8 lg:px-8 lg:py-7">
-        <div className="hidden lg:block">
-          <p className="font-medium font-mono text-[11px] text-background/55 uppercase tracking-[0.2em]">
-            Ready in two steps
-          </p>
-          <p className="mt-1.5 font-heading text-3xl uppercase leading-none">
-            Make your card
-          </p>
-        </div>
-
-        <Button
-          className="h-auto justify-center px-8 py-4 font-heading text-2xl uppercase tracking-wide shadow-primary/50 shadow-xl hover:-translate-y-0.5"
-          onClick={() => setWizardOpen(true)}
-          size="lg"
-        >
-          Get started
-          <ArrowRightIcon className="size-5" weight="bold" />
-        </Button>
-
-        <div className="flex items-center justify-between gap-4 lg:ml-auto lg:block lg:text-right">
-          <div className="flex items-center gap-2 font-medium font-mono text-[11px] text-background/60 uppercase tracking-[0.14em] lg:justify-end">
-            <span className="size-1.5 bg-primary" />
-            Add activity
+        <div className="flex w-full max-w-[64rem] flex-col gap-4 bg-foreground p-5 text-background shadow-2xl shadow-foreground/20 lg:mx-auto lg:flex-row lg:items-center lg:gap-8 lg:px-8 lg:py-7">
+          <div className="hidden lg:block">
+            <p className="font-medium font-mono text-[11px] text-background/55 uppercase tracking-[0.2em]">
+              Ready in two steps
+            </p>
+            <p className="mt-1.5 font-heading text-3xl uppercase leading-none">
+              Make your card
+            </p>
           </div>
-          <div className="flex items-center gap-2 font-medium font-mono text-[11px] text-background/60 uppercase tracking-[0.14em] lg:mt-2 lg:justify-end">
-            <span className="size-1.5 bg-primary" />
-            Add a photo
+
+          <Button
+            className="h-auto justify-center px-8 py-4 font-heading text-2xl uppercase tracking-wide shadow-primary/50 shadow-xl hover:-translate-y-0.5"
+            onClick={() => setWizardOpen(true)}
+            size="lg"
+          >
+            Get started
+            <ArrowRightIcon className="size-5" weight="bold" />
+          </Button>
+
+          <div className="flex items-center justify-between gap-4 lg:ml-auto lg:block lg:text-right">
+            <div className="flex items-center gap-2 font-medium font-mono text-[11px] text-background/60 uppercase tracking-[0.14em] lg:justify-end">
+              <span className="size-1.5 bg-primary" />
+              Add activity
+            </div>
+            <div className="flex items-center gap-2 font-medium font-mono text-[11px] text-background/60 uppercase tracking-[0.14em] lg:mt-2 lg:justify-end">
+              <span className="size-1.5 bg-primary" />
+              Add a photo
+            </div>
           </div>
         </div>
       </div>
 
-      {/* "See it in action" — an inline, looping intro that demonstrates the
-          product right after the value prop + CTA. */}
+      {/* Secondary: a compact, placeholder intro preview, set well below the
+          hero so it reads as a supporting detail rather than the focal point. */}
       <IntroVideo />
 
       {intro.showReplay ? <IntroReplay onReplay={intro.replay} /> : null}
