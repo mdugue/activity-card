@@ -1,5 +1,6 @@
 import { SINGLE_CARD_THEMES, type ThemeId } from "@/components/themes";
-import { PhotoEffectsProvider } from "@/components/themes/shared/photo-fx";
+import { PhotoFxProvider } from "@/components/themes/shared/photo-fx";
+import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
 import type { ActivityData } from "@/lib/activity";
 import type { ColorScheme } from "@/lib/colors";
 import type { ImageTransform } from "@/lib/image-transform";
@@ -43,9 +44,12 @@ export function RenderTheme({
 }: RenderThemeProps) {
   const descriptor = SINGLE_CARD_THEMES[theme];
   const photo = photoBackdropEnabled ? (photoUrl ?? null) : null;
+  // Natural size feeds the rotation-correct cover layer (quarter turns swap
+  // the photo's width/height); derived here once so themes need no new props.
+  const imageSize = useImageNaturalSize(photo);
   const Component = descriptor.Component;
   return (
-    <PhotoEffectsProvider value={photoEffects}>
+    <PhotoFxProvider value={{ effects: photoEffects, imageSize }}>
       <Component
         colors={colors ?? descriptor.colors.default}
         config={config}
@@ -53,6 +57,6 @@ export function RenderTheme({
         imageTransform={imageTransform}
         photoUrl={photo}
       />
-    </PhotoEffectsProvider>
+    </PhotoFxProvider>
   );
 }

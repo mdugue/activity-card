@@ -26,7 +26,7 @@ import {
   segmentProfiles,
   segmentRoutes,
 } from "@/lib/multi-activity";
-import { filterCss, NO_EFFECTS, type PhotoEffects } from "@/lib/photo-effects";
+import { NO_EFFECTS, type PhotoEffects } from "@/lib/photo-effects";
 import {
   DEFAULT_STRATA_CONFIG,
   STRATA_MOODS,
@@ -157,13 +157,13 @@ export function SeamlessCanvas({
   );
   const hasPhoto = Boolean(photoUrl);
 
-  // Every photo-capable theme now shows the photo full-bleed (no faint-texture
-  // mode); legibility comes from the per-theme default filter + text shadows,
-  // with only a light veil on the standard photo themes.
-  const showPhoto = hasPhoto && style.photoSupported;
+  // Every theme shows the photo full-bleed; legibility comes from the per-theme
+  // default filter + text shadows, with only a light veil on the standard photo
+  // themes. The deck-wide "Use as background" switch (visibility.photoBackdrop)
+  // gates it — the same flag as the single card.
+  const showPhoto = hasPhoto && visibility.photoBackdrop;
   const isStandard = style.panelKind === "standard";
   const desaturate = showPhoto && style.routeStyle === "desaturated";
-  const photoFilter = filterCss(photoEffects.filter);
 
   const { profile, mode: profileMode } = pickProfile(data);
   const { multi, segProf, heroRoutes, showElevationHero, showRouteHero } =
@@ -204,13 +204,9 @@ export function SeamlessCanvas({
         return (
           <CarouselPhoto
             desaturate={desaturate}
-            filter={photoFilter}
-            flipH={photoEffects.flipH}
-            flipV={photoEffects.flipV}
-            grain={photoEffects.grain}
+            effects={photoEffects}
             imageSize={imageSize}
             photoUrl={photoUrl}
-            rotate={photoEffects.rotate}
             stripH={SLIDE_H}
             stripW={width}
             transform={imageTransform}

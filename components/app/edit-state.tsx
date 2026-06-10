@@ -3,8 +3,6 @@
 import { DownloadSimpleIcon } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
 import { SINGLE_CARD_THEMES, THEME_ORDER } from "@/components/themes/index";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { ActivityData, Sport } from "@/lib/activity";
 import type { ColorChoice, ColorScheme } from "@/lib/colors";
@@ -98,37 +96,14 @@ export function EditState(props: EditStateProps) {
     }
   };
 
-  const showRepositionHint = photoUrl !== null && visibility.photoBackdrop;
-
-  // Editor-specific photo extras: the "Use as background" switch + the reposition
-  // hint. Every theme can show a photo now, so the switch appears whenever one is
-  // loaded; turning it off falls back to the theme's designed (photo-free) look.
-  const photoExtras = (
-    <>
-      {photoUrl ? (
-        <div className="mt-3 flex items-center justify-between border border-foreground/15 border-dashed px-3 py-2.5">
-          <Label
-            className="font-medium text-sm"
-            htmlFor="photo-backdrop-switch"
-          >
-            Use as background
-          </Label>
-          <Switch
-            checked={visibility.photoBackdrop}
-            id="photo-backdrop-switch"
-            onCheckedChange={(checked) =>
-              onVisibilityChange({ ...visibility, photoBackdrop: checked })
-            }
-          />
-        </div>
-      ) : null}
-      {showRepositionHint ? (
-        <p className="caption-micro mt-2">
-          Tap “Adjust” on the preview to move &amp; zoom
-        </p>
-      ) : null}
-    </>
-  );
+  // The "Use as background" switch lives in the shared PHOTO section now; the
+  // single card only adds the reposition hint while the photo is shown.
+  const photoExtras =
+    photoUrl !== null && visibility.photoBackdrop ? (
+      <p className="caption-micro mt-2">
+        Tap “Adjust” on the preview to move &amp; zoom
+      </p>
+    ) : null;
 
   const tools = useActivityTools({
     athleteName: props.athleteName,
@@ -151,7 +126,6 @@ export function EditState(props: EditStateProps) {
     onTitleChange: props.onTitleChange,
     onVisibilityChange,
     paramCtx: { data, palette: paramPalette },
-    photoAllowRotate: false,
     photoEffects,
     photoExtras,
     photoUrl,

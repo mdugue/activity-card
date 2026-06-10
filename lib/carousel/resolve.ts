@@ -6,6 +6,7 @@
  */
 
 import type { ColorScheme, ThemeColorPolicy } from "@/lib/colors";
+import type { ThemePhotoPolicy } from "@/lib/theme-contract";
 import {
   CAROUSEL_THEME_TOKENS,
   type CarouselThemeId,
@@ -35,7 +36,6 @@ export interface EffectiveStyle {
   mutedInk: string;
   onAccent: string;
   panelKind: PanelKind;
-  photoSupported: boolean;
   routeStyle: RouteStyle;
 }
 
@@ -50,6 +50,18 @@ export function readableOn(hex: string): string {
   const b = Number.parseInt(c.slice(4, 6), 16);
   const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
   return lum > 0.55 ? "#0a0a0a" : "#ffffff";
+}
+
+/** A carousel theme's photo policy, derived from its token row: every
+ *  carousel theme shows an uploaded photo by default, with its signature
+ *  filter + grain look. Mirrors the single-card descriptors' `photo` field. */
+export function carouselPhotoPolicy(theme: CarouselThemeId): ThemePhotoPolicy {
+  const tokens = CAROUSEL_THEME_TOKENS[theme];
+  return {
+    defaultOn: true,
+    defaultFilter: tokens.defaultFilter,
+    defaultGrain: tokens.defaultGrain,
+  };
 }
 
 /** A carousel theme's colour policy, derived from its token row — every
@@ -96,7 +108,6 @@ export function resolveDeckStyle(
     heroMetric: tokens.heroMetric,
     crossViz: tokens.crossViz,
     panelKind: tokens.panelKind,
-    photoSupported: tokens.photoSupported,
     label: tokens.label,
     // Some themes tie the elevation viz to the (user-chosen) accent rather than
     // the fixed token colours.

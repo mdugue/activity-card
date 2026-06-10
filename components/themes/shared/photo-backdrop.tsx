@@ -15,7 +15,11 @@ import {
   type ImageTransform,
   transformToCss,
 } from "@/lib/image-transform";
-import { effectsTransformSuffix, filterCss } from "@/lib/photo-effects";
+import {
+  effectsTransformSuffix,
+  filterCss,
+  isQuarterTurn,
+} from "@/lib/photo-effects";
 import { usePhotoEffects } from "./photo-fx";
 
 export type BackdropTreatment = "path" | "editorial";
@@ -35,6 +39,9 @@ export function PhotoBackdrop({
   const userFilter = fx ? filterCss(fx.filter) : "";
   const suffix = effectsTransformSuffix(fx);
   const transform = `${transformToCss(imageTransform ?? IDENTITY_TRANSFORM)}${suffix}`;
+  // A quarter-turn shortens the rotated footprint vertically; bleeding the
+  // blurred wash further keeps the corners covered (the blur hides the edge).
+  const bleed = fx && isQuarterTurn(fx.rotate) ? -160 : null;
   if (treatment === "path") {
     // Paper-tone overlay multiplies down the photo so the route ink stays the
     // hero. 14px blur softens any detail the eye might catch.
@@ -52,7 +59,7 @@ export function PhotoBackdrop({
         <div
           style={{
             position: "absolute",
-            inset: -40,
+            inset: bleed ?? -40,
             backgroundImage: `url(${photoUrl})`,
             backgroundSize: "cover",
             backgroundPosition: "center",
@@ -100,7 +107,7 @@ export function PhotoBackdrop({
       <div
         style={{
           position: "absolute",
-          inset: -30,
+          inset: bleed ?? -30,
           backgroundImage: `url(${photoUrl})`,
           backgroundSize: "cover",
           backgroundPosition: "center",

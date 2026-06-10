@@ -12,10 +12,14 @@ import { CardStage } from "@/components/app/card-stage";
 import { ImageAdjustOverlay } from "@/components/app/image-adjust-overlay";
 import { RenderTheme, type ThemeId } from "@/components/app/render-theme";
 import { Badge } from "@/components/ui/badge";
+import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
 import type { ActivityData } from "@/lib/activity";
 import type { ColorScheme } from "@/lib/colors";
-import type { ImageTransform } from "@/lib/image-transform";
-import type { PhotoEffects } from "@/lib/photo-effects";
+import {
+  clampCoverTransform,
+  type ImageTransform,
+} from "@/lib/image-transform";
+import { isQuarterTurn, type PhotoEffects } from "@/lib/photo-effects";
 
 interface SingleCardPreviewProps {
   colors: ColorScheme;
@@ -42,10 +46,29 @@ export function SingleCardPreview({
 }: SingleCardPreviewProps) {
   const [adjusting, setAdjusting] = useState(false);
 
+  // Natural photo size → a pan/zoom clamp that respects the photo's real cover
+  // overflow on the 1080×1350 card. A quarter-turn swaps the photo's
+  // width/height, so the clamp must use the rotated dimensions — the same
+  // model as the carousel panorama.
+  const imageSize = useImageNaturalSize(photoUrl);
+  const quarter = isQuarterTurn(photoEffects.rotate);
+  const coverClamp = imageSize
+    ? (t: ImageTransform) =>
+        clampCoverTransform(
+          t,
+          1080,
+          1350,
+          quarter ? imageSize.h : imageSize.w,
+          quarter ? imageSize.w : imageSize.h
+        )
+    : undefined;
+
   // Repositioning is offered wherever the photo is actually on screen — any
-  // theme, whenever the backdrop is toggled on. Drop out of adjust mode if it
-  // stops being shown.
-  const adjustAvailable = photoUrl !== null && photoBackdropEnabled;
+  // theme, whenever the backdrop is toggled on — once its natural size is
+  // known (the clamp depends on it). Drop out of adjust mode if it stops
+  // being shown.
+  const adjustAvailable =
+    photoUrl !== null && photoBackdropEnabled && imageSize !== null;
   useEffect(() => {
     if (adjusting && !adjustAvailable) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -92,6 +115,7 @@ export function SingleCardPreview({
 
         {adjusting ? (
           <ImageAdjustOverlay
+            clamp={coverClamp}
             onChange={onImageTransformChange}
             onDone={() => setAdjusting(false)}
             transform={imageTransform}

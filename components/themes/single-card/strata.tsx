@@ -17,12 +17,7 @@ import {
   formatPaceMin,
   formatPaceSec,
 } from "@/lib/format";
-import { IDENTITY_TRANSFORM, transformToCss } from "@/lib/image-transform";
-import {
-  effectsTransformSuffix,
-  filterCss,
-  GRAIN_BG,
-} from "@/lib/photo-effects";
+
 import {
   buildStrata,
   DEFAULT_STRATA_CONFIG,
@@ -40,7 +35,8 @@ import {
   defineTheme,
   type ThemeProps,
 } from "@/lib/theme-contract";
-import { usePhotoEffects } from "../shared/photo-fx";
+import { CoverPhoto } from "../shared/cover-photo";
+import { usePhotoEffects, usePhotoImageSize } from "../shared/photo-fx";
 
 const DISPLAY = "var(--font-syne), sans-serif";
 const MONO = "var(--font-mono), monospace";
@@ -300,6 +296,7 @@ export function ThemeStrata({
   const statText = tokens.inkStat ? tokens.text : "#fff";
   const overPhoto = Boolean(photoUrl);
   const fx = usePhotoEffects();
+  const imageSize = usePhotoImageSize();
   const metaParts = [
     (data.location || "").toUpperCase(),
     formatDateUpper(data.date),
@@ -331,33 +328,29 @@ export function ThemeStrata({
         <>
           <div
             aria-hidden
-            style={{
-              position: "absolute",
-              inset: 0,
-              zIndex: -1,
-              backgroundImage: `url(${photoUrl})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              filter: fx ? filterCss(fx.filter) || undefined : undefined,
-              transform: `${transformToCss(imageTransform ?? IDENTITY_TRANSFORM)}${effectsTransformSuffix(fx)}`,
-              transformOrigin: "center center",
-            }}
-          />
-          {fx?.grain ? (
-            <div
-              aria-hidden
-              style={{
-                position: "absolute",
-                inset: 0,
-                zIndex: -1,
-                backgroundImage: GRAIN_BG,
-                backgroundRepeat: "repeat",
-                backgroundSize: "180px 180px",
-                mixBlendMode: "overlay",
-                opacity: 0.5,
-              }}
-            />
-          ) : null}
+            style={{ position: "absolute", inset: 0, zIndex: -1 }}
+          >
+            {imageSize ? (
+              <CoverPhoto
+                boxH={1350}
+                boxW={1080}
+                effects={fx}
+                imageSize={imageSize}
+                photoUrl={photoUrl}
+                transform={imageTransform}
+              />
+            ) : (
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  backgroundImage: `url(${photoUrl})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }}
+              />
+            )}
+          </div>
           <div
             aria-hidden
             style={{

@@ -144,8 +144,6 @@ interface UseActivityToolsProps {
   onVisibilityChange: (visibility: Visibility) => void;
   /** the active theme's parameter context (data + extracted palette) */
   paramCtx: ParamCtx;
-  /** rotate is geometry-correct on the carousel panorama; off on the single card */
-  photoAllowRotate: boolean;
   photoEffects: PhotoEffects;
   /** editor-specific photo extras (backdrop switch / reposition hint) */
   photoExtras?: React.ReactNode;
@@ -180,7 +178,6 @@ export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
     onColorChoiceChange,
     photoUrl,
     photoEffects,
-    photoAllowRotate,
     onTitleChange,
     onSportChange,
     onAthleteNameChange,
@@ -266,7 +263,10 @@ export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
   });
 
   // The photo is a prominent control — every theme can show one, adjustable via
-  // the same filter / grain / transform presets as the carousel.
+  // the same filter / grain / transform presets in both modes. The "Use as
+  // background" switch is the shared `photoBackdrop` visibility flag; the
+  // adjustment controls only show while the photo is actually displayed.
+  const photoActive = Boolean(photoUrl) && visibility.photoBackdrop;
   tools.push({
     id: "photo",
     label: "PHOTO",
@@ -274,8 +274,17 @@ export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
     content: (
       <ControlBlock label="BACKGROUND PHOTO">
         <PhotoControl onChange={onPhotoChange} photoUrl={photoUrl} prominent />
-        {photoExtras}
         {photoUrl ? (
+          <div className="mt-3">
+            <ToggleRow
+              checked={visibility.photoBackdrop}
+              label="Use as background"
+              onCheckedChange={(c) => set("photoBackdrop", c)}
+            />
+          </div>
+        ) : null}
+        {photoExtras}
+        {photoActive ? (
           <>
             <div className="mt-3">
               <div className="caption-micro mb-1.5">FILTER</div>
@@ -285,7 +294,7 @@ export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
               />
             </div>
             <PhotoTransformControls
-              allowRotate={photoAllowRotate}
+              allowRotate
               effects={photoEffects}
               onChange={onPhotoEffectsChange}
             />

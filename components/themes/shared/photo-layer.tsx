@@ -1,9 +1,8 @@
-// Shared full-bleed photo layer for "hero" themes (Photo, Minimal). The image
-// is rendered as a CSS background on a div sized to the whole card, with the
-// user's pan/zoom applied as a transform. Background-image (not <img>) keeps
-// next/image out of the way for blob URLs and matches the PhotoBackdrop
-// approach used by "supports" themes. Transform is plain CSS — html-to-image
-// captures it faithfully (unlike backdrop-filter).
+// Shared full-bleed photo layer for the photo-led themes (Photo, Minimal,
+// Altitude). When the photo's natural size is known (provided via the photo-fx
+// context), it renders the rotation-correct `CoverPhoto`; until then it falls
+// back to a plain CSS cover so the preview never flashes empty. Filter / grain /
+// mirror come from the same context. Inline CSS only — html-to-image safe.
 
 import {
   IDENTITY_TRANSFORM,
@@ -11,7 +10,11 @@ import {
   transformToCss,
 } from "@/lib/image-transform";
 import { effectsTransformSuffix, filterCss } from "@/lib/photo-effects";
-import { GrainOverlay, usePhotoEffects } from "./photo-fx";
+import { CoverPhoto } from "./cover-photo";
+import { GrainOverlay, usePhotoEffects, usePhotoImageSize } from "./photo-fx";
+
+const CARD_W = 1080;
+const CARD_H = 1350;
 
 interface PhotoLayerProps {
   imageTransform?: ImageTransform | null;
@@ -21,6 +24,23 @@ interface PhotoLayerProps {
 export function PhotoLayer({ photoUrl, imageTransform }: PhotoLayerProps) {
   const t = imageTransform ?? IDENTITY_TRANSFORM;
   const fx = usePhotoEffects();
+  const imageSize = usePhotoImageSize();
+
+  if (imageSize) {
+    return (
+      <CoverPhoto
+        boxH={CARD_H}
+        boxW={CARD_W}
+        effects={fx}
+        imageSize={imageSize}
+        photoUrl={photoUrl}
+        transform={t}
+      />
+    );
+  }
+
+  // Natural size unknown (loading, or rendered without the provider — e.g. a
+  // bare story): plain CSS cover with the effects as a transform suffix.
   const filter = fx ? filterCss(fx.filter) : "";
   return (
     <div

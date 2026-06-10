@@ -20,7 +20,6 @@ import type { ActivityData, Sport } from "@/lib/activity";
 import {
   CAROUSEL_THEME_LABELS,
   CAROUSEL_THEME_ORDER,
-  CAROUSEL_THEME_TOKENS,
   type CarouselThemeId,
 } from "@/lib/carousel/theme-tokens";
 import type { ColorChoice, ColorScheme } from "@/lib/colors";
@@ -88,11 +87,6 @@ export function CarouselEditState(props: CarouselEditStateProps) {
     props;
   const { slides, selectedId, selectedIndex } = carousel;
 
-  // Photo support is per-theme: every carousel theme now renders a background
-  // photo (the type-led Frame/Press keep it clean via shadows / opaque boxes),
-  // so derive it from the theme token rather than the panel kind.
-  const photoSupported = CAROUSEL_THEME_TOKENS[theme].photoSupported;
-
   const viewportRef = useRef<HTMLDivElement>(null);
   const wideRef = useRef<HTMLDivElement>(null);
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -124,11 +118,11 @@ export function CarouselEditState(props: CarouselEditStateProps) {
         )
     : undefined;
 
-  // Adjust only makes sense when the theme renders the photo AND we know its
-  // natural size — the pan/zoom clamp (coverClamp) is derived from imageSize,
-  // so offering Adjust before it resolves would pan against the wrong bounds.
+  // Adjust only makes sense while the photo is shown AND we know its natural
+  // size — the pan/zoom clamp (coverClamp) is derived from imageSize, so
+  // offering Adjust before it resolves would pan against the wrong bounds.
   const adjustAvailable =
-    photoUrl !== null && photoSupported && imageSize !== null;
+    photoUrl !== null && props.visibility.photoBackdrop && imageSize !== null;
   useEffect(() => {
     if (adjusting && !adjustAvailable) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -265,7 +259,6 @@ export function CarouselEditState(props: CarouselEditStateProps) {
     onTitleChange: props.onTitleChange,
     onVisibilityChange: props.onVisibilityChange,
     paramCtx: { data, palette: props.paramPalette },
-    photoAllowRotate: true,
     photoEffects,
     photoUrl,
     themeConfig: props.config,

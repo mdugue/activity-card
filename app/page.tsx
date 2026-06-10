@@ -18,7 +18,10 @@ import { useCarousel } from "@/hooks/use-carousel";
 import { useImagePalette } from "@/hooks/use-image-palette";
 import type { ActivityData, ActivitySource, Sport } from "@/lib/activity";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
-import { carouselColorPolicy } from "@/lib/carousel/resolve";
+import {
+  carouselColorPolicy,
+  carouselPhotoPolicy,
+} from "@/lib/carousel/resolve";
 import { carouselVisibilityAvailable } from "@/lib/carousel/stats";
 import {
   CAROUSEL_THEME_TOKENS,
@@ -126,6 +129,26 @@ function migrateThemeConfigs(
   return configs;
 }
 
+/** The active theme's colour policy + the choice in effect: the user's pick,
+ *  else the theme's default choice (Exposure → photo:vibrant), else its own
+ *  preset scheme. Pure, so Home stays simple. */
+function activeColorContext(
+  mode: CardMode,
+  theme: ThemeId,
+  carouselTheme: CarouselThemeId,
+  colorChoice: ColorChoice | null
+) {
+  const policy =
+    mode === "carousel"
+      ? carouselColorPolicy(carouselTheme)
+      : SINGLE_CARD_THEMES[theme].colors;
+  const effectiveChoice: ColorChoice = colorChoice ??
+    policy.defaultChoice ?? { kind: "preset", scheme: policy.default };
+  const paletteVariant =
+    effectiveChoice.kind === "photo" ? effectiveChoice.variant : "vibrant";
+  return { policy, effectiveChoice, paletteVariant };
+}
+
 /** The persisted colour choice, with legacy formats folded in: the pre-round-2
  *  `accent` hex becomes a preset choice; a Photo-theme user's PhotoMood (or its
  *  round-1 `themeConfigs.photo.palette` form) becomes a photo-derived choice. */
@@ -208,23 +231,13 @@ export default function Home() {
   // and (for photo-first themes like Exposure) a default photo-derived choice;
   // the user's explicit choice overrides. A photo-kind choice resolves through
   // the extracted palette and falls back to the theme default while none is
-  // available.
-  const activeColorPolicy =
-    mode === "carousel"
-      ? carouselColorPolicy(carouselTheme)
-      : SINGLE_CARD_THEMES[theme].colors;
-  const effectiveColorChoice: ColorChoice = colorChoice ??
-    activeColorPolicy.defaultChoice ?? {
-      kind: "preset",
-      scheme: activeColorPolicy.default,
-    };
-
-  // One palette extraction for the whole app (the colour control's swatches +
-  // any photo-derived choice), regardless of how many mounts consume it.
-  const paletteVariant =
-    effectiveColorChoice.kind === "photo"
-      ? effectiveColorChoice.variant
-      : "vibrant";
+  // available. One palette extraction serves the whole app (the colour
+  // control's swatches + any photo-derived choice).
+  const {
+    policy: activeColorPolicy,
+    effectiveChoice: effectiveColorChoice,
+    paletteVariant,
+  } = activeColorContext(mode, theme, carouselTheme, colorChoice);
   const photoPalette = useImagePalette(photoUrl, paletteVariant);
   const colors = resolveColors(
     effectiveColorChoice,
@@ -417,6 +430,13 @@ export default function Home() {
     setData((prev) => (prev ? { ...prev, location } : prev));
   };
 
+  // The active theme's photo policy — default backdrop state + signature
+  // filter/grain look — for whichever mode is editing. One model, both modes.
+  const activePhotoPolicy =
+    mode === "carousel"
+      ? carouselPhotoPolicy(carouselTheme)
+      : SINGLE_CARD_THEMES[theme].photo;
+
   const handlePhotoChange = (file: File | null) => {
     setPhotoUrl((prev) => {
       if (prev) {
@@ -424,27 +444,20 @@ export default function Home() {
       }
       return file ? URL.createObjectURL(file) : null;
     });
-    // A new (or removed) photo invalidates any previous pan/zoom. In carousel
-    // mode a fresh photo adopts the current theme's default look (filter + grain)
-    // so the theme's intent shows immediately; the single card has no such theme
-    // look, so it starts clean. The user can still change it either way.
+    // A new (or removed) photo invalidates any previous pan/zoom. A fresh photo
+    // adopts the active theme's photo policy: its default backdrop state (the
+    // designed, photo-free look may lead) and its signature filter + grain. The
+    // user can still change both afterwards.
     setImageTransform(IDENTITY_TRANSFORM);
     if (file) {
-      // A freshly added photo adopts the active single-card theme's default
-      // backdrop state — STRATA / Data / Triathlon start OFF so their designed
-      // look shows first; the photo-led themes start ON. (Carousel ignores this
-      // flag, so setting it here is harmless in that mode.)
       setVisibility((v) => ({
         ...v,
-        photoBackdrop: SINGLE_CARD_THEMES[theme].photo.defaultOn,
+        photoBackdrop: activePhotoPolicy.defaultOn,
       }));
-    }
-    if (file && mode === "carousel") {
-      const tokens = CAROUSEL_THEME_TOKENS[carouselTheme];
       setPhotoEffects({
         ...NO_EFFECTS,
-        filter: tokens.defaultFilter,
-        grain: tokens.defaultGrain,
+        filter: activePhotoPolicy.defaultFilter ?? "none",
+        grain: activePhotoPolicy.defaultGrain ?? false,
       });
     } else {
       setPhotoEffects(NO_EFFECTS);
@@ -487,11 +500,11 @@ export default function Home() {
   const handleCarouselThemeChange = (id: CarouselThemeId) => {
     setCarouselTheme(id);
     if (photoUrl) {
-      const tokens = CAROUSEL_THEME_TOKENS[id];
+      const policy = carouselPhotoPolicy(id);
       setPhotoEffects((prev) => ({
         ...prev,
-        filter: tokens.defaultFilter,
-        grain: tokens.defaultGrain,
+        filter: policy.defaultFilter ?? "none",
+        grain: policy.defaultGrain ?? false,
       }));
     }
   };

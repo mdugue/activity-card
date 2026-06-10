@@ -10,7 +10,11 @@ import {
   type ImageTransform,
   transformToCss,
 } from "@/lib/image-transform";
-import { effectsTransformSuffix, filterCss } from "@/lib/photo-effects";
+import {
+  effectsTransformSuffix,
+  filterCss,
+  isQuarterTurn,
+} from "@/lib/photo-effects";
 import { usePhotoEffects } from "./photo-fx";
 
 interface PhotoUnderlayProps {
@@ -24,6 +28,8 @@ export function PhotoUnderlay({
 }: PhotoUnderlayProps) {
   const fx = usePhotoEffects();
   const userFilter = fx ? filterCss(fx.filter) : "";
+  // Quarter-turn bleed — see PhotoBackdrop.
+  const bleed = fx && isQuarterTurn(fx.rotate) ? -160 : 0;
   return (
     <div
       aria-hidden
@@ -38,7 +44,7 @@ export function PhotoUnderlay({
       <div
         style={{
           position: "absolute",
-          inset: 0,
+          inset: bleed,
           backgroundImage: `url(${photoUrl})`,
           backgroundSize: "cover",
           backgroundPosition: "center",

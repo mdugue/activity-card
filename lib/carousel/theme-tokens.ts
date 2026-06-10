@@ -139,8 +139,6 @@ export interface CarouselThemeTokens {
   mutedInk: string;
   onAccent: string;
   panelKind: PanelKind;
-  /** theme can render an uploaded background photo */
-  photoSupported: boolean;
   routeStyle: RouteStyle;
   tagline: string;
 }
@@ -169,7 +167,6 @@ export const CAROUSEL_THEME_TOKENS: Record<
     panelKind: "standard",
     deck: DECK_3,
     detailViz: false,
-    photoSupported: true,
     defaultFilter: "fade",
     defaultGrain: true,
   },
@@ -193,7 +190,6 @@ export const CAROUSEL_THEME_TOKENS: Record<
     panelKind: "standard",
     deck: DECK_3,
     detailViz: false,
-    photoSupported: true,
     defaultFilter: "noir",
     defaultGrain: false,
   },
@@ -218,7 +214,6 @@ export const CAROUSEL_THEME_TOKENS: Record<
     panelKind: "standard",
     deck: DECK_3,
     detailViz: false,
-    photoSupported: true,
     defaultFilter: "fade",
     defaultGrain: true,
   },
@@ -243,7 +238,6 @@ export const CAROUSEL_THEME_TOKENS: Record<
     panelKind: "standard",
     deck: DECK_3,
     detailViz: false,
-    photoSupported: true,
     defaultFilter: "noir",
     defaultGrain: false,
   },
@@ -268,7 +262,6 @@ export const CAROUSEL_THEME_TOKENS: Record<
     panelKind: "standard",
     deck: DECK_3,
     detailViz: true,
-    photoSupported: true,
     defaultColorChoice: { kind: "photo", variant: "vibrant" },
     defaultFilter: "none",
     defaultGrain: false,
@@ -292,7 +285,6 @@ export const CAROUSEL_THEME_TOKENS: Record<
     panelKind: "frame",
     deck: DECK_4,
     detailViz: false,
-    photoSupported: true,
     defaultFilter: "fade",
     defaultGrain: false,
   },
@@ -316,7 +308,6 @@ export const CAROUSEL_THEME_TOKENS: Record<
     panelKind: "press",
     deck: DECK_4,
     detailViz: true,
-    photoSupported: true,
     defaultFilter: "mono",
     defaultGrain: true,
   },
@@ -346,7 +337,6 @@ export const CAROUSEL_THEME_TOKENS: Record<
     detailViz: false,
     // A background photo is optional: the woven field rides over it, the same
     // way the single card composes the field on a photo.
-    photoSupported: true,
     defaultFilter: "none",
     defaultGrain: false,
   },
