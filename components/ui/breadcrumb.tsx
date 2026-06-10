@@ -1,6 +1,6 @@
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import { ChevronRightIcon, MoreHorizontalIcon } from "lucide-react";
+import { CaretRightIcon, DotsThreeIcon } from "@phosphor-icons/react";
 import type * as React from "react";
 import { cn } from "@/lib/utils";
 
@@ -84,7 +84,7 @@ function BreadcrumbSeparator({
       role="presentation"
       {...props}
     >
-      {children ?? <ChevronRightIcon />}
+      {children ?? <CaretRightIcon />}
     </li>
   );
 }
@@ -104,7 +104,7 @@ function BreadcrumbEllipsis({
       role="presentation"
       {...props}
     >
-      <MoreHorizontalIcon />
+      <DotsThreeIcon />
       <span className="sr-only">More</span>
     </span>
   );

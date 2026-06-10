@@ -1,7 +1,7 @@
 "use client";
 
 import { Select as SelectPrimitive } from "@base-ui/react/select";
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
+import { CaretDownIcon, CaretUpIcon, CheckIcon } from "@phosphor-icons/react";
 import type * as React from "react";
 import { cn } from "@/lib/utils";
 
@@ -48,7 +48,7 @@ function SelectTrigger({
       {children}
       <SelectPrimitive.Icon
         render={
-          <ChevronDownIcon className="pointer-events-none size-3.5 text-muted-foreground" />
+          <CaretDownIcon className="pointer-events-none size-3.5 text-muted-foreground" />
         }
       />
     </SelectPrimitive.Trigger>
@@ -170,7 +170,7 @@ function SelectScrollUpButton({
       data-slot="select-scroll-up-button"
       {...props}
     >
-      <ChevronUpIcon />
+      <CaretUpIcon />
     </SelectPrimitive.ScrollUpArrow>
   );
 }
@@ -188,7 +188,7 @@ function SelectScrollDownButton({
       data-slot="select-scroll-down-button"
       {...props}
     >
-      <ChevronDownIcon />
+      <CaretDownIcon />
     </SelectPrimitive.ScrollDownArrow>
   );
 }

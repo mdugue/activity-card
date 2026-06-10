@@ -1,9 +1,9 @@
 "use client";
 
+import { CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react";
 import useEmblaCarousel, {
   type UseEmblaCarouselType,
 } from "embla-carousel-react";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -100,7 +100,6 @@ function Carousel({
     if (!api) {
       return;
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     onSelect(api);
     api.on("reInit", onSelect);
     api.on("select", onSelect);
@@ -201,7 +200,7 @@ function CarouselPrevious({
       variant={variant}
       {...props}
     >
-      <ChevronLeftIcon />
+      <CaretLeftIcon />
       <span className="sr-only">Previous slide</span>
     </Button>
   );
@@ -231,7 +230,7 @@ function CarouselNext({
       variant={variant}
       {...props}
     >
-      <ChevronRightIcon />
+      <CaretRightIcon />
       <span className="sr-only">Next slide</span>
     </Button>
   );
