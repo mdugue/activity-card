@@ -1,5 +1,6 @@
 // For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
 
+import remotion from "@remotion/eslint-plugin";
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
@@ -8,6 +9,12 @@ import storybook from "eslint-plugin-storybook";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  // Remotion-specific lint rules, scoped to the compositions folder. We use
+  // the bare plugin (not `@remotion/eslint-config-flat`) on purpose: the full
+  // flat config bundles its own typescript-eslint + react-hooks, which collide
+  // with eslint-config-next's `@typescript-eslint` plugin ("Cannot redefine
+  // plugin"). `flatPlugin` ships only the `@remotion/*` rules.
+  { files: ["remotion/**/*.{ts,tsx}"], ...remotion.flatPlugin },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
@@ -20,6 +27,9 @@ const eslintConfig = defineConfig([
     "hooks/use-mobile.ts",
     // Auto-generated from Strava's OpenAPI spec via `bun run strava:types`.
     "lib/strava-api.generated.ts",
+    // Vendored agent skills installed via `npx skills add`, pinned by
+    // skills-lock.json. Third-party content — re-add/update, don't edit.
+    "skills/**",
     // Generated, gitignored test artifacts — Playwright's HTML report bundles
     // minified vendor JS that eslint would otherwise flag by the thousands.
     "playwright-report/**",
