@@ -19,6 +19,14 @@ function useInView(ref: RefObject<Element | null>): boolean {
     if (!el || inView) {
       return;
     }
+    // No IntersectionObserver (old browsers / some embedded webviews): skip the
+    // lazy gate and just mount, so the section always renders. One-shot
+    // cold-start sync — the initial state stays false for SSR parity.
+    if (typeof IntersectionObserver === "undefined") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setInView(true);
+      return;
+    }
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
