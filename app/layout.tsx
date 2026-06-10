@@ -16,6 +16,7 @@ import {
   Syne,
 } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "@/components/app/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -123,7 +124,10 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: light)", color: "#faf8f5" },
     { media: "(prefers-color-scheme: dark)", color: "#1a1714" },
   ],
-  colorScheme: "light",
+  // Declare support for both so the browser themes native UI (scrollbars, form
+  // controls, the canvas) to the active scheme. next-themes additionally pins
+  // `color-scheme` on <html> when the user overrides their system setting.
+  colorScheme: "light dark",
 };
 
 export default function RootLayout({
@@ -153,10 +157,21 @@ export default function RootLayout({
         "font-sans"
       )}
       lang="en"
+      // next-themes sets the `class` + `color-scheme` on <html> via its
+      // pre-hydration inline script, so the server markup intentionally differs
+      // from the client's first paint. Scoped to this element only.
+      suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">
-        <TooltipProvider>{children}</TooltipProvider>
-        <Toaster />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          disableTransitionOnChange
+          enableSystem
+        >
+          <TooltipProvider>{children}</TooltipProvider>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );
