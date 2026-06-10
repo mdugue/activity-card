@@ -10,7 +10,7 @@ themes are **not** the single-card themes. They live in their own id space
 (`CarouselThemeId` in `lib/carousel/theme-tokens.ts`), independent of the
 single-card `ThemeId`, so the set can grow freely.
 
-One renderer drives everything: `components/carousel/seamless-canvas.tsx`. It
+One renderer drives everything: `components/themes/carousel/seamless-canvas.tsx`. It
 paints one continuous n×1080 × 1350 strip — a spanning "hero" layer that bleeds
 across slide edges, plus per-slide foreground panels — and the editor windows
 onto it, the thumbnails slice it, and the export slices it. Preview === output.
@@ -38,12 +38,13 @@ Each theme is a row in `CAROUSEL_THEME_TOKENS`. The signature levers:
   `magazine` (Playfair, Exposure/Press), `grotesk` (Space Grotesk, Frame).
 - **`dark`**, colours (`background`, `ink`, `mutedInk`, `accent`, `accent2`),
   `defaultFilter` + `defaultGrain` (the photo look applied when the theme is
-  chosen), `photoSupported`, `usesPhotoPalette` (Exposure derives accent from the
-  photo).
+  chosen), and an optional `defaultColorChoice` (Exposure starts photo-derived).
 
-The shared **accent** (single-card swatch control) is the primary accent for
-every theme except Exposure (photo palette); `accent2` is theme-fixed. Each
-theme's `accent` token is the Reset target for the accent control.
+Colour flows through the shared model (`lib/colors.ts`): the deck renders with a
+resolved `ColorScheme` — `resolveDeckStyle(theme, scheme)` — where the user's
+`ColorChoice` (preset or photo-derived) overrides the token accents.
+`carouselColorPolicy(theme)` derives the policy from the token row (every
+carousel theme is adjustable; the tokens are the Reset target).
 
 ## The themes
 
@@ -68,8 +69,10 @@ families consistent with this contrast.
 
 ## Photo handling
 
-Every theme renders an uploaded photo **full-bleed** (no faint-texture mode).
-Legibility comes from, in order of preference:
+Every theme renders an uploaded photo **full-bleed** (no faint-texture mode),
+gated by the shared "Use as background" toggle (`visibility.photoBackdrop`) —
+the same flag as the single card. Legibility comes from, in order of
+preference:
 
 1. the per-theme **default filter** (`fade` brightens for dark-text themes;
    `noir`/`mono` darken for light-text themes) — `lib/photo-effects.ts`,
@@ -78,10 +81,13 @@ Legibility comes from, in order of preference:
 3. a **light veil** (standard panels only: ~26% white for light themes, ~34%
    black for dark) — Frame uses shadows only; Press uses its opaque boxes.
 
-Optional **film grain** (`GRAIN_BG`, an SVG-noise data-URI overlaid in
-`carousel-photo.tsx`) survives html-to-image because it's decoded as an image,
-not a live filter. Default-on for the art-print themes (Trace Dawn, Ascent Dawn,
-Press).
+The panorama itself is the shared natural-size-aware `CoverPhoto`
+(`components/themes/shared/cover-photo.tsx`, wrapped by `carousel-photo.tsx`):
+quarter-turn rotations swap the element's width/height so the strip stays
+covered. Optional **film grain** (`GRAIN_BG`, an SVG-noise data-URI) survives
+html-to-image because it's decoded as an image, not a live filter. Default-on
+for the art-print themes (Trace Dawn, Ascent Dawn, Press) via the token row's
+photo look (`carouselPhotoPolicy`).
 
 ## Route marker
 
@@ -127,7 +133,7 @@ for it. Athlete name, the "made with effort" mark, and page numbers default OFF.
 3. Keep the contract: render foreground only; the canvas owns the photo, veil,
    spanning hero layer, and per-slide stat assignment.
 4. **Add a story** for the new id in
-   `components/carousel/seamless-canvas.stories.tsx` — one export per
+   `components/themes/carousel/seamless-canvas.stories.tsx` — one export per
    `CarouselThemeId`, built from `buildDeck(CAROUSEL_THEME_TOKENS[id].deck)` and
    the theme's accent + default filter/grain (see the existing `themeArgs`
    helper). Every carousel theme must have a story — this is enforced in
@@ -137,16 +143,23 @@ for it. Athlete name, the "made with effort" mark, and page numbers default OFF.
 
 ```
 lib/carousel/theme-tokens.ts   theme rows + levers + CarouselThemeId
-lib/carousel/resolve.ts        token → EffectiveStyle (+ shared accent / photo palette)
+lib/carousel/resolve.ts        token + ColorScheme → EffectiveStyle; colour/photo policies
 lib/carousel/stats.ts          buildStats · planSlideStats · frameStats · series
 lib/carousel/types.ts          SlideTemplate · buildDeck
 hooks/use-carousel.ts          per-theme deck → slides + selection
-components/carousel/seamless-canvas.tsx   the single renderer
-components/carousel/route-line.tsx        route + start-direction arrow
-components/carousel/elevation-band.tsx    mountain range / sparkline
-components/carousel/detail-viz.tsx        small path + altitude graphics
-components/carousel/carousel-photo.tsx    panorama photo + grain
-components/carousel/templates/            standard panels + shared contract
-components/carousel/panels/               frame-panel · press-panel
-components/carousel/seamless-canvas.stories.tsx  one story per CarouselThemeId (required)
+components/themes/carousel/seamless-canvas.tsx   the single renderer
+components/themes/carousel/route-line.tsx        route + start-direction arrow
+components/themes/carousel/elevation-band.tsx    mountain range / sparkline
+components/themes/carousel/detail-viz.tsx        small path + altitude graphics
+components/themes/carousel/carousel-photo.tsx    panorama photo (shared CoverPhoto)
+components/themes/carousel/templates/            standard panels + the PanelProps contract
+components/themes/carousel/panels/               frame-panel · press-panel
+components/themes/carousel/seamless-canvas.stories.tsx  one story per CarouselThemeId (required)
 ```
+
+Every template/panel receives the same `PanelProps` bag
+(`templates/shared.ts`): pre-resolved `style`, its planned `stats`/`hero`,
+slide `index`/`total`, and the deck-wide flags. Panels are layout fragments
+inside ONE renderer — style is resolved once and stats planned globally, which
+is what guarantees the seamless, no-repeat deck. Don't hand panels raw
+`ActivityData` to re-derive things locally.
