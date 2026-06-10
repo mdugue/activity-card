@@ -2,7 +2,7 @@ import type { ActivityData } from "@/lib/activity";
 import {
   type CapabilityKey,
   GOVERNED_FIELDS,
-  type SingleCardTheme,
+  type ThemeBase,
 } from "@/lib/theme-contract";
 
 /**
@@ -132,18 +132,16 @@ export function applyVisibility(
 }
 
 /**
- * Which visibility switches apply for a single-card theme + activity, derived
- * entirely from the theme's capability declaration:
- * the activity has the data AND the theme declared the capability AND any
- * sport-aware `usesWhen` refinement holds. Replaces the old hand-maintained
- * `THEME_META.usesX` flags (which only covered four fields — so e.g. Editorial
- * offered an elevation-profile toggle it never rendered).
- * Mirrors `carouselVisibilityAvailable`, which derives the same answer from
- * the carousel's stat planner.
+ * Which visibility switches apply for a theme + activity (BOTH families),
+ * derived entirely from the theme's capability declaration: the activity has
+ * the data AND the theme declared the capability AND any sport-aware `usesWhen`
+ * refinement holds. Replaces both `THEME_META.usesX` (single card) and
+ * `carouselVisibilityAvailable` (which derived the same answer by inspecting
+ * the now-deleted stat planner).
  */
 export function themeAvailability(
   data: ActivityData,
-  theme: SingleCardTheme
+  theme: Pick<ThemeBase, "uses" | "usesWhen">
 ): Record<keyof Visibility, boolean> {
   const base = availableVisibility(data);
   const declared = new Set<CapabilityKey>(theme.uses);

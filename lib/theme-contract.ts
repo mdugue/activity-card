@@ -102,10 +102,11 @@ export interface ThemePhotoPolicy {
 
 /**
  * The descriptor core EVERY theme shares, regardless of family: identity,
- * colour policy, photo policy, and parameter specs. The families differ only
- * in their render strategy — a single-card theme adds a bespoke `Component`
- * (+ capability declaration); a carousel theme adds its `look` token row,
- * interpreted by the one shared renderer. "Both are just themes."
+ * colour policy, photo policy, parameter specs, and the capability declaration
+ * (which overlay elements the theme renders — drives the editor's visibility
+ * toggles for both families). The families differ only in their render
+ * strategy — a single-card theme adds a bespoke `Component`; a carousel theme
+ * adds its `look` tokens + `canvas`/`panels`. "Both are just themes."
  */
 export interface ThemeBase {
   colors: ThemeColorPolicy;
@@ -115,6 +116,10 @@ export interface ThemeBase {
   params: ParamDef[];
   photo: ThemePhotoPolicy;
   tagline: string;
+  /** overlay elements this theme renders — the visibility switches it offers */
+  uses: readonly CapabilityKey[];
+  /** sport-aware refinement of a declared capability (editor availability only) */
+  usesWhen?: Partial<Record<CapabilityKey, (data: ActivityView) => boolean>>;
 }
 
 /** The user's effective colour choice for a theme: their pick, else the
@@ -132,11 +137,10 @@ export function effectiveChoiceFor(
   );
 }
 
-/** The erased registry-facing single-card descriptor. */
+/** The erased registry-facing single-card descriptor. The single card uniquely
+ *  uses its `uses` to narrow the component's `data` type (see `defineTheme`). */
 export interface SingleCardTheme extends ThemeBase {
   Component: FC<ThemeProps>;
-  uses: readonly CapabilityKey[];
-  usesWhen?: Partial<Record<CapabilityKey, (data: ActivityView) => boolean>>;
 }
 
 /**
@@ -182,7 +186,7 @@ export function defineTheme<
  * (mirroring `applyVisibility`); optional fields drop to undefined.
  */
 export function pickThemeData(
-  theme: SingleCardTheme,
+  theme: Pick<ThemeBase, "uses">,
   data: ActivityData
 ): ActivityData {
   const declared = new Set(theme.uses);

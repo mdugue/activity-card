@@ -22,7 +22,7 @@
 import type { ColorChoice } from "@/lib/colors";
 import type { ParamDef } from "@/lib/params/kinds";
 import { DEFAULT_STRATA_CONFIG, STRATA_PARAMS } from "@/lib/strata";
-import type { ThemeBase } from "@/lib/theme-contract";
+import type { CapabilityKey, ThemeBase } from "@/lib/theme-contract";
 import type { FontPairId, RouteStyle, SlideTemplate } from "./types";
 
 /** Carousel theme identifiers. Add new families here freely — nothing ties this
@@ -372,6 +372,27 @@ export interface CarouselTheme extends ThemeBase {
   look: CarouselThemeTokens;
 }
 
+/**
+ * Every carousel theme renders the same overlay set: the sport-aware stat
+ * palette (`buildStats`) plus the route + elevation viz (every theme draws both
+ * — as the spanning hero, a cross-viz, a detail cut, or a sparkline). Splits are
+ * never shown as a list, so the only capability omitted is `splits`. Data
+ * presence (`availableVisibility`) handles sport-appropriateness (pace, speed),
+ * so no `usesWhen` is needed. Drives the editor toggles via `themeAvailability`.
+ */
+const CAROUSEL_CAPABILITIES: readonly CapabilityKey[] = [
+  "athleteName",
+  "cadence",
+  "elevation",
+  "elevationViz",
+  "heartRate",
+  "location",
+  "pace",
+  "power",
+  "route",
+  "speed",
+];
+
 export const CAROUSEL_THEMES: Record<CarouselThemeId, CarouselTheme> =
   Object.fromEntries(
     CAROUSEL_THEME_ORDER.map((id) => {
@@ -380,6 +401,7 @@ export const CAROUSEL_THEMES: Record<CarouselThemeId, CarouselTheme> =
         id,
         label: look.label,
         tagline: look.tagline,
+        uses: CAROUSEL_CAPABILITIES,
         colors: {
           default: {
             primary: look.accent,

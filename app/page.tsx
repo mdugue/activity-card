@@ -19,7 +19,6 @@ import { useCarousel } from "@/hooks/use-carousel";
 import { useImagePalette } from "@/hooks/use-image-palette";
 import type { ActivityData, ActivitySource, Sport } from "@/lib/activity";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
-import { carouselVisibilityAvailable } from "@/lib/carousel/stats";
 import {
   CAROUSEL_THEME_TOKENS,
   CAROUSEL_THEMES,
@@ -517,7 +516,7 @@ export default function Home() {
           athleteName: data.athleteName,
           available:
             mode === "carousel"
-              ? carouselVisibilityAvailable(data, carouselTheme)
+              ? themeAvailability(data, CAROUSEL_THEMES[carouselTheme])
               : themeAvailability(data, SINGLE_CARD_THEMES[theme]),
           visibility,
           onVisibilityChange: setVisibility,
