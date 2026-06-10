@@ -638,6 +638,8 @@ export const altitudeTheme = defineTheme({
   label: "ALTITUDE",
   tagline: "elevation as headline",
   uses: USES,
+  // Fixed: white type + line over the photo is the design.
+  colors: { default: { primary: "#ffffff" }, userAdjustable: false },
   photo: { defaultOn: true },
   params: ALTITUDE_PARAMS,
   defaults: DEFAULT_ALTITUDE_CONFIG,

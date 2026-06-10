@@ -9,16 +9,17 @@ import {
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { ActivityData } from "@/lib/activity";
+import type { ColorScheme } from "@/lib/colors";
 import { defaultFilename, exportCard } from "@/lib/export-card";
 import { formatDateUpper } from "@/lib/format";
 import type { ImageTransform } from "@/lib/image-transform";
-import type { PaletteTheme } from "@/lib/palette";
 import type { PhotoEffects } from "@/lib/photo-effects";
 import { RenderTheme, type ThemeId } from "./render-theme";
 
 const CONFETTI_COLORS = ["#c45a2c", "#1d3a2e", "#1a1714", "#a98352"];
 
 interface DownloadStateProps {
+  colors: ColorScheme;
   config: Record<string, unknown>;
   data: ActivityData;
   imageTransform: ImageTransform;
@@ -28,7 +29,6 @@ interface DownloadStateProps {
    *  thumbnail and the "Share" re-export agree with the downloaded PNG. */
   photoBackdropEnabled: boolean;
   photoEffects: PhotoEffects;
-  photoPaletteTheme: PaletteTheme | null;
   photoUrl: string | null;
   theme: ThemeId;
 }
@@ -38,9 +38,9 @@ export function DownloadState({
   theme,
   photoUrl,
   photoBackdropEnabled,
+  colors,
   config,
   photoEffects,
-  photoPaletteTheme,
   imageTransform,
   onKeepEditing,
   onNew,
@@ -81,12 +81,12 @@ export function DownloadState({
                 style={{ width: 1080, height: 1350 }}
               >
                 <RenderTheme
+                  colors={colors}
                   config={config}
                   data={data}
                   imageTransform={imageTransform}
                   photoBackdropEnabled={photoBackdropEnabled}
                   photoEffects={photoEffects}
-                  photoPaletteTheme={photoPaletteTheme}
                   photoUrl={photoUrl}
                   theme={theme}
                 />
@@ -149,12 +149,12 @@ export function DownloadState({
         style={{ width: 1080, height: 1350, transform: "translateX(-200%)" }}
       >
         <RenderTheme
+          colors={colors}
           config={config}
           data={data}
           imageTransform={imageTransform}
           photoBackdropEnabled={photoBackdropEnabled}
           photoEffects={photoEffects}
-          photoPaletteTheme={photoPaletteTheme}
           photoUrl={photoUrl}
           theme={theme}
         />

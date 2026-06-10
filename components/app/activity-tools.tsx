@@ -10,7 +10,6 @@
 // pass and a couple of mode flags (carousel marks, photo rotate).
 
 import {
-  ArrowCounterClockwiseIcon,
   ChartBarIcon,
   ImageIcon,
   LayoutIcon,
@@ -25,15 +24,14 @@ import {
 import { useId } from "react";
 import type { ControlTool } from "@/components/app/control-deck";
 import type { CardMode } from "@/components/app/mode-toggle";
-import { Button } from "@/components/ui/button";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { ActivityData, Sport } from "@/lib/activity";
+import type { ColorChoice } from "@/lib/colors";
 import type { ParamCtx, ParamDef } from "@/lib/params/kinds";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import type { PhotoEffects } from "@/lib/photo-effects";
-import { cn } from "@/lib/utils";
 import type { Visibility } from "@/lib/visibility";
 import { ActivitySource } from "./activity-source";
+import { ColorControl } from "./color-control";
 import {
   ControlBlock,
   DetailField,
@@ -83,21 +81,6 @@ const SPORT_OPTIONS: RichSelectOption[] = [
   },
 ];
 
-// Includes each carousel theme's signature accent so a Reset always lands on a
-// highlighted swatch.
-export const ACCENTS = [
-  "#c45a2c",
-  "#e0683a",
-  "#ff7a3c",
-  "#2f6f86",
-  "#1e6fa0",
-  "#1d3a2e",
-  "#b1281a",
-  "#a98352",
-  "#1a1714",
-  "#e8c39e",
-];
-
 interface ToggleDef {
   key: keyof Visibility;
   label: string;
@@ -133,17 +116,21 @@ const CAROUSEL_TOGGLES: ToggleDef[] = [
 ];
 
 interface UseActivityToolsProps {
-  accent: string;
   athleteName: string;
   /** which switches address data the current activity actually has */
   available: Record<keyof Visibility, boolean>;
+  /** show the COLOUR control (hidden for fixed-palette themes) */
+  colorAdjustable: boolean;
+  /** the effective colour choice (theme default until the user picks) */
+  colorChoice: ColorChoice;
+  /** true while the user hasn't customised — disables the colour Reset */
+  colorIsDefault: boolean;
   data: ActivityData;
-  /** the current theme's default accent (target of the Reset control) */
-  defaultAccent: string;
   location: string;
   mode: CardMode;
-  onAccentChange: (accent: string) => void;
   onAthleteNameChange: (name: string) => void;
+  /** `null` resets the colour to the theme's default choice */
+  onColorChoiceChange: (choice: ColorChoice | null) => void;
   /** swap by uploading a new file (ACTIVITY section) */
   onFilesLoaded: (parts: ParsedActivity[]) => void;
   onLocationChange: (location: string) => void;
@@ -187,8 +174,10 @@ export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
     location,
     visibility,
     available,
-    accent,
-    defaultAccent,
+    colorAdjustable,
+    colorChoice,
+    colorIsDefault,
+    onColorChoiceChange,
     photoUrl,
     photoEffects,
     photoAllowRotate,
@@ -197,7 +186,6 @@ export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
     onAthleteNameChange,
     onLocationChange,
     onVisibilityChange,
-    onAccentChange,
     onPhotoChange,
     onPhotoEffectsChange,
     onFilesLoaded,
@@ -251,8 +239,9 @@ export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
 
   const tools: ControlTool[] = [];
 
-  // STYLE leads: the theme rail, the accent swatches, then any STYLE params the
-  // theme exposes (atmosphere / colour). The "what does this card look like"
+  // STYLE leads: the theme rail, the unified colour control (static presets +
+  // photo-derived schemes, hidden for fixed-palette themes), then any STYLE
+  // params the theme exposes (atmosphere). The "what does this card look like"
   // choices live together.
   tools.push({
     id: "style",
@@ -262,45 +251,14 @@ export function useActivityTools(props: UseActivityToolsProps): ControlTool[] {
       <div className="flex flex-col gap-5">
         <ControlBlock label="THEME">
           {themeControl}
-          <div className="caption-micro mt-4 mb-2">ACCENT</div>
-          <div className="flex flex-wrap items-center gap-2">
-            <ToggleGroup
-              aria-label="Accent colour"
-              className="flex flex-wrap gap-2"
-              onValueChange={(values) => {
-                if (values[0]) {
-                  onAccentChange(values[0]);
-                }
-              }}
-              spacing={2}
-              value={[accent]}
-            >
-              {ACCENTS.map((c) => (
-                <ToggleGroupItem
-                  aria-label={`Accent ${c}`}
-                  className={cn(
-                    "size-8 rounded-full border-2 border-transparent p-0 outline-none transition-transform",
-                    "ring-foreground ring-offset-2 ring-offset-background",
-                    "data-pressed:ring-2"
-                  )}
-                  key={c}
-                  style={{ background: c }}
-                  value={c}
-                />
-              ))}
-            </ToggleGroup>
-            <Button
-              className="ml-auto"
-              disabled={accent === defaultAccent}
-              onClick={() => onAccentChange(defaultAccent)}
-              size="sm"
-              type="button"
-              variant="ghost"
-            >
-              <ArrowCounterClockwiseIcon weight="duotone" />
-              Reset
-            </Button>
-          </div>
+          {colorAdjustable ? (
+            <ColorControl
+              choice={colorChoice}
+              isDefault={colorIsDefault}
+              onChange={onColorChoiceChange}
+              palette={photoUrl ? paramCtx.palette : null}
+            />
+          ) : null}
         </ControlBlock>
         {paramGroup("style")}
       </div>

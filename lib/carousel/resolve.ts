@@ -1,10 +1,11 @@
 /**
- * Resolve the deck-wide visual style: theme defaults + the shared accent
- * (or, for the Photo theme, the photo-adaptive palette). One style drives the
- * whole carousel — there are no per-slide overrides.
+ * Resolve the deck-wide visual style: theme defaults + the user's resolved
+ * colour scheme (a preset, or photo-derived — already resolved upstream by
+ * `resolveColors`). One style drives the whole carousel — there are no
+ * per-slide overrides.
  */
 
-import type { PaletteTheme } from "@/lib/palette";
+import type { ColorScheme, ThemeColorPolicy } from "@/lib/colors";
 import {
   CAROUSEL_THEME_TOKENS,
   type CarouselThemeId,
@@ -51,27 +52,34 @@ export function readableOn(hex: string): string {
   return lum > 0.55 ? "#0a0a0a" : "#ffffff";
 }
 
+/** A carousel theme's colour policy, derived from its token row — every
+ *  carousel theme is colour-adjustable; the tokens are the Reset target. */
+export function carouselColorPolicy(theme: CarouselThemeId): ThemeColorPolicy {
+  const tokens = CAROUSEL_THEME_TOKENS[theme];
+  return {
+    default: {
+      primary: tokens.accent,
+      secondary: tokens.accent2,
+      onPrimary: tokens.onAccent,
+    },
+    defaultChoice: tokens.defaultColorChoice,
+    userAdjustable: true,
+  };
+}
+
 /**
- * @param theme       chosen carousel theme — supplies fonts, overlay, colours
- * @param accent      shared accent swatch (single-card control)
- * @param photoTheme  extracted palette; only consulted for photo-palette themes
- *                    (Exposure), so that theme stays bespoke-to-the-photo
+ * @param theme   chosen carousel theme — supplies fonts, overlay, colours
+ * @param colors  the resolved colour scheme (user choice or theme default)
  */
 export function resolveDeckStyle(
   theme: CarouselThemeId,
-  accent: string,
-  photoTheme: PaletteTheme | null
+  colors: ColorScheme
 ): EffectiveStyle {
   const tokens = CAROUSEL_THEME_TOKENS[theme];
 
-  let resolvedAccent = accent;
-  let accent2 = tokens.accent2;
-  let onAccent = readableOn(accent);
-  if (tokens.usesPhotoPalette && photoTheme) {
-    resolvedAccent = photoTheme.accent;
-    accent2 = photoTheme.accent2;
-    onAccent = photoTheme.onAccent;
-  }
+  const resolvedAccent = colors.primary;
+  const accent2 = colors.secondary ?? tokens.accent2;
+  const onAccent = colors.onPrimary ?? readableOn(resolvedAccent);
 
   return {
     accent: resolvedAccent,

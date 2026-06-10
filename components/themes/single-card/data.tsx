@@ -47,7 +47,7 @@ const USES = [
 ] as const;
 
 const INK = "#0e0e0e";
-const ACCENT = "#d23f1d";
+const DEFAULT_ACCENT = "#d23f1d";
 const BG = "#ffffff";
 const PANEL = "#ffffff";
 const GRID = "rgba(14, 14, 14, 0.1)";
@@ -123,11 +123,13 @@ const DEFAULT_ZONES = [
 // Route glyph: pool lanes for a swim, every leg overlaid (accent shades) for a
 // project, otherwise the single ink silhouette.
 function DataRoute({
+  accent,
   sport,
   multi,
   routes,
   coords,
 }: {
+  accent: string;
   coords?: Coord[];
   multi: boolean;
   routes: SegmentRoute[];
@@ -142,7 +144,7 @@ function DataRoute({
             fill="none"
             key={`lane-${i}`}
             opacity={0.75}
-            stroke={ACCENT}
+            stroke={accent}
             strokeWidth={2}
           />
         ))}
@@ -152,7 +154,7 @@ function DataRoute({
   if (multi) {
     return (
       <OverlayRoute
-        colors={accentShades(ACCENT, routes.length)}
+        colors={accentShades(accent, routes.length)}
         h={200}
         pad={14}
         routes={routes.map((r) => r.coords)}
@@ -176,7 +178,9 @@ export function ThemeData({
   data,
   photoUrl,
   imageTransform,
+  colors,
 }: ThemeProps<(typeof USES)[number]>) {
+  const accent = colors?.primary ?? DEFAULT_ACCENT;
   const sport = data.sport;
   const multi = isMultiActivity(data);
   const routes = multi ? segmentRoutes(data) : [];
@@ -189,7 +193,7 @@ export function ThemeData({
           segProf.useElevation
         )
       : [];
-  const elevShades = accentShades(ACCENT, elevCurves.length);
+  const elevShades = accentShades(accent, elevCurves.length);
 
   let cells: ReactNode = null;
   if (sport === "ride") {
@@ -447,6 +451,7 @@ export function ThemeData({
               />
             ))}
             <DataRoute
+              accent={accent}
               coords={data.routeCoordinates}
               multi={multi}
               routes={routes}
@@ -508,9 +513,9 @@ export function ThemeData({
             {!multi && sport === "run" && data.paceProfile && (
               <path
                 d={pacePath(data.paceProfile, 460, 200, 8, true)}
-                fill={ACCENT}
+                fill={accent}
                 fillOpacity={0.22}
-                stroke={ACCENT}
+                stroke={accent}
                 strokeWidth={2.2}
               />
             )}
@@ -529,7 +534,7 @@ export function ThemeData({
                   const h = 30 + ((v - min) / dv) * 150;
                   return (
                     <rect
-                      fill={ACCENT}
+                      fill={accent}
                       height={h}
                       key={`bar-${i}-${v}`}
                       opacity={0.6 + ((v - min) / dv) * 0.4}
@@ -631,7 +636,7 @@ export function ThemeData({
                 </div>
                 <div
                   style={{
-                    background: i % 2 === 0 ? INK : ACCENT,
+                    background: i % 2 === 0 ? INK : accent,
                     height: z.pct * 3.2,
                     width: "100%",
                     minHeight: 6,
@@ -737,7 +742,7 @@ export function ThemeData({
         }}
       >
         <span>EFF/2026/{sport.toUpperCase().slice(0, 3)}-04</span>
-        <span style={{ color: ACCENT }}>● DATA</span>
+        <span style={{ color: accent }}>● DATA</span>
       </div>
     </div>
   );
@@ -748,6 +753,7 @@ export const dataTheme = defineTheme({
   label: "DATA",
   tagline: "dashboard poster",
   uses: USES,
+  colors: { default: { primary: DEFAULT_ACCENT }, userAdjustable: true },
   photo: { defaultOn: false },
   Component: ThemeData,
 });

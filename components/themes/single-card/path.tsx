@@ -20,7 +20,7 @@ import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoBackdrop } from "../shared/photo-backdrop";
 
 const INK = "#1a1714";
-const ACCENT = "#c45a2c";
+const DEFAULT_ACCENT = "#c45a2c";
 const ROUTE_W = 900;
 const ROUTE_H = 720;
 
@@ -37,7 +37,9 @@ export function ThemePath({
   data,
   photoUrl,
   imageTransform,
+  colors,
 }: ThemeProps<(typeof USES)[number]>) {
+  const accent = colors?.primary ?? DEFAULT_ACCENT;
   const isPool = data.sport === "swim";
   const sport = data.sport;
   const multi = isMultiActivity(data);
@@ -194,6 +196,7 @@ export function ThemePath({
               y="0"
             />
             <RouteHero
+              accent={accent}
               coords={data.routeCoordinates}
               isPool={isPool}
               multi={multi}
@@ -271,26 +274,28 @@ export function ThemePath({
 // The route hero: pool lanes for a swim, every leg overlaid for a project,
 // otherwise a single silhouette.
 function RouteHero({
+  accent,
   isPool,
   multi,
   routes,
   coords,
 }: {
+  accent: string;
   coords?: [number, number][];
   isPool: boolean;
   multi: boolean;
   routes: SegmentRoute[];
 }) {
   if (isPool) {
-    return <PoolLanes />;
+    return <PoolLanes accent={accent} />;
   }
   if (multi) {
-    return <MultiPathRoute routes={routes} />;
+    return <MultiPathRoute accent={accent} routes={routes} />;
   }
-  return <PathRoute coords={coords} />;
+  return <PathRoute accent={accent} coords={coords} />;
 }
 
-function PoolLanes() {
+function PoolLanes({ accent }: { accent: string }) {
   return (
     <g>
       {abstractLanes(ROUTE_W, ROUTE_H, 6, 60).map((l, i) => (
@@ -308,7 +313,7 @@ function PoolLanes() {
           <path
             d={`M${l.x} ${l.y + l.h / 2} Q${l.x + l.w / 4} ${l.y + l.h / 2 - 18}, ${l.x + l.w / 2} ${l.y + l.h / 2} T${l.x + l.w} ${l.y + l.h / 2}`}
             fill="none"
-            stroke={ACCENT}
+            stroke={accent}
             strokeOpacity={0.55 - i * 0.05}
             strokeWidth={2.5}
           />
@@ -318,7 +323,13 @@ function PoolLanes() {
   );
 }
 
-function PathRoute({ coords }: { coords?: [number, number][] }) {
+function PathRoute({
+  accent,
+  coords,
+}: {
+  accent: string;
+  coords?: [number, number][];
+}) {
   if (!coords || coords.length === 0) {
     return null;
   }
@@ -364,7 +375,7 @@ function PathRoute({ coords }: { coords?: [number, number][] }) {
         strokeLinejoin="round"
         strokeWidth={4}
       />
-      <circle cx={start[0]} cy={start[1]} fill={ACCENT} r={9} />
+      <circle cx={start[0]} cy={start[1]} fill={accent} r={9} />
       <circle cx={end[0]} cy={end[1]} fill={INK} r={9} />
     </g>
   );
@@ -375,13 +386,19 @@ function PathRoute({ coords }: { coords?: [number, number][] }) {
 // keep their true positions relative to one another, each tinted a different
 // shade of the accent so they read apart without leaving the palette. Delegates
 // the projection + per-leg draw to the shared OverlayRoute.
-function MultiPathRoute({ routes }: { routes: SegmentRoute[] }) {
+function MultiPathRoute({
+  accent,
+  routes,
+}: {
+  accent: string;
+  routes: SegmentRoute[];
+}) {
   if (routes.length === 0) {
     return null;
   }
   return (
     <OverlayRoute
-      colors={accentShades(ACCENT, routes.length)}
+      colors={accentShades(accent, routes.length)}
       h={ROUTE_H}
       // soft ink halo keeps every leg legible over a photo backdrop
       halo={{ color: "rgba(26,23,20,0.07)", width: 16 }}
@@ -400,6 +417,7 @@ export const pathTheme = defineTheme({
   label: "PATH",
   tagline: "route is the hero",
   uses: USES,
+  colors: { default: { primary: DEFAULT_ACCENT }, userAdjustable: true },
   photo: { defaultOn: true },
   Component: ThemePath,
 });

@@ -6,8 +6,8 @@
 // fallback palette is applied inline so the card stays legible while
 // extraction is in flight or when no photo is loaded.
 
-import { paletteToCssVars } from "@/hooks/use-image-palette";
 import { routePath, whiteRamp } from "@/lib/chart-helpers";
+import type { ColorScheme } from "@/lib/colors";
 import {
   formatDateUpper,
   formatDuration,
@@ -16,7 +16,6 @@ import {
   formatPaceSec,
 } from "@/lib/format";
 import { isMultiActivity, segmentRoutes } from "@/lib/multi-activity";
-import { DEFAULT_PHOTO_CONFIG, PHOTO_PARAMS } from "@/lib/photo-config";
 import { defineTheme, type ThemeProps } from "@/lib/theme-contract";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoLayer } from "../shared/photo-layer";
@@ -61,21 +60,31 @@ function fallbackPalette(sport: string): StaticPalette {
   };
 }
 
-function fallbackVars(palette: StaticPalette): React.CSSProperties {
+/**
+ * Map the resolved colour scheme onto the theme's CSS variables. A
+ * photo-derived scheme carries the full role palette (`roles`); a static
+ * preset only re-colours the accents, with the sport fallback keeping the
+ * background/type roles legible.
+ */
+function colorsToVars(
+  colors: ColorScheme | undefined,
+  sport: string
+): React.CSSProperties {
+  const fb = fallbackPalette(sport);
   return {
-    ["--bg" as string]: palette.background,
-    ["--headline" as string]: palette.headline,
-    ["--body" as string]: palette.body,
-    ["--accent" as string]: palette.accent,
-    ["--accent-2" as string]: palette.accent,
-    ["--on-accent" as string]: palette.onAccent,
+    ["--bg" as string]: colors?.roles?.background ?? fb.background,
+    ["--headline" as string]: colors?.roles?.headline ?? fb.headline,
+    ["--body" as string]: colors?.roles?.body ?? fb.body,
+    ["--accent" as string]: colors?.primary ?? fb.accent,
+    ["--accent-2" as string]: colors?.secondary ?? colors?.primary ?? fb.accent,
+    ["--on-accent" as string]: colors?.onPrimary ?? fb.onAccent,
   } as React.CSSProperties;
 }
 
 export function ThemePhoto({
   data,
   photoUrl,
-  paletteTheme,
+  colors,
   imageTransform,
 }: ThemePhotoProps) {
   const sport = data.sport;
@@ -83,9 +92,7 @@ export function ThemePhoto({
   const multi = isMultiActivity(data);
   const routes = multi ? segmentRoutes(data) : [];
 
-  const cssVars = paletteTheme
-    ? paletteToCssVars(paletteTheme)
-    : fallbackVars(fallbackPalette(sport));
+  const cssVars = colorsToVars(colors, sport);
 
   let hero: { big: string | number; unit: string; sub: string };
   if (sport === "ride") {
@@ -398,8 +405,13 @@ export const photoTheme = defineTheme({
   label: "PHOTO",
   tagline: "magazine cover",
   uses: USES,
+  // Adjustable, and photo-first: until the user picks, the colours come from
+  // the photo (the old PhotoMood, now the shared photo-derived colour source).
+  colors: {
+    default: { primary: "#c89d6e", onPrimary: "#0a0a0a" },
+    defaultChoice: { kind: "photo", variant: "vibrant" },
+    userAdjustable: true,
+  },
   photo: { defaultOn: true },
-  params: PHOTO_PARAMS,
-  defaults: DEFAULT_PHOTO_CONFIG,
   Component: ThemePhoto,
 });

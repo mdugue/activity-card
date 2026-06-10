@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { ActivityData, Sport } from "@/lib/activity";
+import type { ColorChoice, ColorScheme } from "@/lib/colors";
 import { defaultFilename, exportCard } from "@/lib/export-card";
 import type { ImageTransform } from "@/lib/image-transform";
-import type { ExtractedPalette, PaletteTheme } from "@/lib/palette";
+import type { ExtractedPalette } from "@/lib/palette";
 import type { ParamDef } from "@/lib/params/kinds";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import type { PhotoEffects } from "@/lib/photo-effects";
@@ -20,20 +21,24 @@ import { RenderTheme, type ThemeId } from "./render-theme";
 import { SingleCardPreview } from "./single-card-preview";
 import { ThemeRail } from "./theme-rail";
 
-/** Single Card's default accent — the Reset target in every single-card theme. */
-const DEFAULT_SINGLE_ACCENT = "#c45a2c";
-
 interface EditStateProps {
-  accent: string;
   athleteName: string;
   available: Record<keyof Visibility, boolean>;
+  /** show the COLOUR control (hidden for fixed-palette themes) */
+  colorAdjustable: boolean;
+  /** the effective colour choice (theme default until the user picks) */
+  colorChoice: ColorChoice;
+  /** true while the user hasn't customised the colour */
+  colorIsDefault: boolean;
+  /** the resolved colour scheme the theme renders with */
+  colors: ColorScheme;
   /** the active theme's coerced parameter config */
   config: Record<string, unknown>;
   data: ActivityData;
   imageTransform: ImageTransform;
   location: string;
-  onAccentChange: (accent: string) => void;
   onAthleteNameChange: (name: string) => void;
+  onColorChoiceChange: (choice: ColorChoice | null) => void;
   onConfigChange: (next: Record<string, unknown>) => void;
   onDownload: () => void;
   onFilesLoaded: (parts: ParsedActivity[]) => void;
@@ -46,10 +51,9 @@ interface EditStateProps {
   onThemeChange: (theme: ThemeId) => void;
   onTitleChange: (title: string) => void;
   onVisibilityChange: (visibility: Visibility) => void;
-  /** all five palette presets, for the Photo theme's colour-strategy swatches */
+  /** all five palette presets — colour-control swatches + calculated params */
   paramPalette: ExtractedPalette | null;
   photoEffects: PhotoEffects;
-  photoPaletteTheme: PaletteTheme | null;
   photoUrl: string | null;
   theme: ThemeId;
   /** the active theme's parameter schema */
@@ -64,8 +68,8 @@ export function EditState(props: EditStateProps) {
     theme,
     photoUrl,
     photoEffects,
-    photoPaletteTheme,
     paramPalette,
+    colors,
     config,
     onConfigChange,
     themeParams,
@@ -127,15 +131,16 @@ export function EditState(props: EditStateProps) {
   );
 
   const tools = useActivityTools({
-    accent: props.accent,
     athleteName: props.athleteName,
     available: props.available,
+    colorAdjustable: props.colorAdjustable,
+    colorChoice: props.colorChoice,
+    colorIsDefault: props.colorIsDefault,
     data,
-    defaultAccent: DEFAULT_SINGLE_ACCENT,
     location: props.location,
     mode: "single",
-    onAccentChange: props.onAccentChange,
     onAthleteNameChange: props.onAthleteNameChange,
+    onColorChoiceChange: props.onColorChoiceChange,
     onFilesLoaded: props.onFilesLoaded,
     onLocationChange: props.onLocationChange,
     onOpenStravaPicker: props.onOpenStravaPicker,
@@ -182,13 +187,13 @@ export function EditState(props: EditStateProps) {
         }}
         preview={
           <SingleCardPreview
+            colors={colors}
             config={config}
             data={data}
             imageTransform={imageTransform}
             onImageTransformChange={onImageTransformChange}
             photoBackdropEnabled={visibility.photoBackdrop}
             photoEffects={photoEffects}
-            photoPaletteTheme={photoPaletteTheme}
             photoUrl={photoUrl}
             theme={theme}
           />
@@ -205,12 +210,12 @@ export function EditState(props: EditStateProps) {
           style={{ width: 1080, height: 1350, transform: "translateX(-200%)" }}
         >
           <RenderTheme
+            colors={colors}
             config={config}
             data={data}
             imageTransform={imageTransform}
             photoBackdropEnabled={visibility.photoBackdrop}
             photoEffects={photoEffects}
-            photoPaletteTheme={photoPaletteTheme}
             photoUrl={photoUrl}
             theme={theme}
           />

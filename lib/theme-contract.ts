@@ -12,8 +12,8 @@
 
 import type { FC } from "react";
 import type { ActivityData } from "@/lib/activity";
+import type { ColorScheme, ThemeColorPolicy } from "@/lib/colors";
 import type { ImageTransform } from "@/lib/image-transform";
-import type { PaletteTheme } from "@/lib/palette";
 import type { ParamDef } from "@/lib/params/kinds";
 
 /** Overlay elements a theme can opt into. Title/date/distance/time are a
@@ -78,14 +78,15 @@ export interface ThemeProps<
   K extends CapabilityKey = CapabilityKey,
   C = Record<string, unknown>,
 > {
+  /** the resolved colour scheme — colour-adjustable themes render with it;
+   *  fixed-palette themes ignore it. Defaulted per theme so stories can omit. */
+  colors?: ColorScheme;
   /** the theme's coerced parameter config — themes with knobs default it to
    *  their `DEFAULT_*_CONFIG`, so stories can omit it */
   config?: C;
   data: ThemeData<K>;
   /** Pan/zoom for the background photo — applied wherever a theme shows one. */
   imageTransform?: ImageTransform | null;
-  /** Photo theme only — the resolved photo-adaptive palette. */
-  paletteTheme?: PaletteTheme | null;
   photoUrl?: string | null;
 }
 
@@ -102,6 +103,7 @@ export interface ThemePhotoPolicy {
 /** The erased registry-facing descriptor. */
 export interface SingleCardTheme {
   Component: FC<ThemeProps>;
+  colors: ThemeColorPolicy;
   defaults: Record<string, unknown>;
   id: string;
   label: string;
@@ -122,6 +124,7 @@ export function defineTheme<
   const K extends readonly CapabilityKey[],
   C extends Record<string, unknown> = Record<string, never>,
 >(d: {
+  colors: ThemeColorPolicy;
   Component: FC<ThemeProps<K[number], C>>;
   defaults?: C;
   id: string;
@@ -138,6 +141,7 @@ export function defineTheme<
     tagline: d.tagline,
     uses: d.uses,
     usesWhen: d.usesWhen,
+    colors: d.colors,
     photo: d.photo,
     params: d.params ?? [],
     defaults: d.defaults ?? {},

@@ -13,18 +13,18 @@ import { ImageAdjustOverlay } from "@/components/app/image-adjust-overlay";
 import { RenderTheme, type ThemeId } from "@/components/app/render-theme";
 import { Badge } from "@/components/ui/badge";
 import type { ActivityData } from "@/lib/activity";
+import type { ColorScheme } from "@/lib/colors";
 import type { ImageTransform } from "@/lib/image-transform";
-import type { PaletteTheme } from "@/lib/palette";
 import type { PhotoEffects } from "@/lib/photo-effects";
 
 interface SingleCardPreviewProps {
+  colors: ColorScheme;
   config: Record<string, unknown>;
   data: ActivityData;
   imageTransform: ImageTransform;
   onImageTransformChange: (next: ImageTransform) => void;
   photoBackdropEnabled: boolean;
   photoEffects: PhotoEffects;
-  photoPaletteTheme: PaletteTheme | null;
   photoUrl: string | null;
   theme: ThemeId;
 }
@@ -34,9 +34,9 @@ export function SingleCardPreview({
   theme,
   photoUrl,
   photoBackdropEnabled,
+  colors,
   config,
   photoEffects,
-  photoPaletteTheme,
   imageTransform,
   onImageTransformChange,
 }: SingleCardPreviewProps) {
@@ -65,12 +65,12 @@ export function SingleCardPreview({
           }}
         >
           <RenderTheme
+            colors={colors}
             config={config}
             data={data}
             imageTransform={imageTransform}
             photoBackdropEnabled={photoBackdropEnabled}
             photoEffects={photoEffects}
-            photoPaletteTheme={photoPaletteTheme}
             photoUrl={photoUrl}
             theme={theme}
           />

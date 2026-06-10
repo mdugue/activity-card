@@ -41,21 +41,6 @@ describe("theme param specs", () => {
     expect(resolveThemeConfig("nope", { a: 1 })).toEqual({});
   });
 
-  test("photo palette is a calculated select over five strategies", () => {
-    const p = THEME_PARAM_SPECS.photo.params.find((x) => x.id === "palette");
-    expect(p?.kind).toBe("select");
-    if (p && p.kind === "select" && typeof p.options === "function") {
-      const opts = p.options({ data: SAMPLE_RIDE, palette: null });
-      expect(opts.map((o) => o.id)).toEqual([
-        "vibrant",
-        "muted",
-        "complementary",
-        "spectrum",
-        "pure",
-      ]);
-    }
-  });
-
   test("altitude headline offers only available metrics + none", () => {
     const p = THEME_PARAM_SPECS.altitude.params.find((x) => x.id === "claim");
     if (p && p.kind === "select" && typeof p.options === "function") {

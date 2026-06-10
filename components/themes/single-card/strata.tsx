@@ -508,6 +508,11 @@ export const strataTheme = defineTheme({
   label: "STRATA",
   tagline: "woven topography",
   uses: USES,
+  // Fixed: the mood param drives the whole palette.
+  colors: {
+    default: { primary: "#ffd98a", secondary: "#ff6a3a" },
+    userAdjustable: false,
+  },
   photo: { defaultOn: false },
   params: STRATA_PARAMS,
   defaults: DEFAULT_STRATA_CONFIG,

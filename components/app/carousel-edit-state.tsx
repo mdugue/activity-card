@@ -23,12 +23,13 @@ import {
   CAROUSEL_THEME_TOKENS,
   type CarouselThemeId,
 } from "@/lib/carousel/theme-tokens";
+import type { ColorChoice, ColorScheme } from "@/lib/colors";
 import { carouselBaseName, exportCarousel } from "@/lib/export-carousel";
 import {
   clampCoverTransform,
   type ImageTransform,
 } from "@/lib/image-transform";
-import type { ExtractedPalette, PaletteTheme } from "@/lib/palette";
+import type { ExtractedPalette } from "@/lib/palette";
 import type { ParamDef } from "@/lib/params/kinds";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import { isQuarterTurn, type PhotoEffects } from "@/lib/photo-effects";
@@ -43,18 +44,23 @@ import { SlideStrip } from "./slide-strip";
 import { ThemeRail } from "./theme-rail";
 
 interface CarouselEditStateProps {
-  accent: string;
   athleteName: string;
   available: Record<keyof Visibility, boolean>;
   carousel: CarouselController;
+  /** the effective colour choice (theme default until the user picks) */
+  colorChoice: ColorChoice;
+  /** true while the user hasn't customised the colour */
+  colorIsDefault: boolean;
+  /** the resolved colour scheme the deck renders with */
+  colors: ColorScheme;
   /** the active carousel theme's coerced parameter config (StrataConfig for the
    *  STRATA carousel; {} for the rest) */
   config: Record<string, unknown>;
   data: ActivityData;
   imageTransform: ImageTransform;
   location: string;
-  onAccentChange: (accent: string) => void;
   onAthleteNameChange: (name: string) => void;
+  onColorChoiceChange: (choice: ColorChoice | null) => void;
   onConfigChange: (next: Record<string, unknown>) => void;
   onFilesLoaded: (parts: ParsedActivity[]) => void;
   onImageTransformChange: (next: ImageTransform) => void;
@@ -66,10 +72,9 @@ interface CarouselEditStateProps {
   onThemeChange: (theme: CarouselThemeId) => void;
   onTitleChange: (title: string) => void;
   onVisibilityChange: (visibility: Visibility) => void;
-  /** all five palette presets, for any photo-strategy param swatches */
+  /** all five palette presets — colour-control swatches + calculated params */
   paramPalette: ExtractedPalette | null;
   photoEffects: PhotoEffects;
-  photoPaletteTheme: PaletteTheme | null;
   photoUrl: string | null;
   theme: CarouselThemeId;
   /** the active carousel theme's parameter schema */
@@ -79,15 +84,8 @@ interface CarouselEditStateProps {
 }
 
 export function CarouselEditState(props: CarouselEditStateProps) {
-  const {
-    carousel,
-    data,
-    theme,
-    photoUrl,
-    imageTransform,
-    photoEffects,
-    photoPaletteTheme,
-  } = props;
+  const { carousel, data, theme, photoUrl, imageTransform, photoEffects } =
+    props;
   const { slides, selectedId, selectedIndex } = carousel;
 
   // Photo support is per-theme: every carousel theme now renders a background
@@ -234,12 +232,11 @@ export function CarouselEditState(props: CarouselEditStateProps) {
   };
 
   const canvasProps = {
-    accent: props.accent,
+    colors: props.colors,
     data,
     imageSize,
     imageTransform,
     photoEffects,
-    photoTheme: photoPaletteTheme,
     photoUrl,
     slides,
     strataConfig: props.config as StrataConfig,
@@ -248,15 +245,16 @@ export function CarouselEditState(props: CarouselEditStateProps) {
   };
 
   const tools = useActivityTools({
-    accent: props.accent,
     athleteName: props.athleteName,
     available: props.available,
+    colorAdjustable: true,
+    colorChoice: props.colorChoice,
+    colorIsDefault: props.colorIsDefault,
     data,
-    defaultAccent: CAROUSEL_THEME_TOKENS[theme].accent,
     location: props.location,
     mode: "carousel",
-    onAccentChange: props.onAccentChange,
     onAthleteNameChange: props.onAthleteNameChange,
+    onColorChoiceChange: props.onColorChoiceChange,
     onFilesLoaded: props.onFilesLoaded,
     onLocationChange: props.onLocationChange,
     onOpenStravaPicker: props.onOpenStravaPicker,
@@ -369,13 +367,12 @@ export function CarouselEditState(props: CarouselEditStateProps) {
         )}
       >
         <SlideStrip
-          accent={props.accent}
+          colors={props.colors}
           data={data}
           imageSize={imageSize}
           imageTransform={imageTransform}
           onSelect={carousel.select}
           photoEffects={photoEffects}
-          photoTheme={photoPaletteTheme}
           photoUrl={photoUrl}
           selectedId={selectedId}
           slides={slides}

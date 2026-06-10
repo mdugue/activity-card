@@ -11,8 +11,8 @@ import type { ImageSize } from "@/hooks/use-image-natural-size";
 import type { ActivityData } from "@/lib/activity";
 import type { CarouselThemeId } from "@/lib/carousel/theme-tokens";
 import type { Slide } from "@/lib/carousel/types";
+import type { ColorScheme } from "@/lib/colors";
 import type { ImageTransform } from "@/lib/image-transform";
-import type { PaletteTheme } from "@/lib/palette";
 import type { PhotoEffects } from "@/lib/photo-effects";
 import type { StrataConfig } from "@/lib/strata";
 import { cn } from "@/lib/utils";
@@ -23,13 +23,12 @@ const THUMB_H = Math.round((THUMB_W * 1350) / 1080);
 const SCALE = THUMB_W / 1080;
 
 interface SlideStripProps {
-  accent: string;
+  colors: ColorScheme;
   data: ActivityData;
   imageSize?: ImageSize | null;
   imageTransform?: ImageTransform | null;
   onSelect: (id: string) => void;
   photoEffects?: PhotoEffects;
-  photoTheme?: PaletteTheme | null;
   photoUrl?: string | null;
   selectedId: string | null;
   slides: Slide[];
@@ -45,12 +44,11 @@ export function SlideStrip(props: SlideStripProps) {
   // strip, large preview and export are guaranteed to show the same pixels.
   const canvas = (
     <SeamlessCanvas
-      accent={props.accent}
+      colors={props.colors}
       data={props.data}
       imageSize={props.imageSize}
       imageTransform={props.imageTransform}
       photoEffects={props.photoEffects}
-      photoTheme={props.photoTheme}
       photoUrl={props.photoUrl}
       slides={slides}
       strataConfig={props.strataConfig}

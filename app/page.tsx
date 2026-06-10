@@ -18,17 +18,22 @@ import { useCarousel } from "@/hooks/use-carousel";
 import { useImagePalette } from "@/hooks/use-image-palette";
 import type { ActivityData, ActivitySource, Sport } from "@/lib/activity";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
+import { carouselColorPolicy } from "@/lib/carousel/resolve";
 import { carouselVisibilityAvailable } from "@/lib/carousel/stats";
 import {
   CAROUSEL_THEME_TOKENS,
   type CarouselThemeId,
   DEFAULT_CAROUSEL_THEME,
 } from "@/lib/carousel/theme-tokens";
+import {
+  type ColorChoice,
+  coerceColorChoice,
+  resolveColors,
+} from "@/lib/colors";
 import { formatDateUpper } from "@/lib/format";
 import { IDENTITY_TRANSFORM, type ImageTransform } from "@/lib/image-transform";
 import { resolveThemeConfig, themeParams } from "@/lib/params/registry";
 import type { ParsedActivity } from "@/lib/parse-activity";
-import type { PhotoConfig } from "@/lib/photo-config";
 import { NO_EFFECTS, type PhotoEffects } from "@/lib/photo-effects";
 import { cn } from "@/lib/utils";
 import {
@@ -42,12 +47,14 @@ type AppState = "empty" | "picking-strava" | "edit" | "download";
 const STORAGE_KEY = "effort:ui:v1";
 
 interface PersistedUi {
-  accent: string;
-  // Legacy keys (pre-param-schema): read once on load and migrated into
-  // `themeConfigs`, then dropped on the next save.
+  // Legacy keys (pre-colour/param-schema): read once on load, migrated, and
+  // dropped on the next save.
+  accent?: unknown;
   altitudeConfig?: unknown;
   athleteName?: string;
   carouselTheme: CarouselThemeId;
+  /** the user's colour choice; null/absent = the active theme's default */
+  colorChoice?: unknown;
   mode: CardMode;
   photoMood?: unknown;
   strataConfig?: unknown;
@@ -116,10 +123,38 @@ function migrateThemeConfigs(
   if (persisted.strataConfig && configs.strata === undefined) {
     configs.strata = persisted.strataConfig;
   }
-  if (persisted.photoMood && configs.photo === undefined) {
-    configs.photo = { palette: persisted.photoMood };
-  }
   return configs;
+}
+
+/** The persisted colour choice, with legacy formats folded in: the pre-round-2
+ *  `accent` hex becomes a preset choice; a Photo-theme user's PhotoMood (or its
+ *  round-1 `themeConfigs.photo.palette` form) becomes a photo-derived choice. */
+function migrateColorChoice(
+  persisted: Partial<PersistedUi>
+): ColorChoice | null {
+  const direct = coerceColorChoice(persisted.colorChoice);
+  if (direct) {
+    return direct;
+  }
+  if (persisted.theme === "photo") {
+    const photoCfg = persisted.themeConfigs?.photo as
+      | { palette?: unknown }
+      | undefined;
+    const legacyMood = coerceColorChoice({
+      kind: "photo",
+      variant: photoCfg?.palette ?? persisted.photoMood,
+    });
+    if (legacyMood) {
+      return legacyMood;
+    }
+  }
+  if (typeof persisted.accent === "string") {
+    return coerceColorChoice({
+      kind: "preset",
+      scheme: { primary: persisted.accent },
+    });
+  }
+  return null;
 }
 
 export default function Home() {
@@ -142,7 +177,10 @@ export default function Home() {
   // Rotate / mirror / filter for the photo. Like the transform, tied to the
   // current photo and reset when it's swapped or removed.
   const [photoEffects, setPhotoEffects] = useState<PhotoEffects>(NO_EFFECTS);
-  const [accent, setAccent] = useState<string>("#c45a2c");
+  // The user's colour choice — a preset scheme or a photo-derived strategy.
+  // `null` means "the active theme's default", so each theme keeps its own
+  // signature colours until the user explicitly picks.
+  const [colorChoice, setColorChoice] = useState<ColorChoice | null>(null);
   const [visibility, setVisibility] = useState<Visibility>(DEFAULT_VISIBILITY);
   // Per-theme parameter configs, keyed by theme/config key (e.g. "altitude",
   // "strata", "photo"). One generic slot replaces the per-theme config states;
@@ -166,15 +204,33 @@ export default function Home() {
   const setActiveConfig = (next: Record<string, unknown>) =>
     setThemeConfigs((prev) => ({ ...prev, [activeConfigKey]: next }));
 
-  // The Photo theme's colour strategy drives the palette extraction (which also
-  // powers the picker's per-strategy swatches).
-  const photoMood = (
-    resolveThemeConfig("photo", themeConfigs.photo) as PhotoConfig
-  ).palette;
+  // Colour resolution: the active theme's policy supplies the default scheme
+  // and (for photo-first themes like Exposure) a default photo-derived choice;
+  // the user's explicit choice overrides. A photo-kind choice resolves through
+  // the extracted palette and falls back to the theme default while none is
+  // available.
+  const activeColorPolicy =
+    mode === "carousel"
+      ? carouselColorPolicy(carouselTheme)
+      : SINGLE_CARD_THEMES[theme].colors;
+  const effectiveColorChoice: ColorChoice = colorChoice ??
+    activeColorPolicy.defaultChoice ?? {
+      kind: "preset",
+      scheme: activeColorPolicy.default,
+    };
 
-  // One palette extraction for the whole app, regardless of how many copies
-  // of the photo theme are mounted (preview + offscreen export mount).
-  const photoPalette = useImagePalette(photoUrl, photoMood);
+  // One palette extraction for the whole app (the colour control's swatches +
+  // any photo-derived choice), regardless of how many mounts consume it.
+  const paletteVariant =
+    effectiveColorChoice.kind === "photo"
+      ? effectiveColorChoice.variant
+      : "vibrant";
+  const photoPalette = useImagePalette(photoUrl, paletteVariant);
+  const colors = resolveColors(
+    effectiveColorChoice,
+    activeColorPolicy.default,
+    photoUrl ? photoPalette.palette : null
+  );
 
   // Restore UI prefs (theme, accent, visibility, moods, athleteName) on mount.
   // Hydrating from localStorage is a legitimate cold-start sync; the
@@ -194,8 +250,9 @@ export default function Home() {
     ) {
       setCarouselTheme(persisted.carouselTheme);
     }
-    if (persisted.accent) {
-      setAccent(persisted.accent);
+    const migratedChoice = migrateColorChoice(persisted);
+    if (migratedChoice) {
+      setColorChoice(migratedChoice);
     }
     if (persisted.visibility) {
       setVisibility({ ...DEFAULT_VISIBILITY, ...persisted.visibility });
@@ -222,7 +279,7 @@ export default function Home() {
     const payload: PersistedUi = {
       theme,
       carouselTheme,
-      accent,
+      colorChoice: colorChoice ?? undefined,
       visibility,
       themeConfigs,
       mode,
@@ -236,7 +293,7 @@ export default function Home() {
   }, [
     theme,
     carouselTheme,
-    accent,
+    colorChoice,
     visibility,
     themeConfigs,
     mode,
@@ -498,16 +555,18 @@ export default function Home() {
           <EditTopBar mode={mode} onModeChange={setMode} />
           {mode === "carousel" ? (
             <CarouselEditState
-              accent={accent}
               athleteName={data.athleteName}
               available={carouselVisibilityAvailable(data, carouselTheme)}
               carousel={carousel}
+              colorChoice={effectiveColorChoice}
+              colorIsDefault={colorChoice === null}
+              colors={colors}
               config={activeConfig}
               data={visibleData}
               imageTransform={imageTransform}
               location={data.location}
-              onAccentChange={setAccent}
               onAthleteNameChange={handleAthleteNameChange}
+              onColorChoiceChange={setColorChoice}
               onConfigChange={setActiveConfig}
               onFilesLoaded={handleFilesLoaded}
               onImageTransformChange={setImageTransform}
@@ -521,7 +580,6 @@ export default function Home() {
               onVisibilityChange={setVisibility}
               paramPalette={photoPalette.palette}
               photoEffects={photoEffects}
-              photoPaletteTheme={photoPalette.theme}
               photoUrl={photoUrl}
               theme={carouselTheme}
               themeParams={activeThemeParams}
@@ -530,15 +588,18 @@ export default function Home() {
             />
           ) : (
             <EditState
-              accent={accent}
               athleteName={data.athleteName}
               available={themeAvailability(data, SINGLE_CARD_THEMES[theme])}
+              colorAdjustable={activeColorPolicy.userAdjustable}
+              colorChoice={effectiveColorChoice}
+              colorIsDefault={colorChoice === null}
+              colors={colors}
               config={activeConfig}
               data={visibleData}
               imageTransform={imageTransform}
               location={data.location}
-              onAccentChange={setAccent}
               onAthleteNameChange={handleAthleteNameChange}
+              onColorChoiceChange={setColorChoice}
               onConfigChange={setActiveConfig}
               onDownload={handleDownload}
               onFilesLoaded={handleFilesLoaded}
@@ -553,7 +614,6 @@ export default function Home() {
               onVisibilityChange={setVisibility}
               paramPalette={photoPalette.palette}
               photoEffects={photoEffects}
-              photoPaletteTheme={photoPalette.theme}
               photoUrl={photoUrl}
               theme={theme}
               themeParams={activeThemeParams}
@@ -565,6 +625,7 @@ export default function Home() {
       ) : null}
       {state === "download" && visibleData ? (
         <DownloadState
+          colors={colors}
           config={activeConfig}
           data={visibleData}
           imageTransform={imageTransform}
@@ -572,7 +633,6 @@ export default function Home() {
           onNew={handleNew}
           photoBackdropEnabled={visibility.photoBackdrop}
           photoEffects={photoEffects}
-          photoPaletteTheme={photoPalette.theme}
           photoUrl={photoUrl}
           theme={theme}
         />

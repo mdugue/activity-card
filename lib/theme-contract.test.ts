@@ -10,7 +10,7 @@ import {
 } from "@/lib/theme-contract";
 import { themeAvailability } from "@/lib/visibility";
 
-const Noop = (_props: ThemeProps<"route" | "elevation">) => null;
+const Noop: (props: ThemeProps<"route" | "elevation">) => null = () => null;
 
 const slim = defineTheme({
   id: "slim",
@@ -18,6 +18,7 @@ const slim = defineTheme({
   tagline: "test theme",
   uses: ["route", "elevation"],
   usesWhen: { elevation: (d) => d.sport === "ride" },
+  colors: { default: { primary: "#c45a2c" }, userAdjustable: false },
   photo: { defaultOn: true },
   Component: Noop,
 });

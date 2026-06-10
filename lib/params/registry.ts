@@ -5,7 +5,6 @@
 // both use the "strata" key because they render the same StrataConfig.
 
 import { ALTITUDE_PARAMS, DEFAULT_ALTITUDE_CONFIG } from "@/lib/altitude";
-import { DEFAULT_PHOTO_CONFIG, PHOTO_PARAMS } from "@/lib/photo-config";
 import { DEFAULT_STRATA_CONFIG, STRATA_PARAMS } from "@/lib/strata";
 import type { ParamDef } from "./kinds";
 import { coerceConfig } from "./resolve";
@@ -18,7 +17,6 @@ export interface ThemeParamSpec {
 export const THEME_PARAM_SPECS: Record<string, ThemeParamSpec> = {
   altitude: { defaults: DEFAULT_ALTITUDE_CONFIG, params: ALTITUDE_PARAMS },
   strata: { defaults: DEFAULT_STRATA_CONFIG, params: STRATA_PARAMS },
-  photo: { defaults: DEFAULT_PHOTO_CONFIG, params: PHOTO_PARAMS },
 };
 
 /** The param specs for a theme key, or an empty list when it has no knobs. */

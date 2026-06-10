@@ -341,7 +341,7 @@ export function carouselVisibilityAvailable(
   theme: CarouselThemeId
 ): Record<keyof Visibility, boolean> {
   const base = availableVisibility(data);
-  const style = resolveDeckStyle(theme, "#000000", null);
+  const style = resolveDeckStyle(theme, { primary: "#000000" });
   const slides = buildDeck(CAROUSEL_THEME_TOKENS[theme].deck);
   const shown = new Set<string>();
   for (const slideStats of planSlideStats(data, slides, style, {

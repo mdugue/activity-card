@@ -35,7 +35,7 @@ const USES = [
   "speed",
 ] as const;
 
-const ACCENT = "#1d3a2e";
+const DEFAULT_ACCENT = "#1d3a2e";
 const INK = "#1a1816";
 // Soft warm paper — a gentle, low-chroma off-white so the editorial layout
 // reads as printed on a sheet, lifted off the lighter page. Much cleaner than
@@ -68,11 +68,13 @@ const MORNING_WORDS = ["quiet", "gentle", "steady", "still", "clear"] as const;
 // "THE LINE" glyph: pool lanes for a swim, every leg overlaid for a project,
 // otherwise a single silhouette — all in the deep-forest accent.
 function EditorialRoute({
+  accent,
   sport,
   multi,
   routes,
   coords,
 }: {
+  accent: string;
   coords?: Coord[];
   multi: boolean;
   routes: SegmentRoute[];
@@ -85,7 +87,7 @@ function EditorialRoute({
           <line
             key={`lane-${i}`}
             opacity={0.5 + i * 0.1}
-            stroke={ACCENT}
+            stroke={accent}
             strokeDasharray="2 8"
             strokeWidth={1.4}
             x1={20}
@@ -100,7 +102,7 @@ function EditorialRoute({
   if (multi) {
     return (
       <OverlayRoute
-        colors={accentShades(ACCENT, routes.length)}
+        colors={accentShades(accent, routes.length)}
         h={200}
         pad={16}
         routes={routes.map((r) => r.coords)}
@@ -113,7 +115,7 @@ function EditorialRoute({
     <path
       d={routePath(coords, 280, 200, 16)}
       fill="none"
-      stroke={ACCENT}
+      stroke={accent}
       strokeLinecap="round"
       strokeLinejoin="round"
       strokeWidth={2}
@@ -125,7 +127,9 @@ export function ThemeEditorial({
   data,
   photoUrl,
   imageTransform,
+  colors,
 }: ThemeProps<(typeof USES)[number]>) {
+  const accent = colors?.primary ?? DEFAULT_ACCENT;
   const sport = data.sport;
   const multi = isMultiActivity(data);
   const routes = multi ? segmentRoutes(data) : [];
@@ -237,7 +241,7 @@ export function ThemeEditorial({
               fontSize: 52,
               fontStyle: "italic",
               marginTop: 14,
-              color: ACCENT,
+              color: accent,
             }}
           >
             {distUnit}, and then —
@@ -321,6 +325,7 @@ export function ThemeEditorial({
               >
                 <title>Route silhouette</title>
                 <EditorialRoute
+                  accent={accent}
                   coords={data.routeCoordinates}
                   multi={multi}
                   routes={routes}
@@ -396,7 +401,7 @@ export function ThemeEditorial({
           }}
         >
           <span>— FIN —</span>
-          <span style={{ color: ACCENT }}>EFFORT · PRINTED MMXXVI</span>
+          <span style={{ color: accent }}>EFFORT · PRINTED MMXXVI</span>
         </div>
       </div>
     </div>
@@ -416,6 +421,7 @@ export const editorialTheme = defineTheme({
     pace: (d) => d.sport === "run" || d.sport === "swim",
     speed: (d) => d.sport === "ride",
   },
+  colors: { default: { primary: DEFAULT_ACCENT }, userAdjustable: true },
   photo: { defaultOn: true },
   Component: ThemeEditorial,
 });

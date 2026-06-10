@@ -1,14 +1,16 @@
 import { SINGLE_CARD_THEMES, type ThemeId } from "@/components/themes";
 import { PhotoEffectsProvider } from "@/components/themes/shared/photo-fx";
 import type { ActivityData } from "@/lib/activity";
+import type { ColorScheme } from "@/lib/colors";
 import type { ImageTransform } from "@/lib/image-transform";
-import type { PaletteTheme } from "@/lib/palette";
 import type { PhotoEffects } from "@/lib/photo-effects";
 import { pickThemeData } from "@/lib/theme-contract";
 
 export type { ThemeId } from "@/components/themes";
 
 interface RenderThemeProps {
+  /** the resolved colour scheme for the active theme (user choice or default) */
+  colors?: ColorScheme;
   /** the active theme's coerced parameter config */
   config?: Record<string, unknown>;
   data: ActivityData;
@@ -18,8 +20,6 @@ interface RenderThemeProps {
   photoBackdropEnabled?: boolean;
   /** Filter / grain / mirror, provided to every theme's photo layer via context. */
   photoEffects?: PhotoEffects | null;
-  /** Photo theme: pre-resolved palette extracted from the photo, if available. */
-  photoPaletteTheme?: PaletteTheme | null;
   photoUrl?: string | null;
   theme: ThemeId;
 }
@@ -36,8 +36,8 @@ export function RenderTheme({
   data,
   photoUrl,
   photoBackdropEnabled = true,
+  colors,
   config,
-  photoPaletteTheme = null,
   photoEffects = null,
   imageTransform = null,
 }: RenderThemeProps) {
@@ -47,10 +47,10 @@ export function RenderTheme({
   return (
     <PhotoEffectsProvider value={photoEffects}>
       <Component
+        colors={colors ?? descriptor.colors.default}
         config={config}
         data={pickThemeData(descriptor, data)}
         imageTransform={imageTransform}
-        paletteTheme={photoPaletteTheme}
         photoUrl={photo}
       />
     </PhotoEffectsProvider>

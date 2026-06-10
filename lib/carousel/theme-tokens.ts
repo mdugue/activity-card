@@ -19,6 +19,7 @@
  * Dawn/Dusk light·dark pairs) without being capped at the single-card count.
  */
 
+import type { ColorChoice } from "@/lib/colors";
 import type { FontPairId, RouteStyle, SlideTemplate } from "./types";
 
 /** Carousel theme identifiers. Add new families here freely — nothing ties this
@@ -115,6 +116,9 @@ export interface CarouselThemeTokens {
   dark: boolean;
   /** fixed slide sequence for this theme */
   deck: SlideTemplate[];
+  /** initial colour choice when the user hasn't picked one — Exposure
+   *  defaults to the photo-derived palette */
+  defaultColorChoice?: ColorChoice;
   /** photo filter preset applied by default when this theme is chosen */
   defaultFilter: string;
   /** film grain on by default for this theme */
@@ -139,8 +143,6 @@ export interface CarouselThemeTokens {
   photoSupported: boolean;
   routeStyle: RouteStyle;
   tagline: string;
-  /** derive the accent palette from the photo (Exposure only) */
-  usesPhotoPalette: boolean;
 }
 
 export const CAROUSEL_THEME_TOKENS: Record<
@@ -168,7 +170,6 @@ export const CAROUSEL_THEME_TOKENS: Record<
     deck: DECK_3,
     detailViz: false,
     photoSupported: true,
-    usesPhotoPalette: false,
     defaultFilter: "fade",
     defaultGrain: true,
   },
@@ -193,7 +194,6 @@ export const CAROUSEL_THEME_TOKENS: Record<
     deck: DECK_3,
     detailViz: false,
     photoSupported: true,
-    usesPhotoPalette: false,
     defaultFilter: "noir",
     defaultGrain: false,
   },
@@ -219,7 +219,6 @@ export const CAROUSEL_THEME_TOKENS: Record<
     deck: DECK_3,
     detailViz: false,
     photoSupported: true,
-    usesPhotoPalette: false,
     defaultFilter: "fade",
     defaultGrain: true,
   },
@@ -245,7 +244,6 @@ export const CAROUSEL_THEME_TOKENS: Record<
     deck: DECK_3,
     detailViz: false,
     photoSupported: true,
-    usesPhotoPalette: false,
     defaultFilter: "noir",
     defaultGrain: false,
   },
@@ -271,7 +269,7 @@ export const CAROUSEL_THEME_TOKENS: Record<
     deck: DECK_3,
     detailViz: true,
     photoSupported: true,
-    usesPhotoPalette: true,
+    defaultColorChoice: { kind: "photo", variant: "vibrant" },
     defaultFilter: "none",
     defaultGrain: false,
   },
@@ -295,7 +293,6 @@ export const CAROUSEL_THEME_TOKENS: Record<
     deck: DECK_4,
     detailViz: false,
     photoSupported: true,
-    usesPhotoPalette: false,
     defaultFilter: "fade",
     defaultGrain: false,
   },
@@ -320,7 +317,6 @@ export const CAROUSEL_THEME_TOKENS: Record<
     deck: DECK_4,
     detailViz: true,
     photoSupported: true,
-    usesPhotoPalette: false,
     defaultFilter: "mono",
     defaultGrain: true,
   },
@@ -351,7 +347,6 @@ export const CAROUSEL_THEME_TOKENS: Record<
     // A background photo is optional: the woven field rides over it, the same
     // way the single card composes the field on a photo.
     photoSupported: true,
-    usesPhotoPalette: false,
     defaultFilter: "none",
     defaultGrain: false,
   },

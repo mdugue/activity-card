@@ -19,13 +19,13 @@ import {
 import { heroStat, planSlideStats } from "@/lib/carousel/stats";
 import type { CarouselThemeId, PanelKind } from "@/lib/carousel/theme-tokens";
 import { SLIDE_H, SLIDE_W, type Slide } from "@/lib/carousel/types";
+import type { ColorScheme } from "@/lib/colors";
 import type { ImageTransform } from "@/lib/image-transform";
 import {
   isMultiActivity,
   segmentProfiles,
   segmentRoutes,
 } from "@/lib/multi-activity";
-import type { PaletteTheme } from "@/lib/palette";
 import { filterCss, NO_EFFECTS, type PhotoEffects } from "@/lib/photo-effects";
 import {
   DEFAULT_STRATA_CONFIG,
@@ -119,13 +119,12 @@ function withStrataMood(
 }
 
 interface SeamlessCanvasProps {
-  accent: string;
+  colors: ColorScheme;
   data: ActivityData;
   /** natural size of the photo — enables true-cover, pannable panorama */
   imageSize?: ImageSize | null;
   imageTransform?: ImageTransform | null;
   photoEffects?: PhotoEffects;
-  photoTheme?: PaletteTheme | null;
   photoUrl?: string | null;
   slides: Slide[];
   /** STRATA only: mood / density / legend (mood drives the whole palette). */
@@ -139,12 +138,11 @@ export function SeamlessCanvas({
   data,
   slides,
   theme,
-  accent,
+  colors,
   photoUrl,
   imageTransform,
   imageSize = null,
   photoEffects = NO_EFFECTS,
-  photoTheme = null,
   strataConfig,
   visibility = DEFAULT_VISIBILITY,
 }: SeamlessCanvasProps) {
@@ -154,7 +152,7 @@ export function SeamlessCanvas({
   // fixed token palette.
   const strataCfg = strataConfigFor(theme, strataConfig);
   const style: EffectiveStyle = withStrataMood(
-    resolveDeckStyle(theme, accent, photoTheme),
+    resolveDeckStyle(theme, colors),
     strataCfg
   );
   const hasPhoto = Boolean(photoUrl);

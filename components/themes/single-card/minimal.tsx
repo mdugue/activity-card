@@ -373,6 +373,7 @@ export const minimalTheme = defineTheme({
   label: "MINIMAL",
   tagline: "photo, pure",
   uses: USES,
+  colors: { default: { primary: "#ffffff" }, userAdjustable: false },
   photo: { defaultOn: true },
   Component: ThemeMinimal,
 });

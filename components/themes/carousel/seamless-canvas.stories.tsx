@@ -43,7 +43,11 @@ function themeArgs(theme: CarouselThemeId) {
   return {
     theme,
     slides: buildDeck(tokens.deck),
-    accent: tokens.accent,
+    colors: {
+      primary: tokens.accent,
+      secondary: tokens.accent2,
+      onPrimary: tokens.onAccent,
+    },
     photoEffects: {
       ...NO_EFFECTS,
       filter: tokens.defaultFilter,

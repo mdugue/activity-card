@@ -555,6 +555,8 @@ export const triathlonTheme = defineTheme({
   label: "TRIATHLON",
   tagline: "multi-sport",
   uses: USES,
+  // Fixed: the per-discipline swim/bike/run colour identity IS the theme.
+  colors: { default: { primary: "#11151a" }, userAdjustable: false },
   photo: { defaultOn: false },
   Component: ThemeTriathlon,
 });
