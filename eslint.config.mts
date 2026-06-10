@@ -1,5 +1,3 @@
-// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
-
 import remotion from "@remotion/eslint-plugin";
 import type { Linter } from "eslint";
 import { defineConfig, globalIgnores } from "eslint/config";
@@ -15,7 +13,12 @@ const eslintConfig = defineConfig([
   // flat config bundles its own typescript-eslint + react-hooks, which collide
   // with eslint-config-next's `@typescript-eslint` plugin ("Cannot redefine
   // plugin"). `flatPlugin` ships only the `@remotion/*` rules.
-  { files: ["remotion/**/*.{ts,tsx}"], ...remotion.flatPlugin },
+  // Same type-only RuleModule/RuleDefinition clash as the storybook spread
+  // below — cast the assembled config to the flat-config element type.
+  {
+    files: ["remotion/**/*.{ts,tsx}"],
+    ...remotion.flatPlugin,
+  } as unknown as Linter.Config,
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
