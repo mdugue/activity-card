@@ -19,7 +19,6 @@ import {
 } from "@/components/app/sample-data";
 import { StravaFooter } from "@/components/app/strava-footer";
 import { StravaPicker } from "@/components/app/strava-picker";
-import { ThemeToggle } from "@/components/app/theme-toggle";
 import { THEME_META, themeVisibilityAvailable } from "@/components/themes";
 import { useCarousel } from "@/hooks/use-carousel";
 import { useImagePalette } from "@/hooks/use-image-palette";
@@ -582,10 +581,7 @@ function EditTopBar({
   return (
     <div className="mx-auto flex w-full max-w-[1180px] items-center justify-between gap-3 px-6 pt-7 md:px-10">
       <EffortWordmark labelClassName="hidden sm:inline" size="sm" />
-      <div className="flex items-center gap-2.5">
-        <ModeToggle mode={mode} onModeChange={onModeChange} />
-        <ThemeToggle />
-      </div>
+      <ModeToggle mode={mode} onModeChange={onModeChange} />
     </div>
   );
 }
@@ -593,20 +589,17 @@ function EditTopBar({
 function Header({ date, status }: { date?: string; status?: string }) {
   const upper = date ? formatDateUpper(date) : "";
   return (
-    <header className="absolute top-0 right-0 left-0 z-10 flex items-center justify-between px-6 pt-7 md:px-10">
+    <header className="absolute top-0 right-0 left-0 z-10 flex items-start justify-between px-6 pt-7 md:px-10">
       <EffortWordmark />
-      <div className="flex items-center gap-3">
-        {status ? (
-          <span className="font-medium font-mono text-[10px] tracking-[0.22em] opacity-55 sm:text-[11px]">
-            {status}
-          </span>
-        ) : (
-          <span className="hidden font-medium font-mono text-[11px] tracking-[0.22em] opacity-55 sm:inline">
-            ACTIVITY CARD{upper ? ` · ${upper}` : ""}
-          </span>
-        )}
-        <ThemeToggle />
-      </div>
+      {status ? (
+        <div className="font-medium font-mono text-[10px] tracking-[0.22em] opacity-55 sm:text-[11px]">
+          {status}
+        </div>
+      ) : (
+        <div className="hidden font-medium font-mono text-[11px] tracking-[0.22em] opacity-55 sm:block">
+          ACTIVITY CARD{upper ? ` · ${upper}` : ""}
+        </div>
+      )}
     </header>
   );
 }
