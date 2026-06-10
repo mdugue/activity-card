@@ -231,11 +231,12 @@ export default function Home() {
   useEffect(() => {
     const persisted = loadPersistedUi();
     /* eslint-disable react-hooks/set-state-in-effect */
-    if (persisted.theme) {
+    // Validate both ids against the current theme sets: a stale id from an
+    // older build or hand-edited storage would otherwise throw downstream on
+    // the registry lookup.
+    if (persisted.theme && persisted.theme in SINGLE_CARD_THEMES) {
       setTheme(persisted.theme);
     }
-    // Validate against the current theme set: a stale id from an older build or
-    // hand-edited storage would otherwise throw downstream (tokens[id].deck).
     if (
       persisted.carouselTheme &&
       persisted.carouselTheme in CAROUSEL_THEME_TOKENS

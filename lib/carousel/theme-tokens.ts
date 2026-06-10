@@ -348,8 +348,10 @@ export const CAROUSEL_THEME_ORDER: CarouselThemeId[] = [
 /**
  * Every carousel theme renders the same overlay set: the sport-aware stat
  * palette (`buildStats`) plus the route + elevation viz (every theme draws both
- * — as the spanning hero, a cross-viz, a detail cut, or a sparkline). Splits are
- * never shown as a list, so the only capability omitted is `splits`. Data
+ * — as the spanning hero, a cross-viz, a detail cut, or a sparkline). Splits
+ * are never shown as a list, but they feed Frame's coarse speed sparkline
+ * (`speedSeries` falls back to per-split speeds), so the capability is
+ * declared — toggling Splits off legitimately drops that sparkline. Data
  * presence (`availableVisibility`) handles sport-appropriateness (pace, speed),
  * so no `usesWhen` is needed. Drives the editor toggles via `themeAvailability`.
  *
@@ -368,4 +370,5 @@ export const CAROUSEL_CAPABILITIES: readonly CapabilityKey[] = [
   "power",
   "route",
   "speed",
+  "splits",
 ];

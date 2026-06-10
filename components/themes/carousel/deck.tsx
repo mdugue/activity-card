@@ -40,7 +40,9 @@ export function CarouselDeck({
   data,
   theme,
   colors,
-  config = {},
+  // The theme's own defaults, NOT {} — a bare mount (story, test) must hand a
+  // param-driven canvas (STRATA's mood/density) a complete config.
+  config = theme.defaults,
   photoUrl,
   imageTransform,
   imageSize = null,
