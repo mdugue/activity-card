@@ -13,7 +13,7 @@ import type { ThemeId } from "@/components/app/render-theme";
 import { SAMPLE_RIDE, SAMPLE_RUN } from "@/components/app/sample-data";
 import { StravaFooter } from "@/components/app/strava-footer";
 import { StravaPicker } from "@/components/app/strava-picker";
-import { THEME_META, themeVisibilityAvailable } from "@/components/themes";
+import { SINGLE_CARD_THEMES } from "@/components/themes";
 import { useCarousel } from "@/hooks/use-carousel";
 import { useImagePalette } from "@/hooks/use-image-palette";
 import type { ActivityData, ActivitySource, Sport } from "@/lib/activity";
@@ -34,6 +34,7 @@ import { cn } from "@/lib/utils";
 import {
   applyVisibility,
   DEFAULT_VISIBILITY,
+  themeAvailability,
   type Visibility,
 } from "@/lib/visibility";
 
@@ -378,7 +379,7 @@ export default function Home() {
       // flag, so setting it here is harmless in that mode.)
       setVisibility((v) => ({
         ...v,
-        photoBackdrop: THEME_META[theme].photoDefaultOn,
+        photoBackdrop: SINGLE_CARD_THEMES[theme].photo.defaultOn,
       }));
     }
     if (file && mode === "carousel") {
@@ -400,7 +401,7 @@ export default function Home() {
     setTheme(next);
     setVisibility((v) => ({
       ...v,
-      photoBackdrop: THEME_META[next].photoDefaultOn,
+      photoBackdrop: SINGLE_CARD_THEMES[next].photo.defaultOn,
     }));
   };
 
@@ -531,7 +532,7 @@ export default function Home() {
             <EditState
               accent={accent}
               athleteName={data.athleteName}
-              available={themeVisibilityAvailable(data, theme)}
+              available={themeAvailability(data, SINGLE_CARD_THEMES[theme])}
               config={activeConfig}
               data={visibleData}
               imageTransform={imageTransform}

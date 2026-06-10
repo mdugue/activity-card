@@ -1,20 +1,15 @@
-import { THEMES, type ThemeId } from "@/components/themes";
+import { SINGLE_CARD_THEMES, type ThemeId } from "@/components/themes";
 import { PhotoEffectsProvider } from "@/components/themes/shared/photo-fx";
-import { ThemeAltitude } from "@/components/themes/single-card/altitude";
-import { ThemePhoto } from "@/components/themes/single-card/photo";
-import { ThemeStrata } from "@/components/themes/single-card/strata";
 import type { ActivityData } from "@/lib/activity";
-import type { AltitudeConfig } from "@/lib/altitude";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PaletteTheme } from "@/lib/palette";
 import type { PhotoEffects } from "@/lib/photo-effects";
-import type { StrataConfig } from "@/lib/strata";
+import { pickThemeData } from "@/lib/theme-contract";
 
 export type { ThemeId } from "@/components/themes";
 
 interface RenderThemeProps {
-  /** the active theme's coerced parameter config (StrataConfig / AltitudeConfig
-   *  for those themes; ignored by the rest) */
+  /** the active theme's coerced parameter config */
   config?: Record<string, unknown>;
   data: ActivityData;
   /** Pan/zoom applied to the background photo, wherever a theme shows one. */
@@ -29,9 +24,13 @@ interface RenderThemeProps {
   theme: ThemeId;
 }
 
-/** Dispatcher: picks the right theme component for the given id and provides the
- *  shared photo-effects context. Every theme now accepts a background photo,
- *  gated only by the `photoBackdrop` visibility flag. */
+/**
+ * Dispatcher: looks the theme's descriptor up in the registry, strips the data
+ * down to the theme's declared capabilities (`pickThemeData`, so the runtime
+ * data matches the component's narrowed type), and provides the shared
+ * photo-effects context. No per-theme branches — every theme takes the same
+ * generic props; the photo is gated only by the `photoBackdrop` flag.
+ */
 export function RenderTheme({
   theme,
   data,
@@ -42,44 +41,18 @@ export function RenderTheme({
   photoEffects = null,
   imageTransform = null,
 }: RenderThemeProps) {
+  const descriptor = SINGLE_CARD_THEMES[theme];
   const photo = photoBackdropEnabled ? (photoUrl ?? null) : null;
-
-  let inner: React.ReactNode;
-  if (theme === "strata") {
-    inner = (
-      <ThemeStrata
-        config={config as StrataConfig | undefined}
-        data={data}
-        imageTransform={imageTransform}
-        photoUrl={photo}
-      />
-    );
-  } else if (theme === "altitude") {
-    inner = (
-      <ThemeAltitude
-        config={config as AltitudeConfig | undefined}
-        data={data}
-        imageTransform={imageTransform}
-        photoUrl={photo}
-      />
-    );
-  } else if (theme === "photo") {
-    inner = (
-      <ThemePhoto
-        data={data}
+  const Component = descriptor.Component;
+  return (
+    <PhotoEffectsProvider value={photoEffects}>
+      <Component
+        config={config}
+        data={pickThemeData(descriptor, data)}
         imageTransform={imageTransform}
         paletteTheme={photoPaletteTheme}
         photoUrl={photo}
       />
-    );
-  } else {
-    const Theme = THEMES[theme];
-    inner = (
-      <Theme data={data} imageTransform={imageTransform} photoUrl={photo} />
-    );
-  }
-
-  return (
-    <PhotoEffectsProvider value={photoEffects}>{inner}</PhotoEffectsProvider>
+    </PhotoEffectsProvider>
   );
 }

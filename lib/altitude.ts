@@ -10,7 +10,7 @@
  * directly. English/metric formatting, consistent with every other theme.
  */
 
-import type { ActivityData, Sport } from "@/lib/activity";
+import type { Sport } from "@/lib/activity";
 import {
   formatDuration,
   formatNumber,
@@ -18,6 +18,7 @@ import {
   formatPaceSec,
 } from "@/lib/format";
 import type { ParamDef, ParamOption } from "@/lib/params/kinds";
+import type { ActivityView } from "@/lib/theme-contract";
 
 /** Display typeface for the claim. */
 export type AltitudeFont = "modern" | "serif";
@@ -88,7 +89,7 @@ export interface ResolvedClaim extends ResolvedStat {
 const isNum = (n: number | undefined): n is number =>
   n !== undefined && Number.isFinite(n);
 
-type StatBuilder = (data: ActivityData) => ResolvedStat | null;
+type StatBuilder = (data: ActivityView) => ResolvedStat | null;
 
 /** One builder per metric key; each returns null when its field is absent. */
 const STAT_BUILDERS: Record<StatKey, StatBuilder> = {
@@ -207,7 +208,7 @@ const STAT_BUILDERS: Record<StatKey, StatBuilder> = {
 };
 
 /** Build a stat for one metric key, or `null` when the data isn't present. */
-function metricStat(key: StatKey, data: ActivityData): ResolvedStat | null {
+function metricStat(key: StatKey, data: ActivityView): ResolvedStat | null {
   return STAT_BUILDERS[key](data);
 }
 
@@ -251,7 +252,7 @@ export const CLAIM_LABELS: Record<AltitudeClaim, string> = {
  */
 export function resolveClaim(
   claim: AltitudeHeadline,
-  data: ActivityData
+  data: ActivityView
 ): ResolvedClaim | null {
   if (claim === "none") {
     return null;
@@ -276,7 +277,7 @@ export function resolveClaim(
  * activity doesn't have.
  */
 export function supportingStats(
-  data: ActivityData,
+  data: ActivityView,
   excludeKey: StatKey | null,
   max = 2
 ): ResolvedStat[] {
@@ -297,7 +298,7 @@ export function supportingStats(
 }
 
 /** Headline options that resolve to real data for this activity. */
-export function claimOptions(data: ActivityData): AltitudeClaim[] {
+export function claimOptions(data: ActivityView): AltitudeClaim[] {
   return CLAIM_PICKER_ORDER.filter((k) =>
     k === "name" ? Boolean(data.title?.trim()) : metricStat(k, data) !== null
   );

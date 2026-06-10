@@ -15,16 +15,29 @@ import {
   type SegmentRoute,
   segmentRoutes,
 } from "@/lib/multi-activity";
+import { defineTheme, type ThemeProps } from "@/lib/theme-contract";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoBackdrop } from "../shared/photo-backdrop";
-import type { ThemeProps } from "../types";
 
 const INK = "#1a1714";
 const ACCENT = "#c45a2c";
 const ROUTE_W = 900;
 const ROUTE_H = 720;
 
-export function ThemePath({ data, photoUrl, imageTransform }: ThemeProps) {
+const USES = [
+  "athleteName",
+  "elevation",
+  "location",
+  "pace",
+  "route",
+  "speed",
+] as const;
+
+export function ThemePath({
+  data,
+  photoUrl,
+  imageTransform,
+}: ThemeProps<(typeof USES)[number]>) {
   const isPool = data.sport === "swim";
   const sport = data.sport;
   const multi = isMultiActivity(data);
@@ -381,3 +394,12 @@ function MultiPathRoute({ routes }: { routes: SegmentRoute[] }) {
     />
   );
 }
+
+export const pathTheme = defineTheme({
+  id: "path",
+  label: "PATH",
+  tagline: "route is the hero",
+  uses: USES,
+  photo: { defaultOn: true },
+  Component: ThemePath,
+});

@@ -11,20 +11,19 @@ import {
   sequenceProfiles,
   whiteRamp,
 } from "@/lib/chart-helpers";
-import type { ImageTransform } from "@/lib/image-transform";
 import {
   isMultiActivity,
   type SegmentRoute,
   segmentProfiles,
   segmentRoutes,
 } from "@/lib/multi-activity";
+import { defineTheme, type ThemeProps } from "@/lib/theme-contract";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoLayer } from "../shared/photo-layer";
-import type { ThemeProps } from "../types";
 
-interface ThemeMinimalProps extends ThemeProps {
-  imageTransform?: ImageTransform | null;
-}
+const USES = ["elevationViz", "pace", "route"] as const;
+
+type ThemeMinimalProps = ThemeProps<(typeof USES)[number]>;
 
 const ROUTE_W = 720;
 const ROUTE_H = 720;
@@ -368,3 +367,12 @@ export function ThemeMinimal({
     </div>
   );
 }
+
+export const minimalTheme = defineTheme({
+  id: "minimal",
+  label: "MINIMAL",
+  tagline: "photo, pure",
+  uses: USES,
+  photo: { defaultOn: true },
+  Component: ThemeMinimal,
+});

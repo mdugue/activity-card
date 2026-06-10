@@ -16,10 +16,10 @@
  * layers between are the abstraction.
  */
 
-import type { ActivityData } from "@/lib/activity";
 import type { Coord } from "@/lib/chart-helpers";
 import { isMultiActivity } from "@/lib/multi-activity";
 import type { ParamDef } from "@/lib/params/kinds";
+import type { ActivityView } from "@/lib/theme-contract";
 
 /* ----------------------------- configuration ----------------------------- */
 
@@ -251,7 +251,7 @@ export interface StrataSource {
 type PickedProfile = Pick<StrataSource, "profile" | "profileLabel" | "elevMax">;
 
 /** The profile that becomes the bottom ridge: elevation, then pace, then laps. */
-function pickProfile(data: ActivityData): PickedProfile | null {
+function pickProfile(data: ActivityView): PickedProfile | null {
   const elev = data.elevationProfile;
   if (elev && elev.length > 1) {
     return {
@@ -278,7 +278,7 @@ function pickProfile(data: ActivityData): PickedProfile | null {
  * so it pairs each leg's route with that SAME leg's profile and concatenates in
  * order — see `resolveMultiStrataSource`. Returns `null` without enough geometry.
  */
-export function resolveStrataSource(data: ActivityData): StrataSource | null {
+export function resolveStrataSource(data: ActivityView): StrataSource | null {
   const route = data.routeCoordinates;
   const picked = pickProfile(data);
   if (route && route.length > 1 && picked) {
@@ -297,7 +297,7 @@ export function resolveStrataSource(data: ActivityData): StrataSource | null {
  * the morph progress-aligned — a swim leg with a route but no elevation is
  * skipped rather than smearing the route's swim third against the bike's climb.
  */
-function resolveMultiStrataSource(data: ActivityData): StrataSource | null {
+function resolveMultiStrataSource(data: ActivityView): StrataSource | null {
   const segs = data.segments ?? [];
   const useElevation = segs.some((s) => (s.elevationProfile?.length ?? 0) > 1);
   const routeCoords: Coord[] = [];

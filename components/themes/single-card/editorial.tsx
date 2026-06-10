@@ -17,9 +17,23 @@ import {
   type SegmentRoute,
   segmentRoutes,
 } from "@/lib/multi-activity";
+import { defineTheme, type ThemeProps } from "@/lib/theme-contract";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoBackdrop } from "../shared/photo-backdrop";
-import type { ThemeProps } from "../types";
+
+// No `elevationViz`/`splits`: Editorial never draws the profile chart or split
+// tables, so the editor won't offer their toggles here. The sport-aware
+// refinements mirror the figures table exactly (see the `Row`s below).
+const USES = [
+  "athleteName",
+  "cadence",
+  "elevation",
+  "heartRate",
+  "location",
+  "pace",
+  "route",
+  "speed",
+] as const;
 
 const ACCENT = "#1d3a2e";
 const INK = "#1a1816";
@@ -107,7 +121,11 @@ function EditorialRoute({
   );
 }
 
-export function ThemeEditorial({ data, photoUrl, imageTransform }: ThemeProps) {
+export function ThemeEditorial({
+  data,
+  photoUrl,
+  imageTransform,
+}: ThemeProps<(typeof USES)[number]>) {
   const sport = data.sport;
   const multi = isMultiActivity(data);
   const routes = multi ? segmentRoutes(data) : [];
@@ -384,3 +402,20 @@ export function ThemeEditorial({ data, photoUrl, imageTransform }: ThemeProps) {
     </div>
   );
 }
+
+export const editorialTheme = defineTheme({
+  id: "editorial",
+  label: "EDITORIAL",
+  tagline: "typography led",
+  uses: USES,
+  usesWhen: {
+    // The figures table is sport-specific: elevation + speed rows are ride-only,
+    // cadence is run-only, pace appears for runs and swims.
+    cadence: (d) => d.sport === "run",
+    elevation: (d) => d.sport === "ride",
+    pace: (d) => d.sport === "run" || d.sport === "swim",
+    speed: (d) => d.sport === "ride",
+  },
+  photo: { defaultOn: true },
+  Component: ThemeEditorial,
+});

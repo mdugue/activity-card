@@ -8,7 +8,7 @@
 // (cartographic labels / data). Renders to plain inline SVG (no CSS filters) so
 // it rasterises cleanly via html-to-image.
 
-import type { ActivityData } from "@/lib/activity";
+import type { Sport } from "@/lib/activity";
 import { mixHex } from "@/lib/chart-helpers";
 import {
   formatDateUpper,
@@ -29,13 +29,18 @@ import {
   resolveStrataSource,
   STRATA_DENSITY_K,
   STRATA_MOODS,
+  STRATA_PARAMS,
   type StrataConfig,
   smoothPath,
   strataDirectionArrow,
   strataPeakMarker,
 } from "@/lib/strata";
+import {
+  type ActivityView,
+  defineTheme,
+  type ThemeProps,
+} from "@/lib/theme-contract";
 import { usePhotoEffects } from "../shared/photo-fx";
-import type { ThemeProps } from "../types";
 
 const DISPLAY = "var(--font-syne), sans-serif";
 const MONO = "var(--font-mono), monospace";
@@ -44,9 +49,15 @@ const MONO = "var(--font-mono), monospace";
 const FIELD_W = 920;
 const FIELD_H = 880;
 
-interface ThemeStrataProps extends ThemeProps {
-  config?: StrataConfig;
-}
+const USES = [
+  "elevation",
+  "elevationViz",
+  "location",
+  "pace",
+  "route",
+] as const;
+
+type ThemeStrataProps = ThemeProps<(typeof USES)[number], StrataConfig>;
 
 /** The reusable strata SVG: the woven field plus the two highlighted heroes. */
 function StrataField({
@@ -55,7 +66,7 @@ function StrataField({
   overPhoto,
 }: {
   config: StrataConfig;
-  data: ActivityData;
+  data: ActivityView;
   /** Boost halos + outline the captions so the field reads over a photo. */
   overPhoto: boolean;
 }) {
@@ -234,7 +245,7 @@ function StrataField({
 }
 
 /** Sport-appropriate [label, value, unit] trio for the foot of the card. */
-function statRow(data: ActivityData): [string, string, string][] {
+function statRow(data: ActivityView): [string, string, string][] {
   const time: [string, string, string] = [
     "TIME",
     formatDuration(data.durationSec),
@@ -262,7 +273,7 @@ function statRow(data: ActivityData): [string, string, string][] {
   ];
 }
 
-function sportLabel(sport: ActivityData["sport"]): string {
+function sportLabel(sport: Sport): string {
   if (sport === "ride") {
     return "A CYCLE";
   }
@@ -491,3 +502,14 @@ export function ThemeStrata({
     </div>
   );
 }
+
+export const strataTheme = defineTheme({
+  id: "strata",
+  label: "STRATA",
+  tagline: "woven topography",
+  uses: USES,
+  photo: { defaultOn: false },
+  params: STRATA_PARAMS,
+  defaults: DEFAULT_STRATA_CONFIG,
+  Component: ThemeStrata,
+});

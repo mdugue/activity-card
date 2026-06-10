@@ -2,7 +2,7 @@
 
 import { DownloadSimpleIcon } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
-import { THEME_META, THEME_ORDER } from "@/components/themes/index";
+import { SINGLE_CARD_THEMES, THEME_ORDER } from "@/components/themes/index";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -153,7 +153,7 @@ export function EditState(props: EditStateProps) {
     themeConfig: config,
     themeControl: (
       <ThemeRail
-        labels={THEME_META}
+        labels={SINGLE_CARD_THEMES}
         onThemeChange={onThemeChange}
         order={THEME_ORDER}
         theme={theme}

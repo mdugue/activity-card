@@ -28,9 +28,23 @@ import {
   segmentProfiles,
   segmentRoutes,
 } from "@/lib/multi-activity";
+import { defineTheme, type ThemeProps } from "@/lib/theme-contract";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoUnderlay } from "../shared/photo-underlay";
-import type { ThemeProps } from "../types";
+
+const USES = [
+  "athleteName",
+  "cadence",
+  "elevation",
+  "elevationViz",
+  "heartRate",
+  "location",
+  "pace",
+  "power",
+  "route",
+  "speed",
+  "splits",
+] as const;
 
 const INK = "#0e0e0e";
 const ACCENT = "#d23f1d";
@@ -158,7 +172,11 @@ function DataRoute({
   );
 }
 
-export function ThemeData({ data, photoUrl, imageTransform }: ThemeProps) {
+export function ThemeData({
+  data,
+  photoUrl,
+  imageTransform,
+}: ThemeProps<(typeof USES)[number]>) {
   const sport = data.sport;
   const multi = isMultiActivity(data);
   const routes = multi ? segmentRoutes(data) : [];
@@ -724,3 +742,12 @@ export function ThemeData({ data, photoUrl, imageTransform }: ThemeProps) {
     </div>
   );
 }
+
+export const dataTheme = defineTheme({
+  id: "data",
+  label: "DATA",
+  tagline: "dashboard poster",
+  uses: USES,
+  photo: { defaultOn: false },
+  Component: ThemeData,
+});

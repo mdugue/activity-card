@@ -12,8 +12,12 @@ import {
   formatPaceMin,
   formatPaceSec,
 } from "@/lib/format";
+import { defineTheme, type ThemeProps } from "@/lib/theme-contract";
 import { PhotoUnderlay } from "../shared/photo-underlay";
-import type { ThemeProps } from "../types";
+
+// The bands render per-segment data (`segments`/`transitions` — core fields,
+// not capabilities), so only the identity overlays are declared here.
+const USES = ["athleteName", "location"] as const;
 
 const INK = "#11151a";
 const PAPER = "#ffffff";
@@ -83,7 +87,11 @@ function heroFor(seg: TriSegment): string {
   return `${formatPaceMin(seg.avgPaceMinPerKm)} /km`;
 }
 
-export function ThemeTriathlon({ data, photoUrl, imageTransform }: ThemeProps) {
+export function ThemeTriathlon({
+  data,
+  photoUrl,
+  imageTransform,
+}: ThemeProps<(typeof USES)[number]>) {
   const sports = data.segments || [];
   const transitions = data.transitions || [];
 
@@ -541,3 +549,12 @@ export function ThemeTriathlon({ data, photoUrl, imageTransform }: ThemeProps) {
     </div>
   );
 }
+
+export const triathlonTheme = defineTheme({
+  id: "triathlon",
+  label: "TRIATHLON",
+  tagline: "multi-sport",
+  uses: USES,
+  photo: { defaultOn: false },
+  Component: ThemeTriathlon,
+});

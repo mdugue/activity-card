@@ -15,17 +15,15 @@ import {
   formatPaceMin,
   formatPaceSec,
 } from "@/lib/format";
-import type { ImageTransform } from "@/lib/image-transform";
 import { isMultiActivity, segmentRoutes } from "@/lib/multi-activity";
-import type { PaletteTheme } from "@/lib/palette";
+import { DEFAULT_PHOTO_CONFIG, PHOTO_PARAMS } from "@/lib/photo-config";
+import { defineTheme, type ThemeProps } from "@/lib/theme-contract";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoLayer } from "../shared/photo-layer";
-import type { ThemeProps } from "../types";
 
-interface ThemePhotoProps extends ThemeProps {
-  imageTransform?: ImageTransform | null;
-  paletteTheme?: PaletteTheme | null;
-}
+const USES = ["athleteName", "elevation", "location", "pace", "route"] as const;
+
+type ThemePhotoProps = ThemeProps<(typeof USES)[number]>;
 
 interface StaticPalette {
   accent: string;
@@ -394,3 +392,14 @@ export function ThemePhoto({
     </div>
   );
 }
+
+export const photoTheme = defineTheme({
+  id: "photo",
+  label: "PHOTO",
+  tagline: "magazine cover",
+  uses: USES,
+  photo: { defaultOn: true },
+  params: PHOTO_PARAMS,
+  defaults: DEFAULT_PHOTO_CONFIG,
+  Component: ThemePhoto,
+});

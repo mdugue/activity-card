@@ -12,6 +12,7 @@
 
 import type { CSSProperties } from "react";
 import {
+  ALTITUDE_PARAMS,
   type AltitudeConfig,
   type AltitudePosition,
   type ClaimLayout,
@@ -27,15 +28,20 @@ import {
   sequenceProfiles,
 } from "@/lib/chart-helpers";
 import { formatDateUpper } from "@/lib/format";
-import type { ImageTransform } from "@/lib/image-transform";
 import { isMultiActivity, segmentProfiles } from "@/lib/multi-activity";
+import { defineTheme, type ThemeProps } from "@/lib/theme-contract";
 import { PhotoLayer } from "../shared/photo-layer";
-import type { ThemeProps } from "../types";
 
-interface ThemeAltitudeProps extends ThemeProps {
-  config?: AltitudeConfig;
-  imageTransform?: ImageTransform | null;
-}
+const USES = [
+  "elevation",
+  "elevationViz",
+  "heartRate",
+  "location",
+  "pace",
+  "speed",
+] as const;
+
+type ThemeAltitudeProps = ThemeProps<(typeof USES)[number], AltitudeConfig>;
 
 const W = 1080;
 const H = 1350;
@@ -626,3 +632,14 @@ export function ThemeAltitude({
     </div>
   );
 }
+
+export const altitudeTheme = defineTheme({
+  id: "altitude",
+  label: "ALTITUDE",
+  tagline: "elevation as headline",
+  uses: USES,
+  photo: { defaultOn: true },
+  params: ALTITUDE_PARAMS,
+  defaults: DEFAULT_ALTITUDE_CONFIG,
+  Component: ThemeAltitude,
+});
