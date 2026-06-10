@@ -1,10 +1,12 @@
 "use client";
 
-import { ArrowRightIcon } from "@phosphor-icons/react";
+import { ArrowRightIcon, CaretDownIcon } from "@phosphor-icons/react";
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { EffortMark } from "@/components/app/effort-wordmark";
+import { EffortMark, EffortWordmark } from "@/components/app/effort-wordmark";
 import {
+  claimStyle,
   IntroReplay,
   type IntroStage,
   PANEL_REST_CLASS,
@@ -13,14 +15,16 @@ import {
   RevealOverlay,
   useEmptyStateIntro,
 } from "@/components/app/empty-state-intro";
+import { IntroVideo } from "@/components/app/intro-video";
 import {
   type OnboardingResult,
   OnboardingWizard,
 } from "@/components/app/onboarding-wizard";
+import { StravaCompatLink } from "@/components/app/strava-footer";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const PANEL_COUNT = 4;
+const PANEL_COUNT = 3;
 // Keep in sync with the rail's `gap-4` (16px) so the sliced panorama lines up
 // across the gutters and reads as one continuous photo.
 const PANEL_GAP = "16px";
@@ -75,8 +79,9 @@ function ElevationGlyph() {
   );
 }
 
-// The claim "DROP YOUR EFFORT." spelled one word per slide, fading back so the
-// eye reads left-to-right, with a sample of what each slide becomes underneath.
+// The card claim "DROP YOUR EFFORT" spelled one word per slide, fading back so
+// the eye reads left-to-right, with a sample of what each slide becomes
+// underneath. Three panels mirror the usual three-slide carousel output.
 const PANELS: { glyph: React.ReactNode; word: string; wordClass: string }[] = [
   {
     word: "DROP",
@@ -107,15 +112,6 @@ const PANELS: { glyph: React.ReactNode; word: string; wordClass: string }[] = [
       </div>
     ),
   },
-  {
-    word: ".",
-    wordClass: "text-[6.75rem] leading-none text-background/25 lg:text-[8rem]",
-    glyph: (
-      <div className="flex justify-center">
-        <EffortMark className="size-12 lg:size-16" />
-      </div>
-    ),
-  },
 ];
 
 function ClaimPanel({
@@ -134,7 +130,7 @@ function ClaimPanel({
   return (
     <div
       className={cn(
-        "relative flex h-[20rem] w-60 shrink-0 snap-center flex-col overflow-hidden bg-foreground p-5 text-background lg:h-[31rem] lg:w-auto lg:flex-1 lg:basis-0 lg:p-6",
+        "relative flex h-80 w-64 shrink-0 snap-center flex-col overflow-hidden bg-foreground p-5 text-background lg:h-[26rem] lg:w-auto lg:flex-1 lg:basis-0 lg:p-6",
         PANEL_REST_CLASS[index]
       )}
       style={panelFadeStyle(stage, index)}
@@ -224,80 +220,180 @@ export function EmptyState({
   };
 
   return (
-    <section className="relative flex flex-1 flex-col items-center justify-center gap-5 px-6 pt-20 pb-10 lg:gap-8 lg:pt-24 lg:pb-16">
-      <p className="caption-label w-full text-left lg:text-center">
-        {intro.eyebrow}
-      </p>
-
-      {/* Claim panels: a swipe rail on touch, a 4-up grid from lg up. The
-          intro animation slices a seamless photo overlay into these slides. */}
-      <div className="relative w-full max-w-[64rem] lg:mx-auto">
-        <div
-          className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto lg:snap-none lg:overflow-x-visible"
-          onScroll={handleRailScroll}
-          ref={railRef}
-        >
-          {PANELS.map((p, i) => (
-            <ClaimPanel
-              glyph={p.glyph}
-              index={i}
-              key={p.word}
-              stage={intro.stage}
-              word={p.word}
-              wordClass={p.wordClass}
-            />
-          ))}
+    // A dedicated scroll-snap container (scoped here, so snapping never leaks
+    // into the editor/download views). `proximity` keeps it gentle — tall
+    // content never traps the user — and reduced motion drops snap + smoothing.
+    <div className="h-dvh snap-y snap-proximity overflow-y-auto scroll-smooth bg-background text-foreground motion-reduce:snap-none motion-reduce:scroll-auto">
+      {/* ───── Section 1 · Hero (light) — the animated claim, panels, CTA ───── */}
+      <section className="relative flex min-h-dvh snap-start flex-col px-6 pt-7 pb-10 lg:pt-9">
+        <div className="mx-auto flex w-full max-w-[64rem] items-start justify-between">
+          <EffortWordmark />
+          <p className="font-medium font-mono text-[10px] tracking-[0.22em] opacity-55 sm:text-[11px]">
+            TURN ANY EFFORT INTO A CARD
+          </p>
         </div>
-        <RevealOverlay photoSrc="/images/dunes.webp" stage={intro.stage} />
-      </div>
 
-      {/* Swipe affordance — touch only; tracks the centred slide. */}
-      <div className="flex gap-1.5 lg:hidden">
-        {PANELS.map((p, i) => (
-          <span
-            className={cn(
-              "h-1.5 rounded-full transition-all",
-              i === activeSlide ? "w-4 bg-primary" : "w-1.5 bg-foreground/25"
-            )}
-            key={p.word}
+        <div className="flex flex-1 flex-col items-center justify-center gap-5 lg:gap-8">
+          <h1
+            className="w-full max-w-[64rem] text-balance text-left font-medium text-foreground/70 text-lg leading-snug lg:mx-auto lg:text-center lg:text-xl"
+            style={claimStyle(intro.stage)}
+          >
+            {intro.claim}
+          </h1>
+
+          {/* Claim panels: a swipe rail on touch, a 3-up grid from lg up. The
+              intro animation slices a seamless photo overlay into these slides. */}
+          <div className="relative w-full max-w-[64rem] lg:mx-auto">
+            <div
+              className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto lg:snap-none lg:overflow-x-visible"
+              onScroll={handleRailScroll}
+              ref={railRef}
+            >
+              {PANELS.map((p, i) => (
+                <ClaimPanel
+                  glyph={p.glyph}
+                  index={i}
+                  key={p.word}
+                  stage={intro.stage}
+                  word={p.word}
+                  wordClass={p.wordClass}
+                />
+              ))}
+            </div>
+            <RevealOverlay photoSrc="/images/dunes.webp" stage={intro.stage} />
+          </div>
+
+          {/* Swipe affordance — touch only; tracks the centred slide. */}
+          <div className="flex gap-1.5 lg:hidden">
+            {PANELS.map((p, i) => (
+              <span
+                className={cn(
+                  "h-1.5 rounded-full transition-all",
+                  i === activeSlide
+                    ? "w-4 bg-primary"
+                    : "w-1.5 bg-foreground/25"
+                )}
+                key={p.word}
+              />
+            ))}
+          </div>
+
+          {/* Action bar — a single GET STARTED CTA opens the two-step wizard. */}
+          <div className="flex w-full max-w-[64rem] flex-col gap-4 bg-foreground p-5 text-background shadow-2xl shadow-foreground/20 lg:mx-auto lg:flex-row lg:items-center lg:gap-8 lg:px-8 lg:py-7">
+            <div className="hidden lg:block">
+              <p className="font-medium font-mono text-[11px] text-background/55 uppercase tracking-[0.2em]">
+                Ready in two steps
+              </p>
+              <p className="mt-1.5 font-heading text-3xl uppercase leading-none">
+                Make your card
+              </p>
+            </div>
+
+            <Button
+              className="h-auto justify-center px-8 py-4 font-heading text-2xl uppercase tracking-wide shadow-primary/50 shadow-xl hover:-translate-y-0.5"
+              onClick={() => setWizardOpen(true)}
+              size="lg"
+            >
+              Get started
+              <ArrowRightIcon className="size-5" weight="bold" />
+            </Button>
+
+            <div className="flex items-center justify-between gap-4 lg:ml-auto lg:block lg:text-right">
+              <div className="flex items-center gap-2 font-medium font-mono text-[11px] text-background/60 uppercase tracking-[0.14em] lg:justify-end">
+                <span className="size-1.5 bg-primary" />
+                Add activity
+              </div>
+              <div className="flex items-center gap-2 font-medium font-mono text-[11px] text-background/60 uppercase tracking-[0.14em] lg:mt-2 lg:justify-end">
+                <span className="size-1.5 bg-primary" />
+                Add a photo
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Scroll cue — invites the user down into the sections below. */}
+        <div className="pointer-events-none flex flex-col items-center gap-1 text-foreground/40">
+          <span className="caption-micro">Scroll</span>
+          <CaretDownIcon
+            className="size-4 motion-safe:animate-bounce"
+            weight="bold"
           />
-        ))}
-      </div>
+        </div>
 
-      {/* Action bar — a single GET STARTED CTA opens the two-step wizard. The
-          orange button sits alone on ink so it reads as the focal point. */}
-      <div className="flex w-full max-w-[64rem] flex-col gap-4 bg-foreground p-5 text-background shadow-2xl shadow-foreground/20 lg:mx-auto lg:flex-row lg:items-center lg:gap-8 lg:px-8 lg:py-7">
-        <div className="hidden lg:block">
-          <p className="font-medium font-mono text-[11px] text-background/55 uppercase tracking-[0.2em]">
-            Ready in two steps
-          </p>
-          <p className="mt-1.5 font-heading text-3xl uppercase leading-none">
+        {intro.showReplay ? <IntroReplay onReplay={intro.replay} /> : null}
+      </section>
+
+      {/* ───── Section 2 · Intro video (dark) ───── */}
+      <section className="flex min-h-[92dvh] snap-start items-center bg-foreground px-6 py-20 text-background">
+        <div className="mx-auto grid w-full max-w-[68rem] items-center gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+          <div>
+            <p className="caption-label">See it in action</p>
+            <h2 className="mt-4 text-balance font-heading text-4xl uppercase leading-[0.95] lg:text-5xl">
+              From activity to art
+            </h2>
+            <p className="mt-5 max-w-md text-background/70 leading-relaxed">
+              Drop a ride, run, or swim, add a favourite photo, and Effort lays
+              it out as a share-ready carousel — route, elevation, and the
+              numbers that matter. Here’s the gist.
+            </p>
+            <p className="mt-6 font-medium font-mono text-[11px] text-background/45 uppercase tracking-[0.16em]">
+              Short placeholder — full walkthrough on the way
+            </p>
+          </div>
+          <IntroVideo className="shadow-2xl shadow-black/40 ring-1 ring-background/15" />
+        </div>
+      </section>
+
+      {/* ───── Section 3 · Footer (light) — final CTA + attribution ───── */}
+      <footer className="flex min-h-dvh snap-start flex-col bg-background px-6 pt-20 pb-8">
+        <div className="mx-auto flex w-full max-w-[64rem] flex-1 flex-col items-center justify-center gap-6 text-center">
+          <EffortMark className="size-12 lg:size-14" />
+          <h2 className="text-balance font-heading text-5xl uppercase leading-[0.9] lg:text-7xl">
             Make your card
+          </h2>
+          <p className="max-w-md text-balance text-foreground/65 leading-relaxed">
+            Every ride, run, and swim deserves a finish worth sharing. Two
+            steps, no account needed.
           </p>
+          <Button
+            className="h-auto justify-center px-8 py-4 font-heading text-2xl uppercase tracking-wide shadow-primary/50 shadow-xl hover:-translate-y-0.5"
+            onClick={() => setWizardOpen(true)}
+            size="lg"
+          >
+            Get started
+            <ArrowRightIcon className="size-5" weight="bold" />
+          </Button>
         </div>
 
-        <Button
-          className="h-auto justify-center px-8 py-4 font-heading text-2xl uppercase tracking-wide shadow-primary/50 shadow-xl hover:-translate-y-0.5"
-          onClick={() => setWizardOpen(true)}
-          size="lg"
-        >
-          Get started
-          <ArrowRightIcon className="size-5" weight="bold" />
-        </Button>
-
-        <div className="flex items-center justify-between gap-4 lg:ml-auto lg:block lg:text-right">
-          <div className="flex items-center gap-2 font-medium font-mono text-[11px] text-background/60 uppercase tracking-[0.14em] lg:justify-end">
-            <span className="size-1.5 bg-primary" />
-            Add activity
-          </div>
-          <div className="flex items-center gap-2 font-medium font-mono text-[11px] text-background/60 uppercase tracking-[0.14em] lg:mt-2 lg:justify-end">
-            <span className="size-1.5 bg-primary" />
-            Add a photo
-          </div>
+        <div className="mx-auto mt-16 flex w-full max-w-[64rem] flex-col items-center gap-5 border-foreground/10 border-t pt-8 sm:flex-row sm:justify-between">
+          <span className="font-mono text-[11px] uppercase tracking-[0.16em] opacity-80">
+            <StravaCompatLink />
+          </span>
+          <nav className="flex items-center gap-5 font-medium font-mono text-[11px] uppercase tracking-[0.16em]">
+            <Link
+              className="opacity-60 transition-opacity hover:opacity-100"
+              href="/imprint"
+            >
+              Imprint
+            </Link>
+            <Link
+              className="opacity-60 transition-opacity hover:opacity-100"
+              href="/privacy"
+            >
+              Privacy
+            </Link>
+          </nav>
+          <a
+            className="group font-medium font-mono text-[11px] text-foreground/60 uppercase tracking-[0.16em] transition-colors hover:text-foreground"
+            href="https://manuel.fyi/"
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            Made between training sessions by{" "}
+            <span className="text-primary group-hover:underline">Manuel ↗</span>
+          </a>
         </div>
-      </div>
-
-      {intro.showReplay ? <IntroReplay onReplay={intro.replay} /> : null}
+      </footer>
 
       <OnboardingWizard
         initialStravaPickerOpen={autoStravaPicker}
@@ -305,6 +401,6 @@ export function EmptyState({
         onOpenChange={setWizardOpen}
         open={wizardOpen}
       />
-    </section>
+    </div>
   );
 }

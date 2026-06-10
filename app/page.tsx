@@ -446,18 +446,19 @@ export default function Home() {
       className={cn(
         "relative flex flex-col overflow-hidden bg-background text-foreground",
         // The editor is a non-scrolling app-shell pinned to the dynamic viewport
-        // on mobile (panels scroll internally, the page doesn't); every other
-        // screen — and desktop — keeps its natural, scrollable height.
-        state === "edit"
-          ? "h-[100dvh] lg:h-auto lg:min-h-screen"
-          : "min-h-screen"
+        // on mobile (panels scroll internally, the page doesn't). The empty
+        // state is a scroll-snap landing that owns its own internal scroller, so
+        // it's pinned to the viewport too. Every other screen keeps its natural,
+        // scrollable height.
+        state === "edit" && "h-[100dvh] lg:h-auto lg:min-h-screen",
+        state === "empty" && "h-dvh",
+        state !== "edit" && state !== "empty" && "min-h-screen"
       )}
     >
-      {state === "edit" ? null : (
-        <Header
-          date={data?.date}
-          status={state === "empty" ? "TURN ANY EFFORT INTO A CARD" : undefined}
-        />
+      {/* The empty-state landing renders its own wordmark header per section;
+          every other non-editor screen gets the shared top header. */}
+      {state === "edit" || state === "empty" ? null : (
+        <Header date={data?.date} />
       )}
       {state === "empty" ? (
         <EmptyState
@@ -555,12 +556,11 @@ export default function Home() {
           theme={theme}
         />
       ) : null}
-      {/* "Compatible with Strava" (§4) on the Strava-facing surfaces: the
-          connect (empty) screen and the activity picker. The editor/download
-          stay clean — the card carries no Strava mark by brand rule. */}
-      {state === "empty" || state === "picking-strava" ? (
-        <StravaFooter />
-      ) : null}
+      {/* "Compatible with Strava" (§4) on the Strava-facing surfaces. The empty
+          landing carries the mark in its own footer section; the picker uses the
+          standalone footer. The editor/download stay clean — the card carries no
+          Strava mark by brand rule. */}
+      {state === "picking-strava" ? <StravaFooter /> : null}
     </div>
   );
 }
