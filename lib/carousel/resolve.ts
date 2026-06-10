@@ -7,8 +7,7 @@
 
 import type { ColorScheme } from "@/lib/colors";
 import {
-  CAROUSEL_THEME_TOKENS,
-  type CarouselThemeId,
+  type CarouselThemeTokens,
   type CrossViz,
   type ElevationColors,
   FONT_PAIRS,
@@ -52,15 +51,13 @@ export function readableOn(hex: string): string {
 }
 
 /**
- * @param theme   chosen carousel theme — supplies fonts, overlay, colours
+ * @param tokens  the theme's look tokens — supplies fonts, overlay, colours
  * @param colors  the resolved colour scheme (user choice or theme default)
  */
 export function resolveDeckStyle(
-  theme: CarouselThemeId,
+  tokens: CarouselThemeTokens,
   colors: ColorScheme
 ): EffectiveStyle {
-  const tokens = CAROUSEL_THEME_TOKENS[theme];
-
   const resolvedAccent = colors.primary;
   const accent2 = colors.secondary ?? tokens.accent2;
   const onAccent = colors.onPrimary ?? readableOn(resolvedAccent);

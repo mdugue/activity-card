@@ -15,13 +15,13 @@ import { SAMPLE_RIDE, SAMPLE_RUN } from "@/components/app/sample-data";
 import { StravaFooter } from "@/components/app/strava-footer";
 import { StravaPicker } from "@/components/app/strava-picker";
 import { SINGLE_CARD_THEMES } from "@/components/themes";
+import { CAROUSEL_THEMES } from "@/components/themes/carousel/registry";
 import { useCarousel } from "@/hooks/use-carousel";
 import { useImagePalette } from "@/hooks/use-image-palette";
 import type { ActivityData, ActivitySource, Sport } from "@/lib/activity";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
 import {
   CAROUSEL_THEME_TOKENS,
-  CAROUSEL_THEMES,
   type CarouselThemeId,
   DEFAULT_CAROUSEL_THEME,
 } from "@/lib/carousel/theme-tokens";
@@ -189,7 +189,7 @@ export default function Home() {
   const [themeConfigs, setThemeConfigs] = useState<Record<string, unknown>>({});
   // Carousel is the headline mode, so it's the default for a fresh session.
   const [mode, setMode] = useState<CardMode>("carousel");
-  const carousel = useCarousel(carouselTheme);
+  const carousel = useCarousel(CAROUSEL_THEMES[carouselTheme].panels.length);
   // Held outside `data` so it survives between activities and can seed
   // `adoptParsed` when the parsed file lacks an athlete name.
   const persistedAthleteNameRef = useRef<string | undefined>(undefined);

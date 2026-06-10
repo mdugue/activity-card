@@ -286,34 +286,18 @@ function FrameSignature({
   );
 }
 
-export function FramePanel({
+/** Shared Frame chrome: location header + slide index, the per-slide body, and
+ *  the theme nameplate footer. */
+function FrameChrome({
   data,
   style,
   hasPhoto,
   index,
   total,
-  visibility,
-  showEffort,
   showPageNumber,
-}: PanelProps) {
+  children,
+}: PanelProps & { children: React.ReactNode }) {
   const c = slideText(style, hasPhoto);
-  const isLast = index === total - 1;
-  // One curated datum per slide, in Frame's sparkline-led priority order.
-  const stat: StatItem | undefined = frameStats(data, statOptsFor(visibility))[
-    index
-  ];
-
-  // Last slide is the signature; a non-last slide with no datum (sparse activity
-  // with fewer data than datum slots) stays blank rather than duplicating it.
-  let body = <div aria-hidden />;
-  if (isLast) {
-    body = (
-      <FrameSignature c={c} data={data} showEffort={showEffort} style={style} />
-    );
-  } else if (stat) {
-    body = <FrameDatum c={c} data={data} stat={stat} style={style} />;
-  }
-
   return (
     <div
       style={{
@@ -340,7 +324,7 @@ export function FramePanel({
         {showPageNumber ? <span>{slideNumber(index, total)}</span> : null}
       </div>
 
-      {body}
+      {children}
 
       <div
         aria-hidden
@@ -355,5 +339,36 @@ export function FramePanel({
         {style.label}
       </div>
     </div>
+  );
+}
+
+/** A Frame datum slide: one curated stat + its sparkline (route / elevation /
+ *  speed / power), chosen by slide index from Frame's priority order. A sparse
+ *  activity with fewer data than slots leaves the slide blank. */
+export function FrameDatumPanel(props: PanelProps) {
+  const { data, style, hasPhoto, index, visibility } = props;
+  const c = slideText(style, hasPhoto);
+  const stat: StatItem | undefined = frameStats(data, statOptsFor(visibility))[
+    index
+  ];
+  return (
+    <FrameChrome {...props}>
+      {stat ? (
+        <FrameDatum c={c} data={data} stat={stat} style={style} />
+      ) : (
+        <div aria-hidden />
+      )}
+    </FrameChrome>
+  );
+}
+
+/** The Frame wrap-up slide: title + the "made with effort" mark. */
+export function FrameSignaturePanel(props: PanelProps) {
+  const { data, style, hasPhoto, showEffort } = props;
+  const c = slideText(style, hasPhoto);
+  return (
+    <FrameChrome {...props}>
+      <FrameSignature c={c} data={data} showEffort={showEffort} style={style} />
+    </FrameChrome>
   );
 }

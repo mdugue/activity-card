@@ -9,8 +9,6 @@
  *   panelKind  — how each slide is laid out:
  *                standard · frame (one big datum + sparkline) · press (broadsheet)
  *   heroMetric — which number headlines the intro slide (distance vs elevation)
- *   deck       — the fixed slide sequence for this theme (length is per-theme:
- *                most are 3, Frame and Press are 4)
  *   detailViz  — render small path + altitude graphics on the detail slide(s)
  *                (themes whose hero isn't already the route/elevation)
  *
@@ -22,8 +20,8 @@
 import type { ColorChoice } from "@/lib/colors";
 import type { ParamDef } from "@/lib/params/kinds";
 import { DEFAULT_STRATA_CONFIG, STRATA_PARAMS } from "@/lib/strata";
-import type { CapabilityKey, ThemeBase } from "@/lib/theme-contract";
-import type { FontPairId, RouteStyle, SlideTemplate } from "./types";
+import type { CapabilityKey } from "@/lib/theme-contract";
+import type { FontPairId, RouteStyle } from "./types";
 
 /** Carousel theme identifiers. Add new families here freely — nothing ties this
  *  to the single-card theme count. */
@@ -104,11 +102,6 @@ export type HeroMetric = "distance" | "elevation";
 export type PanelKind = "frame" | "press" | "standard";
 export type CrossViz = "elevation" | "route";
 
-// Most themes tell a tight three-beat story; Frame and Press earn a fourth beat
-// (an extra datum / spread).
-const DECK_3: SlideTemplate[] = ["hero", "statGrid", "editorial"];
-const DECK_4: SlideTemplate[] = ["hero", "statRow", "statGrid", "editorial"];
-
 export interface CarouselThemeTokens {
   accent: string;
   accent2: string;
@@ -117,8 +110,6 @@ export interface CarouselThemeTokens {
   crossViz?: CrossViz;
   /** true → slide background is dark, default text is light */
   dark: boolean;
-  /** fixed slide sequence for this theme */
-  deck: SlideTemplate[];
   /** initial colour choice when the user hasn't picked one — Exposure
    *  defaults to the photo-derived palette */
   defaultColorChoice?: ColorChoice;
@@ -171,7 +162,6 @@ export const CAROUSEL_THEME_TOKENS: Record<
     heroMetric: "distance",
     crossViz: "elevation",
     panelKind: "standard",
-    deck: DECK_3,
     detailViz: false,
     defaultFilter: "fade",
     defaultGrain: true,
@@ -194,7 +184,6 @@ export const CAROUSEL_THEME_TOKENS: Record<
     heroMetric: "distance",
     crossViz: "elevation",
     panelKind: "standard",
-    deck: DECK_3,
     detailViz: false,
     defaultFilter: "noir",
     defaultGrain: false,
@@ -218,7 +207,6 @@ export const CAROUSEL_THEME_TOKENS: Record<
     heroMetric: "elevation",
     crossViz: "route",
     panelKind: "standard",
-    deck: DECK_3,
     detailViz: false,
     defaultFilter: "fade",
     defaultGrain: true,
@@ -242,7 +230,6 @@ export const CAROUSEL_THEME_TOKENS: Record<
     heroMetric: "elevation",
     crossViz: "route",
     panelKind: "standard",
-    deck: DECK_3,
     detailViz: false,
     defaultFilter: "noir",
     defaultGrain: false,
@@ -266,7 +253,6 @@ export const CAROUSEL_THEME_TOKENS: Record<
     heroMetric: "distance",
     crossViz: "route",
     panelKind: "standard",
-    deck: DECK_3,
     detailViz: true,
     defaultColorChoice: { kind: "photo", variant: "vibrant" },
     defaultFilter: "none",
@@ -289,7 +275,6 @@ export const CAROUSEL_THEME_TOKENS: Record<
     heroLayer: "none",
     heroMetric: "distance",
     panelKind: "frame",
-    deck: DECK_4,
     detailViz: false,
     defaultFilter: "fade",
     defaultGrain: false,
@@ -312,7 +297,6 @@ export const CAROUSEL_THEME_TOKENS: Record<
     heroLayer: "none",
     heroMetric: "distance",
     panelKind: "press",
-    deck: DECK_4,
     detailViz: true,
     defaultFilter: "mono",
     defaultGrain: true,
@@ -339,7 +323,6 @@ export const CAROUSEL_THEME_TOKENS: Record<
     heroLayer: "strata",
     heroMetric: "distance",
     panelKind: "standard",
-    deck: DECK_3,
     detailViz: false,
     params: STRATA_PARAMS,
     defaults: DEFAULT_STRATA_CONFIG,
@@ -363,24 +346,18 @@ export const CAROUSEL_THEME_ORDER: CarouselThemeId[] = [
 ];
 
 /**
- * A carousel theme expressed in the shared descriptor shape (`ThemeBase`) —
- * identity + colour/photo policy + params — plus its `look` token row for the
- * renderer. Derived from the rows above, so the tokens stay the single place a
- * theme is authored while the app sees both families through one shape.
- */
-export interface CarouselTheme extends ThemeBase {
-  look: CarouselThemeTokens;
-}
-
-/**
  * Every carousel theme renders the same overlay set: the sport-aware stat
  * palette (`buildStats`) plus the route + elevation viz (every theme draws both
  * — as the spanning hero, a cross-viz, a detail cut, or a sparkline). Splits are
  * never shown as a list, so the only capability omitted is `splits`. Data
  * presence (`availableVisibility`) handles sport-appropriateness (pace, speed),
  * so no `usesWhen` is needed. Drives the editor toggles via `themeAvailability`.
+ *
+ * The theme descriptors themselves (component layer: identity + colour/photo
+ * policy + canvas + panels) live in `components/themes/carousel/registry.ts`,
+ * built from these look tokens — this file stays the pure look-token source.
  */
-const CAROUSEL_CAPABILITIES: readonly CapabilityKey[] = [
+export const CAROUSEL_CAPABILITIES: readonly CapabilityKey[] = [
   "athleteName",
   "cadence",
   "elevation",
@@ -392,36 +369,3 @@ const CAROUSEL_CAPABILITIES: readonly CapabilityKey[] = [
   "route",
   "speed",
 ];
-
-export const CAROUSEL_THEMES: Record<CarouselThemeId, CarouselTheme> =
-  Object.fromEntries(
-    CAROUSEL_THEME_ORDER.map((id) => {
-      const look = CAROUSEL_THEME_TOKENS[id];
-      const theme: CarouselTheme = {
-        id,
-        label: look.label,
-        tagline: look.tagline,
-        uses: CAROUSEL_CAPABILITIES,
-        colors: {
-          default: {
-            primary: look.accent,
-            secondary: look.accent2,
-            onPrimary: look.onAccent,
-          },
-          defaultChoice: look.defaultColorChoice,
-          // Every carousel theme is colour-adjustable; the tokens are the
-          // Reset target.
-          userAdjustable: true,
-        },
-        photo: {
-          defaultOn: true,
-          defaultFilter: look.defaultFilter,
-          defaultGrain: look.defaultGrain,
-        },
-        params: look.params ?? [],
-        defaults: look.defaults ?? {},
-        look,
-      };
-      return [id, theme];
-    })
-  ) as Record<CarouselThemeId, CarouselTheme>;

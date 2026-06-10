@@ -2,8 +2,8 @@
 import { describe, expect, test } from "bun:test";
 import { SAMPLE_RIDE } from "@/components/app/sample-data";
 import { SINGLE_CARD_THEMES } from "@/components/themes";
+import { CAROUSEL_THEMES } from "@/components/themes/carousel/registry";
 import { ALTITUDE_PARAMS } from "@/lib/altitude";
-import { CAROUSEL_THEMES } from "@/lib/carousel/theme-tokens";
 import { coerceConfig } from "@/lib/params/resolve";
 import type { ThemeBase } from "@/lib/theme-contract";
 

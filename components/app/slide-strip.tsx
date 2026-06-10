@@ -1,20 +1,18 @@
 "use client";
 
-// Slide thumbnails — each is a *slice* of the one SeamlessCanvas (the same
-// render the large preview and export use), so the strip, preview and output
-// always agree. Click a thumbnail to bring it into the preview. The deck
-// (chosen elsewhere) defines which slides exist; the strip is just navigation.
+// Slide thumbnails — each is a *slice* of the one CarouselDeck (the same render
+// the large preview and export use), so the strip, preview and output always
+// agree. Click a thumbnail to bring it into the preview. The deck (chosen
+// elsewhere) defines how many slides exist; the strip is just navigation.
 
-import { SeamlessCanvas } from "@/components/themes/carousel/seamless-canvas";
-import { TEMPLATE_META } from "@/components/themes/carousel/templates";
+import { CarouselDeck } from "@/components/themes/carousel/deck";
+import type { CarouselTheme } from "@/components/themes/carousel/define-theme";
 import type { ImageSize } from "@/hooks/use-image-natural-size";
 import type { ActivityData } from "@/lib/activity";
-import type { CarouselThemeId } from "@/lib/carousel/theme-tokens";
 import type { Slide } from "@/lib/carousel/types";
 import type { ColorScheme } from "@/lib/colors";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PhotoEffects } from "@/lib/photo-effects";
-import type { StrataConfig } from "@/lib/strata";
 import { cn } from "@/lib/utils";
 import type { Visibility } from "@/lib/visibility";
 
@@ -24,6 +22,7 @@ const SCALE = THUMB_W / 1080;
 
 interface SlideStripProps {
   colors: ColorScheme;
+  config?: Record<string, unknown>;
   data: ActivityData;
   imageSize?: ImageSize | null;
   imageTransform?: ImageTransform | null;
@@ -32,27 +31,25 @@ interface SlideStripProps {
   photoUrl?: string | null;
   selectedId: string | null;
   slides: Slide[];
-  strataConfig?: StrataConfig;
-  theme: CarouselThemeId;
+  theme: CarouselTheme;
   visibility?: Visibility;
 }
 
 export function SlideStrip(props: SlideStripProps) {
-  const { slides, selectedId, onSelect } = props;
+  const { slides, selectedId, onSelect, theme } = props;
 
   // Each thumb renders the full strip and windows onto its own slice, so the
   // strip, large preview and export are guaranteed to show the same pixels.
   const canvas = (
-    <SeamlessCanvas
+    <CarouselDeck
       colors={props.colors}
+      config={props.config}
       data={props.data}
       imageSize={props.imageSize}
       imageTransform={props.imageTransform}
       photoEffects={props.photoEffects}
       photoUrl={props.photoUrl}
-      slides={slides}
-      strataConfig={props.strataConfig}
-      theme={props.theme}
+      theme={theme}
       visibility={props.visibility}
     />
   );
@@ -64,7 +61,7 @@ export function SlideStrip(props: SlideStripProps) {
         return (
           <div className="flex flex-col items-center gap-1" key={slide.id}>
             <button
-              aria-label={`Slide ${i + 1}: ${TEMPLATE_META[slide.template].label}`}
+              aria-label={`Slide ${i + 1}: ${theme.label}`}
               aria-pressed={active}
               className={cn(
                 "relative overflow-hidden border-2 bg-white transition-all",

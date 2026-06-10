@@ -469,21 +469,29 @@ function Byline({
   );
 }
 
-export function PressPanel(props: PanelProps) {
-  const { data, style, hasPhoto, index, total, visibility, showEffort } = props;
-  const isFirst = index === 0;
-  const isLast = index === total - 1;
-  const stats = pressSlideStats(data, index, total, statOptsFor(visibility));
-  const shared: SpreadProps = {
+/** The shared SpreadProps each Press slide builds from its own data + position. */
+function spreadProps(props: PanelProps): SpreadProps {
+  const { data, style, hasPhoto, index, total, visibility } = props;
+  return {
     data,
     style,
     hasPhoto,
-    stats,
+    stats: pressSlideStats(data, index, total, statOptsFor(visibility)),
     ink: style.ink,
     muted: style.mutedInk,
     paper: style.background,
   };
+}
 
+/** Masthead + the slide's body — every Press slide shares the nameplate. */
+function PressChrome({
+  props,
+  children,
+}: {
+  children: React.ReactNode;
+  props: PanelProps;
+}) {
+  const { data, style, hasPhoto, index, total, showPageNumber } = props;
   return (
     <div
       style={{
@@ -501,13 +509,38 @@ export function PressPanel(props: PanelProps) {
         ink={style.ink}
         onPhoto={hasPhoto}
         paper={style.background}
-        showPageNumber={props.showPageNumber}
+        showPageNumber={showPageNumber}
         style={style}
         total={total}
       />
-      {isFirst ? <FrontPage {...shared} /> : null}
-      {isFirst || isLast ? null : <Spread {...shared} index={index} />}
-      {isLast ? <Byline {...shared} showEffort={showEffort} /> : null}
+      {children}
     </div>
+  );
+}
+
+/** Press front page: title, drop-cap lede, headline stats. */
+export function PressFrontPanel(props: PanelProps) {
+  return (
+    <PressChrome props={props}>
+      <FrontPage {...spreadProps(props)} />
+    </PressChrome>
+  );
+}
+
+/** Press spread: a stat card + an altitude / route cut (by slide index). */
+export function PressSpreadPanel(props: PanelProps) {
+  return (
+    <PressChrome props={props}>
+      <Spread {...spreadProps(props)} index={props.index} />
+    </PressChrome>
+  );
+}
+
+/** Press closing byline: athlete name + the "made with effort" mark + date. */
+export function PressBylinePanel(props: PanelProps) {
+  return (
+    <PressChrome props={props}>
+      <Byline {...spreadProps(props)} showEffort={props.showEffort} />
+    </PressChrome>
   );
 }

@@ -11,14 +11,14 @@
 
 import { ArrowsOutCardinalIcon, ImagesIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
-import { SeamlessCanvas } from "@/components/themes/carousel/seamless-canvas";
+import { CarouselDeck } from "@/components/themes/carousel/deck";
+import { CAROUSEL_THEMES } from "@/components/themes/carousel/registry";
 import { Badge } from "@/components/ui/badge";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CarouselController } from "@/hooks/use-carousel";
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
 import {
   CAROUSEL_THEME_ORDER,
-  CAROUSEL_THEMES,
   type CarouselThemeId,
 } from "@/lib/carousel/theme-tokens";
 import { carouselBaseName, exportCarousel } from "@/lib/export-carousel";
@@ -27,7 +27,6 @@ import {
   type ImageTransform,
 } from "@/lib/image-transform";
 import { isQuarterTurn } from "@/lib/photo-effects";
-import type { StrataConfig } from "@/lib/strata";
 import { cn } from "@/lib/utils";
 import { useActivityTools } from "./activity-tools";
 import { CardStage } from "./card-stage";
@@ -52,6 +51,7 @@ export function CarouselEditState({
 }: CarouselEditStateProps) {
   const { data, visibility, color, config, photo } = session;
   const { slides, selectedId, selectedIndex } = carousel;
+  const descriptor = CAROUSEL_THEMES[theme];
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const wideRef = useRef<HTMLDivElement>(null);
@@ -191,16 +191,15 @@ export function CarouselEditState({
     }
   };
 
-  const canvasProps = {
+  const deckProps = {
     colors: color.scheme,
+    config: config.value,
     data,
     imageSize,
     imageTransform: photo.transform,
     photoEffects: photo.effects,
     photoUrl: photo.url,
-    slides,
-    strataConfig: config.value as StrataConfig,
-    theme,
+    theme: descriptor,
     visibility,
   };
 
@@ -246,7 +245,7 @@ export function CarouselEditState({
                 transform: "scale(calc(100cqw / 1080px))",
               }}
             >
-              <SeamlessCanvas {...canvasProps} />
+              <CarouselDeck {...deckProps} />
             </div>
             <div className="absolute inset-0 flex">
               {slides.map((s) => (
@@ -303,6 +302,7 @@ export function CarouselEditState({
       >
         <SlideStrip
           colors={color.scheme}
+          config={config.value}
           data={data}
           imageSize={imageSize}
           imageTransform={photo.transform}
@@ -311,8 +311,7 @@ export function CarouselEditState({
           photoUrl={photo.url}
           selectedId={selectedId}
           slides={slides}
-          strataConfig={config.value as StrataConfig}
-          theme={theme}
+          theme={descriptor}
           visibility={visibility}
         />
       </div>
@@ -342,7 +341,7 @@ export function CarouselEditState({
             ref={wideRef}
             style={{ width: slides.length * 1080, height: 1350 }}
           >
-            <SeamlessCanvas {...canvasProps} />
+            <CarouselDeck {...deckProps} />
           </div>
         </div>
       </ControlDeck>

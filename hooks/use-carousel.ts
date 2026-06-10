@@ -1,14 +1,10 @@
-// Carousel slide-state manager. The deck (slide sequence + length) is fixed per
-// theme — most themes are 3 slides, Frame/Press are 4 — so the user doesn't pick
-// a deck; switching theme switches the deck. This hook derives the slides from
-// the chosen theme and tracks which slide is selected for the preview.
+// Carousel slide-state manager. The deck (slide count) is fixed per theme — most
+// themes are 3 slides, Frame/Press are 4 — so the user doesn't pick a deck;
+// switching theme switches the count. This hook derives the slides from the
+// chosen theme's panel count and tracks which slide is selected for the preview.
 
 import { useCallback, useState } from "react";
-import {
-  CAROUSEL_THEME_TOKENS,
-  type CarouselThemeId,
-} from "@/lib/carousel/theme-tokens";
-import { buildDeck, type Slide } from "@/lib/carousel/types";
+import { buildSlides, type Slide } from "@/lib/carousel/types";
 
 export interface CarouselController {
   /** reset selection to the first slide (e.g. when a new activity loads) */
@@ -19,14 +15,14 @@ export interface CarouselController {
   slides: Slide[];
 }
 
-export function useCarousel(theme: CarouselThemeId): CarouselController {
+export function useCarousel(slideCount: number): CarouselController {
   // Deterministic, so this is stable across renders without memoisation.
-  const slides = buildDeck(CAROUSEL_THEME_TOKENS[theme].deck);
+  const slides = buildSlides(slideCount);
   const [selectedId, setSelectedId] = useState<string | null>(
     () => slides[0]?.id ?? null
   );
 
-  // Switching theme can change the deck, invalidating the stored selection;
+  // Switching theme can change the count, invalidating the stored selection;
   // normalise to the first slide so downstream consumers never see a stale id.
   const validId = slides.some((s) => s.id === selectedId)
     ? selectedId
