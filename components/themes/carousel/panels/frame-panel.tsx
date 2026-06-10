@@ -6,11 +6,13 @@
 import type { ActivityData } from "@/lib/activity";
 import {
   elevationSeries,
+  frameStats,
   paceSeries,
   powerSeries,
   routeSeries,
   type StatItem,
   speedSeries,
+  statOptsFor,
 } from "@/lib/carousel/stats";
 import {
   isMultiActivity,
@@ -290,13 +292,16 @@ export function FramePanel({
   hasPhoto,
   index,
   total,
-  stats,
+  visibility,
   showEffort,
   showPageNumber,
 }: PanelProps) {
   const c = slideText(style, hasPhoto);
   const isLast = index === total - 1;
-  const stat: StatItem | undefined = stats[0];
+  // One curated datum per slide, in Frame's sparkline-led priority order.
+  const stat: StatItem | undefined = frameStats(data, statOptsFor(visibility))[
+    index
+  ];
 
   // Last slide is the signature; a non-last slide with no datum (sparse activity
   // with fewer data than datum slots) stays blank rather than duplicating it.

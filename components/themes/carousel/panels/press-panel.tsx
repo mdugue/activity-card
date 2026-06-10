@@ -6,6 +6,11 @@
 import type { ActivityData } from "@/lib/activity";
 import { bandModeFor, pickProfile } from "@/lib/carousel/profile";
 import type { EffectiveStyle } from "@/lib/carousel/resolve";
+import {
+  pressSlideStats,
+  type StatItem,
+  statOptsFor,
+} from "@/lib/carousel/stats";
 import { formatDateUpper } from "@/lib/format";
 import {
   isMultiActivity,
@@ -115,7 +120,7 @@ interface SpreadProps {
   ink: string;
   muted: string;
   paper: string;
-  stats: PanelProps["stats"];
+  stats: StatItem[];
   style: EffectiveStyle;
 }
 
@@ -465,9 +470,10 @@ function Byline({
 }
 
 export function PressPanel(props: PanelProps) {
-  const { data, style, hasPhoto, index, total, stats, showEffort } = props;
+  const { data, style, hasPhoto, index, total, visibility, showEffort } = props;
   const isFirst = index === 0;
   const isLast = index === total - 1;
+  const stats = pressSlideStats(data, index, total, statOptsFor(visibility));
   const shared: SpreadProps = {
     data,
     style,

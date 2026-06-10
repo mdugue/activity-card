@@ -2,8 +2,9 @@
  * Sport-aware stat model for carousel slides. Reuses the single-card stat
  * conventions (see the `sport-data` skill): rides think in speed + power, runs
  * in pace, swims in pace-per-100m and SWOLF. Returns ordered, formatted items so
- * every template draws from one source of truth, plus planners that distribute
- * those stats across a deck so no two slides repeat the same number.
+ * every panel draws from one source of truth. Each panel derives the stats it
+ * shows directly from `data` (by its own slide index) — there is no deck-wide
+ * stat planner.
  */
 
 import type { ActivityData, Coord } from "@/lib/activity";
@@ -13,9 +14,7 @@ import {
   formatPaceMin,
   formatPaceSec,
 } from "@/lib/format";
-import type { EffectiveStyle } from "./resolve";
 import type { HeroMetric } from "./theme-tokens";
-import type { Slide } from "./types";
 
 export interface StatItem {
   /** stable identifier, used for visibility toggles + sparkline mapping */
@@ -172,37 +171,46 @@ export function heroStat(
   return buildStats(data, opts)[0] ?? EMPTY_HERO;
 }
 
-/**
- * Assign stats to each slide of a standard deck so the intro headlines the hero
- * number, the detail slides page through the *rest* without repeating it, and
- * the wrap-up slide draws its own summary. Returns one StatItem[] per slide.
- *
- * Decks are always [hero, …detail, wrap-up]; detail slides carry capacity by
- * template (statRow 3, statGrid 4) and consume the remaining stats in order.
- */
-export function planStandardStats(
+/** The distance/time visibility a stat panel honours, read from the deck-wide
+ *  visibility flags it already receives. */
+export function statOptsFor(vis: {
+  distance: boolean;
+  time: boolean;
+}): StatOpts {
+  return { distance: vis.distance, time: vis.time };
+}
+
+/** A standard stat detail slide shows every stat EXCEPT the one the hero slide
+ *  headlines (so the deck doesn't repeat its big number). Each panel derives
+ *  this itself from `data` — there is no central planner. */
+export function detailStats(
   data: ActivityData,
-  slides: Slide[],
   metric: HeroMetric,
   opts?: StatOpts
-): StatItem[][] {
-  const all = buildStats(data, opts);
-  const hero = heroStat(data, metric, opts);
-  const rest = all.filter((s) => s.key !== hero.key);
-  let cursor = 0;
-  const last = slides.length - 1;
-  return slides.map((slide, i) => {
-    if (i === 0) {
-      return [hero];
-    }
-    if (i === last) {
-      return [];
-    }
-    const cap = slide.template === "statRow" ? 3 : 4;
-    const slice = rest.slice(cursor, cursor + cap);
-    cursor += cap;
-    return slice;
-  });
+): StatItem[] {
+  const heroKey = heroStat(data, metric, opts).key;
+  return buildStats(data, opts).filter((s) => s.key !== heroKey);
+}
+
+/** The stats a Press slide shows, by position: the front page leads with the
+ *  headline + lede (first 3); the first spread carries one pull-quote, the next
+ *  a small row; the byline shows none. Pure + index-addressed (each PressPanel
+ *  calls it for its own slide), not a deck-wide plan. */
+export function pressSlideStats(
+  data: ActivityData,
+  index: number,
+  total: number,
+  opts?: StatOpts
+): StatItem[] {
+  if (index === 0) {
+    return buildStats(data, opts).slice(0, 3); // headline + lede
+  }
+  if (index === total - 1) {
+    return [];
+  }
+  const rest = buildStats(data, opts).slice(3);
+  // First spread leads with one pull-quote; later spreads carry a small row.
+  return index === 1 ? rest.slice(0, 1) : rest.slice(1, 4);
 }
 
 /**
@@ -216,47 +224,6 @@ const FRAME_PRIORITY: Record<ActivityData["sport"], string[]> = {
   swim: ["distance", "pace", "swolf", "duration", "avgHr"],
   triathlon: ["distance", "duration", "elevation", "avgHr"],
 };
-
-/**
- * One entry point the seamless canvas calls to assign each slide its stats,
- * branching on the panel kind: standard decks distribute the rest of the stats
- * across detail slides; Frame shows one curated datum per slide; Press leads
- * with a lede then pages a pull-quote stat per spread.
- */
-export function planSlideStats(
-  data: ActivityData,
-  slides: Slide[],
-  style: EffectiveStyle,
-  opts?: StatOpts
-): StatItem[][] {
-  const last = slides.length - 1;
-  if (style.panelKind === "frame") {
-    const fs = frameStats(data, opts);
-    return slides.map((_, i) => {
-      if (i === last) {
-        return [];
-      }
-      const item = fs[i];
-      return item ? [item] : [];
-    });
-  }
-  if (style.panelKind === "press") {
-    const all = buildStats(data, opts);
-    const rest = all.slice(3);
-    return slides.map((_, i) => {
-      if (i === 0) {
-        return all.slice(0, 3); // headline + lede
-      }
-      if (i === last) {
-        return [];
-      }
-      // First spread leads with elevation (paired with the altitude cut); the
-      // second carries the next datum + a couple more (e.g. power) as a row.
-      return i === 1 ? rest.slice(0, 1) : rest.slice(1, 4);
-    });
-  }
-  return planStandardStats(data, slides, style.heroMetric, opts);
-}
 
 export function frameStats(data: ActivityData, opts?: StatOpts): StatItem[] {
   const all = buildStats(data, opts);

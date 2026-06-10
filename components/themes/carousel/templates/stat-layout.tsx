@@ -1,9 +1,10 @@
 // Shared scaffold for the stat-led detail slides. The title + stat grid are
 // grouped and anchored as one block (low under the route / photo, high above the
 // elevation range) so the slide reads balanced instead of cramming numbers at
-// the top. Stats are pre-assigned per slide by the deck planner, so StatRow and
-// StatGrid just lay out whatever they're handed.
+// the top. The slide derives its own stats (all but the hero metric) from the
+// activity — StatRow and StatGrid just choose the grid shape.
 
+import { detailStats, statOptsFor } from "@/lib/carousel/stats";
 import { DetailViz } from "../detail-viz";
 import { Stat } from "../stat-block";
 import { MetaBand } from "./parts";
@@ -22,7 +23,7 @@ export function StatLayout({
   hasPhoto,
   index,
   total,
-  stats,
+  visibility,
   showPageNumber,
   columns,
   numeralSize,
@@ -30,6 +31,8 @@ export function StatLayout({
 }: StatLayoutProps) {
   const colors = slideText(style, hasPhoto);
   const anchor = contentAnchor(style);
+  // Every stat except the one the hero slide headlines (no repeated big number).
+  const stats = detailStats(data, style.heroMetric, statOptsFor(visibility));
 
   const group = (
     <div>

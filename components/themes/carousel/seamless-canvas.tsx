@@ -16,7 +16,6 @@ import {
   readableOn,
   resolveDeckStyle,
 } from "@/lib/carousel/resolve";
-import { heroStat, planSlideStats } from "@/lib/carousel/stats";
 import type { CarouselThemeId, PanelKind } from "@/lib/carousel/theme-tokens";
 import { SLIDE_H, SLIDE_W, type Slide } from "@/lib/carousel/types";
 import type { ColorScheme } from "@/lib/colors";
@@ -178,10 +177,6 @@ export function SeamlessCanvas({
   const heroBandMode = segProf?.useElevation ? "elevation" : "pace";
   const heroInk = showPhoto && style.dark ? "#ffffff" : style.ink;
 
-  const statOpts = { distance: visibility.distance, time: visibility.time };
-  const slidePlan = planSlideStats(data, slides, style, statOpts);
-  const hero = heroStat(data, style.heroMetric, statOpts);
-
   return (
     <div
       style={{
@@ -321,11 +316,9 @@ export function SeamlessCanvas({
             <Panel
               data={data}
               hasPhoto={showPhoto}
-              hero={hero}
               index={i}
               showEffort={visibility.showEffort}
               showPageNumber={visibility.showPageNumber}
-              stats={slidePlan[i]}
               style={style}
               total={total}
               visibility={visibility}
