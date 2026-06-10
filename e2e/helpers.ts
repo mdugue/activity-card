@@ -29,7 +29,12 @@ export async function selectSingleCard(page: Page): Promise<void> {
  * intake (file upload, Strava, samples) all live inside it now.
  */
 export async function openWizard(page: Page): Promise<void> {
-  await page.getByRole("button", { name: /get started/i }).click();
+  // The landing shows the same "Get started" CTA twice — in the hero and again
+  // in the closing footer — so target the first (hero) one.
+  await page
+    .getByRole("button", { name: /get started/i })
+    .first()
+    .click();
   // Sync point: the dialog must be open before callers interact with it.
   await expect(page.getByRole("dialog")).toBeVisible();
 }
