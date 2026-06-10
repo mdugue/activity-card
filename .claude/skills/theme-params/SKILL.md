@@ -11,8 +11,9 @@ How a theme describes itself to the app. EVERY theme — single-card or carousel
 families add only their render strategy: a single-card theme is a `defineTheme`
 descriptor with a bespoke `Component` (+ capability declaration), collected in
 `SINGLE_CARD_THEMES` (`components/themes/index.ts`); a carousel theme is a
-token row whose `ThemeBase` shape is derived into `CAROUSEL_THEMES`
-(`lib/carousel/theme-tokens.ts`). Everything the editor shows (which toggles
+`defineCarouselTheme` descriptor (a `canvas?` + `panels[]`, look tokens derived
+from `lib/carousel/theme-tokens.ts`), collected in `CAROUSEL_THEMES`
+(`components/themes/carousel/registry.ts`). Everything the editor shows (which toggles
 exist, which knobs render, whether the colour control appears, the photo
 defaults) derives from the descriptor; there are no parallel metadata tables
 and no per-theme control components. `app/page.tsx` treats both modes through
@@ -52,8 +53,9 @@ date / distance / time are a card's core, not capabilities).
   derives every toggle's availability:
   `dataHas && uses.includes(k) && (usesWhen[k]?.(data) ?? true)`. `usesWhen`
   refines a declared capability per activity (Editorial's elevation row is
-  ride-only). The carousel derives the same answer from its stat planner
-  (`carouselVisibilityAvailable`).
+  ride-only). Both families use this same `themeAvailability`; the carousel
+  declares the shared `CAROUSEL_CAPABILITIES` (it doesn't narrow panel prop
+  types — its panels take full `ActivityData`).
 - Shared helpers a theme passes `data` into take `ActivityView` (every
   governed field optional), so any narrowed `ThemeData` is assignable.
 

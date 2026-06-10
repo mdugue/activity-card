@@ -225,32 +225,38 @@ PLAYWRIGHT_BROWSERS_PATH=… bun run test:e2e e2e/themes.spec.ts
 
 ## A new carousel theme
 
-A carousel theme is **a token row**, not a component — one shared renderer
-(`components/themes/carousel/seamless-canvas.tsx`) draws every theme. Deep
+A carousel theme is a **descriptor**, like a single-card theme — a `ThemeBase`
+core (`defineCarouselTheme`) plus a render strategy: an optional **`canvas`**
+(the spanning signature drawn once across the strip) and a **`panels`** array
+(one foreground component per slide, any count). One shared renderer
+(`components/themes/carousel/deck.tsx`, `CarouselDeck`) composes them. Deep
 dive: the `carousel-themes` skill.
 
-1. **Add the id** to `CarouselThemeId` and a row to `CAROUSEL_THEME_TOKENS`
-   (`lib/carousel/theme-tokens.ts`); append the id to `CAROUSEL_THEME_ORDER`.
-   The signature levers: `heroLayer` (route / elevation / photo / none),
-   `panelKind` (standard / frame / press), `heroMetric`, `deck` (3 or 4
-   slides), `crossViz`, `detailViz`, `fontPair`, the colours
-   (`background/ink/mutedInk/accent/accent2/onAccent`, `dark`), and the photo
-   look (`defaultFilter`, `defaultGrain`). A photo-first theme may set
-   `defaultColorChoice: { kind: "photo", variant: "vibrant" }`.
-2. **Reuse a `panelKind`** if possible. A new kind means a panel component
-   under `components/themes/carousel/panels/` (it receives the shared
-   `PanelProps` bag — pre-resolved style + planned stats; never re-derive
-   those locally), wired in `panelFor` (seamless-canvas) and the planner
-   branch in `planSlideStats` (`lib/carousel/stats.ts`).
-3. **Add a story** in
-   `components/themes/carousel/seamless-canvas.stories.tsx` — one export per
-   theme id, built with the existing `themeArgs(id)` helper.
+1. **Add the id** to `CarouselThemeId` + `CAROUSEL_THEME_ORDER` and a **look
+   row** to `CAROUSEL_THEME_TOKENS` (`lib/carousel/theme-tokens.ts`). The look
+   levers: `heroMetric`, `crossViz`, `detailViz`, `fontPair`, the colours
+   (`background/ink/mutedInk/accent/accent2/onAccent`, `dark`), `routeStyle` /
+   `elevation`, the photo look (`defaultFilter`, `defaultGrain`), and the
+   `heroLayer` / `panelKind` style hints (content anchor + veil). A photo-first
+   theme may set `defaultColorChoice: { kind: "photo", variant: "vibrant" }`;
+   knobs go in `params` / `defaults` on the row.
+2. **Wire the strategy** in `components/themes/carousel/registry.ts`: add a
+   `STRATEGY[id]` entry with its `canvas?` (reuse `RouteCanvas` /
+   `ElevationCanvas` / `StrataCanvas`, or add one under `canvas/`) and `panels`
+   (reuse `STANDARD_PANELS`, or compose new per-slide panels under
+   `panels/`). Panels receive the shared `PanelProps` bag (pre-resolved style +
+   `index`/`total` + `visibility`) and **self-derive** their stats from `data`
+   (`heroStat` / `detailStats` / `frameStats` / `pressSlideStats`). A `canvas`
+   owns its placement and returns null when its metric is absent. Add a
+   `resolveStyle` only to post-process the palette (Strata's mood).
+3. **Add a story** — a `<theme>.stories.tsx` next to the registry rendering
+   `<CarouselDeck theme={CAROUSEL_THEMES[id]} …>` via the `carouselArgs` helper
+   in `story-support.ts`, with `backgroundArgTypes`.
 4. **Verify** as above; `e2e/carousel.spec.ts` covers the deck mechanics.
 
 Colour and photo behaviour come for free: every carousel theme is
-colour-adjustable (policy derived from its tokens via `carouselColorPolicy`)
-and shows the photo per `carouselPhotoPolicy` + the shared "Use as background"
-toggle.
+colour-adjustable (policy derived from its look tokens) and shows the photo via
+the deck's shared photo layer + the "Use as background" toggle.
 
 ---
 
@@ -290,7 +296,9 @@ components/themes/index.ts                SINGLE_CARD_THEMES registry + THEME_OR
 components/themes/single-card/<name>.tsx  a single-card theme (component + descriptor)
 components/themes/shared/                 PhotoLayer · PhotoBackdrop · PhotoUnderlay ·
                                           CoverPhoto · photo-fx context · OverlayRoute
-components/themes/carousel/               the carousel renderer + templates/panels
-lib/carousel/theme-tokens.ts              carousel theme rows + derived CAROUSEL_THEMES
+components/themes/carousel/define-theme.ts defineCarouselTheme · CarouselTheme · canvas/panels
+components/themes/carousel/registry.ts     CAROUSEL_THEMES (carousel descriptor registry)
+components/themes/carousel/deck.tsx        CarouselDeck — the shared renderer
+lib/carousel/theme-tokens.ts              carousel look tokens + CarouselThemeId
 components/app/editor-session.ts          the one object the editors share
 ```

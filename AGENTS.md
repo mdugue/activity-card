@@ -77,13 +77,13 @@ strip).
 |                | Single card                                            | Carousel ("accordion")                                              |
 | -------------- | ------------------------------------------------------ | ------------------------------------------------------------------- |
 | Output         | one 1080×1350 poster                                   | an n×1080 × 1350 seamless strip, sliced into slides                 |
-| A theme is…    | **a `defineTheme` descriptor** (component + declaration) | **a token row** (data)                                              |
-| Lives in       | `components/themes/single-card/<name>.tsx`             | tokens: `lib/carousel/theme-tokens.ts` · render: `components/themes/carousel/` |
+| A theme is…    | **a `defineTheme` descriptor** (component + declaration) | **a `defineCarouselTheme` descriptor** (`canvas?` + `panels[]`)   |
+| Lives in       | `components/themes/single-card/<name>.tsx`             | descriptor: `components/themes/carousel/registry.ts` · look tokens: `lib/carousel/theme-tokens.ts` |
 | Id space       | `ThemeId` (`components/themes/index.ts`)               | `CarouselThemeId` (`lib/carousel/theme-tokens.ts`)                  |
-| Registered in  | `SINGLE_CARD_THEMES` (descriptor registry)             | `CAROUSEL_THEME_TOKENS` + `CAROUSEL_THEME_ORDER`                    |
-| Renderer       | the theme component itself                             | one shared `components/themes/carousel/seamless-canvas.tsx`         |
-| Contract       | `ThemeProps` + capability declaration — see `card-rendering` + `theme-params` skills | theme tokens/levers — see `carousel-themes` skill |
-| Story          | `components/themes/single-card/<name>.stories.tsx`     | a story in `components/themes/carousel/seamless-canvas.stories.tsx` |
+| Registered in  | `SINGLE_CARD_THEMES` (descriptor registry)             | `CAROUSEL_THEMES` (`registry.ts`) · `CAROUSEL_THEME_ORDER`          |
+| Renderer       | the theme component itself                             | one shared `components/themes/carousel/deck.tsx` (`CarouselDeck`)   |
+| Contract       | `ThemeProps` + capability declaration — see `card-rendering` + `theme-params` skills | `CanvasProps` / `PanelProps` + canvas/panels — see `carousel-themes` skill |
+| Story          | `components/themes/single-card/<name>.stories.tsx`     | `components/themes/carousel/<theme>.stories.tsx` (one per theme)    |
 
 Both families share the same **editor machinery**:
 
@@ -91,11 +91,12 @@ Both families share the same **editor machinery**:
   (`ParamDef[]`) and rendered generically — there are no per-theme control
   components. Config lives in one coerced slot keyed by theme id; the editor
   groups controls by category (STYLE · LAYOUT · PHOTO · TEXT · STATS · MARKS · ACTIVITY).
-- **Capabilities** (`lib/theme-contract.ts`): a single-card theme *declares* which
-  overlay elements it renders (`uses` / sport-aware `usesWhen`). The declaration
-  narrows the component's `data` prop type (reading an undeclared field is a
-  compile error) and drives the editor's availability; the carousel derives the
-  same answer from its stat planner.
+- **Capabilities** (`lib/theme-contract.ts`): every theme — both families —
+  *declares* which overlay elements it renders (`uses` / sport-aware `usesWhen`)
+  on its `ThemeBase` core. On the single card the declaration also narrows the
+  component's `data` prop type (reading an undeclared field is a compile error).
+  Both families drive editor availability the same way — `themeAvailability(data,
+  theme)` (`lib/visibility.ts`).
 - **Colour** (`lib/colors.ts`): themes consume a resolved `ColorScheme`; the user
   picks a `ColorChoice` — a static preset (single hue or pair) or a photo-derived
   strategy — in one control, hidden for fixed-palette themes.
@@ -154,10 +155,12 @@ components/
     single-card/      SINGLE-CARD themes — one file per theme, each exporting its
                       component plus a `defineTheme` descriptor; collected in
                       `themes/index.ts` (`SINGLE_CARD_THEMES` / `ThemeId`).
-    carousel/         CAROUSEL ("accordion") themes — one renderer
-                      (`seamless-canvas.tsx`) + slide templates/panels. A carousel
-                      theme itself is a token row in `lib/carousel/theme-tokens.ts`,
-                      not a file-per-theme component.
+    carousel/         CAROUSEL ("accordion") themes — descriptors (`registry.ts`,
+                      built via `define-theme.ts`) composed by one shared renderer
+                      (`deck.tsx`, `CarouselDeck`). A theme is a `canvas?` (spanning
+                      signature, under `canvas/`) + `panels[]` (slide components,
+                      under `templates/` + `panels/`); its look tokens live in
+                      `lib/carousel/theme-tokens.ts`.
     shared/           Rendering utilities both card kinds build on (photo layers,
                       cover-photo geometry, photo-fx context, overlay-route).
                       (Stories colocate next to components as `<name>.stories.tsx`.)
@@ -166,9 +169,10 @@ lib/                  Utilities (`cn`, parsers, formatters). `lib/activity.ts` i
                       canonical ActivityData model. `lib/theme-contract.ts` holds the
                       single-card descriptor contract (capabilities, ThemeData,
                       defineTheme); `lib/colors.ts` the ColorScheme/ColorChoice model.
-                      `lib/carousel/` holds the carousel theme tokens (+ the derived
-                      `CAROUSEL_THEMES` ThemeBase registry), deck + stat planning, and
-                      resolve logic. `lib/params/` holds the editor parameter schema
+                      `lib/carousel/` holds the carousel look tokens, the per-slide
+                      stat helpers, and the deck-style resolve logic (the
+                      `CAROUSEL_THEMES` descriptor registry lives in the component
+                      layer). `lib/params/` holds the editor parameter schema
                       (`ParamDef`) and `coerceConfig` coercion; param specs live on the
                       theme descriptors themselves.
 public/               Static assets.
@@ -197,9 +201,11 @@ public/               Static assets.
   photo policy, params); add it to `SINGLE_CARD_THEMES` + `THEME_ORDER`
   (`components/themes/index.ts`), **plus a colocated
   `components/themes/single-card/<name>.stories.tsx`**.
-- **A new carousel theme** → a token row in `lib/carousel/theme-tokens.ts` (add
-  the id to `CarouselThemeId` + `CAROUSEL_THEME_ORDER`), **plus a story for it in
-  `components/themes/carousel/seamless-canvas.stories.tsx`**. See the `carousel-themes` skill.
+- **A new carousel theme** → a look row in `lib/carousel/theme-tokens.ts` (add
+  the id to `CarouselThemeId` + `CAROUSEL_THEME_ORDER`) + a `STRATEGY` entry
+  (`canvas?` + `panels`) in `components/themes/carousel/registry.ts`, **plus a
+  colocated `components/themes/carousel/<theme>.stories.tsx`**. See the
+  `carousel-themes` skill.
 - **A new adjustable knob on a theme** → add a `ParamDef` to the theme's
   `*_PARAMS` spec (pure data in `lib/<theme>.ts`) and reference it from the
   theme's descriptor (`defineTheme` `params`/`defaults`, or the carousel token
