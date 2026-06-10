@@ -1,14 +1,14 @@
 "use client";
 
-// Intro animation for the connect empty state (desktop only). Narrates the
-// product mechanic in three beats — one photo → sliced into slides → overlaid
-// with data — then rests on the tagline. See the design handoff README.
+// Intro animation for the connect empty state (desktop only). The claim panels
+// slice a seamless photo into story slides and fill them with data, then a
+// single page claim fades + slides up once that reveal has settled.
 //
 // Design contract (important): the *composed* (finished) state is the base.
 // "Hidden" values are only ever applied via JS after mount, so no-JS, SSR,
 // reduced-motion and mobile all render the finished layout directly. The
 // animation is layered on top via CSS transitions driven by a single stage
-// flip, with per-element delays reproducing the handoff timeline.
+// flip, with per-element delays sequencing the reveal.
 
 import Image from "next/image";
 import {
@@ -21,12 +21,11 @@ import {
 
 export type IntroStage = "composed" | "hidden" | "playing";
 type IntroRole = "scrim" | "tint" | "num" | "word" | "content";
-type Beat = "whole" | "cut" | "reveal" | "done";
 
 const RISE_PX = 14;
 const CUT_EASE = "cubic-bezier(0.65, 0, 0.35, 1)";
 const RISE_EASE = "cubic-bezier(0.2, 0.7, 0.2, 1)";
-// Timeline constants (seconds), mirrored from the handoff spec.
+// Timeline constants (seconds).
 const CUT_START = 0.45;
 const CUT_STAGGER = 0.18;
 const FILL_START = 1.15;
@@ -38,24 +37,19 @@ const FILL_STAGGER = 0.16;
 // every slide at full strength.
 const FADE_DELAY = 1.25;
 const FADE_DURATION = 1.5;
-const PANEL_REST_OPACITY = [1, 0.8, 0.65, 0.5];
-// Tailwind counterparts of PANEL_REST_OPACITY — keep the two in lockstep. These
-// are the composed (no-JS / reduced-motion) resting values, lg-gated.
-export const PANEL_REST_CLASS = [
-  "",
-  "lg:opacity-80",
-  "lg:opacity-65",
-  "lg:opacity-50",
-];
+const PANEL_REST_OPACITY = [1, 0.8, 0.6];
+// Tailwind counterparts of PANEL_REST_OPACITY — keep the two in lockstep (and
+// the same length as the panel list in empty-state.tsx). These are the composed
+// (no-JS / reduced-motion) resting values, lg-gated.
+export const PANEL_REST_CLASS = ["", "lg:opacity-80", "lg:opacity-60"];
 
-const EYEBROW: Record<Beat, string> = {
-  whole: "One photo — your activity",
-  cut: "Sliced into story slides",
-  reveal: "Overlaid with your data",
-  done: "Your claim, told across the slides — two steps to fill them",
-};
+// The single page claim that fades + slides up once the panel reveal is done.
+const CLAIM = "Make every effort worth sharing.";
+const CLAIM_RISE_PX = 18;
+const CLAIM_DELAY = 1.7;
+const CLAIM_DURATION = 0.7;
 
-// Only narrate where the 4-up grid actually exists and motion is welcome.
+// Only animate where the 3-up grid actually exists and motion is welcome.
 function shouldPlayIntro(): boolean {
   if (typeof window === "undefined") {
     return false;
@@ -73,7 +67,6 @@ const useIsoLayoutEffect =
 
 export function useEmptyStateIntro() {
   const [stage, setStage] = useState<IntroStage>("composed");
-  const [beat, setBeat] = useState<Beat>("done");
   const [showReplay, setShowReplay] = useState(false);
   const [runId, setRunId] = useState(0);
 
@@ -85,20 +78,17 @@ export function useEmptyStateIntro() {
       return;
     }
     setStage("hidden");
-    setBeat("whole");
     setShowReplay(false);
     let raf2 = 0;
     const raf1 = requestAnimationFrame(() => {
       raf2 = requestAnimationFrame(() => setStage("playing"));
     });
     const timers = [
-      window.setTimeout(() => setBeat("cut"), 450),
-      window.setTimeout(() => setBeat("reveal"), 1100),
-      window.setTimeout(() => setBeat("done"), 2450),
-      window.setTimeout(() => setShowReplay(true), 2550),
+      // Surface the replay control once the claim has finished sliding in.
+      window.setTimeout(() => setShowReplay(true), 2600),
       // Lock the composed end-state in case a background tab froze the
-      // transition clock mid-flight (after the slow recede has settled).
-      window.setTimeout(() => setStage("composed"), 3000),
+      // transition clock mid-flight (after claim + recede have settled).
+      window.setTimeout(() => setStage("composed"), 3200),
     ];
     return () => {
       cancelAnimationFrame(raf1);
@@ -110,7 +100,7 @@ export function useEmptyStateIntro() {
   }, [runId]);
 
   const replay = useCallback(() => setRunId((r) => r + 1), []);
-  return { stage, eyebrow: EYEBROW[beat], showReplay, replay };
+  return { claim: CLAIM, replay, showReplay, stage };
 }
 
 // Per-element style for the panel overlays (scrim/tint/number/word/graphic).
@@ -179,12 +169,32 @@ export function panelFadeStyle(
   };
 }
 
-// Gutter bars align to the fluid panel seams: panel width is (100% − 3·16px)/4,
+// The single page claim: fades + slides up once the panel reveal has settled.
+// `composed` defers to the element's resting Tailwind look (no-JS / mobile /
+// reduced-motion all show it in place from the start).
+export function claimStyle(stage: IntroStage): CSSProperties | undefined {
+  if (stage === "composed") {
+    return;
+  }
+  if (stage === "hidden") {
+    return {
+      opacity: 0,
+      transform: `translateY(${CLAIM_RISE_PX}px)`,
+      transition: "none",
+    };
+  }
+  return {
+    opacity: 1,
+    transform: "translateY(0)",
+    transition: `opacity ${CLAIM_DURATION}s ${RISE_EASE} ${CLAIM_DELAY}s, transform ${CLAIM_DURATION}s ${RISE_EASE} ${CLAIM_DELAY}s`,
+  };
+}
+
+// Gutter bars align to the fluid panel seams: panel width is (100% − 2·16px)/3,
 // so seam j sits j+1 panels plus j gaps in from the left.
 const GUTTER_LEFT = [
-  "calc((100% - 48px) / 4)",
-  "calc((100% - 48px) / 2 + 16px)",
-  "calc(3 * (100% - 48px) / 4 + 32px)",
+  "calc((100% - 32px) / 3)",
+  "calc(2 * (100% - 32px) / 3 + 16px)",
 ];
 
 function revealStyle(stage: IntroStage): CSSProperties {
@@ -194,7 +204,7 @@ function revealStyle(stage: IntroStage): CSSProperties {
   if (stage === "playing") {
     return {
       opacity: 0,
-      transition: `opacity 0.42s ease-in-out ${CUT_START + 3 * CUT_STAGGER}s`,
+      transition: `opacity 0.42s ease-in-out ${CUT_START + GUTTER_LEFT.length * CUT_STAGGER}s`,
     };
   }
   return { opacity: 0 };

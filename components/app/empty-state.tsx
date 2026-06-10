@@ -3,8 +3,8 @@
 import { ArrowRightIcon } from "@phosphor-icons/react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { EffortMark } from "@/components/app/effort-wordmark";
 import {
+  claimStyle,
   IntroReplay,
   type IntroStage,
   PANEL_REST_CLASS,
@@ -13,6 +13,7 @@ import {
   RevealOverlay,
   useEmptyStateIntro,
 } from "@/components/app/empty-state-intro";
+import { IntroVideo } from "@/components/app/intro-video";
 import {
   type OnboardingResult,
   OnboardingWizard,
@@ -20,7 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const PANEL_COUNT = 4;
+const PANEL_COUNT = 3;
 // Keep in sync with the rail's `gap-4` (16px) so the sliced panorama lines up
 // across the gutters and reads as one continuous photo.
 const PANEL_GAP = "16px";
@@ -75,8 +76,9 @@ function ElevationGlyph() {
   );
 }
 
-// The claim "DROP YOUR EFFORT." spelled one word per slide, fading back so the
-// eye reads left-to-right, with a sample of what each slide becomes underneath.
+// The card claim "DROP YOUR EFFORT" spelled one word per slide, fading back so
+// the eye reads left-to-right, with a sample of what each slide becomes
+// underneath. Three panels mirror the usual three-slide carousel output.
 const PANELS: { glyph: React.ReactNode; word: string; wordClass: string }[] = [
   {
     word: "DROP",
@@ -107,15 +109,6 @@ const PANELS: { glyph: React.ReactNode; word: string; wordClass: string }[] = [
       </div>
     ),
   },
-  {
-    word: ".",
-    wordClass: "text-[6.75rem] leading-none text-background/25 lg:text-[8rem]",
-    glyph: (
-      <div className="flex justify-center">
-        <EffortMark className="size-12 lg:size-16" />
-      </div>
-    ),
-  },
 ];
 
 function ClaimPanel({
@@ -134,7 +127,7 @@ function ClaimPanel({
   return (
     <div
       className={cn(
-        "relative flex h-[20rem] w-60 shrink-0 snap-center flex-col overflow-hidden bg-foreground p-5 text-background lg:h-[31rem] lg:w-auto lg:flex-1 lg:basis-0 lg:p-6",
+        "relative flex h-80 w-64 shrink-0 snap-center flex-col overflow-hidden bg-foreground p-5 text-background lg:h-[26rem] lg:w-auto lg:flex-1 lg:basis-0 lg:p-6",
         PANEL_REST_CLASS[index]
       )}
       style={panelFadeStyle(stage, index)}
@@ -225,8 +218,11 @@ export function EmptyState({
 
   return (
     <section className="relative flex flex-1 flex-col items-center justify-center gap-5 px-6 pt-20 pb-10 lg:gap-8 lg:pt-24 lg:pb-16">
-      <p className="caption-label w-full text-left lg:text-center">
-        {intro.eyebrow}
+      <p
+        className="w-full max-w-[64rem] text-balance text-left font-medium text-foreground/70 text-lg leading-snug lg:mx-auto lg:text-center lg:text-xl"
+        style={claimStyle(intro.stage)}
+      >
+        {intro.claim}
       </p>
 
       {/* Claim panels: a swipe rail on touch, a 4-up grid from lg up. The
@@ -296,6 +292,10 @@ export function EmptyState({
           </div>
         </div>
       </div>
+
+      {/* "See it in action" — an inline, looping intro that demonstrates the
+          product right after the value prop + CTA. */}
+      <IntroVideo />
 
       {intro.showReplay ? <IntroReplay onReplay={intro.replay} /> : null}
 
