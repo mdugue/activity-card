@@ -1,7 +1,8 @@
 import { SpinnerIcon } from "@phosphor-icons/react";
+import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
-function Spinner({ className, ...props }: React.ComponentProps<"svg">) {
+function Spinner({ className, ...props }: ComponentProps<"svg">) {
   return (
     <SpinnerIcon
       aria-label="Loading"
