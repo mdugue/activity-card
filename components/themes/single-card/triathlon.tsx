@@ -544,7 +544,7 @@ export function ThemeTriathlon({
         }}
       >
         <span>EFFORT · TRIATHLON CARD</span>
-        <span>{data.athleteName ? data.athleteName.toUpperCase() : "—"}</span>
+        <span>{data.athleteName ? data.athleteName.toUpperCase() : ""}</span>
       </div>
     </div>
   );

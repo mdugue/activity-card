@@ -6,6 +6,16 @@
 // `unknown` at this boundary (the theme body stays strictly typed on its own
 // config); each kind narrows it as it reads.
 
+import {
+  CircleDashedIcon,
+  ClockIcon,
+  GaugeIcon,
+  LightningIcon,
+  MountainsIcon,
+  PathIcon,
+  TextAaIcon,
+  TimerIcon,
+} from "@phosphor-icons/react";
 import { Slider } from "@/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { ParamCtx, ParamDef, ParamOption } from "@/lib/params/kinds";
@@ -24,9 +34,33 @@ interface ParamControlProps {
   value: unknown;
 }
 
-/** A colour swatch (palette picker) or a neutral disc, used as the rich-select
- *  glyph so option rows keep a consistent leading mark. */
-function OptionGlyph({ swatch }: { swatch?: string }) {
+// Duotone glyph per option `glyph` id, sized to match the editor's other rich
+// selects (the sport picker). The map lives here — not on the `ParamOption` —
+// so param specs in `lib/` stay JSX-free.
+const ICON_PROPS = {
+  "aria-hidden": true,
+  className: "size-5",
+  weight: "duotone",
+} as const;
+
+export const OPTION_GLYPHS: Record<string, React.ReactNode> = {
+  elevation: <MountainsIcon {...ICON_PROPS} />,
+  distance: <PathIcon {...ICON_PROPS} />,
+  name: <TextAaIcon {...ICON_PROPS} />,
+  duration: <ClockIcon {...ICON_PROPS} />,
+  avgSpeed: <GaugeIcon {...ICON_PROPS} />,
+  maxSpeed: <LightningIcon {...ICON_PROPS} />,
+  pace: <TimerIcon {...ICON_PROPS} />,
+  none: <CircleDashedIcon {...ICON_PROPS} />,
+};
+
+/** The option's semantic duotone icon, a colour swatch (palette picker), or a
+ *  neutral disc — so option rows keep a consistent leading mark. */
+function OptionGlyph({ glyph, swatch }: { glyph?: string; swatch?: string }) {
+  const icon = glyph ? OPTION_GLYPHS[glyph] : undefined;
+  if (icon) {
+    return icon;
+  }
   if (swatch) {
     return (
       <span
@@ -47,7 +81,7 @@ function OptionGlyph({ swatch }: { swatch?: string }) {
 function toRichOption(o: ParamOption): RichSelectOption {
   return {
     value: o.id,
-    icon: <OptionGlyph swatch={o.swatch} />,
+    icon: <OptionGlyph glyph={o.glyph} swatch={o.swatch} />,
     primary: o.value ?? o.label,
     unit: o.unit,
     hint: o.hint ?? (o.value ? undefined : o.blurb),

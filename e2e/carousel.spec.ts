@@ -20,7 +20,7 @@ test.describe("carousel mode", () => {
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
 
-    // Default theme (Trace Dawn) → a tight 3-slide deck.
+    // Default theme (Trace) → a tight 3-slide deck.
     await expect(page.getByTestId("carousel-preview")).toBeVisible();
     await expect(
       page.getByRole("button", { name: /^Slide \d+:/i })
@@ -46,10 +46,10 @@ test.describe("carousel mode", () => {
   });
 
   test("theme switches via the rail in the THEME section", async ({ page }) => {
-    // Carousel uses its own theme names (Trace Dawn/Dusk, Ascent, Press, …).
-    // Default is Trace Dawn → its toggle is pressed; picking Press selects it.
+    // Carousel uses its own theme names (Trace, Ascent, Press, …).
+    // Default is Trace → its toggle is pressed; picking Press selects it.
     await expect(
-      page.getByRole("button", { name: /^TRACE DAWN\b/i })
+      page.getByRole("button", { name: /^TRACE\b/i })
     ).toHaveAttribute("aria-pressed", "true");
     const press = page.getByRole("button", { name: /^PRESS\b/i });
     await press.click();

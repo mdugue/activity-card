@@ -273,7 +273,7 @@ function LoadedRow({
         ) : null}
         <div className="flex min-w-0 flex-1 items-center gap-3 p-4">
           <span className="flex size-7 shrink-0 items-center justify-center bg-primary text-primary-foreground">
-            <CheckIcon className="size-4" weight="bold" />
+            <CheckIcon className="size-4" weight="duotone" />
           </span>
           <div className="min-w-0">
             <div className="caption-micro text-background/60">{kicker}</div>

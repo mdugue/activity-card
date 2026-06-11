@@ -240,33 +240,37 @@ function StrataField({
   );
 }
 
-/** Sport-appropriate [label, value, unit] trio for the foot of the card. */
+/** Sport-appropriate [label, value, unit] stats for the foot of the card. The
+ *  middle metric is omitted when the activity lacks it (or the user toggled it
+ *  off — `applyVisibility` strips the field), never shown as a dash. */
 function statRow(data: ActivityView): [string, string, string][] {
+  const has = (n: number | undefined): n is number =>
+    n !== undefined && Number.isFinite(n);
   const time: [string, string, string] = [
     "TIME",
     formatDuration(data.durationSec),
     "",
   ];
+  const row: [string, string, string][] = [];
   if (data.sport === "run") {
-    return [
-      ["DST", data.distanceKm.toFixed(1), "km"],
-      ["PACE", formatPaceMin(data.avgPaceMinPerKm), "/km"],
-      time,
-    ];
+    row.push(["DST", data.distanceKm.toFixed(1), "km"]);
+    if (has(data.avgPaceMinPerKm)) {
+      row.push(["PACE", formatPaceMin(data.avgPaceMinPerKm), "/km"]);
+    }
+  } else if (data.sport === "swim") {
+    row.push(["DST", (data.distanceKm * 1000).toFixed(0), "m"]);
+    if (has(data.avgPacePer100m)) {
+      row.push(["/100", formatPaceSec(data.avgPacePer100m), ""]);
+    }
+  } else {
+    // ride, triathlon, and anything else: distance · elevation · time.
+    row.push(["DST", data.distanceKm.toFixed(1), "km"]);
+    if (has(data.elevationGainM)) {
+      row.push(["ELEV", formatNumber(data.elevationGainM), "m"]);
+    }
   }
-  if (data.sport === "swim") {
-    return [
-      ["DST", (data.distanceKm * 1000).toFixed(0), "m"],
-      ["/100", formatPaceSec(data.avgPacePer100m), ""],
-      time,
-    ];
-  }
-  // ride, triathlon, and anything else: distance · elevation · time.
-  return [
-    ["DST", data.distanceKm.toFixed(1), "km"],
-    ["ELEV", formatNumber(data.elevationGainM), "m"],
-    time,
-  ];
+  row.push(time);
+  return row;
 }
 
 function sportLabel(sport: Sport): string {

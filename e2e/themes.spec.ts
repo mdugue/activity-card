@@ -2,14 +2,13 @@ import { expect, test } from "@playwright/test";
 import { enterEditViaUpload, selectSingleCard, selectTheme } from "./helpers";
 
 const THEMES = [
-  "PATH",
   "ALTITUDE",
   "PHOTO",
-  "MINIMAL",
-  "DATA",
-  "EDITORIAL",
-  "TRIATHLON",
   "STRATA",
+  "PATH",
+  "EDITORIAL",
+  "DATA",
+  "TRIATHLON",
 ] as const;
 
 test.describe("themes", () => {

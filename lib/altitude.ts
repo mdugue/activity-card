@@ -336,6 +336,7 @@ export const ALTITUDE_PARAMS: ParamDef[] = [
         return {
           id: c,
           label: CLAIM_LABELS[c],
+          glyph: c,
           value: stat?.value ?? CLAIM_LABELS[c],
           unit: stat?.unit || undefined,
           hint: stat?.label ?? CLAIM_LABELS[c],
@@ -344,6 +345,7 @@ export const ALTITUDE_PARAMS: ParamDef[] = [
       opts.push({
         id: "none",
         label: "None",
+        glyph: "none",
         value: "None",
         hint: "No headline",
       });

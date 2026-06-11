@@ -14,16 +14,16 @@ import { CarouselDeck } from "./deck";
 import { carouselArgs } from "./story-support";
 
 // Trace — the route silhouette is the spanning signature, an art-print on warm
-// paper (Dawn) or after dark (Dusk). One `CarouselDeck` paints the whole
-// n×1080 × 1350 strip; pick a Background from the toolbar (or upload one) to see
-// the theme over a photo.
+// paper (Dawn) or after dark (Dusk) via the ATMOSPHERE param. One
+// `CarouselDeck` paints the whole n×1080 × 1350 strip; pick a Background from
+// the toolbar (or upload one) to see the theme over a photo.
 const meta = {
   component: CarouselDeck,
   title: "Carousel/Trace",
   tags: ["ai-generated"],
   parameters: { layout: "fullscreen" },
   argTypes: { ...backgroundArgTypes },
-  args: { data: SAMPLE_RIDE, ...carouselArgs("traceDawn") },
+  args: { data: SAMPLE_RIDE, ...carouselArgs("trace") },
 } satisfies Meta<ComponentProps<typeof CarouselDeck> & BackgroundArgs>;
 
 export default meta;
@@ -41,13 +41,10 @@ export const Dawn: Story = {
   },
 };
 
-export const Dusk: Story = { args: carouselArgs("traceDusk") };
+// The ATMOSPHERE param swaps the deck onto the dusk look (palette + type).
+export const Dusk: Story = { args: { config: { atmosphere: "dusk" } } };
 
 // Multi-activity project: every leg's route overlays in the spanning signature.
-export const DawnTriathlon: Story = {
-  args: { ...carouselArgs("traceDawn"), data: SAMPLE_TRI },
-};
+export const DawnTriathlon: Story = { args: { data: SAMPLE_TRI } };
 // Two-leg brick (bike + a small run) — checks both legs survive in the route.
-export const DawnBrick: Story = {
-  args: { ...carouselArgs("traceDawn"), data: SAMPLE_BRICK },
-};
+export const DawnBrick: Story = { args: { data: SAMPLE_BRICK } };

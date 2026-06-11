@@ -70,12 +70,12 @@ optional `resolveStyle(base, config)` (Strata's mood swaps the whole palette).
 
 ## The themes
 
-- **Trace Dawn / Trace Dusk** — the route silhouette as an art-print
-  (`RouteCanvas`). Dawn is light & serif on warm paper; Dusk is the same idea
-  after dark, condensed & bold. Hero = distance, elevation cross-viz.
-- **Ascent Dawn / Ascent Dusk** — the elevation range as a mountain-range
-  portrait (`ElevationCanvas`), content anchored above it. Dawn light/serif, Dusk
-  dark/bold. Hero = total elevation, route cross-viz.
+- **Trace** — the route silhouette as an art-print (`RouteCanvas`). The
+  ATMOSPHERE param picks Dawn (light & serif on warm paper) or Dusk (the same
+  idea after dark, condensed & bold). Hero = distance, elevation cross-viz.
+- **Ascent** — the elevation range as a mountain-range portrait
+  (`ElevationCanvas`), content anchored above it. Same Dawn/Dusk ATMOSPHERE
+  param. Hero = total elevation, route cross-viz.
 - **Exposure** — full-bleed photo panorama + magazine masthead, no spanning
   canvas; the route and elevation appear as small detail graphics (the photo is
   the hero).
@@ -88,9 +88,12 @@ optional `resolveStyle(base, config)` (Strata's mood swaps the whole palette).
   elevation ridge bottom, the swipe walking across the whole topography. Mood
   (via `resolveStyle`), density, legend are adjustable params.
 
-**Dawn/Dusk are pairs:** same signature idea, opposite tone. Light = bright photo
-filter + dark serif text; dark = moody photo filter + light bold text. Keep new
-families consistent with this contrast.
+**Dawn/Dusk is a knob, not a theme split:** same signature idea, opposite tone —
+light = bright photo filter + dark serif text; dark = moody photo filter + light
+bold text. Trace and Ascent expose it as the shared ATMOSPHERE param
+(`lib/carousel/atmosphere.ts` + `atmosphereResolveStyle` in `registry.ts`, the
+same `resolveStyle` mechanism as Strata's mood). Keep new families consistent
+with this contrast.
 
 ## Photo handling
 

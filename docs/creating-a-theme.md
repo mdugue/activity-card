@@ -111,8 +111,8 @@ export const exampleTheme = defineTheme({
   theme's own hue as `colors.default`. The user then gets the unified COLOUR
   control — static presets *and*, once a photo is loaded, the five
   photo-derived schemes.
-- **Fixed** (`userAdjustable: false`): the palette is the design (Minimal,
-  Altitude, Strata, Triathlon). The control hides; still set `colors.default`
+- **Fixed** (`userAdjustable: false`): the palette is the design (Altitude,
+  Strata, Triathlon). The control hides; still set `colors.default`
   to something representative.
 - Photo-first themes can add `defaultChoice: { kind: "photo", variant: "vibrant" }`
   so they start with photo-derived colours (see the Photo theme).

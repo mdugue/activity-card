@@ -1,4 +1,4 @@
-// Shared full-bleed photo layer for the photo-led themes (Photo, Minimal,
+// Shared full-bleed photo layer for the photo-led themes (Photo,
 // Altitude). When the photo's natural size is known (provided via the photo-fx
 // context), it renders the rotation-correct `CoverPhoto`; until then it falls
 // back to a plain CSS cover so the preview never flashes empty. Filter / grain /
