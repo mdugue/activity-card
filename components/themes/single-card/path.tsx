@@ -54,31 +54,43 @@ export function ThemePath({
     sportLabel = "A SWIM";
   }
 
-  let statTrio: [string, string][];
+  // Cells whose datum is missing (or toggled off — `applyVisibility` strips the
+  // field) are omitted entirely rather than rendered as a dashed placeholder.
+  const has = (n: number | undefined): n is number =>
+    n !== undefined && Number.isFinite(n);
+  const statTrio: [string, string][] = [];
   if (sport === "ride") {
-    statTrio = [
-      ["DISTANCE", `${data.distanceKm.toFixed(1)} km`],
-      ["ELEVATION", `${formatNumber(data.elevationGainM)} m`],
-      ["AVG SPEED", `${formatNumber(data.avgSpeedKmh, 1)} km/h`],
-    ];
+    statTrio.push(["DISTANCE", `${data.distanceKm.toFixed(1)} km`]);
+    if (has(data.elevationGainM)) {
+      statTrio.push(["ELEVATION", `${formatNumber(data.elevationGainM)} m`]);
+    }
+    if (has(data.avgSpeedKmh)) {
+      statTrio.push(["AVG SPEED", `${formatNumber(data.avgSpeedKmh, 1)} km/h`]);
+    }
   } else if (sport === "run") {
-    statTrio = [
+    statTrio.push(
       ["DISTANCE", `${data.distanceKm.toFixed(1)} km`],
-      ["DURATION", formatDuration(data.durationSec)],
-      ["AVG PACE", `${formatPaceMin(data.avgPaceMinPerKm)} /km`],
-    ];
+      ["DURATION", formatDuration(data.durationSec)]
+    );
+    if (has(data.avgPaceMinPerKm)) {
+      statTrio.push(["AVG PACE", `${formatPaceMin(data.avgPaceMinPerKm)} /km`]);
+    }
   } else if (sport === "swim") {
-    statTrio = [
+    statTrio.push(
       ["DISTANCE", `${(data.distanceKm * 1000).toFixed(0)} m`],
-      ["DURATION", formatDuration(data.durationSec)],
-      ["PACE", `${formatPaceSec(data.avgPacePer100m)} /100m`],
-    ];
+      ["DURATION", formatDuration(data.durationSec)]
+    );
+    if (has(data.avgPacePer100m)) {
+      statTrio.push(["PACE", `${formatPaceSec(data.avgPacePer100m)} /100m`]);
+    }
   } else {
-    statTrio = [
+    statTrio.push(
       ["DISTANCE", `${data.distanceKm.toFixed(1)} km`],
-      ["DURATION", formatDuration(data.durationSec)],
-      ["ELEVATION", `${formatNumber(data.elevationGainM)} m`],
-    ];
+      ["DURATION", formatDuration(data.durationSec)]
+    );
+    if (has(data.elevationGainM)) {
+      statTrio.push(["ELEVATION", `${formatNumber(data.elevationGainM)} m`]);
+    }
   }
 
   return (
@@ -154,16 +166,18 @@ export function ThemePath({
           >
             {data.title}
           </h1>
-          <div
-            style={{
-              marginTop: 18,
-              fontSize: 26,
-              letterSpacing: "0.18em",
-              opacity: 0.62,
-            }}
-          >
-            {data.location.toUpperCase()}
-          </div>
+          {data.location ? (
+            <div
+              style={{
+                marginTop: 18,
+                fontSize: 26,
+                letterSpacing: "0.18em",
+                opacity: 0.62,
+              }}
+            >
+              {data.location.toUpperCase()}
+            </div>
+          ) : null}
         </div>
 
         {/* Route — the hero */}

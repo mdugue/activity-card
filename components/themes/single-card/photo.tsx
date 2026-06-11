@@ -94,32 +94,29 @@ export function ThemePhoto({
 
   const cssVars = colorsToVars(colors, sport);
 
-  let hero: { big: string | number; unit: string; sub: string };
-  if (sport === "ride") {
-    hero = {
-      big: data.distanceKm.toFixed(1),
-      unit: "km",
-      sub: `${formatDuration(data.durationSec)} · ${formatNumber(data.elevationGainM)} m elev`,
-    };
-  } else if (sport === "run") {
-    hero = {
-      big: data.distanceKm.toFixed(1),
-      unit: "km",
-      sub: `${formatDuration(data.durationSec)} · ${formatPaceMin(data.avgPaceMinPerKm)} /km`,
-    };
-  } else if (sport === "swim") {
-    hero = {
-      big: (data.distanceKm * 1000).toFixed(0),
-      unit: "m",
-      sub: `${formatDuration(data.durationSec)} · ${formatPaceSec(data.avgPacePer100m)} /100m`,
-    };
-  } else {
-    hero = {
-      big: data.distanceKm.toFixed(1),
-      unit: "km",
-      sub: `${formatDuration(data.durationSec)} · triathlon`,
-    };
+  // The sub-line only carries metrics the activity actually has — a stripped
+  // field (toggled off, or absent from the file) drops out instead of leaving
+  // a dashed placeholder in the sentence.
+  const has = (n: number | undefined): n is number =>
+    n !== undefined && Number.isFinite(n);
+  const subParts: string[] = [formatDuration(data.durationSec)];
+  if (sport === "ride" && has(data.elevationGainM)) {
+    subParts.push(`${formatNumber(data.elevationGainM)} m elev`);
+  } else if (sport === "run" && has(data.avgPaceMinPerKm)) {
+    subParts.push(`${formatPaceMin(data.avgPaceMinPerKm)} /km`);
+  } else if (sport === "swim" && has(data.avgPacePer100m)) {
+    subParts.push(`${formatPaceSec(data.avgPacePer100m)} /100m`);
+  } else if (sport === "triathlon") {
+    subParts.push("triathlon");
   }
+  const hero: { big: string | number; unit: string; sub: string } = {
+    big:
+      sport === "swim"
+        ? (data.distanceKm * 1000).toFixed(0)
+        : data.distanceKm.toFixed(1),
+    unit: sport === "swim" ? "m" : "km",
+    sub: subParts.join(" · "),
+  };
 
   let placeholderBg =
     "linear-gradient(180deg, #2c3848 0%, #5a6a7e 40%, #8e7458 80%, #c89d6e 100%)";
@@ -228,7 +225,9 @@ export function ThemePhoto({
               fontWeight: 700,
             }}
           >
-            VOL. 01 · {formatDateUpper(data.date)}
+            {["VOL. 01", formatDateUpper(data.date)]
+              .filter(Boolean)
+              .join(" · ")}
           </div>
         </div>
         <div
@@ -242,10 +241,14 @@ export function ThemePhoto({
           }}
         >
           {storyLabel}
-          <br />
-          <span style={{ color: "var(--body)" }}>
-            {data.location.toUpperCase()}
-          </span>
+          {data.location ? (
+            <>
+              <br />
+              <span style={{ color: "var(--body)" }}>
+                {data.location.toUpperCase()}
+              </span>
+            </>
+          ) : null}
         </div>
       </div>
 

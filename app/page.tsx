@@ -11,7 +11,6 @@ import { EmptyState } from "@/components/app/empty-state";
 import { type CardMode, ModeToggle } from "@/components/app/mode-toggle";
 import type { OnboardingResult } from "@/components/app/onboarding-wizard";
 import type { ThemeId } from "@/components/app/render-theme";
-import { SAMPLE_RIDE, SAMPLE_RUN } from "@/components/app/sample-data";
 import { StravaFooter } from "@/components/app/strava-footer";
 import { StravaPicker } from "@/components/app/strava-picker";
 import { SINGLE_CARD_THEMES } from "@/components/themes";
@@ -73,21 +72,12 @@ function adoptParsed(
   persistedAthleteName?: string,
   source: ActivitySource = "upload"
 ): ActivityData {
-  // Parsed files give us universals + whichever sport-specific stats we can
-  // compute; merge over a sport-appropriate sample so themes that lean on
-  // optional fields (splits, zones, segments) still have something to draw.
-  const base = parsed.sport === "run" ? SAMPLE_RUN : SAMPLE_RIDE;
+  // A real activity carries ONLY what its file contains — never sample
+  // fixtures. Themes render conditionally on optional fields, so anything the
+  // parser couldn't compute (splits, zones, streams) simply doesn't appear.
   return {
-    ...base,
     ...parsed,
-    location: parsed.location || base.location,
-    athleteName: parsed.athleteName || persistedAthleteName || base.athleteName,
-    splits: parsed.splits ?? base.splits,
-    // Power/speed streams aren't parsed yet; never inherit the sample curves, or
-    // a real upload would show a fabricated sparkline. (Frame degrades to the
-    // number alone, and speed falls back to real per-split data when present.)
-    powerProfile: undefined,
-    speedProfile: undefined,
+    athleteName: parsed.athleteName || persistedAthleteName || "",
     source,
   };
 }
@@ -114,11 +104,44 @@ function loadPersistedUi(): Partial<PersistedUi> {
   }
 }
 
+interface MigratedCarouselTheme {
+  /** seed for the merged theme's ATMOSPHERE param (legacy Dusk/Dawn ids) */
+  atmosphere?: "dawn" | "dusk";
+  id: CarouselThemeId;
+}
+
+/** Pre-merge carousel ids (Trace/Ascent shipped as Dawn/Dusk pairs): map a
+ *  stale persisted id onto the merged theme and carry the light choice into its
+ *  ATMOSPHERE param. */
+const LEGACY_CAROUSEL_THEMES: Record<string, MigratedCarouselTheme> = {
+  traceDawn: { id: "trace", atmosphere: "dawn" },
+  traceDusk: { id: "trace", atmosphere: "dusk" },
+  ascentDawn: { id: "ascent", atmosphere: "dawn" },
+  ascentDusk: { id: "ascent", atmosphere: "dusk" },
+};
+
+/** The persisted carousel selection, validated against the current theme set,
+ *  with legacy Dawn/Dusk ids folded onto the merged themes. `null` = nothing
+ *  usable persisted (keep the default). */
+function migrateCarouselTheme(
+  persisted: Partial<PersistedUi>
+): MigratedCarouselTheme | null {
+  const stored = persisted.carouselTheme;
+  if (!stored) {
+    return null;
+  }
+  if (stored in CAROUSEL_THEMES) {
+    return { id: stored };
+  }
+  return LEGACY_CAROUSEL_THEMES[stored] ?? null;
+}
+
 /** The persisted theme configs, with any legacy single-key configs (pre-param-
  *  schema) folded in so existing users keep their tuned themes. Each value is
  *  coerced on read by `resolveThemeConfig`, so raw migration is safe. */
 function migrateThemeConfigs(
-  persisted: Partial<PersistedUi>
+  persisted: Partial<PersistedUi>,
+  carousel: MigratedCarouselTheme | null
 ): Record<string, unknown> {
   const configs: Record<string, unknown> = { ...persisted.themeConfigs };
   if (persisted.altitudeConfig && configs.altitude === undefined) {
@@ -126,6 +149,9 @@ function migrateThemeConfigs(
   }
   if (persisted.strataConfig && configs.strata === undefined) {
     configs.strata = persisted.strataConfig;
+  }
+  if (carousel?.atmosphere && configs[carousel.id] === undefined) {
+    configs[carousel.id] = { atmosphere: carousel.atmosphere };
   }
   return configs;
 }
@@ -167,8 +193,8 @@ export default function Home() {
   // with the Strava picker showing (instead of a separate full-screen state).
   const [autoStravaPicker, setAutoStravaPicker] = useState(false);
   const [data, setData] = useState<ActivityData | null>(null);
-  const [theme, setTheme] = useState<ThemeId>("path");
-  // Carousel themes have their own id space (Dawn/Dusk pairs etc.), so the
+  const [theme, setTheme] = useState<ThemeId>("altitude");
+  // Carousel themes have their own id space (Trace, Ascent, …), so the
   // carousel keeps its own selection separate from the single-card theme.
   const [carouselTheme, setCarouselTheme] = useState<CarouselThemeId>(
     DEFAULT_CAROUSEL_THEME
@@ -240,8 +266,9 @@ export default function Home() {
     if (persisted.theme && persisted.theme in SINGLE_CARD_THEMES) {
       setTheme(persisted.theme);
     }
-    if (persisted.carouselTheme && persisted.carouselTheme in CAROUSEL_THEMES) {
-      setCarouselTheme(persisted.carouselTheme);
+    const migratedCarousel = migrateCarouselTheme(persisted);
+    if (migratedCarousel) {
+      setCarouselTheme(migratedCarousel.id);
     }
     const migratedChoice = migrateColorChoice(persisted);
     if (migratedChoice) {
@@ -250,7 +277,7 @@ export default function Home() {
     if (persisted.visibility) {
       setVisibility({ ...DEFAULT_VISIBILITY, ...persisted.visibility });
     }
-    const configs = migrateThemeConfigs(persisted);
+    const configs = migrateThemeConfigs(persisted, migratedCarousel);
     if (Object.keys(configs).length > 0) {
       setThemeConfigs(configs);
     }

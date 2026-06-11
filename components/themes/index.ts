@@ -8,7 +8,6 @@ import type { SingleCardTheme } from "@/lib/theme-contract";
 import { altitudeTheme } from "./single-card/altitude";
 import { dataTheme } from "./single-card/data";
 import { editorialTheme } from "./single-card/editorial";
-import { minimalTheme } from "./single-card/minimal";
 import { pathTheme } from "./single-card/path";
 import { photoTheme } from "./single-card/photo";
 import { strataTheme } from "./single-card/strata";
@@ -18,7 +17,6 @@ export const SINGLE_CARD_THEMES = {
   path: pathTheme,
   altitude: altitudeTheme,
   photo: photoTheme,
-  minimal: minimalTheme,
   data: dataTheme,
   editorial: editorialTheme,
   triathlon: triathlonTheme,
@@ -28,12 +26,11 @@ export const SINGLE_CARD_THEMES = {
 export type ThemeId = keyof typeof SINGLE_CARD_THEMES;
 
 export const THEME_ORDER: ThemeId[] = [
-  "path",
   "altitude",
   "photo",
-  "minimal",
-  "data",
-  "editorial",
-  "triathlon",
   "strata",
+  "path",
+  "editorial",
+  "data",
+  "triathlon",
 ];

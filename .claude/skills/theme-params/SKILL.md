@@ -70,7 +70,7 @@ pair, `onPrimary`, optional photo `roles`); the user picks a **`ColorChoice`**:
 One control (`components/app/color-control.tsx`) serves both sources: presets
 always; with a photo loaded, the five photo schemes lead with their real
 computed swatches badged "FROM YOUR PHOTO". The control is **hidden** when the
-active theme's policy says `userAdjustable: false` (Altitude, Minimal, Strata,
+active theme's policy says `userAdjustable: false` (Altitude, Strata,
 Triathlon — their palettes are the design). Reset returns to the theme's
 default; `defaultChoice` lets a theme start photo-derived (Photo theme,
 Exposure). `resolveColors(choice, themeDefault, palette)` resolves the choice —

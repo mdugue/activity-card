@@ -125,14 +125,15 @@ Themes never branch on raw file format. They branch on `sport` and check which o
 
 ## Themes
 
-Six themes, each a distinct design direction. Each is a React component plus a `defineTheme` descriptor declaring what it renders (capabilities), its colour + photo policy, and its adjustable knobs — see the `theme-params` skill.
+Seven themes, each a distinct design direction. Each is a React component plus a `defineTheme` descriptor declaring what it renders (capabilities), its colour + photo policy, and its adjustable knobs — see the `theme-params` skill.
 
-1. **Path** — route silhouette is the hero. Stats quiet.
-2. **Altitude / Pace** — elevation profile (rides / trail runs) or pace chart (road runs) dominates. Mountain-range portrait.
-3. **Photo** — user's photo full-bleed; route + stats overlay subtly.
-4. **Data** — info-dense dashboard-as-poster. VAM, normalised power, HR zones, SWOLF — whichever the sport supports.
+1. **Altitude / Pace** — elevation profile (rides / trail runs) or pace chart (road runs) dominates. Mountain-range portrait.
+2. **Photo** — user's photo full-bleed; route + stats overlay subtly.
+3. **Strata** — generative woven morph-field: the route unfurling into the elevation profile.
+4. **Path** — route silhouette is the hero. Stats quiet.
 5. **Editorial** — typography-led. Magazine-headline treatment of distance, date, location.
-6. **Triathlon / Multi-sport** — swim → T1 → bike → T2 → run as one coherent piece.
+6. **Data** — info-dense dashboard-as-poster. VAM, normalised power, HR zones, SWOLF — whichever the sport supports.
+7. **Triathlon / Multi-sport** — swim → T1 → bike → T2 → run as one coherent piece.
 
 Each theme owns its type system, palette, and grid. Different display fonts per theme (Google Fonts or self-hosted). Avoid Inter as a default.
 
@@ -154,8 +155,8 @@ An additive mode alongside the single card (top-level **Carousel ↔ Single Card
 - **A theme is a descriptor** — like a single-card theme, a carousel theme is a `defineCarouselTheme` descriptor (`components/themes/carousel/registry.ts`): a `ThemeBase` core (identity, colour/photo policy, params, `uses`) + an optional `canvas` (the spanning signature) + a `panels[]` array (one component per slide) + its hand-tuned `look`, all inline in one entry.
 - **State** — `hooks/use-carousel.ts` derives the slides from the **theme's panel count** + tracks selection. The count is per-theme, not user-chosen: most themes are 3 slides (Intro · detail · Wrap-up), Frame and Press are 4. The chosen **carousel theme** lives in app state separately from the single-card theme.
 - **Own theme id space** — carousel themes are keyed by `CarouselThemeId` (`components/themes/carousel/registry.ts`), **independent** of the single-card `ThemeId`, so the carousel can grow its own families without being capped at the single-card count. Each theme is a different *look*, driven by its `canvas` + `panels` strategy plus the look levers (`heroMetric`, `detailViz`, an optional `crossViz`, `fontPair`, and a `defaultFilter`/`defaultGrain` photo look):
-  - **Trace Dawn / Trace Dusk** — route silhouette art-print; light·serif and dark·bold variants of one idea (`heroMetric: distance`, elevation cross-viz).
-  - **Ascent Dawn / Ascent Dusk** — elevation mountain-range; light·serif and dark·bold variants (`heroMetric: elevation`, route cross-viz).
+  - **Trace** — route silhouette art-print (`heroMetric: distance`, elevation cross-viz). An ATMOSPHERE param picks Dawn (light·serif) or Dusk (dark·bold).
+  - **Ascent** — elevation mountain-range (`heroMetric: elevation`, route cross-viz). Same Dawn/Dusk ATMOSPHERE param.
   - **Exposure** (photo) — full-bleed photo panorama, magazine masthead, photo-adaptive palette; small path + altitude graphics on the detail slide (`detailViz`).
   - **Frame** (minimal) — one big datum + a matching sparkline (route / elevation / speed / watts) per slide, hairline rules, 4 slides (`panels/frame-panel.tsx`).
   - **Press** (editorial) — newspaper: masthead, drop cap, pull-quotes, byline, 4 slides (`panels/press-panel.tsx`). Over a photo, text sits in fully-opaque print boxes (never a soft scrim); small print-style path/altitude cuts ride the spreads.
