@@ -14,6 +14,9 @@ test.describe("edit controls", () => {
   });
 
   test("title editor updates the card preview live", async ({ page }) => {
+    // Pick a theme that prints the title verbatim — the default (Altitude)
+    // headlines a metric instead, so a typed title never reaches its card.
+    await selectTheme(page, "PATH");
     const titleInput = page.getByLabel(/^Title$/i);
     await titleInput.fill("Sunrise Loop");
     // The Path theme title shows the user-entered value in the preview.
