@@ -16,9 +16,10 @@
  * layers between are the abstraction.
  */
 
-import type { ActivityData } from "@/components/app/sample-data";
 import type { Coord } from "@/lib/chart-helpers";
 import { isMultiActivity } from "@/lib/multi-activity";
+import type { ParamDef } from "@/lib/params/kinds";
+import type { ActivityView } from "@/lib/theme-contract";
 
 /* ----------------------------- configuration ----------------------------- */
 
@@ -28,7 +29,9 @@ export type StrataMood = "paper" | "dawn" | "dusk" | "midnight" | "alpine";
 /** How finely the route is woven down into the profile (the layer count). */
 export type StrataDensity = "fine" | "woven" | "bold";
 
-export interface StrataConfig {
+// Extends Record so the config flows through the generic param registry /
+// coercer without casts; declared keys keep their precise types.
+export interface StrataConfig extends Record<string, unknown> {
   /** How finely the field is woven — the number of strata layers. */
   density: StrataDensity;
   /** Mark the peak height + a direction arrow on the field. */
@@ -187,6 +190,53 @@ export const STRATA_DENSITY_BLURBS: Record<StrataDensity, string> = {
   bold: "a few bare ridges",
 };
 
+/* ---------------------------- parameter schema ---------------------------- */
+// The editor renders these generically (grouped by `group`). Atmosphere is a
+// STYLE choice; density is a LAYOUT choice; the legend markers file under MARKS.
+
+const MOOD_ORDER: StrataMood[] = [
+  "paper",
+  "dawn",
+  "dusk",
+  "midnight",
+  "alpine",
+];
+const DENSITY_ORDER: StrataDensity[] = ["fine", "woven", "bold"];
+
+export const STRATA_PARAMS: ParamDef[] = [
+  {
+    id: "mood",
+    group: "style",
+    label: "ATMOSPHERE",
+    kind: "segmented",
+    default: DEFAULT_STRATA_CONFIG.mood,
+    options: MOOD_ORDER.map((m) => ({
+      id: m,
+      label: STRATA_MOOD_LABELS[m],
+      blurb: STRATA_MOOD_BLURBS[m],
+    })),
+  },
+  {
+    id: "density",
+    group: "layout",
+    label: "DENSITY",
+    kind: "segmented",
+    default: DEFAULT_STRATA_CONFIG.density,
+    options: DENSITY_ORDER.map((d) => ({
+      id: d,
+      label: STRATA_DENSITY_LABELS[d],
+      blurb: STRATA_DENSITY_BLURBS[d],
+    })),
+  },
+  {
+    id: "legend",
+    group: "marks",
+    label: "Peak height & direction arrow",
+    kind: "toggle",
+    default: DEFAULT_STRATA_CONFIG.legend,
+  },
+];
+
 /* --------------------------- source resolution ---------------------------- */
 
 export interface StrataSource {
@@ -201,7 +251,7 @@ export interface StrataSource {
 type PickedProfile = Pick<StrataSource, "profile" | "profileLabel" | "elevMax">;
 
 /** The profile that becomes the bottom ridge: elevation, then pace, then laps. */
-function pickProfile(data: ActivityData): PickedProfile | null {
+function pickProfile(data: ActivityView): PickedProfile | null {
   const elev = data.elevationProfile;
   if (elev && elev.length > 1) {
     return {
@@ -228,7 +278,7 @@ function pickProfile(data: ActivityData): PickedProfile | null {
  * so it pairs each leg's route with that SAME leg's profile and concatenates in
  * order — see `resolveMultiStrataSource`. Returns `null` without enough geometry.
  */
-export function resolveStrataSource(data: ActivityData): StrataSource | null {
+export function resolveStrataSource(data: ActivityView): StrataSource | null {
   const route = data.routeCoordinates;
   const picked = pickProfile(data);
   if (route && route.length > 1 && picked) {
@@ -247,7 +297,7 @@ export function resolveStrataSource(data: ActivityData): StrataSource | null {
  * the morph progress-aligned — a swim leg with a route but no elevation is
  * skipped rather than smearing the route's swim third against the bike's climb.
  */
-function resolveMultiStrataSource(data: ActivityData): StrataSource | null {
+function resolveMultiStrataSource(data: ActivityView): StrataSource | null {
   const segs = data.segments ?? [];
   const useElevation = segs.some((s) => (s.elevationProfile?.length ?? 0) > 1);
   const routeCoords: Coord[] = [];

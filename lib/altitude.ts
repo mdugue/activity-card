@@ -3,20 +3,22 @@
  *
  * Kept JSX-free (and out of the component) so the claim/supporting-stat logic
  * is unit-testable under `bun:test`. The component in
- * `components/themes/altitude.tsx` consumes these; the editor controls in
- * `components/app/altitude-controls.tsx` drive the config.
+ * `components/themes/altitude.tsx` consumes the config; the editor renders
+ * `ALTITUDE_PARAMS` generically (see `lib/params/` + `components/app/param-control.tsx`).
  *
  * Values are formatted here via `lib/format.ts` so the theme renders strings
  * directly. English/metric formatting, consistent with every other theme.
  */
 
-import type { ActivityData, Sport } from "@/components/app/sample-data";
+import type { Sport } from "@/lib/activity";
 import {
   formatDuration,
   formatNumber,
   formatPaceMin,
   formatPaceSec,
 } from "@/lib/format";
+import type { ParamDef, ParamOption } from "@/lib/params/kinds";
+import type { ActivityView } from "@/lib/theme-contract";
 
 /** Display typeface for the claim. */
 export type AltitudeFont = "modern" | "serif";
@@ -31,15 +33,22 @@ export type AltitudeClaim =
   | "duration"
   | "pace";
 
+/** The stored headline choice: a metric, or `"none"` for no claim (line +
+ *  supporting stats only). Kept a plain string (not `AltitudeClaim | null`) so
+ *  the config is fully serialisable / param-schema friendly. */
+export type AltitudeHeadline = AltitudeClaim | "none";
+
 /** Vertical anchor of the claim cluster. */
 export type AltitudePosition = "top" | "center" | "bottom";
 
 /** How the claim relates to the elevation line. */
 export type AltitudeClaimStyle = "cutout" | "stacked";
 
-export interface AltitudeConfig {
-  /** The hero metric, or `null` to show no claim (line + supporting stats only). */
-  claim: AltitudeClaim | null;
+// Extends Record so the config flows through the generic param registry /
+// coercer without casts; declared keys keep their precise types.
+export interface AltitudeConfig extends Record<string, unknown> {
+  /** The hero metric, or `"none"` to show no claim (line + supporting stats only). */
+  claim: AltitudeHeadline;
   claimStyle: AltitudeClaimStyle;
   /** 0–100. Only meaningful when `claimStyle === "cutout"`. */
   cutoutOpacity: number;
@@ -80,7 +89,7 @@ export interface ResolvedClaim extends ResolvedStat {
 const isNum = (n: number | undefined): n is number =>
   n !== undefined && Number.isFinite(n);
 
-type StatBuilder = (data: ActivityData) => ResolvedStat | null;
+type StatBuilder = (data: ActivityView) => ResolvedStat | null;
 
 /** One builder per metric key; each returns null when its field is absent. */
 const STAT_BUILDERS: Record<StatKey, StatBuilder> = {
@@ -199,7 +208,7 @@ const STAT_BUILDERS: Record<StatKey, StatBuilder> = {
 };
 
 /** Build a stat for one metric key, or `null` when the data isn't present. */
-function metricStat(key: StatKey, data: ActivityData): ResolvedStat | null {
+function metricStat(key: StatKey, data: ActivityView): ResolvedStat | null {
   return STAT_BUILDERS[key](data);
 }
 
@@ -242,10 +251,10 @@ export const CLAIM_LABELS: Record<AltitudeClaim, string> = {
  * toggle, or absent for the sport). Returns `null` only when `claim` is `null`.
  */
 export function resolveClaim(
-  claim: AltitudeClaim | null,
-  data: ActivityData
+  claim: AltitudeHeadline,
+  data: ActivityView
 ): ResolvedClaim | null {
-  if (claim === null) {
+  if (claim === "none") {
     return null;
   }
   const order: StatKey[] = [
@@ -268,7 +277,7 @@ export function resolveClaim(
  * activity doesn't have.
  */
 export function supportingStats(
-  data: ActivityData,
+  data: ActivityView,
   excludeKey: StatKey | null,
   max = 2
 ): ResolvedStat[] {
@@ -289,11 +298,113 @@ export function supportingStats(
 }
 
 /** Headline options that resolve to real data for this activity. */
-export function claimOptions(data: ActivityData): AltitudeClaim[] {
+export function claimOptions(data: ActivityView): AltitudeClaim[] {
   return CLAIM_PICKER_ORDER.filter((k) =>
     k === "name" ? Boolean(data.title?.trim()) : metricStat(k, data) !== null
   );
 }
+
+/* ---------------------------- parameter schema ---------------------------- */
+// LAYOUT controls for the editor. The headline is a *calculated* select — only
+// the metrics this activity has, each showing its live value first-class (this
+// is the data-dependent `options(ctx)` case). The rest are fixed choices.
+// Treatment and cutout opacity are conditional (no claim → no treatment; only
+// the cutout treatment has an opacity).
+
+const ALL_HEADLINES: readonly AltitudeHeadline[] = [
+  "elevation",
+  "distance",
+  "name",
+  "avgSpeed",
+  "maxSpeed",
+  "duration",
+  "pace",
+  "none",
+];
+
+export const ALTITUDE_PARAMS: ParamDef[] = [
+  {
+    id: "claim",
+    group: "layout",
+    label: "HEADLINE",
+    kind: "select",
+    default: DEFAULT_ALTITUDE_CONFIG.claim,
+    optionIds: ALL_HEADLINES,
+    options: (ctx): ParamOption[] => {
+      const opts: ParamOption[] = claimOptions(ctx.data).map((c) => {
+        const stat = resolveClaim(c, ctx.data);
+        return {
+          id: c,
+          label: CLAIM_LABELS[c],
+          value: stat?.value ?? CLAIM_LABELS[c],
+          unit: stat?.unit || undefined,
+          hint: stat?.label ?? CLAIM_LABELS[c],
+        };
+      });
+      opts.push({
+        id: "none",
+        label: "None",
+        value: "None",
+        hint: "No headline",
+      });
+      return opts;
+    },
+  },
+  {
+    id: "font",
+    group: "layout",
+    label: "FONT",
+    kind: "segmented",
+    default: DEFAULT_ALTITUDE_CONFIG.font,
+    options: [
+      { id: "modern", label: "MODERN", blurb: "bold condensed" },
+      { id: "serif", label: "SERIF", blurb: "elegant" },
+    ],
+  },
+  {
+    id: "position",
+    group: "layout",
+    label: "POSITION",
+    kind: "segmented",
+    default: DEFAULT_ALTITUDE_CONFIG.position,
+    options: [
+      { id: "top", label: "TOP" },
+      { id: "center", label: "CENTER" },
+      { id: "bottom", label: "BOTTOM" },
+    ],
+  },
+  {
+    id: "claimStyle",
+    group: "layout",
+    label: "TREATMENT",
+    kind: "segmented",
+    default: DEFAULT_ALTITUDE_CONFIG.claimStyle,
+    visibleWhen: (cfg) => cfg.claim !== "none",
+    options: [
+      { id: "cutout", label: "CUTOUT", blurb: "line through type" },
+      { id: "stacked", label: "STACKED", blurb: "line below" },
+    ],
+  },
+  {
+    id: "cutoutOpacity",
+    group: "layout",
+    label: "CUTOUT OPACITY",
+    kind: "slider",
+    default: DEFAULT_ALTITUDE_CONFIG.cutoutOpacity,
+    min: 0,
+    max: 100,
+    step: 1,
+    unit: "%",
+    visibleWhen: (cfg) => cfg.claim !== "none" && cfg.claimStyle === "cutout",
+  },
+  {
+    id: "secondLine",
+    group: "layout",
+    label: "Second line of stats",
+    kind: "toggle",
+    default: DEFAULT_ALTITUDE_CONFIG.secondLine,
+  },
+];
 
 // ---------------------------------------------------------------------------
 // Claim type-setting. The hero is drawn as SVG <text>, so we can't rely on the

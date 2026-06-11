@@ -1,6 +1,6 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
-import type { ActivityData } from "@/components/app/sample-data";
+import type { ActivityData } from "@/lib/activity";
 import {
   claimOptions,
   layoutClaim,
@@ -25,7 +25,7 @@ function make(partial: Partial<ActivityData>): ActivityData {
 
 describe("resolveClaim", () => {
   test("returns null when no claim is selected", () => {
-    expect(resolveClaim(null, make({}))).toBeNull();
+    expect(resolveClaim("none", make({}))).toBeNull();
   });
 
   test("formats the requested metric with its unit", () => {

@@ -1,7 +1,7 @@
 "use client";
 
 // Carousel editor. The large preview is a horizontally scroll-snapped window
-// onto the single SeamlessCanvas — it shows one slide at a time and swiping
+// onto the single CarouselDeck — it shows one slide at a time and swiping
 // reveals the neighbours with the seamless bleed, exactly like an Instagram /
 // Strava carousel. The slide strip below windows onto the same canvas, and the
 // off-screen full-width mount feeds the slicing export — so preview, thumbnails
@@ -11,88 +11,47 @@
 
 import { ArrowsOutCardinalIcon, ImagesIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
-import { SeamlessCanvas } from "@/components/carousel/seamless-canvas";
+import { CarouselDeck } from "@/components/themes/carousel/deck";
+import {
+  CAROUSEL_THEME_ORDER,
+  CAROUSEL_THEMES,
+  type CarouselThemeId,
+} from "@/components/themes/carousel/registry";
 import { Badge } from "@/components/ui/badge";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CarouselController } from "@/hooks/use-carousel";
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
-import {
-  CAROUSEL_THEME_LABELS,
-  CAROUSEL_THEME_ORDER,
-  CAROUSEL_THEME_TOKENS,
-  type CarouselThemeId,
-} from "@/lib/carousel/theme-tokens";
 import { carouselBaseName, exportCarousel } from "@/lib/export-carousel";
 import {
   clampCoverTransform,
   type ImageTransform,
 } from "@/lib/image-transform";
-import type { PaletteTheme } from "@/lib/palette";
-import type { ParsedActivity } from "@/lib/parse-activity";
-import { isQuarterTurn, type PhotoEffects } from "@/lib/photo-effects";
-
-import type { StrataConfig } from "@/lib/strata";
+import { isQuarterTurn } from "@/lib/photo-effects";
 import { cn } from "@/lib/utils";
-import type { Visibility } from "@/lib/visibility";
 import { useActivityTools } from "./activity-tools";
 import { CardStage } from "./card-stage";
 import { ControlDeck, PANEL_MOTION } from "./control-deck";
+import type { EditorSession } from "./editor-session";
 import { ImageAdjustOverlay } from "./image-adjust-overlay";
-import {
-  PhotoFilterControl,
-  PhotoTransformControls,
-} from "./photo-effects-controls";
-import type { ActivityData, Sport } from "./sample-data";
 import { SlideStrip } from "./slide-strip";
-import { StrataControls } from "./strata-controls";
 import { ThemeRail } from "./theme-rail";
 
 interface CarouselEditStateProps {
-  accent: string;
-  athleteName: string;
-  available: Record<keyof Visibility, boolean>;
   carousel: CarouselController;
-  data: ActivityData;
-  imageTransform: ImageTransform;
-  location: string;
-  onAccentChange: (accent: string) => void;
-  onAthleteNameChange: (name: string) => void;
-  onFilesLoaded: (parts: ParsedActivity[]) => void;
-  onImageTransformChange: (next: ImageTransform) => void;
-  onLocationChange: (location: string) => void;
-  onOpenStravaPicker: () => void;
-  onPhotoChange: (file: File | null) => void;
-  onPhotoEffectsChange: (next: PhotoEffects) => void;
-  onSportChange: (sport: Sport) => void;
-  onStrataConfigChange: (config: StrataConfig) => void;
   onThemeChange: (theme: CarouselThemeId) => void;
-  onTitleChange: (title: string) => void;
-  onVisibilityChange: (visibility: Visibility) => void;
-  photoEffects: PhotoEffects;
-  photoPaletteTheme: PaletteTheme | null;
-  photoUrl: string | null;
-  strataConfig: StrataConfig;
+  session: EditorSession;
   theme: CarouselThemeId;
-  title: string;
-  visibility: Visibility;
 }
 
-export function CarouselEditState(props: CarouselEditStateProps) {
-  const {
-    carousel,
-    data,
-    theme,
-    photoUrl,
-    imageTransform,
-    photoEffects,
-    photoPaletteTheme,
-  } = props;
-  const { slides, selectedId, selectedIndex } = carousel;
-
-  // Photo support is per-theme: every carousel theme now renders a background
-  // photo (the type-led Frame/Press keep it clean via shadows / opaque boxes),
-  // so derive it from the theme token rather than the panel kind.
-  const photoSupported = CAROUSEL_THEME_TOKENS[theme].photoSupported;
+export function CarouselEditState({
+  carousel,
+  session,
+  theme,
+  onThemeChange,
+}: CarouselEditStateProps) {
+  const { data, visibility, color, config, photo } = session;
+  const { count, selectedIndex } = carousel;
+  const descriptor = CAROUSEL_THEMES[theme];
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const wideRef = useRef<HTMLDivElement>(null);
@@ -111,9 +70,9 @@ export function CarouselEditState(props: CarouselEditStateProps) {
   // Natural photo size → true-cover, pannable panorama + a clamp that respects
   // the wide strip's real vertical overflow. A quarter-turn swaps the photo's
   // width/height, so the clamp must use the rotated dimensions.
-  const imageSize = useImageNaturalSize(photoUrl);
-  const stripW = slides.length * 1080;
-  const quarter = isQuarterTurn(photoEffects.rotate);
+  const imageSize = useImageNaturalSize(photo.url);
+  const stripW = count * 1080;
+  const quarter = isQuarterTurn(photo.effects.rotate);
   const coverClamp = imageSize
     ? (t: ImageTransform) =>
         clampCoverTransform(
@@ -125,11 +84,11 @@ export function CarouselEditState(props: CarouselEditStateProps) {
         )
     : undefined;
 
-  // Adjust only makes sense when the theme renders the photo AND we know its
-  // natural size — the pan/zoom clamp (coverClamp) is derived from imageSize,
-  // so offering Adjust before it resolves would pan against the wrong bounds.
+  // Adjust only makes sense while the photo is shown AND we know its natural
+  // size — the pan/zoom clamp (coverClamp) is derived from imageSize, so
+  // offering Adjust before it resolves would pan against the wrong bounds.
   const adjustAvailable =
-    photoUrl !== null && photoSupported && imageSize !== null;
+    photo.url !== null && visibility.photoBackdrop && imageSize !== null;
   useEffect(() => {
     if (adjusting && !adjustAvailable) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -209,9 +168,8 @@ export function CarouselEditState(props: CarouselEditStateProps) {
     }
     settleTimer.current = setTimeout(() => {
       const idx = Math.round(vp.scrollLeft / vp.clientWidth);
-      const id = slides[idx]?.id;
-      if (id) {
-        carousel.select(id);
+      if (idx >= 0 && idx < count) {
+        carousel.select(idx);
       }
     }, 120);
   };
@@ -224,7 +182,7 @@ export function CarouselEditState(props: CarouselEditStateProps) {
     try {
       await exportCarousel(
         wideRef.current,
-        slides.length,
+        count,
         carouselBaseName(data.sport, data.date)
       );
     } finally {
@@ -232,76 +190,29 @@ export function CarouselEditState(props: CarouselEditStateProps) {
     }
   };
 
-  const canvasProps = {
-    accent: props.accent,
+  const deckProps = {
+    colors: color.scheme,
+    config: config.value,
     data,
     imageSize,
-    imageTransform,
-    photoEffects,
-    photoTheme: photoPaletteTheme,
-    photoUrl,
-    slides,
-    strataConfig: props.strataConfig,
-    theme,
-    visibility: props.visibility,
+    imageTransform: photo.transform,
+    photoEffects: photo.effects,
+    photoUrl: photo.url,
+    theme: descriptor,
+    visibility,
   };
 
-  const photoEditable = photoUrl !== null && photoSupported;
-
-  // STRATA carousel exposes the same mood / density / legend panel as the
-  // single card; other carousel themes have no per-theme parameters.
-  const moodControl =
-    theme === "strata" ? (
-      <StrataControls
-        config={props.strataConfig}
-        onChange={props.onStrataConfigChange}
-      />
-    ) : undefined;
-
   const tools = useActivityTools({
-    accent: props.accent,
-    athleteName: props.athleteName,
-    available: props.available,
-    data,
-    defaultAccent: CAROUSEL_THEME_TOKENS[theme].accent,
-    filterControl: photoEditable ? (
-      <PhotoFilterControl
-        effects={photoEffects}
-        onChange={props.onPhotoEffectsChange}
-      />
-    ) : undefined,
-    location: props.location,
     mode: "carousel",
-    onAccentChange: props.onAccentChange,
-    onAthleteNameChange: props.onAthleteNameChange,
-    onFilesLoaded: props.onFilesLoaded,
-    onLocationChange: props.onLocationChange,
-    onOpenStravaPicker: props.onOpenStravaPicker,
-    moodControl,
-    onPhotoChange: props.onPhotoChange,
-    onSportChange: props.onSportChange,
-    onTitleChange: props.onTitleChange,
-    onVisibilityChange: props.onVisibilityChange,
-    photoExtras: photoEditable ? (
-      <PhotoTransformControls
-        allowRotate
-        effects={photoEffects}
-        onChange={props.onPhotoEffectsChange}
-      />
-    ) : null,
-    photoSupported,
-    photoUrl,
+    session,
     themeControl: (
       <ThemeRail
-        labels={CAROUSEL_THEME_LABELS}
-        onThemeChange={props.onThemeChange}
+        labels={CAROUSEL_THEMES}
+        onThemeChange={onThemeChange}
         order={CAROUSEL_THEME_ORDER}
         theme={theme}
       />
     ),
-    themeLabel: CAROUSEL_THEME_LABELS[theme].label,
-    title: props.title,
-    visibility: props.visibility,
   });
 
   const preview = (
@@ -323,23 +234,24 @@ export function CarouselEditState(props: CarouselEditStateProps) {
         >
           <div
             className="relative h-full"
-            style={{ width: `calc(100cqw * ${slides.length})` }}
+            style={{ width: `calc(100cqw * ${count})` }}
           >
             <div
               className="absolute top-0 left-0 origin-top-left"
               style={{
-                width: 1080 * slides.length,
+                width: 1080 * count,
                 height: 1350,
                 transform: "scale(calc(100cqw / 1080px))",
               }}
             >
-              <SeamlessCanvas {...canvasProps} />
+              <CarouselDeck {...deckProps} />
             </div>
             <div className="absolute inset-0 flex">
-              {slides.map((s) => (
+              {Array.from({ length: count }, (_, i) => (
                 <div
                   aria-hidden
-                  key={s.id}
+                  // biome-ignore lint/suspicious/noArrayIndexKey: slides are positional — the index IS the identity (fixed count, never reordered)
+                  key={`snap-${i}`}
                   style={{
                     flex: "0 0 100cqw",
                     width: "100cqw",
@@ -368,9 +280,9 @@ export function CarouselEditState(props: CarouselEditStateProps) {
         {adjusting ? (
           <ImageAdjustOverlay
             clamp={coverClamp}
-            onChange={props.onImageTransformChange}
+            onChange={photo.onTransformChange}
             onDone={() => setAdjusting(false)}
-            transform={imageTransform}
+            transform={photo.transform}
           />
         ) : null}
       </CardStage>
@@ -389,19 +301,17 @@ export function CarouselEditState(props: CarouselEditStateProps) {
         )}
       >
         <SlideStrip
-          accent={props.accent}
+          colors={color.scheme}
+          config={config.value}
           data={data}
           imageSize={imageSize}
-          imageTransform={imageTransform}
+          imageTransform={photo.transform}
           onSelect={carousel.select}
-          photoEffects={photoEffects}
-          photoTheme={photoPaletteTheme}
-          photoUrl={photoUrl}
-          selectedId={selectedId}
-          slides={slides}
-          strataConfig={props.strataConfig}
-          theme={theme}
-          visibility={props.visibility}
+          photoEffects={photo.effects}
+          photoUrl={photo.url}
+          selectedIndex={selectedIndex}
+          theme={descriptor}
+          visibility={visibility}
         />
       </div>
     </div>
@@ -414,7 +324,7 @@ export function CarouselEditState(props: CarouselEditStateProps) {
           icon: <ImagesIcon aria-hidden className="size-5" weight="duotone" />,
           isBusy: isExporting,
           label: "Export carousel",
-          meta: `${slides.length} × 1080×1350`,
+          meta: `${count} × 1080×1350`,
           onAction: handleExport,
         }}
         preview={preview}
@@ -426,11 +336,8 @@ export function CarouselEditState(props: CarouselEditStateProps) {
           className="pointer-events-none fixed top-0 left-0 -z-10"
           style={{ transform: "translateX(-200%)" }}
         >
-          <div
-            ref={wideRef}
-            style={{ width: slides.length * 1080, height: 1350 }}
-          >
-            <SeamlessCanvas {...canvasProps} />
+          <div ref={wideRef} style={{ width: count * 1080, height: 1350 }}>
+            <CarouselDeck {...deckProps} />
           </div>
         </div>
       </ControlDeck>

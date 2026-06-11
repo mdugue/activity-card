@@ -1,12 +1,12 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
-import type { ActivityData, Coord } from "@/components/app/sample-data";
 import {
   SAMPLE_RIDE,
   SAMPLE_RUN,
   SAMPLE_SWIM,
   SAMPLE_TRI,
 } from "@/components/app/sample-data";
+import type { ActivityData, Coord } from "@/lib/activity";
 import {
   buildStrata,
   resolveStrataSource,

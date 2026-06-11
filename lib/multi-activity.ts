@@ -10,14 +10,11 @@
  * JSX-free and pure so the selection logic is unit-testable.
  */
 
-import type {
-  ActivityData,
-  Coord,
-  TriSegment,
-} from "@/components/app/sample-data";
+import type { Coord, TriSegment } from "@/lib/activity";
+import type { ActivityView } from "@/lib/theme-contract";
 
 /** A project carries two or more segments to combine. */
-export function isMultiActivity(data: ActivityData): boolean {
+export function isMultiActivity(data: ActivityView): boolean {
   return (data.segments?.length ?? 0) >= 2;
 }
 
@@ -28,7 +25,7 @@ export interface SegmentRoute {
 }
 
 /** Segments that have a usable route, in order. */
-export function segmentRoutes(data: ActivityData): SegmentRoute[] {
+export function segmentRoutes(data: ActivityView): SegmentRoute[] {
   const out: SegmentRoute[] = [];
   for (const s of data.segments ?? []) {
     if (s.routeCoordinates && s.routeCoordinates.length > 1) {
@@ -57,7 +54,7 @@ export interface SegmentProfiles {
  * Only legs carrying the chosen metric are included (e.g. a swim leg with no
  * elevation is skipped when biking/running legs do have it).
  */
-export function segmentProfiles(data: ActivityData): SegmentProfiles {
+export function segmentProfiles(data: ActivityView): SegmentProfiles {
   const segs = data.segments ?? [];
   const useElevation = segs.some((s) => (s.elevationProfile?.length ?? 0) > 1);
   const profiles: number[][] = [];
@@ -80,7 +77,7 @@ export function segmentProfiles(data: ActivityData): SegmentProfiles {
  * elevation-preferred pick (e.g. a theme showing a dedicated pace sparkline).
  */
 export function segmentSeries(
-  data: ActivityData,
+  data: ActivityView,
   field: "elevationProfile" | "paceProfile"
 ): { distances: number[]; profiles: number[][] } {
   const profiles: number[][] = [];

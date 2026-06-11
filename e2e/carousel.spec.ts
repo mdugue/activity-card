@@ -92,3 +92,41 @@ test.describe("carousel mode", () => {
     );
   });
 });
+
+test.describe("carousel photo backdrop", () => {
+  test.beforeEach(async ({ page }) => {
+    await enterEditViaUpload(page);
+  });
+
+  test("'Use as background' toggles the deck photo and its controls", async ({
+    page,
+  }) => {
+    await page.locator('input[type="file"][accept="image/*"]').setInputFiles({
+      name: "photo.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(TINY_PNG_BASE64, "base64"),
+    });
+    await expect(page.getByText(/Photo loaded/i)).toBeVisible();
+
+    // Photo on (every carousel theme defaults to showing it): the filter row
+    // and the deck-wide Adjust affordance are present.
+    await expect(page.getByText(/^FILTER$/)).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /adjust photo/i })
+    ).toBeVisible();
+
+    // Toggle the backdrop off: the photo controls and Adjust disappear (the
+    // deck falls back to the theme's designed, photo-free look).
+    const backdrop = page.getByRole("switch", { name: /use as background/i });
+    await expect(backdrop).toBeChecked();
+    await backdrop.click();
+    await expect(page.getByText(/^FILTER$/)).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: /adjust photo/i })
+    ).toHaveCount(0);
+
+    // And back on.
+    await backdrop.click();
+    await expect(page.getByText(/^FILTER$/)).toBeVisible();
+  });
+});

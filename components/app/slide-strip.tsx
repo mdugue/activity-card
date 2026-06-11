@@ -1,20 +1,17 @@
 "use client";
 
-// Slide thumbnails — each is a *slice* of the one SeamlessCanvas (the same
-// render the large preview and export use), so the strip, preview and output
-// always agree. Click a thumbnail to bring it into the preview. The deck
-// (chosen elsewhere) defines which slides exist; the strip is just navigation.
+// Slide thumbnails — each is a *slice* of the one CarouselDeck (the same render
+// the large preview and export use), so the strip, preview and output always
+// agree. Click a thumbnail to bring it into the preview. The theme defines how
+// many slides exist (its panel count); the strip is just navigation.
 
-import type { ActivityData } from "@/components/app/sample-data";
-import { SeamlessCanvas } from "@/components/carousel/seamless-canvas";
-import { TEMPLATE_META } from "@/components/carousel/templates";
+import { CarouselDeck } from "@/components/themes/carousel/deck";
+import type { CarouselTheme } from "@/components/themes/carousel/define-theme";
 import type { ImageSize } from "@/hooks/use-image-natural-size";
-import type { CarouselThemeId } from "@/lib/carousel/theme-tokens";
-import type { Slide } from "@/lib/carousel/types";
+import type { ActivityData } from "@/lib/activity";
+import type { ColorScheme } from "@/lib/colors";
 import type { ImageTransform } from "@/lib/image-transform";
-import type { PaletteTheme } from "@/lib/palette";
 import type { PhotoEffects } from "@/lib/photo-effects";
-import type { StrataConfig } from "@/lib/strata";
 import { cn } from "@/lib/utils";
 import type { Visibility } from "@/lib/visibility";
 
@@ -23,50 +20,51 @@ const THUMB_H = Math.round((THUMB_W * 1350) / 1080);
 const SCALE = THUMB_W / 1080;
 
 interface SlideStripProps {
-  accent: string;
+  colors: ColorScheme;
+  config?: Record<string, unknown>;
   data: ActivityData;
   imageSize?: ImageSize | null;
   imageTransform?: ImageTransform | null;
-  onSelect: (id: string) => void;
+  onSelect: (index: number) => void;
   photoEffects?: PhotoEffects;
-  photoTheme?: PaletteTheme | null;
   photoUrl?: string | null;
-  selectedId: string | null;
-  slides: Slide[];
-  strataConfig?: StrataConfig;
-  theme: CarouselThemeId;
+  selectedIndex: number;
+  theme: CarouselTheme;
   visibility?: Visibility;
 }
 
 export function SlideStrip(props: SlideStripProps) {
-  const { slides, selectedId, onSelect } = props;
+  const { selectedIndex, onSelect, theme } = props;
+  const total = theme.panels.length;
 
   // Each thumb renders the full strip and windows onto its own slice, so the
   // strip, large preview and export are guaranteed to show the same pixels.
   const canvas = (
-    <SeamlessCanvas
-      accent={props.accent}
+    <CarouselDeck
+      colors={props.colors}
+      config={props.config}
       data={props.data}
       imageSize={props.imageSize}
       imageTransform={props.imageTransform}
       photoEffects={props.photoEffects}
-      photoTheme={props.photoTheme}
       photoUrl={props.photoUrl}
-      slides={slides}
-      strataConfig={props.strataConfig}
-      theme={props.theme}
+      theme={theme}
       visibility={props.visibility}
     />
   );
 
   return (
     <div className="flex items-stretch justify-center gap-2">
-      {slides.map((slide, i) => {
-        const active = slide.id === selectedId;
+      {Array.from({ length: total }, (_, i) => {
+        const active = i === selectedIndex;
         return (
-          <div className="flex flex-col items-center gap-1" key={slide.id}>
+          <div
+            className="flex flex-col items-center gap-1"
+            // biome-ignore lint/suspicious/noArrayIndexKey: slides are positional — the index IS the identity (fixed count, never reordered)
+            key={`slide-${i}`}
+          >
             <button
-              aria-label={`Slide ${i + 1}: ${TEMPLATE_META[slide.template].label}`}
+              aria-label={`Slide ${i + 1}: ${theme.label}`}
               aria-pressed={active}
               className={cn(
                 "relative overflow-hidden border-2 bg-white transition-all",
@@ -74,14 +72,14 @@ export function SlideStrip(props: SlideStripProps) {
                   ? "border-foreground shadow-md"
                   : "border-foreground/15 opacity-80 hover:opacity-100"
               )}
-              onClick={() => onSelect(slide.id)}
+              onClick={() => onSelect(i)}
               style={{ width: THUMB_W, height: THUMB_H }}
               type="button"
             >
               <div
                 className="origin-top-left"
                 style={{
-                  width: 1080 * slides.length,
+                  width: 1080 * total,
                   height: 1350,
                   transform: `translateX(${-(i * THUMB_W)}px) scale(${SCALE})`,
                 }}

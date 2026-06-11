@@ -34,7 +34,16 @@ Don't ship one fixed mapping — auto-color is delightful when it hits and jarri
 - **spectrum** — headline pulls LightVibrant, body pulls LightMuted, accent pulls Vibrant, and a *second* accent (`accent2`) is set to the complementary rotation of the primary. Themes can paint different elements with `accent` vs `accent2` (or use them together in a gradient) so a Spectrum card visibly carries two hues at once. The wildest of the moods by design.
 - **pure** — ignores the swatches entirely and returns fixed white type with a white accent. The photo still shows as background; the type stays neutral so the image speaks for itself. Use this as the "opt out" — when the extracted colours don't land or the user wants the original look.
 
-`buildPaletteFromImage()` returns all five pre-built. The caller picks one and the hook returns `themes[variant]`.
+`buildPaletteFromImage()` returns all five pre-built (`ExtractedPalette.themes`).
+Because all five are pre-built in one pass, the editor's unified COLOUR control
+previews **each strategy's real swatch** for free. The five variants are no
+longer a Photo-theme-only "mood": they are the photo-derived arm of the shared
+`ColorChoice` (`lib/colors.ts`, `{ kind: "photo", variant }`), available to every
+colour-adjustable theme once a photo is loaded and badged "FROM YOUR PHOTO" in
+the picker (`components/app/color-control.tsx`). `schemeFromPalette` maps a
+variant to the `ColorScheme` a theme consumes (accents + the role palette the
+Photo theme paints its CSS vars from); a photo-kind choice without a palette
+resolves to the theme's own default.
 
 ## Why OKLCH (not HSL)
 

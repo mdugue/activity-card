@@ -149,31 +149,42 @@ Render the area as a filled `<path>` and the line as a stroked `<path>` on top.
 
 ## Theme component contract
 
-Every theme implements the same interface:
+Every single-card theme implements `ThemeProps` (`lib/theme-contract.ts`):
 
 ```ts
-// app/_components/themes/types.ts
-export type ActivityCardProps = {
-  activity: Activity
-  accentColor?: string // user-overridable
-  visibleStats?: StatKey[] // user-toggleable
-}
-
-export type ActivityCardTheme = React.FC<ActivityCardProps>
-```
-
-Each theme file exports a default component with this signature. The editor maps a `themeId` to a component:
-
-```ts
-const themes: Record<ThemeId, ActivityCardTheme> = {
-  path: PathTheme,
-  altitude: AltitudeTheme,
-  photo: PhotoTheme,
-  data: DataTheme,
-  editorial: EditorialTheme,
-  triathlon: TriathlonTheme,
+interface ThemeProps<K extends CapabilityKey, C> {
+  colors?: ColorScheme;          // resolved colour scheme (theme default until the user picks)
+  config?: C;                    // the theme's coerced parameter config
+  data: ThemeData<K>;            // ActivityData NARROWED to the declared capabilities
+  imageTransform?: ImageTransform | null; // pan/zoom for the background photo
+  photoUrl?: string | null;      // null when the photo is toggled off
 }
 ```
+
+A theme file exports its component plus a **`defineTheme` descriptor** declaring
+`uses` (the overlay capabilities it renders — this narrows `data`'s type, so
+reading an undeclared field is a compile error), sport-aware `usesWhen`
+refinements, a colour policy, a photo policy, and its params. Descriptors are
+collected in `components/themes/index.ts` (`SINGLE_CARD_THEMES` / `ThemeId`).
+The dispatcher `components/app/render-theme.tsx` is fully generic: it strips the
+data to the declaration (`pickThemeData`), resolves `colors`, and provides the
+photo-fx context — no per-theme branches. See the `theme-params` skill for the
+descriptor + parameter model.
+
+### Photo effects
+
+`PhotoEffects` (filter preset, grain, mirror, rotate) plus the photo's natural
+size are provided once by `RenderTheme` via a React context
+(`components/themes/shared/photo-fx.tsx`) and read by the shared photo layers
+(`PhotoLayer` / `PhotoBackdrop` / `PhotoUnderlay`) and Strata's inline photo —
+every theme's background is adjustable without threading props. Full-bleed
+layers render through the shared `CoverPhoto`
+(`components/themes/shared/cover-photo.tsx`), which sizes the element from the
+photo's natural dimensions and swaps width/height on quarter turns so rotation
+never exposes the corners (the same geometry as the carousel panorama). Apply
+effects as inline CSS (`filterCss`, `effectsTransformSuffix`, `GRAIN_BG`) —
+never `backdrop-filter`, which html-to-image mishandles. Rendered without the
+provider (e.g. in a story) the layers see `null` and render unfiltered.
 
 ### Theme dimensions
 
@@ -195,7 +206,7 @@ When `activity.backgroundImage` is set, themes that support it (Photo theme alwa
 
 ### Every theme needs a story
 
-Each single-card theme has a colocated `components/themes/<name>.stories.tsx`
+Each single-card theme has a colocated `components/themes/single-card/<name>.stories.tsx`
 (Storybook). A theme is not done until it renders there — enforced in
 `AGENTS.md`. Photo-capable themes spread `backgroundArgTypes`
 (`.storybook/backgrounds.ts`) into the story `meta` (typed

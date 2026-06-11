@@ -1,4 +1,9 @@
-import type { ActivityData } from "@/components/app/sample-data";
+import type { ActivityData } from "@/lib/activity";
+import {
+  type CapabilityKey,
+  GOVERNED_FIELDS,
+  type ThemeBase,
+} from "@/lib/theme-contract";
 
 /**
  * Per-element visibility. Every overlay the card can show has a switch here.
@@ -124,4 +129,32 @@ export function applyVisibility(
     routeCoordinates: vis.route ? data.routeCoordinates : undefined,
     splits: vis.splits ? data.splits : undefined,
   };
+}
+
+/**
+ * Which visibility switches apply for a theme + activity (BOTH families),
+ * derived entirely from the theme's capability declaration: the activity has
+ * the data AND the theme declared the capability AND any sport-aware `usesWhen`
+ * refinement holds. Replaces both `THEME_META.usesX` (single card) and
+ * `carouselVisibilityAvailable` (which derived the same answer by inspecting
+ * the now-deleted stat planner).
+ */
+export function themeAvailability(
+  data: ActivityData,
+  theme: Pick<ThemeBase, "uses" | "usesWhen">
+): Record<keyof Visibility, boolean> {
+  const base = availableVisibility(data);
+  const declared = new Set<CapabilityKey>(theme.uses);
+  const out = { ...base };
+  // Non-capability switches (title/date/distance/time/photoBackdrop/marks) are
+  // never theme-gated; capability switches gate on declaration + refinement.
+  for (const key of Object.keys(GOVERNED_FIELDS) as CapabilityKey[]) {
+    if (!declared.has(key)) {
+      out[key] = false;
+      continue;
+    }
+    const refine = theme.usesWhen?.[key];
+    out[key] = out[key] && (refine ? refine(data) : true);
+  }
+  return out;
 }

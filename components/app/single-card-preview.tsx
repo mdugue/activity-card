@@ -3,31 +3,33 @@
 // The Single Card preview: a static render of the active theme at full size,
 // scaled into its container. The theme itself is chosen from the THEME tool in
 // the ControlDeck, so the preview no longer doubles as a theme switcher — it
-// just shows the result, the way the focused-toolbar design intends. Hero photo
-// themes still get an in-place "Adjust" affordance for pan/zoom.
+// just shows the result, the way the focused-toolbar design intends. Any theme
+// showing a background photo gets an in-place "Adjust" affordance for pan/zoom.
 
 import { ArrowsOutCardinalIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { CardStage } from "@/components/app/card-stage";
 import { ImageAdjustOverlay } from "@/components/app/image-adjust-overlay";
 import { RenderTheme, type ThemeId } from "@/components/app/render-theme";
-import type { ActivityData } from "@/components/app/sample-data";
-import { THEME_META } from "@/components/themes/index";
 import { Badge } from "@/components/ui/badge";
-import type { AltitudeConfig } from "@/lib/altitude";
-import type { ImageTransform } from "@/lib/image-transform";
-import type { PaletteTheme } from "@/lib/palette";
-import type { StrataConfig } from "@/lib/strata";
+import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
+import type { ActivityData } from "@/lib/activity";
+import type { ColorScheme } from "@/lib/colors";
+import {
+  clampCoverTransform,
+  type ImageTransform,
+} from "@/lib/image-transform";
+import { isQuarterTurn, type PhotoEffects } from "@/lib/photo-effects";
 
 interface SingleCardPreviewProps {
-  altitudeConfig: AltitudeConfig;
+  colors: ColorScheme;
+  config: Record<string, unknown>;
   data: ActivityData;
   imageTransform: ImageTransform;
   onImageTransformChange: (next: ImageTransform) => void;
   photoBackdropEnabled: boolean;
-  photoPaletteTheme: PaletteTheme | null;
+  photoEffects: PhotoEffects;
   photoUrl: string | null;
-  strataConfig: StrataConfig;
   theme: ThemeId;
 }
 
@@ -36,22 +38,37 @@ export function SingleCardPreview({
   theme,
   photoUrl,
   photoBackdropEnabled,
-  altitudeConfig,
-  strataConfig,
-  photoPaletteTheme,
+  colors,
+  config,
+  photoEffects,
   imageTransform,
   onImageTransformChange,
 }: SingleCardPreviewProps) {
   const [adjusting, setAdjusting] = useState(false);
 
-  // Repositioning is offered wherever the photo is actually on screen — hero
-  // themes always, "supports" themes (incl. STRATA / Data / Triathlon) when the
-  // backdrop is toggled on. Drop out of adjust mode if it stops being shown.
-  const meta = THEME_META[theme];
+  // Natural photo size → a pan/zoom clamp that respects the photo's real cover
+  // overflow on the 1080×1350 card. A quarter-turn swaps the photo's
+  // width/height, so the clamp must use the rotated dimensions — the same
+  // model as the carousel panorama.
+  const imageSize = useImageNaturalSize(photoUrl);
+  const quarter = isQuarterTurn(photoEffects.rotate);
+  const coverClamp = imageSize
+    ? (t: ImageTransform) =>
+        clampCoverTransform(
+          t,
+          1080,
+          1350,
+          quarter ? imageSize.h : imageSize.w,
+          quarter ? imageSize.w : imageSize.h
+        )
+    : undefined;
+
+  // Repositioning is offered wherever the photo is actually on screen — any
+  // theme, whenever the backdrop is toggled on — once its natural size is
+  // known (the clamp depends on it). Drop out of adjust mode if it stops
+  // being shown.
   const adjustAvailable =
-    photoUrl !== null &&
-    (meta.photoMode === "hero" ||
-      (meta.photoMode === "supports" && photoBackdropEnabled));
+    photoUrl !== null && photoBackdropEnabled && imageSize !== null;
   useEffect(() => {
     if (adjusting && !adjustAvailable) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -71,13 +88,13 @@ export function SingleCardPreview({
           }}
         >
           <RenderTheme
-            altitudeConfig={altitudeConfig}
+            colors={colors}
+            config={config}
             data={data}
             imageTransform={imageTransform}
             photoBackdropEnabled={photoBackdropEnabled}
-            photoPaletteTheme={photoPaletteTheme}
+            photoEffects={photoEffects}
             photoUrl={photoUrl}
-            strataConfig={strataConfig}
             theme={theme}
           />
         </div>
@@ -98,6 +115,7 @@ export function SingleCardPreview({
 
         {adjusting ? (
           <ImageAdjustOverlay
+            clamp={coverClamp}
             onChange={onImageTransformChange}
             onDone={() => setAdjusting(false)}
             transform={imageTransform}

@@ -14,9 +14,9 @@ import {
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useStravaConnection } from "@/hooks/use-strava-connection";
+import type { ActivityData } from "@/lib/activity";
 import { formatDate } from "@/lib/format";
 import { type ParsedActivity, parseActivityFiles } from "@/lib/parse-activity";
-import type { ActivityData } from "./sample-data";
 
 interface ActivitySourceProps {
   data: ActivityData;

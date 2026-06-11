@@ -3,11 +3,11 @@ import { describe, expect, test } from "bun:test";
 import { SAMPLE_RIDE, SAMPLE_RUN } from "@/components/app/sample-data";
 import {
   buildStats,
+  detailStats,
   frameStats,
   heroStat,
-  planStandardStats,
+  pressSlideStats,
 } from "@/lib/carousel/stats";
-import { buildDeck } from "@/lib/carousel/types";
 
 describe("buildStats", () => {
   test("leads with distance and includes core ride metrics", () => {
@@ -67,26 +67,44 @@ describe("buildStats", () => {
   });
 });
 
-describe("planStandardStats", () => {
-  test("intro headlines the hero; detail slides never repeat it", () => {
-    const slides = buildDeck(["hero", "statRow", "statGrid", "editorial"]);
-    const plan = planStandardStats(SAMPLE_RIDE, slides, "distance");
-    expect(plan).toHaveLength(slides.length);
-    // intro slide → only the hero stat
-    expect(plan[0].map((s) => s.key)).toEqual(["distance"]);
-    // wrap-up slide → no grid stats (it draws its own summary)
-    expect(plan.at(-1)).toEqual([]);
-    // no detail slide repeats the hero, and none repeat each other
-    const detail = plan.slice(1, -1).flat();
-    expect(detail.some((s) => s.key === "distance")).toBe(false);
-    const keys = detail.map((s) => s.key);
-    expect(new Set(keys).size).toBe(keys.length);
+describe("detailStats", () => {
+  test("shows every stat except the hero metric (no repeated big number)", () => {
+    const stats = detailStats(SAMPLE_RIDE, "distance");
+    const keys = stats.map((s) => s.key);
+    expect(keys).not.toContain("distance"); // the hero headline
+    expect(keys).toContain("power"); // a ride's deeper metric still appears
+    expect(new Set(keys).size).toBe(keys.length); // no repeats
   });
 
-  test("a ride's detail slides include power (watts)", () => {
-    const slides = buildDeck(["hero", "statRow", "statGrid", "editorial"]);
-    const plan = planStandardStats(SAMPLE_RIDE, slides, "distance");
-    const keys = plan.flat().map((s) => s.key);
-    expect(keys).toContain("power");
+  test("when the hero headlines elevation, elevation drops from the grid", () => {
+    const keys = detailStats(SAMPLE_RIDE, "elevation").map((s) => s.key);
+    expect(keys).not.toContain("elevation");
+    expect(keys).toContain("distance");
+  });
+});
+
+describe("pressSlideStats", () => {
+  const TOTAL = 4; // Press is a 4-slide deck
+
+  test("front page leads with the headline + lede (first three)", () => {
+    const front = pressSlideStats(SAMPLE_RIDE, 0, TOTAL);
+    expect(front).toHaveLength(3);
+    expect(front[0].key).toBe("distance");
+  });
+
+  test("byline (last slide) shows no stats", () => {
+    expect(pressSlideStats(SAMPLE_RIDE, TOTAL - 1, TOTAL)).toEqual([]);
+  });
+
+  test("spreads page the rest without repeating the front page", () => {
+    const front = new Set(
+      pressSlideStats(SAMPLE_RIDE, 0, TOTAL).map((s) => s.key)
+    );
+    const spreads = [
+      ...pressSlideStats(SAMPLE_RIDE, 1, TOTAL),
+      ...pressSlideStats(SAMPLE_RIDE, 2, TOTAL),
+    ];
+    expect(spreads.length).toBeGreaterThan(0);
+    expect(spreads.some((s) => front.has(s.key))).toBe(false);
   });
 });

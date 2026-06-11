@@ -6,7 +6,7 @@
  * dynamic-imported independently without dragging the other's deps along.
  */
 
-import type { Coord, Split } from "@/components/app/sample-data";
+import type { Coord, Split } from "@/lib/activity";
 import { resampleTo, simplifyToCount, smooth } from "@/lib/simplify";
 
 export type ParsedSport = "ride" | "run" | "swim" | "triathlon";

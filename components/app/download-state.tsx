@@ -8,19 +8,19 @@ import {
 } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import type { AltitudeConfig } from "@/lib/altitude";
+import type { ActivityData } from "@/lib/activity";
+import type { ColorScheme } from "@/lib/colors";
 import { defaultFilename, exportCard } from "@/lib/export-card";
 import { formatDateUpper } from "@/lib/format";
 import type { ImageTransform } from "@/lib/image-transform";
-import type { PaletteTheme } from "@/lib/palette";
-import type { StrataConfig } from "@/lib/strata";
+import type { PhotoEffects } from "@/lib/photo-effects";
 import { RenderTheme, type ThemeId } from "./render-theme";
-import type { ActivityData } from "./sample-data";
 
 const CONFETTI_COLORS = ["#c45a2c", "#1d3a2e", "#1a1714", "#a98352"];
 
 interface DownloadStateProps {
-  altitudeConfig: AltitudeConfig;
+  colors: ColorScheme;
+  config: Record<string, unknown>;
   data: ActivityData;
   imageTransform: ImageTransform;
   onKeepEditing: () => void;
@@ -28,9 +28,8 @@ interface DownloadStateProps {
   /** Single-card backdrop toggle — must match the editor so the celebration
    *  thumbnail and the "Share" re-export agree with the downloaded PNG. */
   photoBackdropEnabled: boolean;
-  photoPaletteTheme: PaletteTheme | null;
+  photoEffects: PhotoEffects;
   photoUrl: string | null;
-  strataConfig: StrataConfig;
   theme: ThemeId;
 }
 
@@ -39,9 +38,9 @@ export function DownloadState({
   theme,
   photoUrl,
   photoBackdropEnabled,
-  altitudeConfig,
-  strataConfig,
-  photoPaletteTheme,
+  colors,
+  config,
+  photoEffects,
   imageTransform,
   onKeepEditing,
   onNew,
@@ -82,13 +81,13 @@ export function DownloadState({
                 style={{ width: 1080, height: 1350 }}
               >
                 <RenderTheme
-                  altitudeConfig={altitudeConfig}
+                  colors={colors}
+                  config={config}
                   data={data}
                   imageTransform={imageTransform}
                   photoBackdropEnabled={photoBackdropEnabled}
-                  photoPaletteTheme={photoPaletteTheme}
+                  photoEffects={photoEffects}
                   photoUrl={photoUrl}
-                  strataConfig={strataConfig}
                   theme={theme}
                 />
               </div>
@@ -150,13 +149,13 @@ export function DownloadState({
         style={{ width: 1080, height: 1350, transform: "translateX(-200%)" }}
       >
         <RenderTheme
-          altitudeConfig={altitudeConfig}
+          colors={colors}
+          config={config}
           data={data}
           imageTransform={imageTransform}
           photoBackdropEnabled={photoBackdropEnabled}
-          photoPaletteTheme={photoPaletteTheme}
+          photoEffects={photoEffects}
           photoUrl={photoUrl}
-          strataConfig={strataConfig}
           theme={theme}
         />
       </div>

@@ -84,32 +84,24 @@ export function PhotoFilterControl({ effects, onChange }: PhotoControlProps) {
   );
 }
 
-interface PhotoTransformControlsProps extends PhotoControlProps {
-  /** rotate is geometry-correct on the carousel panorama; hidden elsewhere */
-  allowRotate?: boolean;
-}
-
 /** Rotate / mirror / flip / grain row, shown inside the PHOTO category. */
 export function PhotoTransformControls({
   effects,
   onChange,
-  allowRotate = false,
-}: PhotoTransformControlsProps) {
+}: PhotoControlProps) {
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2">
-      {allowRotate ? (
-        <Button
-          onClick={() =>
-            onChange({ ...effects, rotate: nextRotation(effects.rotate) })
-          }
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          <ArrowClockwiseIcon className="size-3.5" weight="duotone" />
-          Rotate
-        </Button>
-      ) : null}
+      <Button
+        onClick={() =>
+          onChange({ ...effects, rotate: nextRotation(effects.rotate) })
+        }
+        size="sm"
+        type="button"
+        variant="outline"
+      >
+        <ArrowClockwiseIcon className="size-3.5" weight="duotone" />
+        Rotate
+      </Button>
       <Toggle
         className="data-[pressed]:!border-foreground data-[pressed]:!bg-foreground data-[pressed]:!text-background gap-1.5"
         onPressedChange={(p) => onChange({ ...effects, flipH: p })}

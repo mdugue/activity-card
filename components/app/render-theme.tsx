@@ -1,95 +1,62 @@
-import type { ActivityData } from "@/components/app/sample-data";
-import { THEME_META, THEMES, type ThemeId } from "@/components/themes";
-import { ThemeAltitude } from "@/components/themes/altitude";
-import { ThemePhoto } from "@/components/themes/photo";
-import { ThemeStrata } from "@/components/themes/strata";
-import type { AltitudeConfig } from "@/lib/altitude";
+import { SINGLE_CARD_THEMES, type ThemeId } from "@/components/themes";
+import { PhotoFxProvider } from "@/components/themes/shared/photo-fx";
+import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
+import type { ActivityData } from "@/lib/activity";
+import type { ColorScheme } from "@/lib/colors";
 import type { ImageTransform } from "@/lib/image-transform";
-import type { PaletteTheme } from "@/lib/palette";
-import type { StrataConfig } from "@/lib/strata";
+import type { PhotoEffects } from "@/lib/photo-effects";
+import { pickThemeData } from "@/lib/theme-contract";
 
 export type { ThemeId } from "@/components/themes";
 
 interface RenderThemeProps {
-  altitudeConfig?: AltitudeConfig;
+  /** the resolved colour scheme for the active theme (user choice or default) */
+  colors?: ColorScheme;
+  /** the active theme's coerced parameter config */
+  config?: Record<string, unknown>;
   data: ActivityData;
   /** Pan/zoom applied to the background photo, wherever a theme shows one. */
   imageTransform?: ImageTransform | null;
+  /** Whether the background photo shows (the `photoBackdrop` visibility flag). */
   photoBackdropEnabled?: boolean;
-  /** Photo theme: pre-resolved palette extracted from the photo, if available. */
-  photoPaletteTheme?: PaletteTheme | null;
+  /** Filter / grain / mirror, provided to every theme's photo layer via context. */
+  photoEffects?: PhotoEffects | null;
   photoUrl?: string | null;
-  strataConfig?: StrataConfig;
   theme: ThemeId;
 }
 
 /**
- * Compute the effective photo URL handed to a theme. `hero` themes always get
- * the photo; `supports` themes only get it if the user hasn't disabled the
- * backdrop; `none` themes never get it.
+ * Dispatcher: looks the theme's descriptor up in the registry, strips the data
+ * down to the theme's declared capabilities (`pickThemeData`, so the runtime
+ * data matches the component's narrowed type), and provides the shared
+ * photo-effects context. No per-theme branches — every theme takes the same
+ * generic props; the photo is gated only by the `photoBackdrop` flag.
  */
-function effectivePhotoUrl(
-  theme: ThemeId,
-  photoUrl: string | null | undefined,
-  backdropEnabled: boolean
-): string | null {
-  if (!photoUrl) {
-    return null;
-  }
-  const meta = THEME_META[theme];
-  if (meta.photoMode === "hero") {
-    return photoUrl;
-  }
-  if (meta.photoMode === "supports" && backdropEnabled) {
-    return photoUrl;
-  }
-  return null;
-}
-
-/** Dispatcher: picks the right theme component for the given id. */
 export function RenderTheme({
   theme,
   data,
   photoUrl,
   photoBackdropEnabled = true,
-  altitudeConfig,
-  strataConfig,
-  photoPaletteTheme = null,
+  colors,
+  config,
+  photoEffects = null,
   imageTransform = null,
 }: RenderThemeProps) {
-  const photo = effectivePhotoUrl(theme, photoUrl, photoBackdropEnabled);
-  if (theme === "strata") {
-    return (
-      <ThemeStrata
-        config={strataConfig}
-        data={data}
+  const descriptor = SINGLE_CARD_THEMES[theme];
+  const photo = photoBackdropEnabled ? (photoUrl ?? null) : null;
+  // Natural size feeds the rotation-correct cover layer (quarter turns swap
+  // the photo's width/height); derived here once so themes need no new props.
+  const imageSize = useImageNaturalSize(photo);
+  const Component = descriptor.Component;
+  return (
+    <PhotoFxProvider value={{ effects: photoEffects, imageSize }}>
+      <Component
+        colors={colors ?? descriptor.colors.default}
+        config={config}
+        data={pickThemeData(descriptor, data)}
         imageTransform={imageTransform}
         photoUrl={photo}
       />
-    );
-  }
-  if (theme === "altitude") {
-    return (
-      <ThemeAltitude
-        config={altitudeConfig}
-        data={data}
-        imageTransform={imageTransform}
-        photoUrl={photo}
-      />
-    );
-  }
-  if (theme === "photo") {
-    return (
-      <ThemePhoto
-        data={data}
-        imageTransform={imageTransform}
-        paletteTheme={photoPaletteTheme}
-        photoUrl={photo}
-      />
-    );
-  }
-  // Minimal, Path, Editorial, Data, Triathlon take exactly { data, photoUrl,
-  // imageTransform } — the generic path. Only the cases above need extra props.
-  const Theme = THEMES[theme];
-  return <Theme data={data} imageTransform={imageTransform} photoUrl={photo} />;
+    </PhotoFxProvider>
+  );
 }
