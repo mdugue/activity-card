@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { IconDefaults } from "@/components/app/icon-defaults";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { fontVariables } from "@/lib/fonts";
@@ -49,8 +50,10 @@ export default function RootLayout({
       lang="en"
     >
       <body className="flex min-h-full flex-col">
-        <TooltipProvider>{children}</TooltipProvider>
-        <Toaster />
+        <IconDefaults>
+          <TooltipProvider>{children}</TooltipProvider>
+          <Toaster />
+        </IconDefaults>
       </body>
     </html>
   );

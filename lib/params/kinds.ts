@@ -39,6 +39,10 @@ export interface ParamCtx {
 export interface ParamOption {
   /** small muted sub-label under the label (segmented controls) */
   blurb?: string;
+  /** semantic glyph id, rendered as a duotone icon in the rich select (the
+   *  id→icon map lives in `components/app/param-control.tsx` so this spec
+   *  stays JSX-free) */
+  glyph?: string;
   /** muted caption under the value (e.g. the metric name) */
   hint?: string;
   id: string;

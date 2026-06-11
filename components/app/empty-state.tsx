@@ -295,7 +295,7 @@ export function EmptyState({
               size="lg"
             >
               Get started
-              <ArrowRightIcon className="size-5" weight="bold" />
+              <ArrowRightIcon className="size-5" weight="duotone" />
             </Button>
 
             <div className="flex items-center justify-between gap-4 lg:ml-auto lg:block lg:text-right">
@@ -316,7 +316,7 @@ export function EmptyState({
           <span className="caption-micro">Scroll</span>
           <CaretDownIcon
             className="size-4 motion-safe:animate-bounce"
-            weight="bold"
+            weight="duotone"
           />
         </div>
 
@@ -361,7 +361,7 @@ export function EmptyState({
             size="lg"
           >
             Get started
-            <ArrowRightIcon className="size-5" weight="bold" />
+            <ArrowRightIcon className="size-5" weight="duotone" />
           </Button>
         </div>
 

@@ -1,5 +1,6 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
+import { OPTION_GLYPHS } from "@/components/app/param-control";
 import { SAMPLE_RIDE } from "@/components/app/sample-data";
 import { SINGLE_CARD_THEMES } from "@/components/themes";
 import { CAROUSEL_THEMES } from "@/components/themes/carousel/registry";
@@ -107,6 +108,18 @@ describe("theme registries", () => {
         .map((o) => o.id);
       expect(ids).toContain("none");
       expect(ids).toContain("distance");
+    }
+  });
+
+  // The rich select leads every headline option with a duotone metric icon;
+  // each option must name a glyph the param control's icon map covers.
+  test("altitude headline options carry editor-renderable glyphs", () => {
+    const p = ALTITUDE_PARAMS.find((x) => x.id === "claim");
+    if (p && p.kind === "select" && typeof p.options === "function") {
+      for (const o of p.options({ data: SAMPLE_RIDE, palette: null })) {
+        expect(o.glyph).toBeDefined();
+        expect(OPTION_GLYPHS[o.glyph as string]).toBeDefined();
+      }
     }
   });
 });

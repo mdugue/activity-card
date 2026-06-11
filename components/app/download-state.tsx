@@ -94,7 +94,7 @@ export function DownloadState({
             </div>
           </div>
           <div className="absolute -right-3 -bottom-3 flex size-14 items-center justify-center bg-primary text-primary-foreground shadow-lg shadow-primary/50">
-            <CheckIcon aria-hidden className="size-6" weight="bold" />
+            <CheckIcon aria-hidden className="size-6" weight="duotone" />
           </div>
         </div>
 

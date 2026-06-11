@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
 import { SAMPLE_RIDE } from "@/components/app/sample-data";
+import { ALTITUDE_PARAMS } from "@/lib/altitude";
 import type { ParamCtx, ParamDef } from "@/lib/params/kinds";
 import { ParamControl } from "./param-control";
 
@@ -82,6 +83,17 @@ export const Slider: Story = {
       initial={20}
     />
   ),
+};
+
+// The Altitude HEADLINE select, on the real param spec: every option leads
+// with its duotone metric glyph (`ParamOption.glyph` → the icon map in
+// param-control.tsx) and shows the live value first-class.
+const headlineDef = ALTITUDE_PARAMS.find((p) => p.id === "claim");
+if (!headlineDef) {
+  throw new Error("ALTITUDE_PARAMS must declare the `claim` headline select");
+}
+export const SelectWithGlyphs: Story = {
+  render: () => <Demo def={headlineDef} initial="elevation" />,
 };
 
 // A select with live colour swatches — the pattern the Photo theme uses to show
