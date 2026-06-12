@@ -6,9 +6,43 @@
 //   culori               → OKLCH math + WCAG contrast (perceptually uniform, tree-shakeable)
 
 import { converter, formatHex, type Oklch, parse, wcagContrast } from "culori";
+// The browser entry registers the in-thread pipeline as the baseline, so
+// extraction always works (SSR-rendered imports, tests, environments without
+// Worker). `ensureWorkerPipeline` upgrades it to off-thread quantization.
 import { Vibrant } from "node-vibrant/browser";
+import { WorkerPipeline } from "node-vibrant/worker";
 
 const toOklch = converter("oklch");
+
+// Quantization is the slow stage of extraction (quality 1 scans every pixel)
+// and it used to run on the main thread, freezing the editor for the duration
+// of a photo swap. node-vibrant's WorkerPipeline moves it into a Web Worker;
+// image decode stays on the main thread (it needs the DOM), only the pixel
+// crunching is shipped off. Installed lazily on first extraction so merely
+// importing this module stays side-effect free.
+let workerPipelineInstalled = false;
+
+function ensureWorkerPipeline(): void {
+  if (workerPipelineInstalled || typeof Worker === "undefined") {
+    return;
+  }
+  workerPipelineInstalled = true;
+  // node-vibrant's worker pool instantiates the class per worker; the wrapper
+  // keeps the bundler-recognised `new Worker(new URL(...))` pattern verbatim
+  // so the worker chunk is emitted by Next/Vite alike.
+  const PaletteWorker = function PaletteWorker() {
+    return new Worker(new URL("./palette.worker.ts", import.meta.url), {
+      type: "module",
+    });
+  } as unknown as ConstructorParameters<typeof WorkerPipeline>[0];
+  // Aliased: the react-hooks lint rule misreads any `.use(...)` as a Hook.
+  const installPipeline = Vibrant.use.bind(Vibrant);
+  try {
+    installPipeline(new WorkerPipeline(PaletteWorker));
+  } catch {
+    // Keep the in-thread pipeline registered by the browser entry.
+  }
+}
 
 // ----------------------------------------------------------------------------
 // Types
@@ -89,6 +123,7 @@ const BLACK = "#0a0a0a";
 export async function extractSwatches(
   src: string
 ): Promise<NormalisedSwatch[]> {
+  ensureWorkerPipeline();
   const palette = await Vibrant.from(src).quality(1).getPalette();
 
   const swatches: NormalisedSwatch[] = (Object.keys(palette) as SwatchName[])
