@@ -6,6 +6,12 @@
       "sourceType": "well-known",
       "computedHash": "959aa11169f7532aa08da08ab16d4409f5785bd08b125164dfba3e92d336cd76"
     },
+    "improve": {
+      "source": "shadcn/improve",
+      "sourceType": "github",
+      "skillPath": "skills/improve/SKILL.md",
+      "computedHash": "431adaf38132005b32cacb952313f18b4c03ee98ee4c5859bad323156a48bb02"
+    },
     "modern-web-guidance": {
       "source": "GoogleChrome/modern-web-guidance",
       "sourceType": "github",
