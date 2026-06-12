@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { AbsoluteFill } from "remotion";
 import { cn } from "@/lib/utils";
-import { FONT_VARS } from "../design/fonts";
+import { getFontVars } from "../design/fonts";
 import { INK, PAPER } from "../design/tokens";
 
 /**
@@ -22,7 +22,7 @@ export function VideoFrame({
   return (
     <AbsoluteFill
       className={cn("font-sans", className)}
-      style={{ backgroundColor: INK, color: PAPER, ...FONT_VARS, ...style }}
+      style={{ backgroundColor: INK, color: PAPER, ...getFontVars(), ...style }}
     >
       {children}
     </AbsoluteFill>

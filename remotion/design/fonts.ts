@@ -9,8 +9,12 @@
  * variable set under the exact names the app uses — theme components and
  * Tailwind's font utilities resolve identically in all three environments.
  *
- * `FONT_VARS` is empty in the player (inherit next/font) and complete
- * elsewhere; `VideoFrame` applies it on every composition root.
+ * `getFontVars()` returns {} in the player (inherit next/font) and the
+ * complete set elsewhere; `VideoFrame` applies it on every composition root.
+ * It MUST be called during render, not at module scope: the player only sets
+ * its environment flag (`window.remotion_isPlayer`) while the <Player>
+ * component renders, so a module-scope check would mis-detect the app as
+ * Studio and re-download every family from Google Fonts.
  */
 
 import { loadFont as loadAnton } from "@remotion/google-fonts/Anton";
@@ -121,6 +125,12 @@ function loadAll(): CSSProperties {
   } as CSSProperties;
 }
 
-export const FONT_VARS: CSSProperties = getRemotionEnvironment().isPlayer
-  ? {}
-  : loadAll();
+let cached: CSSProperties | null = null;
+
+export function getFontVars(): CSSProperties {
+  if (getRemotionEnvironment().isPlayer) {
+    return {};
+  }
+  cached ??= loadAll();
+  return cached;
+}

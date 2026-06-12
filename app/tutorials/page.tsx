@@ -48,6 +48,7 @@ export default function TutorialsPage() {
           </h2>
           <Button
             className="h-auto justify-center px-7 py-3.5 font-heading text-xl uppercase tracking-wide shadow-lg shadow-primary/50"
+            nativeButton={false}
             render={<Link href="/" />}
             size="lg"
           >
