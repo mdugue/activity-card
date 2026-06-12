@@ -5,6 +5,7 @@ import {
   stravaFetchOptional,
 } from "@/lib/strava-client";
 import { ensureFreshToken } from "@/lib/strava-cookies";
+import { largestPhotoUrl } from "@/lib/strava-photos";
 import { stravaToParsed } from "@/lib/strava-to-parsed";
 import type {
   StravaActivityDetail,
@@ -50,7 +51,7 @@ export async function GET(
 
     const parts = stravaToParsed(detail, streams ?? {});
     const photos = (photoList ?? []).flatMap((photo, index) => {
-      const previewUrl = photo.urls ? Object.values(photo.urls)[0] : undefined;
+      const previewUrl = largestPhotoUrl(photo.urls);
       return previewUrl ? [{ activityId: Number(id), index, previewUrl }] : [];
     });
     if (photos.length > 0 && parts[0]) {

@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { stravaErrorResponse, stravaFetch } from "@/lib/strava-client";
 import { clampedIntParam } from "@/lib/strava-params";
+import { largestPhotoUrl } from "@/lib/strava-photos";
 import type { StravaPhotoListItem } from "@/lib/strava-types";
 
 const NUMERIC_ID = /^\d+$/;
-// Big enough for the 2160×2700 export canvas without pulling originals.
-const PHOTO_FULL_SIZE = 2400;
+// Strava buckets photo sizes and silently serves a small variant for
+// unsupported values; 5000 is the de-facto "largest available rendition"
+// request, comfortably above the 2160×2700 export canvas.
+const PHOTO_FULL_SIZE = 5000;
 
 /**
  * Streams one of an activity's Strava photos through our origin. The image
@@ -26,8 +29,7 @@ export async function GET(request: Request) {
     const list = await stravaFetch<StravaPhotoListItem[]>(
       `/activities/${activity}/photos?size=${PHOTO_FULL_SIZE}&photo_sources=true`
     );
-    const urls = list?.[index]?.urls;
-    const src = urls ? Object.values(urls)[0] : undefined;
+    const src = largestPhotoUrl(list?.[index]?.urls);
     if (!src) {
       return NextResponse.json({ error: "photo_not_found" }, { status: 404 });
     }

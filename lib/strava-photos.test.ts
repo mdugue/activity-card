@@ -1,6 +1,10 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
-import { stravaPhotoKey, stravaPhotoProxyUrl } from "@/lib/strava-photos";
+import {
+  largestPhotoUrl,
+  stravaPhotoKey,
+  stravaPhotoProxyUrl,
+} from "@/lib/strava-photos";
 
 const REF = { activityId: 1001, index: 2, previewUrl: "https://x/p.jpg" };
 
@@ -9,6 +13,24 @@ describe("stravaPhotoProxyUrl", () => {
     expect(stravaPhotoProxyUrl(REF)).toBe(
       "/api/strava/photo?activity=1001&index=2"
     );
+  });
+});
+
+describe("largestPhotoUrl", () => {
+  test("picks the biggest size bucket, not the first entry", () => {
+    expect(
+      largestPhotoUrl({ "100": "small", "5000": "big", "600": "mid" })
+    ).toBe("big");
+  });
+
+  test("handles a single entry and missing input", () => {
+    expect(largestPhotoUrl({ "600": "only" })).toBe("only");
+    expect(largestPhotoUrl(undefined)).toBeUndefined();
+    expect(largestPhotoUrl({})).toBeUndefined();
+  });
+
+  test("non-numeric keys rank below any numeric size", () => {
+    expect(largestPhotoUrl({ default: "weird", "600": "sized" })).toBe("sized");
   });
 });
 

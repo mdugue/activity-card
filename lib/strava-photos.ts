@@ -1,6 +1,31 @@
 import type { StravaPhotoRef } from "@/lib/activity";
 
 /**
+ * Pick the largest rendition from a Strava photo's `urls` record (keyed by
+ * pixel size, e.g. `{"600": …, "5000": …}`). Strava usually returns exactly
+ * the requested size, but when it returns several — or a different bucket
+ * than asked for — taking the first entry can silently land on a thumbnail.
+ */
+export function largestPhotoUrl(
+  urls: Record<string, string> | undefined
+): string | undefined {
+  if (!urls) {
+    return;
+  }
+  let best: string | undefined;
+  let bestSize = Number.NEGATIVE_INFINITY;
+  for (const [key, url] of Object.entries(urls)) {
+    const size = Number.parseInt(key, 10);
+    const rank = Number.isFinite(size) ? size : 0;
+    if (rank > bestSize) {
+      bestSize = rank;
+      best = url;
+    }
+  }
+  return best;
+}
+
+/**
  * Same-origin URL for the full-size variant of a Strava photo. Routing the
  * bytes through our own origin keeps the export canvas untainted (Strava's
  * CDN doesn't promise CORS) and keeps Strava URLs out of client state.
