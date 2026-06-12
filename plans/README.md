@@ -14,11 +14,11 @@ your row when done.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 001  | Prune unused vendored shadcn primitives and orphaned deps | P1 | M | — | TODO |
-| 002  | Replace boilerplate README, fix doc contradictions | P1 | S | — | TODO |
-| 003  | Enforce Storybook build in CI, pin Bun version | P1 | S | — | TODO |
-| 004  | Unit-test baseline: parsers, visibility, export (+ loud carousel-frame failure) | P2 | M | — | TODO |
-| 005  | Strava route hardening: pagination, same-origin disconnect, honest UI | P2 | M | — | TODO |
+| 001  | Prune unused vendored shadcn primitives and orphaned deps | P1 | M | — | REJECTED (maintainer: ignore #1) |
+| 002  | Replace boilerplate README, fix doc contradictions | P1 | S | — | DONE (2026-06-12) |
+| 003  | Enforce Storybook build in CI, pin Bun version | P1 | S | — | DONE, modified (2026-06-12): Bun pinned via `.bun-version`; per maintainer the Storybook CI gate was dropped and the "keep build-storybook green" requirement removed from AGENTS.md instead |
+| 004  | Unit-test baseline: parsers, visibility, export (+ loud carousel-frame failure) | P2 | M | — | DONE (2026-06-12) |
+| 005  | Strava route hardening: pagination, same-origin disconnect, honest UI | P2 | M | — | DONE (2026-06-12) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) |
 REJECTED (with one-line rationale).
@@ -39,22 +39,23 @@ REJECTED (with one-line rationale).
   splitting) is L-effort and risks breaking the font-ready export contract.
   Measure first.
 - **node-vibrant palette extraction runs on the main thread per photo change**
-  (`lib/palette.ts:92` — `Vibrant.from(src).quality(1)`,
-  `hooks/use-image-palette.ts:27-49`). Perceptible freeze on large photos /
-  slow devices. Candidate fixes: Web Worker, or lower quality/downsample.
-  M effort.
+  — RESOLVED 2026-06-12: quantization now runs in a Web Worker
+  (`lib/palette.worker.ts` + `WorkerPipeline` in `lib/palette.ts`), with the
+  in-thread pipeline kept as the Worker-less fallback; verified e2e.
 - **Export delivery logic duplicated** between `lib/export-card.ts` and
   `lib/export-carousel.ts` (triggerDownload + share-or-download); card
   dimensions (1080×1350) hardcoded across `edit-state.tsx`,
   `download-state.tsx`, `carousel-edit-state.tsx`. Consolidation is M effort,
   MED risk (touches the mobile share path); do it next time that code is
   open anyway.
-- **`app/page.tsx` god-file trajectory** (694 lines, ~18 useState, dual-mode
-  branching, the per-render `session` object). Decomposition is L effort /
-  HIGH risk and should only follow plan 004's safety net plus e2e green.
-  Note: React Compiler is ON (`next.config.ts: reactCompiler: true`), so the
-  re-render cost of the per-render session object is largely mitigated —
-  the remaining cost is comprehension, not performance.
+- **`app/page.tsx` god-file trajectory** — FIRST STEP LANDED 2026-06-12
+  (694 → 485 lines): persistence + migrations →
+  `components/app/persisted-ui.ts`, photo state cluster →
+  `hooks/use-card-photo.ts` (object-URL revocation consolidated to one
+  owner), Strava-return toasts → `hooks/use-strava-return-toast.ts`.
+  Remaining candidates if it grows again: mode-specific editor state hooks,
+  session assembly. React Compiler is ON, so the per-render session object
+  is a comprehension cost, not a performance one.
 - **`bun audit`: 2 moderate advisories** (postcss <8.5.10 via build tooling;
   file-type via node-vibrant's *Node* path, which the browser bundle doesn't
   use). Routine `bun update` material, not urgent.
@@ -73,11 +74,12 @@ REJECTED (with one-line rationale).
     rendering already exist, so most of the architecture is in place.
     L effort; needs the mock extended (`e2e/strava-mock.ts` has no laps
     endpoint).
-2. **Import the activity photo from Strava** — asymmetry: activities come
-   from Strava but photos must be re-uploaded by hand, while photo-led
-   themes (Exposure, Photo) are the defaults. Strava's detail API exposes
-   `photos`; `stravaToParsed` maps ~25 fields but no photo. S–M effort;
-   verify API availability + brand-terms implications first.
+2. **Import the activity photo from Strava** — SHIPPED 2026-06-12: the
+   detail route attaches photo refs, `/api/strava/photo` proxies the
+   full-size image same-origin (export canvas stays untainted), and both
+   the wizard photo step and the editor PHOTO group offer an
+   "images from Strava" strip with one-click activation next to Browse
+   Photos; the no-photo path stays one click away everywhere.
 3. **Per-segment stats for triathlon carousels** — `lib/multi-activity.ts`
    already computes per-segment routes/profiles; the stat builders
    (`lib/carousel/stats.ts`) stop at deck-wide totals. M effort, builds on
