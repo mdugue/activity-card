@@ -78,7 +78,9 @@
     "generate-icons": "bun run scripts/generate-icons.ts",
     "strava:types": "bunx --bun swagger2openapi https://developers.strava.com/swagger/swagger.json --outfile strava-oas3.tmp.json && openapi-typescript strava-oas3.tmp.json -o lib/strava-api.generated.ts && rm -f strava-oas3.tmp.json",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "video:studio": "remotion studio",
+    "video:render": "remotion render"
   },
   "version": "0.1.0",
   "private": true,
