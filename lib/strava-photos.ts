@@ -1,5 +1,9 @@
 import type { StravaPhotoRef } from "@/lib/activity";
 
+// Strava's photo CDN encodes the rendition's pixel size in the filename,
+// e.g. `…-576x768.jpg` (portrait) / `…-2048x1536.jpg` (landscape).
+const CDN_SIZE_SUFFIX_RE = /-(\d+)x(\d+)(\.(?:jpe?g|png|webp))$/i;
+
 /**
  * Pick the largest rendition from a Strava photo's `urls` record (keyed by
  * pixel size, e.g. `{"600": …, "5000": …}`). Strava usually returns exactly
@@ -23,6 +27,35 @@ export function largestPhotoUrl(
     }
   }
   return best;
+}
+
+/**
+ * Strava's CDN stores several pre-generated renditions of each photo at the
+ * same path, differing only in the `-WxH` filename suffix — and the API
+ * often hands out a mid-size rendition (`…-576x768.jpg`) no matter what
+ * `size` was requested, while the web app links the 2048-class one
+ * (`…-1536x2048.jpg`). Rewrite the suffix so the long edge hits `target`,
+ * preserving the aspect ratio. Returns `null` when the URL doesn't carry a
+ * size suffix or is already at/above the target — callers must treat the
+ * rewritten URL as a *candidate* (fetch may 404 for non-standard renditions)
+ * and fall back to the original.
+ */
+export function upscaledPhotoUrl(src: string, target: number): string | null {
+  const match = src.match(CDN_SIZE_SUFFIX_RE);
+  if (!match) {
+    return null;
+  }
+  const w = Number.parseInt(match[1], 10);
+  const h = Number.parseInt(match[2], 10);
+  const long = Math.max(w, h);
+  if (!(Number.isFinite(long) && long > 0) || long >= target) {
+    return null;
+  }
+  const scale = target / long;
+  return src.replace(
+    CDN_SIZE_SUFFIX_RE,
+    `-${Math.round(w * scale)}x${Math.round(h * scale)}${match[3]}`
+  );
 }
 
 /**

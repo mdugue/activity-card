@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { stravaErrorResponse, stravaFetch } from "@/lib/strava-client";
 import { clampedIntParam } from "@/lib/strava-params";
-import { largestPhotoUrl } from "@/lib/strava-photos";
+import { largestPhotoUrl, upscaledPhotoUrl } from "@/lib/strava-photos";
 import type { StravaPhotoListItem } from "@/lib/strava-types";
 
 const NUMERIC_ID = /^\d+$/;
@@ -9,6 +9,9 @@ const NUMERIC_ID = /^\d+$/;
 // unsupported values; 5000 is the de-facto "largest available rendition"
 // request, comfortably above the 2160×2700 export canvas.
 const PHOTO_FULL_SIZE = 5000;
+// The largest standard CDN rendition's long edge (the Strava web app links
+// `…-1536x2048.jpg` / `…-2048x1536.jpg`).
+const PHOTO_TARGET_LONG_EDGE = 2048;
 
 /**
  * Streams one of an activity's Strava photos through our origin. The image
@@ -33,8 +36,23 @@ export async function GET(request: Request) {
     if (!src) {
       return NextResponse.json({ error: "photo_not_found" }, { status: 404 });
     }
-    const upstream = await fetch(src, { cache: "no-store" });
-    if (!(upstream.ok && upstream.body)) {
+    // The API frequently returns a mid-size rendition no matter what `size`
+    // was requested, but the 2048-class rendition exists at the same CDN
+    // path (it's what strava.com itself links). Try it first and fall back
+    // to the URL the API actually gave us.
+    const upgraded = upscaledPhotoUrl(src, PHOTO_TARGET_LONG_EDGE);
+    const candidates = upgraded ? [upgraded, src] : [src];
+    let upstream: Response | undefined;
+    for (const candidate of candidates) {
+      // Sequential on purpose: the original URL is only fetched when the
+      // upgraded rendition doesn't exist.
+      const res = await fetch(candidate, { cache: "no-store" });
+      if (res.ok && res.body) {
+        upstream = res;
+        break;
+      }
+    }
+    if (!upstream) {
       return NextResponse.json(
         { error: "photo_fetch_failed" },
         { status: 502 }
