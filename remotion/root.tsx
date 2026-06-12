@@ -1,5 +1,6 @@
 import type React from "react";
 import { Composition } from "remotion";
+import { FEATURE_VIDEOS } from "./videos/catalog";
 import {
   HERO_DURATION_IN_FRAMES,
   HERO_FPS,
@@ -33,5 +34,16 @@ export const RemotionRoot: React.FC = () => (
       id="HeroVertical"
       width={HERO_VERTICAL_WIDTH}
     />
+    {FEATURE_VIDEOS.map((video) => (
+      <Composition
+        component={video.component}
+        durationInFrames={video.durationInFrames}
+        fps={video.fps}
+        height={video.height}
+        id={video.id}
+        key={video.id}
+        width={video.width}
+      />
+    ))}
   </>
 );
