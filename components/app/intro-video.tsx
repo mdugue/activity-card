@@ -43,11 +43,9 @@ function useInView(ref: RefObject<Element | null>): boolean {
 }
 
 /**
- * The placeholder intro clip — a Remotion composition rendered on-page through
- * @remotion/player. Lazily mounted only once scrolled into view, and tagged with
- * a "Coming soon" badge (its closing beat says the same) so it always reads as a
- * stand-in until the real walkthrough is produced. The surrounding section copy
- * lives at the call site.
+ * The hero clip — the Hero Remotion composition rendered on-page through
+ * @remotion/player. Lazily mounted only once scrolled into view. The
+ * surrounding section copy lives at the call site.
  */
 export function IntroVideo({ className }: { className?: string }) {
   const frameRef = useRef<HTMLDivElement>(null);
@@ -61,10 +59,6 @@ export function IntroVideo({ className }: { className?: string }) {
       ref={frameRef}
     >
       {inView ? <IntroPlayer /> : null}
-      <span className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 rounded-full bg-primary px-2.5 py-1 font-medium font-mono text-[10px] text-primary-foreground uppercase tracking-[0.16em] shadow-sm">
-        <span className="size-1.5 rounded-full bg-primary-foreground/80" />
-        Coming soon
-      </span>
     </div>
   );
 }

@@ -3,12 +3,12 @@
 import { Player } from "@remotion/player";
 import { useState } from "react";
 import {
-  EffortIntro,
-  INTRO_DURATION_IN_FRAMES,
-  INTRO_FPS,
-  INTRO_HEIGHT,
-  INTRO_WIDTH,
-} from "@/remotion/composition";
+  HERO_DURATION_IN_FRAMES,
+  HERO_FPS,
+  HERO_HEIGHT,
+  HERO_WIDTH,
+  Hero,
+} from "@/remotion/videos/hero";
 
 function prefersReducedMotion(): boolean {
   return (
@@ -29,16 +29,16 @@ export default function IntroPlayer() {
     <Player
       acknowledgeRemotionLicense
       autoPlay={autoPlay}
-      component={EffortIntro}
-      compositionHeight={INTRO_HEIGHT}
-      compositionWidth={INTRO_WIDTH}
+      component={Hero}
+      compositionHeight={HERO_HEIGHT}
+      compositionWidth={HERO_WIDTH}
       controls
-      durationInFrames={INTRO_DURATION_IN_FRAMES}
-      fps={INTRO_FPS}
-      // Park on a settled frame so the band shows the finished lockup whether or
-      // not autoplay is allowed — never the blank first frame. Once playing it
-      // loops through the full draw-in.
-      initialFrame={90}
+      durationInFrames={HERO_DURATION_IN_FRAMES}
+      fps={HERO_FPS}
+      // Park on the finished card reveal so the band shows a real card whether
+      // or not autoplay is allowed — never the blank first frame. Once playing
+      // it loops through the full cut.
+      initialFrame={420}
       loop
       style={{ height: "100%", width: "100%" }}
     />

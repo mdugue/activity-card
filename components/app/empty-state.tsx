@@ -336,9 +336,13 @@ export function EmptyState({
               it out as a share-ready carousel — route, elevation, and the
               numbers that matter. Here’s the gist.
             </p>
-            <p className="mt-6 font-medium font-mono text-[11px] text-background/45 uppercase tracking-[0.16em]">
-              Short placeholder — full walkthrough on the way
-            </p>
+            <Link
+              className="mt-6 inline-flex items-center gap-2 font-medium font-mono text-[11px] text-background/60 uppercase tracking-[0.16em] transition-colors hover:text-background"
+              href="/tutorials"
+            >
+              Watch the tutorials
+              <ArrowRightIcon className="size-3.5" weight="bold" />
+            </Link>
           </div>
           <IntroVideo className="shadow-2xl shadow-black/40 ring-1 ring-background/15" />
         </div>
@@ -370,6 +374,12 @@ export function EmptyState({
             <StravaCompatLink />
           </span>
           <nav className="flex items-center gap-5 font-medium font-mono text-[11px] uppercase tracking-[0.16em]">
+            <Link
+              className="opacity-60 transition-opacity hover:opacity-100"
+              href="/tutorials"
+            >
+              Tutorials
+            </Link>
             <Link
               className="opacity-60 transition-opacity hover:opacity-100"
               href="/imprint"
