@@ -7,6 +7,7 @@ import {
   ShareNetworkIcon,
 } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { ActivityData } from "@/lib/activity";
 import type { ColorScheme } from "@/lib/colors";
@@ -56,6 +57,8 @@ export function DownloadState({
     setIsSharing(true);
     try {
       await exportCard(cardRef.current, { filename });
+    } catch {
+      toast.error("Export failed — please try again.");
     } finally {
       setIsSharing(false);
     }

@@ -2,6 +2,7 @@
 
 import { DownloadSimpleIcon } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 import { SINGLE_CARD_THEMES, THEME_ORDER } from "@/components/themes/index";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { defaultFilename, exportCard } from "@/lib/export-card";
@@ -39,6 +40,8 @@ export function EditState({
         filename: defaultFilename(data.sport, data.date),
       });
       onDownload();
+    } catch {
+      toast.error("Export failed — please try again.");
     } finally {
       setIsExporting(false);
     }
