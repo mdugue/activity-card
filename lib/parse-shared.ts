@@ -6,7 +6,7 @@
  * dynamic-imported independently without dragging the other's deps along.
  */
 
-import type { Coord, Split } from "@/lib/activity";
+import type { Coord, Split, StravaPhotoRef } from "@/lib/activity";
 import { resampleTo, simplifyToCount, smooth } from "@/lib/simplify";
 
 export type ParsedSport = "ride" | "run" | "swim" | "triathlon";
@@ -39,6 +39,9 @@ export interface ParsedActivity {
    * activity → `[id]`. Combined triathlon → segment-aligned with `null`
    * entries for file-sourced parts. Unset for pure GPX/.fit uploads. */
   stravaActivityIds?: (number | null)[];
+  /** Photos Strava attached to the activity (set by the detail route,
+   * never by the file parsers). */
+  stravaPhotos?: StravaPhotoRef[];
   title: string;
 }
 

@@ -139,6 +139,43 @@ function makeStreams(count: number) {
 const DETAIL_RE = /^\/api\/v3\/activities\/(\d+)$/;
 const STREAMS_RE = /^\/api\/v3\/activities\/(\d+)\/streams$/;
 const STATS_RE = /^\/api\/v3\/athletes\/(\d+)\/stats$/;
+const PHOTOS_RE = /^\/api\/v3\/activities\/(\d+)\/photos$/;
+const PHOTO_FILE_RE = /^\/photos\/(\d+)-(\d+)\.png$/;
+
+// How many photos each fixture activity carries (others have none). The ride
+// gets two so the strip and "pick the second one" flows are coverable.
+const PHOTO_COUNTS: Record<number, number> = { 1001: 2, 1002: 1 };
+
+// A 1×1 orange PNG — enough for <img> rendering and the proxy round-trip.
+const PHOTO_PNG = Uint8Array.from(
+  atob(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+  ),
+  (c) => c.charCodeAt(0)
+);
+
+/** The photo list endpoint + the static images its URLs point at. */
+function handlePhotoRoutes(url: URL): Response | null {
+  const photosMatch = url.pathname.match(PHOTOS_RE);
+  if (photosMatch) {
+    const id = Number(photosMatch[1]);
+    const size = url.searchParams.get("size") || "600";
+    const count = PHOTO_COUNTS[id] ?? 0;
+    return Response.json(
+      Array.from({ length: count }, (_, i) => ({
+        unique_id: `photo-${id}-${i}`,
+        source: 1,
+        urls: { [size]: `http://localhost:${PORT}/photos/${id}-${i}.png` },
+      }))
+    );
+  }
+  if (url.pathname.match(PHOTO_FILE_RE)) {
+    return new Response(PHOTO_PNG, {
+      headers: { "content-type": "image/png" },
+    });
+  }
+  return null;
+}
 
 function handle(req: Request): Response | Promise<Response> {
   const url = new URL(req.url);
@@ -205,6 +242,11 @@ function handle(req: Request): Response | Promise<Response> {
 
   if (url.pathname.match(STREAMS_RE)) {
     return Response.json(makeStreams(60));
+  }
+
+  const photoResponse = handlePhotoRoutes(url);
+  if (photoResponse) {
+    return photoResponse;
   }
 
   if (url.pathname.match(STATS_RE)) {
