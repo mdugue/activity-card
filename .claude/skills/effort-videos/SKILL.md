@@ -79,7 +79,11 @@ Videos star the actual theme components with the app's sample fixtures:
 
 1. Create `remotion/videos/<name>.tsx`: scenes inside `VideoFrame`, assembled with `TransitionSeries`; export the component + `<NAME>_DURATION_IN_FRAMES`.
 2. Tutorial? Build it from `walkthrough.tsx` scaffolding and add a row to `remotion/videos/catalog.ts` — that alone registers it in Studio/CLI (via `root.tsx`) **and** puts it on `/tutorials` (`components/app/tutorials-gallery.tsx`).
-3. One-off (like the hero)? Register it in `remotion/root.tsx` and embed via the lazy-player pattern: a `"use client"` default-export player module (`components/app/intro-player.tsx` style) behind `next/dynamic` `ssr:false` + `useInView` (`hooks/use-in-view.ts`).
+3. One-off (like the hero)? Register it in `remotion/root.tsx` and embed via the lazy-player pattern: a `"use client"` default-export module (`components/app/intro-player.tsx`) that renders `VideoPlayer`, behind `next/dynamic` `ssr:false` + `useInView` (`hooks/use-in-view.ts`).
+
+**The player** is always `components/app/video-player.tsx` (`VideoPlayer`) — never `@remotion/player` directly. It carries the app's chrome: duotone Phosphor controls (play/pause · **restart** · mute · fullscreen), a rust scrubber, mobile-safe fullscreen (native where supported, a fixed-overlay fallback for iPhone), and `autoPlayOnView` (start from frame 0 the moment the band is actually visible; pause when it leaves). Pass a flattering `posterFrame` for the paused/reduced-motion still.
+
+**Hero composition conventions** (`hero-scenes.tsx`): big bold Anton headlines almost everywhere, set opposite the visual they describe in an editorial **`SplitScene`** (text angled in 3D on one third, card on the other) — alternate `side` between beats so they trade sides. Strengthen the 3D with real `perspective(...) rotateY(...)` (≈20–34° on hero text). Prefer **morphs over fades** at the big seams: an input sheet grows into the first card (icon→app), and the single card **uncrops** the same photo into the carousel (a crop window that widens over a fixed strip). Keep elements moving (`breathe`).
 
 ## Preview & render
 
