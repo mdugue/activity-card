@@ -19,6 +19,7 @@ import { routePath } from "@/lib/chart-helpers";
 import type { ColorScheme } from "@/lib/colors";
 import { activityMetadata, exportCard } from "@/lib/export-card";
 import {
+  contentBox,
   type ExportFormat,
   FORMAT_ORDER,
   getFormat,
@@ -54,6 +55,7 @@ function fileFor(data: ActivityData, format: ExportFormat): string {
 export function ExportSheet(props: ExportSheetProps) {
   const { data, onKeepEditing, onNew, colors } = props;
   const [gps, setGps] = useState(true);
+  const [safeZones, setSafeZones] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   // One native-size mount per format, registered by each tile — the export
   // source. The same node is shown scaled-to-fit in the tile.
@@ -139,13 +141,18 @@ export function ExportSheet(props: ExportSheetProps) {
             <PlusIcon aria-hidden className="size-4" weight="duotone" />
             New
           </Button>
-          <div className="ml-auto w-full max-w-[260px] rounded-md border border-foreground/15 px-3 py-2">
+          <div className="ml-auto w-full max-w-[260px] space-y-2 rounded-md border border-foreground/15 px-3 py-2">
+            <ToggleRow
+              checked={safeZones}
+              label="Show safe zones"
+              onCheckedChange={setSafeZones}
+            />
             <ToggleRow
               checked={gps}
               label="Embed location (GPS)"
               onCheckedChange={setGps}
             />
-            <p className="caption-micro mt-1 opacity-60">
+            <p className="caption-micro opacity-60">
               Attribution is always written. Most apps strip metadata on upload.
             </p>
           </div>
@@ -161,6 +168,7 @@ export function ExportSheet(props: ExportSheetProps) {
               registerMount={(node) => {
                 mounts.current[id] = node;
               }}
+              safeZones={safeZones}
               {...props}
             />
           ))}
@@ -175,6 +183,8 @@ interface FormatTileProps extends ExportSheetProps {
   format: ExportFormat;
   onDownload: (format: ExportFormat) => void;
   registerMount: (node: HTMLDivElement | null) => void;
+  /** overlay the platform keep-out guides (preview only, never exported) */
+  safeZones: boolean;
 }
 
 function FormatTile({
@@ -182,6 +192,7 @@ function FormatTile({
   busy,
   onDownload,
   registerMount,
+  safeZones,
   data,
   theme,
   colors,
@@ -234,6 +245,7 @@ function FormatTile({
               theme={theme}
             />
           </div>
+          {safeZones ? <SafeZoneOverlay format={format} scale={scale} /> : null}
         </div>
       </div>
       <div className="flex items-center justify-between gap-2">
@@ -259,6 +271,78 @@ function FormatTile({
           />
         </Button>
       </div>
+    </div>
+  );
+}
+
+/** Keep-out guides for a format, scaled to the preview. Dims the platform UI
+ *  zones and dashes the content box. Lives in the display layer only, so it is
+ *  never part of the exported node. */
+function SafeZoneOverlay({
+  format,
+  scale,
+}: {
+  format: ExportFormat;
+  scale: number;
+}) {
+  const box = contentBox(format);
+  const dim = "rgba(0,0,0,0.5)";
+  const topH = box.y * scale;
+  const bottomH = (format.height - (box.y + box.h)) * scale;
+  const leftW = box.x * scale;
+  const rightW = (format.width - (box.x + box.w)) * scale;
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0">
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: topH,
+          background: dim,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: bottomH,
+          background: dim,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          top: topH,
+          left: 0,
+          width: leftW,
+          bottom: bottomH,
+          background: dim,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          top: topH,
+          right: 0,
+          width: rightW,
+          bottom: bottomH,
+          background: dim,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: leftW,
+          top: topH,
+          width: box.w * scale,
+          height: box.h * scale,
+          border: "1px dashed rgba(255,255,255,0.85)",
+        }}
+      />
     </div>
   );
 }
