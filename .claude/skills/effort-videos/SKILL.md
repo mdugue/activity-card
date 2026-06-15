@@ -22,6 +22,7 @@ Renders land in the gitignored `out/`.
 | Module | What it gives you |
 | --- | --- |
 | `remotion/design/tokens.ts` | The brand as constants: `INK/PAPER/RUST/RUST_BRIGHT/TAN…`, `FONT` (heading/sans/mono var refs), `TYPE` scale, `TRACKING` (the app's caption recipes), `SAFE`/`SPACE`/`RADIUS`, easings `EASE_PANEL/EASE_RISE/EASE_CUT`, `RISE_PX`, `DUR`, `SETTLE_SPRING`, `FPS`, `LANDSCAPE/PORTRAIT/CARD` |
+| `remotion/design/motion.ts` | The continuous-movement layer: `linger`/`lingerValue` (one A→B travel that crawls through the centre — slide-in-and-out as a single decelerating glide), `breathe` (slow sine drift so resting elements stay alive), `cameraDrift` (the Stage3D living camera), `EASE_GLIDE`. |
 | `remotion/design/fonts.ts` | `getFontVars()` — re-creates the app's `--font-*` set via `@remotion/google-fonts` in Studio/CLI, and intentionally returns `{}` in the player (next/font already provides the vars there). Applied by VideoFrame **during render** — never call it at module scope, the player flag doesn't exist yet there. |
 | `remotion/components/video-frame.tsx` | `VideoFrame` — the composition template. **Every composition's scenes mount inside it.** |
 
@@ -32,7 +33,9 @@ Renders land in the gitignored `out/`.
 - `kinetic-title.tsx` — staggered Anton claim lines (`accent: true` → rust).
 - `caption.tsx` — the sound-off reading layer: rust mono overline + Inter sentence, pinned in the safe area; optional `step={{index,total}}` chip for walkthroughs.
 - `cut-slices.tsx` — `cutSlices()` presentation for `TransitionSeries.Transition`: the brand's guillotine cut (staggered vertical slice reveal).
+- `stage-3d.tsx` — `Stage3D` (a perspective room with a subtle living camera) + `Plane3D` (a block angled toward the centre): the hero's "typography on one side, card on the other, 3D" treatment. Keep rotations ≤ ~18° for legibility.
 - `backdrop.tsx` — ink/paper/photo stage + the app's own grain tile + vignette.
+- `file-icon.tsx` — `FileIcon` (a drawn .GPX / .FIT sheet) + `SourcePlate`: the "any input" beat. Pair with the official Strava connect SVG.
 - `browser-frame.tsx` / `cursor.tsx` / `stat-chip.tsx` (`FileChip`, `Pill`, `PaletteChip`) — app-vignette props.
 - `card-showcase.tsx` — `CardScaled` (one 1080×1350 card scaled into a scene) and `StripPan` (pans a CarouselDeck strip; `showSeams` demonstrates slide slicing).
 - `theme-card.tsx` — `ThemeCard`: renders a REAL single-card theme from the registry with `pickThemeData`, exactly as the app exports it.
@@ -61,8 +64,9 @@ Videos star the actual theme components with the app's sample fixtures:
 
 - Stage: warm ink (`INK`), warm paper type (`PAPER`), rust accent — never cold slate (cold slate is reserved for the hero's deliberate "generic stats app" anti-beat).
 - Type roles: Anton uppercase for claims (`FONT.heading`), Inter for sentences, JetBrains Mono uppercase + `TRACKING.label`/`micro` for overlines. Theme fonts appear only inside cards.
-- Motion: settle curves only (`EASE_PANEL/EASE_RISE/EASE_CUT`), 14–18px rises, `SETTLE_SPRING` (damping 200). The single allowed overshoot is the mark's rust peak pop. **No CSS transitions/animations and no Tailwind `animate-*`/`transition-*`** — animate exclusively from `useCurrentFrame()`.
-- Pacing: hero = fast cuts (~3–4s per scene, `cutSlices`/slide/fade); walkthroughs = calm (~7–8s per step, fades, numbered `StepScene` captions).
+- Motion: settle curves only (`EASE_PANEL/EASE_RISE/EASE_CUT/EASE_GLIDE`), 14–18px rises, `SETTLE_SPRING` (damping 200). The single allowed overshoot is the mark's rust peak pop. **No CSS transitions/animations and no Tailwind `animate-*`/`transition-*`** — animate exclusively from `useCurrentFrame()`.
+- Keep it alive: nothing sits dead still on screen. Resting elements `breathe`; elements that cross frame use one continuous `linger` glide (fast at the off-screen edges, a long elegant hold through the centre) rather than separate in/out moves. The hero opens in `Stage3D` (typography one side, visualisation the other) and a shared word can carry between claims as a single morphing object.
+- Pacing: hero = cinematic but tight (~3–6s per beat, internal morphs + `cutSlices`/fade between); walkthroughs = calm (~7–8s per step, fades, numbered `StepScene` captions).
 - Sound-off by definition: every message is on screen (Caption). Music optional and royalty-free only; no AI voiceover.
 
 ## Specs

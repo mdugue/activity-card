@@ -1,12 +1,14 @@
-// The hero's scenes, shared by the landscape (Hero) and portrait
-// (HeroVertical) cuts — every scene reads the canvas from useVideoConfig and
-// lays itself out for either orientation. Cards and carousels are the real
-// theme components fed with the app's sample fixtures; nothing is mocked.
+// The hero's scenes — a cinematic, continuously-moving cut shared by the
+// landscape (Hero) and portrait (HeroVertical) compositions. Typography and
+// cards live in a shallow 3D room (Stage3D); elements glide rather than sit,
+// and the word EFFORT carries through the opening as one continuous object.
+// Every card and carousel is the real theme component fed with sample data.
 
 import {
   AbsoluteFill,
   Img,
   interpolate,
+  spring,
   staticFile,
   useCurrentFrame,
   useVideoConfig,
@@ -20,34 +22,35 @@ import type { ThemeId } from "@/components/themes";
 import { CarouselDeck } from "@/components/themes/carousel/deck";
 import { CAROUSEL_THEMES } from "@/components/themes/carousel/registry";
 import { carouselArgs } from "@/components/themes/carousel/story-support";
-import type { ColorScheme } from "@/lib/colors";
+import { type Coord, mixHex } from "@/lib/chart-helpers";
 import { Backdrop } from "../components/backdrop";
-import { BrowserFrame } from "../components/browser-frame";
 import { Caption } from "../components/caption";
 import { CardScaled, StripPan } from "../components/card-showcase";
-import { KineticTitle } from "../components/kinetic-title";
+import { FileIcon } from "../components/file-icon";
 import { LogoSting } from "../components/logo-sting";
 import { PreloadImg } from "../components/preload-img";
 import { RiseIn } from "../components/rise-in";
 import { RouteDraw } from "../components/route-draw";
-import { FileChip, PaletteChip, Pill } from "../components/stat-chip";
+import { Plane3D, Stage3D } from "../components/stage-3d";
+import { PaletteChip, Pill } from "../components/stat-chip";
 import { ThemeCard } from "../components/theme-card";
 import { VideoFrame } from "../components/video-frame";
+import { breathe, EASE_GLIDE } from "../design/motion";
 import {
-  DUR,
-  EASE_PANEL,
   FONT,
+  PAPER,
   PAPER_DIM,
   RUST,
-  SAFE,
+  RUST_BRIGHT,
+  SETTLE_SPRING,
   SPACE,
+  TRACKING,
   TYPE,
 } from "../design/tokens";
 
 const RIDE_PHOTO = "images/ride.jpg";
 const DUNES_PHOTO = "images/dunes.webp";
-// Natural size of dunes.webp, measured once — the carousel sizes its
-// panorama against it (the app measures live; renders need a constant).
+// Natural sizes (measured once) — carousel panoramas size against them.
 const DUNES_SIZE = { h: 2400, w: 1600 };
 
 function usePortrait(): boolean {
@@ -55,218 +58,344 @@ function usePortrait(): boolean {
   return height > width;
 }
 
-/* ───────────── 1 · Hook — the route is the art ───────────── */
-
-export function HookScene() {
-  const { height, width } = useVideoConfig();
-  const portrait = usePortrait();
-  return (
-    <VideoFrame>
-      <Backdrop grain variant="ink" />
-      <AbsoluteFill
-        style={{ alignItems: "center", justifyContent: "center", opacity: 0.4 }}
-      >
-        <RouteDraw
-          coords={SAMPLE_RIDE.routeCoordinates}
-          durationInFrames={55}
-          height={height * 0.72}
-          stroke={RUST}
-          strokeWidth={8}
-          width={width * 0.78}
-        />
-      </AbsoluteFill>
-      <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
-        <KineticTitle
-          delay={18}
-          lines={[{ text: "You put in" }, { text: "the effort." }]}
-          size={portrait ? TYPE.claim * 0.86 : TYPE.claim}
-        />
-      </AbsoluteFill>
-    </VideoFrame>
-  );
+// A hard alpine climb: hairpin switchbacks of uneven width tightening toward a
+// summit, finished with a little summit hook. Reads as a genuine challenge —
+// where a gentle loop reads as a Sunday spin.
+function genClimb(n: number): Coord[] {
+  const out: Coord[] = [];
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    // Switchbacks tighten as the road climbs; each pass a different width so it
+    // never reads as a machine zig-zag.
+    const phase = t * 5.5;
+    const tri = 2 * Math.abs(phase - Math.round(phase)) - 1; // −1 … 1
+    const ampVar = 0.62 + 0.5 * Math.sin(t * 8.5 + 0.7);
+    const amp = (1 - 0.52 * t) * ampVar;
+    // a summit hook near the top, then the air thins (route stops climbing)
+    const hook = t > 0.86 ? Math.sin((t - 0.86) * 22) * 0.4 : 0;
+    const x = tri * amp + hook + 0.05 * Math.sin(t * 37);
+    const y = (0.5 - t) * 1.9 + 0.07 * Math.cos(t * 24) + (t > 0.9 ? 0.08 : 0);
+    out.push([x, y]);
+  }
+  return out;
 }
+const CLIMB_ROUTE = genClimb(260);
 
-/* ───────────── 2 · Problem — deliberately off-brand stats ───────────── */
+/* ════════════════ 1 · Opening — "you put in the EFFORT" ════════════════ */
+// One scene, two claims. The word EFFORT is a single object that travels from
+// the first claim's position into the second, swinging face-on and taking the
+// rust accent as it lands — "your effort deserves more than plain statistics".
 
-// A drab stats screen in cold slate — the one thing in the system allowed to
-// look generic, because that's the point.
-function DrabStats() {
-  const rows = [
-    ["Distance", "82.4 km"],
-    ["Moving time", "3:21:08"],
-    ["Avg speed", "24.5 km/h"],
-    ["Elevation", "1,240 m"],
-  ];
-  return (
-    <AbsoluteFill style={{ backgroundColor: "#17191c", padding: 44 }}>
-      <div
-        style={{
-          color: "#aeb4bb",
-          fontFamily: "system-ui, sans-serif",
-          fontSize: 30,
-          fontWeight: 600,
-          marginBottom: 30,
-        }}
-      >
-        Sunday Activity
-      </div>
-      {rows.map(([label, value]) => (
-        <div
-          key={label}
-          style={{
-            alignItems: "center",
-            borderTop: "1px solid #24272b",
-            color: "#878d94",
-            display: "flex",
-            fontFamily: "system-ui, sans-serif",
-            fontSize: 26,
-            justifyContent: "space-between",
-            paddingBottom: 22,
-            paddingTop: 22,
-          }}
-        >
-          <span>{label}</span>
-          <span style={{ color: "#aeb4bb", fontWeight: 600 }}>{value}</span>
-        </div>
-      ))}
-    </AbsoluteFill>
-  );
-}
-
-export function ProblemScene() {
+export function OpeningScene() {
   const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
   const { height, width } = useVideoConfig();
   const portrait = usePortrait();
-  const zoom = interpolate(frame, [0, 130], [1, 1.04], {
+
+  const effortSize = (portrait ? 0.82 : 1) * TYPE.claim;
+  // Morph window: claim 1 → claim 2.
+  const m = interpolate(frame, [96, 140], [0, 1], {
+    easing: EASE_GLIDE,
+    extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const frameW = portrait ? width * 0.84 : width * 0.56;
-  const frameH = portrait ? height * 0.38 : height * 0.56;
-  return (
-    <VideoFrame>
-      <Backdrop variant="ink" />
-      <AbsoluteFill
-        style={{
-          alignItems: "center",
-          justifyContent: "center",
-          paddingBottom: height * 0.12,
-        }}
-      >
-        <RiseIn delay={4} style={{ transform: `scale(${zoom})` }}>
-          <BrowserFrame
-            label="any stats app"
-            style={{ filter: "saturate(0.7)", height: frameH, width: frameW }}
-          >
-            <DrabStats />
-          </BrowserFrame>
-        </RiseIn>
-      </AbsoluteFill>
-      <Caption
-        delay={26}
-        label="Sound familiar?"
-        position="bottom-center"
-        text="Your effort deserves more than plain statistics."
-      />
-    </VideoFrame>
-  );
-}
 
-/* ───────────── 3 · Ingest — drop a file, or pull from Strava ───────────── */
+  // EFFORT — the shared, continuous object.
+  const intro = spring({
+    config: SETTLE_SPRING,
+    durationInFrames: 24,
+    fps,
+    frame,
+  });
+  const ex =
+    interpolate(m, [0, 1], [-width * 0.16, 0]) + breathe(frame, 5, 240);
+  const ey = interpolate(m, [0, 1], [-height * 0.03, -height * 0.11]);
+  const escale =
+    interpolate(m, [0, 1], [1, 0.9]) * interpolate(intro, [0, 1], [0.92, 1]);
+  const erot = interpolate(m, [0, 1], [15, 0]);
+  const ecolor = mixHex(PAPER, RUST_BRIGHT, m);
 
-export function IngestScene() {
-  const { height } = useVideoConfig();
-  const portrait = usePortrait();
+  const claim1Op = interpolate(frame, [108, 132], [1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const claim2Op = interpolate(frame, [134, 160], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const strike = interpolate(frame, [168, 196], [0, 1], {
+    easing: EASE_GLIDE,
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+
+  const smallSize = effortSize * 0.26;
+
   return (
     <VideoFrame>
       <Backdrop grain variant="ink" />
-      <AbsoluteFill
-        style={{
-          alignItems: "center",
-          gap: SPACE.md,
-          flexDirection: portrait ? "column" : "row",
-          justifyContent: "center",
-          paddingBottom: height * 0.1,
-        }}
-      >
-        <RiseIn delay={6}>
-          <FileChip label="sunday-ride.gpx" scale={portrait ? 1 : 1.15} />
-        </RiseIn>
-        <RiseIn delay={14}>
+      <Stage3D>
+        {/* The hard climb, angled on the right plane — phase one only. */}
+        <Plane3D
+          opacity={claim1Op * 0.92}
+          rotateY={-15}
+          x={width * (portrait ? 0.0 : 0.22)}
+          y={portrait ? -height * 0.26 : 0}
+          z={-60}
+        >
+          <RouteDraw
+            coords={CLIMB_ROUTE}
+            durationInFrames={78}
+            height={portrait ? height * 0.32 : height * 0.64}
+            stroke={RUST}
+            strokeWidth={7}
+            width={portrait ? width * 0.7 : width * 0.42}
+          />
+        </Plane3D>
+
+        {/* "YOU PUT IN THE" — phase one, left/up. */}
+        <div
+          style={{
+            color: PAPER_DIM,
+            fontFamily: FONT.heading,
+            fontSize: smallSize,
+            left: "50%",
+            letterSpacing: TRACKING.heading,
+            lineHeight: 1,
+            opacity: claim1Op,
+            position: "absolute",
+            textTransform: "uppercase",
+            top: "50%",
+            transform: `translate(-50%, -50%) translate(${-width * 0.16}px, ${-height * 0.03 - effortSize * 0.62}px) rotateY(15deg)`,
+            whiteSpace: "nowrap",
+          }}
+        >
+          You put in the
+        </div>
+
+        {/* "YOUR" — phase two, above EFFORT. */}
+        <div
+          style={{
+            color: PAPER,
+            fontFamily: FONT.heading,
+            fontSize: smallSize,
+            left: "50%",
+            letterSpacing: TRACKING.heading,
+            lineHeight: 1,
+            opacity: claim2Op,
+            position: "absolute",
+            textTransform: "uppercase",
+            top: "50%",
+            transform: `translate(-50%, -50%) translate(0px, ${-height * 0.11 - effortSize * 0.9 * 0.74}px)`,
+          }}
+        >
+          Your
+        </div>
+
+        {/* EFFORT — the continuous object. */}
+        <div
+          style={{
+            color: ecolor,
+            fontFamily: FONT.heading,
+            fontSize: effortSize,
+            left: "50%",
+            letterSpacing: TRACKING.heading,
+            lineHeight: 1,
+            opacity: intro,
+            position: "absolute",
+            textShadow: "0 24px 60px rgba(0,0,0,0.5)",
+            textTransform: "uppercase",
+            top: "50%",
+            transform: `translate(-50%, -50%) translate(${ex}px, ${ey}px) rotateY(${erot}deg) scale(${escale})`,
+          }}
+        >
+          Effort
+        </div>
+
+        {/* phase two — the deprecating tail, struck through. */}
+        <div
+          style={{
+            alignItems: "center",
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+            left: "50%",
+            opacity: claim2Op,
+            position: "absolute",
+            top: "50%",
+            transform: `translate(-50%, -50%) translate(0px, ${-height * 0.11 + effortSize * 0.9 * 0.9}px)`,
+          }}
+        >
           <span
             style={{
               color: PAPER_DIM,
-              fontFamily: FONT.mono,
-              fontSize: TYPE.caption,
-              letterSpacing: "0.18em",
-              textTransform: "uppercase",
+              fontFamily: FONT.sans,
+              fontSize: effortSize * 0.22,
             }}
           >
-            or
+            deserves more than just
           </span>
-        </RiseIn>
-        <RiseIn delay={20}>
-          <Img
-            src={staticFile("strava/btn-connect-with-strava-orange.svg")}
-            style={{ display: "block", height: portrait ? 72 : 84 }}
-          />
-        </RiseIn>
-      </AbsoluteFill>
-      <Caption
-        delay={30}
-        label="Drop your effort"
-        position="bottom-center"
-        text="A ride, run, or swim — GPX, .fit, or straight from Strava."
-      />
+          <div style={{ position: "relative" }}>
+            <span
+              style={{
+                color: PAPER,
+                fontFamily: FONT.heading,
+                fontSize: effortSize * 0.4,
+                letterSpacing: TRACKING.heading,
+                textTransform: "uppercase",
+              }}
+            >
+              plain statistics
+            </span>
+            <div
+              style={{
+                backgroundColor: RUST_BRIGHT,
+                height: 5,
+                left: -6,
+                position: "absolute",
+                right: -6,
+                top: "52%",
+                transform: `scaleX(${strike})`,
+                transformOrigin: "left center",
+              }}
+            />
+          </div>
+        </div>
+      </Stage3D>
     </VideoFrame>
   );
 }
 
-/* ───────────── 4 · Reveal — the card, instantly ───────────── */
+/* ════════════ 2 · Ingest → reveal — any input becomes a card ════════════ */
+// GPX, .fit and Strava drift in the room, then converge and morph into the
+// first card (Altitude — image-led, so the photo lands the point).
 
-export function CardRevealScene() {
+export function IngestRevealScene({
+  durationInFrames,
+}: {
+  durationInFrames: number;
+}) {
   const frame = useCurrentFrame();
-  const { height } = useVideoConfig();
+  const { height, width } = useVideoConfig();
   const portrait = usePortrait();
-  const settle = interpolate(frame, [0, 26], [1.05, 1], {
-    easing: EASE_PANEL,
+
+  const cStart = durationInFrames - 122;
+  const cEnd = durationInFrames - 92;
+  const converge = interpolate(frame, [cStart, cEnd], [0, 1], {
+    easing: EASE_GLIDE,
+    extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
+  const inputsOp = interpolate(frame, [cStart, cEnd], [1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const cardIn = interpolate(frame, [cEnd - 14, cEnd + 16], [0, 1], {
+    easing: EASE_GLIDE,
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+
+  const spread = 1 - converge;
+  const side = portrait ? width * 0.2 : width * 0.24;
+
+  function inputTransform(baseX: number, baseY: number, drift: number): string {
+    const x = baseX * spread + breathe(frame, 10, 150, drift) * spread;
+    const y = baseY * spread + breathe(frame, 14, 170, drift + 1) * spread;
+    const s = interpolate(converge, [0, 1], [1, 0.18]);
+    return `translate(-50%, -50%) translate(${x}px, ${y}px) scale(${s})`;
+  }
+
   return (
     <VideoFrame>
       <Backdrop grain variant="ink" />
-      <AbsoluteFill
-        style={{
-          alignItems: "center",
-          justifyContent: "center",
-          paddingBottom: portrait ? height * 0.1 : height * 0.14,
-        }}
-      >
-        <div style={{ transform: `scale(${settle})` }}>
-          <CardScaled height={height * (portrait ? 0.56 : 0.68)}>
-            <ThemeCard data={SAMPLE_RIDE} id="path" />
+      <PreloadImg src={staticFile(RIDE_PHOTO)} />
+      <Stage3D>
+        {/* the three inputs */}
+        <Plane3D
+          opacity={inputsOp}
+          rotateY={14}
+          style={{
+            left: "50%",
+            position: "absolute",
+            top: "50%",
+            transform: inputTransform(-side, height * 0.04, 0),
+          }}
+        >
+          <FileIcon ext=".GPX" width={portrait ? 180 : 220} />
+        </Plane3D>
+        <Plane3D
+          opacity={inputsOp}
+          rotateY={-14}
+          style={{
+            left: "50%",
+            position: "absolute",
+            top: "50%",
+            transform: inputTransform(side, height * 0.04, 2.3),
+          }}
+        >
+          <FileIcon accent="#2f6f86" ext=".FIT" width={portrait ? 180 : 220} />
+        </Plane3D>
+        <div
+          style={{
+            left: "50%",
+            opacity: inputsOp,
+            position: "absolute",
+            top: "50%",
+            transform: inputTransform(0, -height * 0.24, 4.1),
+          }}
+        >
+          <Img
+            src={staticFile("strava/btn-connect-with-strava-orange.svg")}
+            style={{ display: "block", height: portrait ? 70 : 84 }}
+          />
+        </div>
+
+        {/* the card the inputs become */}
+        <div
+          style={{
+            opacity: cardIn,
+            transform: `scale(${interpolate(cardIn, [0, 1], [0.86, 1])})`,
+          }}
+        >
+          <CardScaled height={height * (portrait ? 0.6 : 0.76)}>
+            <ThemeCard
+              data={SAMPLE_RIDE}
+              id="altitude"
+              photoUrl={staticFile(RIDE_PHOTO)}
+            />
           </CardScaled>
         </div>
-      </AbsoluteFill>
-      <Caption
-        delay={20}
-        label="Instant"
-        position="bottom-center"
-        text="A share-ready card — route, numbers, and all."
-      />
+      </Stage3D>
+      {frame < cEnd ? (
+        <Caption
+          delay={6}
+          label="Any file, any sport"
+          position="bottom-center"
+          text="GPX, .fit, or straight from Strava — drop it in."
+        />
+      ) : (
+        <Caption
+          delay={cEnd + 4}
+          label="Instantly"
+          position="bottom-center"
+          text="…and it's a card worth sharing."
+        />
+      )}
     </VideoFrame>
   );
 }
 
-/* ───────────── 5 · Montage — themes ───────────── */
+/* ════════════════ 3 · Themes — flying in from behind you ════════════════ */
 
-const MONTAGE_THEMES: { id: ThemeId; label: string }[] = [
-  { id: "altitude", label: "Altitude" },
+const THEME_TOUR: { id: ThemeId; label: string; photo?: boolean }[] = [
+  { id: "altitude", label: "Altitude", photo: true },
   { id: "strata", label: "Strata" },
   { id: "editorial", label: "Editorial" },
   { id: "data", label: "Data" },
 ];
 
-export function MontageThemesScene({
+export function ThemesScene({
   durationInFrames,
 }: {
   durationInFrames: number;
@@ -274,43 +403,53 @@ export function MontageThemesScene({
   const frame = useCurrentFrame();
   const { height } = useVideoConfig();
   const portrait = usePortrait();
-  const step = Math.floor(durationInFrames / MONTAGE_THEMES.length);
-  const active = Math.min(MONTAGE_THEMES.length - 1, Math.floor(frame / step));
+  const step = Math.floor(durationInFrames / THEME_TOUR.length);
+  const active = Math.min(THEME_TOUR.length - 1, Math.floor(frame / step));
   const local = frame - active * step;
-  const slide = interpolate(local, [0, DUR.fast], [36, 0], {
-    easing: EASE_PANEL,
+  const entry = THEME_TOUR[active];
+
+  // Fly in from behind the viewer: starts huge + blurred + tipped, recedes home
+  // quickly so each card has a clear, sharp beat before the next arrives.
+  const z = interpolate(local, [0, 13], [760, 0], {
+    easing: EASE_GLIDE,
     extrapolateRight: "clamp",
   });
-  const fade = interpolate(local, [0, DUR.fast], [0, 1], {
+  const blur = interpolate(local, [0, 9], [18, 0], {
     extrapolateRight: "clamp",
   });
-  const entry = MONTAGE_THEMES[active];
+  const rot = interpolate(local, [0, 15], [active % 2 ? 13 : -13, 0], {
+    easing: EASE_GLIDE,
+    extrapolateRight: "clamp",
+  });
+  const fade = interpolate(local, [0, 7, step - 9, step], [0, 1, 1, 0], {
+    extrapolateRight: "clamp",
+  });
+
   return (
     <VideoFrame>
       <Backdrop grain variant="ink" />
       <PreloadImg src={staticFile(RIDE_PHOTO)} />
-      <AbsoluteFill
-        style={{
-          alignItems: "center",
-          justifyContent: "center",
-          paddingBottom: height * (portrait ? 0.3 : 0.28),
-        }}
-      >
-        <div style={{ opacity: fade, transform: `translateX(${slide}px)` }}>
-          <CardScaled height={height * (portrait ? 0.5 : 0.56)}>
+      <Stage3D camera={false} perspective={1400}>
+        <div
+          style={{
+            filter: `blur(${blur}px)`,
+            opacity: fade,
+            transform: `translateZ(${z}px) rotateY(${rot}deg)`,
+            transformStyle: "preserve-3d",
+          }}
+        >
+          <CardScaled height={height * (portrait ? 0.54 : 0.66)}>
             <ThemeCard
               data={SAMPLE_RIDE}
               id={entry.id}
-              photoUrl={
-                entry.id === "altitude" ? staticFile(RIDE_PHOTO) : undefined
-              }
+              photoUrl={entry.photo ? staticFile(RIDE_PHOTO) : undefined}
             />
           </CardScaled>
         </div>
-      </AbsoluteFill>
+      </Stage3D>
       <div
         style={{
-          bottom: SAFE + (portrait ? 250 : 134),
+          bottom: portrait ? height * 0.16 : 134,
           display: "flex",
           flexWrap: "wrap",
           gap: SPACE.sm,
@@ -320,7 +459,7 @@ export function MontageThemesScene({
           right: 0,
         }}
       >
-        {MONTAGE_THEMES.map((t, i) => (
+        {THEME_TOUR.map((t, i) => (
           <Pill active={i === active} key={t.id}>
             {t.label}
           </Pill>
@@ -330,33 +469,37 @@ export function MontageThemesScene({
         delay={6}
         label="Thirteen looks"
         position="bottom-center"
-        text="Posters and carousels — pick the one that feels like the day."
+        text="Pick the one that feels like the day."
       />
     </VideoFrame>
   );
 }
 
-/* ───────────── 6 · Montage — colours ───────────── */
+/* ════════════════ 4 · Colour — the whole card, recoloured ════════════════ */
+// Strata's mood swaps the entire generative field — a real, dramatic colour
+// move, not a one-pixel accent tweak.
 
-const PALETTE_BEATS: { label: string; scheme: ColorScheme }[] = [
-  { label: "Rust", scheme: { primary: "#c45a2c" } },
-  { label: "Alpine", scheme: { primary: "#2f6f86", secondary: "#c4663a" } },
-  { label: "Ocean", scheme: { primary: "#1e6fa0" } },
-  { label: "Press", scheme: { primary: "#b1281a", secondary: "#1d3a2e" } },
-  { label: "Sand", scheme: { primary: "#e8c39e" } },
-];
+const MOOD_BEATS: { label: string; mood: string; swatch: [string, string] }[] =
+  [
+    { label: "Dusk", mood: "dusk", swatch: ["#e0683a", "#7c3a52"] },
+    { label: "Alpine", mood: "alpine", swatch: ["#2f6f86", "#9fc7d6"] },
+    { label: "Midnight", mood: "midnight", swatch: ["#1e2a4a", "#5566a8"] },
+    { label: "Dawn", mood: "dawn", swatch: ["#caa46a", "#e8c39e"] },
+  ];
 
-export function MontagePaletteScene({
-  durationInFrames,
-}: {
-  durationInFrames: number;
-}) {
+export function ColorScene({ durationInFrames }: { durationInFrames: number }) {
   const frame = useCurrentFrame();
   const { height } = useVideoConfig();
   const portrait = usePortrait();
-  const step = Math.floor(durationInFrames / PALETTE_BEATS.length);
-  const active = Math.min(PALETTE_BEATS.length - 1, Math.floor(frame / step));
-  const beat = PALETTE_BEATS[active];
+  const step = Math.floor(durationInFrames / MOOD_BEATS.length);
+  const active = Math.min(MOOD_BEATS.length - 1, Math.floor(frame / step));
+  const local = frame - active * step;
+  const beat = MOOD_BEATS[active];
+  const pop = interpolate(local, [0, 12], [0.96, 1], {
+    easing: EASE_GLIDE,
+    extrapolateRight: "clamp",
+  });
+
   return (
     <VideoFrame>
       <Backdrop grain variant="ink" />
@@ -369,9 +512,15 @@ export function MontagePaletteScene({
           paddingBottom: height * 0.12,
         }}
       >
-        <CardScaled height={height * (portrait ? 0.5 : 0.64)}>
-          <ThemeCard colors={beat.scheme} data={SAMPLE_RIDE} id="path" />
-        </CardScaled>
+        <div style={{ transform: `scale(${pop})` }}>
+          <CardScaled height={height * (portrait ? 0.5 : 0.64)}>
+            <ThemeCard
+              config={{ mood: beat.mood }}
+              data={SAMPLE_RIDE}
+              id="strata"
+            />
+          </CardScaled>
+        </div>
         <div
           style={{
             display: "flex",
@@ -379,11 +528,11 @@ export function MontagePaletteScene({
             gap: SPACE.sm,
           }}
         >
-          {PALETTE_BEATS.map((b, i) => (
+          {MOOD_BEATS.map((b, i) => (
             <PaletteChip
               active={i === active}
-              colors={[b.scheme.primary, b.scheme.secondary ?? "#f7f3ec"]}
-              key={b.label}
+              colors={b.swatch}
+              key={b.mood}
               label={b.label}
             />
           ))}
@@ -393,15 +542,17 @@ export function MontagePaletteScene({
         delay={6}
         label="Your colours"
         position="bottom-center"
-        text="Preset schemes — or palettes pulled straight from your photo."
+        text="Recolour the whole card — or pull a palette from your photo."
       />
     </VideoFrame>
   );
 }
 
-/* ───────────── 7 · Montage — the seamless carousel ───────────── */
+/* ═══════════ 5 · Carousel — not one image, but a whole strip ═══════════ */
+// Open on what looks like a single beautiful image (slide one of Exposure),
+// then pull the camera back to reveal it was a seamless wide carousel.
 
-export function MontageCarouselScene({
+export function CarouselScene({
   durationInFrames,
 }: {
   durationInFrames: number;
@@ -411,32 +562,58 @@ export function MontageCarouselScene({
   const portrait = usePortrait();
   const theme = CAROUSEL_THEMES.exposure;
   const slideCount = theme.panels.length;
-  const stripHeight = height * (portrait ? 0.6 : 0.72);
-  const scale = stripHeight / 1350;
-  const viewportStripPx = width / scale;
-  const panTo = Math.max(0, slideCount * 1080 - viewportStripPx);
-  const progress = interpolate(frame, [8, durationInFrames - 6], [0, 1], {
-    easing: EASE_PANEL,
+
+  // Phase one: a single beautiful image (one photo-led card, the dunes shot).
+  // Phase two: the camera pulls back to reveal the same shot was a wide
+  // carousel all along — same photo, so the relationship is unmistakable.
+  const handoff = durationInFrames - 122;
+  const single = interpolate(frame, [handoff, handoff + 24], [1, 0], {
+    easing: EASE_GLIDE,
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
+  const singleZoom =
+    interpolate(frame, [0, handoff], [1, 1.06], { extrapolateRight: "clamp" }) +
+    interpolate(frame, [handoff, handoff + 24], [0, 0.16], {
+      easing: EASE_GLIDE,
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    });
+
+  const reveal = interpolate(
+    frame,
+    [handoff + 6, durationInFrames - 8],
+    [0, 1],
+    { easing: EASE_GLIDE, extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+  );
+  const stripOp = interpolate(frame, [handoff + 6, handoff + 30], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const stripHeight = height * (portrait ? 0.56 : 0.66);
+  const scale = stripHeight / 1350;
+  const panTo = Math.max(0, slideCount * 1080 - width / scale);
+
   return (
     <VideoFrame>
       <Backdrop variant="ink" />
+      <PreloadImg src={staticFile(DUNES_PHOTO)} />
+
+      {/* phase two — the carousel strip, fading up as the single card lifts */}
       <AbsoluteFill
         style={{
           alignItems: "center",
           justifyContent: "center",
-          paddingBottom: height * (portrait ? 0.12 : 0.18),
+          opacity: stripOp,
+          paddingBottom: height * (portrait ? 0.12 : 0.16),
         }}
       >
-        <PreloadImg src={staticFile(DUNES_PHOTO)} />
         <StripPan
           height={stripHeight}
           panFrom={0}
           panTo={panTo}
-          progress={progress}
-          showSeams
+          progress={reveal}
+          showSeams={reveal > 0.45}
           slideCount={slideCount}
           style={{
             boxShadow: "0 60px 120px -40px rgba(0,0,0,0.65)",
@@ -451,17 +628,49 @@ export function MontageCarouselScene({
           />
         </StripPan>
       </AbsoluteFill>
-      <Caption
-        delay={10}
-        label="Carousel mode"
-        position="bottom-left"
-        text="One seamless story — sliced into slides."
-      />
+
+      {/* phase one — one beautiful image, the same photo */}
+      {single > 0.01 ? (
+        <AbsoluteFill
+          style={{
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: single,
+            paddingBottom: height * (portrait ? 0.12 : 0.16),
+          }}
+        >
+          <div style={{ transform: `scale(${singleZoom})` }}>
+            <CardScaled height={height * (portrait ? 0.62 : 0.78)}>
+              <ThemeCard
+                data={SAMPLE_RIDE}
+                id="altitude"
+                photoUrl={staticFile(DUNES_PHOTO)}
+              />
+            </CardScaled>
+          </div>
+        </AbsoluteFill>
+      ) : null}
+
+      {frame < handoff + 12 ? (
+        <Caption
+          delay={6}
+          label="Carousel mode"
+          position="bottom-left"
+          text="Not just one beautiful image…"
+        />
+      ) : (
+        <Caption
+          delay={handoff + 12}
+          label="Carousel mode"
+          position="bottom-left"
+          text="…but a whole carousel from one wide frame."
+        />
+      )}
     </VideoFrame>
   );
 }
 
-/* ───────────── 8 · Montage — every sport ───────────── */
+/* ════════════════════════ 6 · Every sport ════════════════════════ */
 
 const SPORT_CARDS: { data: typeof SAMPLE_RIDE; id: ThemeId }[] = [
   { data: SAMPLE_RIDE, id: "path" },
@@ -469,7 +678,8 @@ const SPORT_CARDS: { data: typeof SAMPLE_RIDE; id: ThemeId }[] = [
   { data: SAMPLE_SWIM, id: "data" },
 ];
 
-export function MontageSportsScene() {
+export function SportsScene() {
+  const frame = useCurrentFrame();
   const { height } = useVideoConfig();
   const portrait = usePortrait();
   const cardHeight = height * (portrait ? 0.28 : 0.56);
@@ -485,24 +695,26 @@ export function MontageSportsScene() {
           paddingBottom: height * 0.1,
         }}
       >
-        {SPORT_CARDS.map((card, i) => (
-          <RiseIn
-            delay={6 + i * 7}
-            key={card.id}
-            style={{
-              // Portrait stacks the trio into a slightly rotated fan; the
-              // negative margin overlaps them so all three fit the column.
-              marginTop: portrait && i > 0 ? -cardHeight * 0.22 : 0,
-              transform: portrait
-                ? `rotate(${(i - 1) * 3}deg)`
-                : `translateY(${(i - 1) * 14}px)`,
-            }}
-          >
-            <CardScaled height={cardHeight}>
-              <ThemeCard data={card.data} id={card.id} />
-            </CardScaled>
-          </RiseIn>
-        ))}
+        {SPORT_CARDS.map((card, i) => {
+          // a slow continuous float so the fan never sits still
+          const drift = breathe(frame, 8, 180, i * 1.4);
+          return (
+            <RiseIn
+              delay={6 + i * 7}
+              key={card.id}
+              style={{
+                marginTop: portrait && i > 0 ? -cardHeight * 0.22 : 0,
+                transform: portrait
+                  ? `rotate(${(i - 1) * 3}deg)`
+                  : `translateY(${(i - 1) * 14 + drift}px) rotate(${(i - 1) * 2}deg)`,
+              }}
+            >
+              <CardScaled height={cardHeight}>
+                <ThemeCard data={card.data} id={card.id} />
+              </CardScaled>
+            </RiseIn>
+          );
+        })}
       </AbsoluteFill>
       <Caption
         delay={24}
@@ -514,7 +726,7 @@ export function MontageSportsScene() {
   );
 }
 
-/* ───────────── 9 · CTA ───────────── */
+/* ════════════════════════ 7 · CTA ════════════════════════ */
 
 export function CtaScene() {
   return (

@@ -1,96 +1,84 @@
-// The portrait social cut of the hero (1080×1920) — same scenes, tighter
-// pacing, the problem beat dropped. ~28s at 30fps.
+// The portrait social cut of the hero (1080×1920) — the same scenes, tighter.
+// ~31s at 30fps.
 
 import { linearTiming, TransitionSeries } from "@remotion/transitions";
 import { fade } from "@remotion/transitions/fade";
-import { slide } from "@remotion/transitions/slide";
 import { cutSlices } from "../components/cut-slices";
 import { FPS, PORTRAIT } from "../design/tokens";
 import {
-  CardRevealScene,
+  CarouselScene,
+  ColorScene,
   CtaScene,
-  HookScene,
-  IngestScene,
-  MontageCarouselScene,
-  MontagePaletteScene,
-  MontageSportsScene,
-  MontageThemesScene,
+  IngestRevealScene,
+  OpeningScene,
+  SportsScene,
+  ThemesScene,
 } from "./hero-scenes";
 
-const HOOK = 100;
-const INGEST = 115;
-const REVEAL = 115;
-const THEMES = 110;
-const PALETTE = 105;
-const CAROUSEL = 120;
-const SPORTS = 100;
+const OPENING = 230;
+const INGEST = 180;
+const THEMES = 160;
+const COLOR = 120;
+const CAROUSEL = 165;
+const SPORTS = 104;
 const CTA = 140;
 
 const CUT = 14;
-const SLIDE = 10;
 const FADE = 12;
 
 export const HERO_VERTICAL_FPS = FPS;
 export const HERO_VERTICAL_WIDTH = PORTRAIT.width;
 export const HERO_VERTICAL_HEIGHT = PORTRAIT.height;
 export const HERO_VERTICAL_DURATION_IN_FRAMES =
-  HOOK +
+  OPENING +
   INGEST +
-  REVEAL +
   THEMES +
-  PALETTE +
+  COLOR +
   CAROUSEL +
   SPORTS +
   CTA -
-  (CUT * 2 + SLIDE * 4 + FADE);
+  (CUT + FADE * 5);
 
 export function HeroVertical() {
   return (
     <TransitionSeries>
-      <TransitionSeries.Sequence durationInFrames={HOOK}>
-        <HookScene />
+      <TransitionSeries.Sequence durationInFrames={OPENING}>
+        <OpeningScene />
       </TransitionSeries.Sequence>
       <TransitionSeries.Transition
         presentation={cutSlices({ slices: 3 })}
         timing={linearTiming({ durationInFrames: CUT })}
       />
       <TransitionSeries.Sequence durationInFrames={INGEST}>
-        <IngestScene />
+        <IngestRevealScene durationInFrames={INGEST} />
       </TransitionSeries.Sequence>
       <TransitionSeries.Transition
-        presentation={cutSlices({ slices: 3 })}
-        timing={linearTiming({ durationInFrames: CUT })}
-      />
-      <TransitionSeries.Sequence durationInFrames={REVEAL}>
-        <CardRevealScene />
-      </TransitionSeries.Sequence>
-      <TransitionSeries.Transition
-        presentation={slide({ direction: "from-right" })}
-        timing={linearTiming({ durationInFrames: SLIDE })}
+        presentation={fade()}
+        timing={linearTiming({ durationInFrames: FADE })}
       />
       <TransitionSeries.Sequence durationInFrames={THEMES}>
-        <MontageThemesScene durationInFrames={THEMES} />
+        <ThemesScene durationInFrames={THEMES} />
       </TransitionSeries.Sequence>
       <TransitionSeries.Transition
-        presentation={slide({ direction: "from-right" })}
-        timing={linearTiming({ durationInFrames: SLIDE })}
+        presentation={fade()}
+        timing={linearTiming({ durationInFrames: FADE })}
       />
-      <TransitionSeries.Sequence durationInFrames={PALETTE}>
-        <MontagePaletteScene durationInFrames={PALETTE} />
+      <TransitionSeries.Sequence durationInFrames={COLOR}>
+        <ColorScene durationInFrames={COLOR} />
       </TransitionSeries.Sequence>
       <TransitionSeries.Transition
-        presentation={slide({ direction: "from-right" })}
-        timing={linearTiming({ durationInFrames: SLIDE })}
+        presentation={fade()}
+        timing={linearTiming({ durationInFrames: FADE })}
       />
       <TransitionSeries.Sequence durationInFrames={CAROUSEL}>
-        <MontageCarouselScene durationInFrames={CAROUSEL} />
+        <CarouselScene durationInFrames={CAROUSEL} />
       </TransitionSeries.Sequence>
       <TransitionSeries.Transition
-        presentation={slide({ direction: "from-right" })}
-        timing={linearTiming({ durationInFrames: SLIDE })}
+        presentation={fade()}
+        timing={linearTiming({ durationInFrames: FADE })}
       />
       <TransitionSeries.Sequence durationInFrames={SPORTS}>
-        <MontageSportsScene />
+        <SportsScene />
       </TransitionSeries.Sequence>
       <TransitionSeries.Transition
         presentation={fade()}

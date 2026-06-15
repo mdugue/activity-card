@@ -1,6 +1,7 @@
 "use client";
 
 import { Player } from "@remotion/player";
+import { useCoarsePointer } from "@/hooks/use-coarse-pointer";
 import { FEATURE_VIDEOS } from "@/remotion/videos/catalog";
 
 /**
@@ -12,12 +13,17 @@ import { FEATURE_VIDEOS } from "@/remotion/videos/catalog";
  */
 export default function TutorialPlayer({ index }: { index: number }) {
   const video = FEATURE_VIDEOS[index];
+  // Touch devices have no hover to reveal the controls bar; keep it (and the
+  // fullscreen button) visible there.
+  const coarse = useCoarsePointer();
   if (!video) {
     return null;
   }
   return (
     <Player
       acknowledgeRemotionLicense
+      allowFullscreen
+      alwaysShowControls={coarse}
       component={video.component}
       compositionHeight={video.height}
       compositionWidth={video.width}
