@@ -28,6 +28,11 @@ import {
   coerceColorChoice,
   resolveColors,
 } from "@/lib/colors";
+import {
+  DEFAULT_FORMAT_ID,
+  type ExportFormatId,
+  getFormat,
+} from "@/lib/export-formats";
 import { formatDateUpper } from "@/lib/format";
 import { IDENTITY_TRANSFORM, type ImageTransform } from "@/lib/image-transform";
 import { coerceConfig } from "@/lib/params/resolve";
@@ -194,6 +199,10 @@ export default function Home() {
   const [autoStravaPicker, setAutoStravaPicker] = useState(false);
   const [data, setData] = useState<ActivityData | null>(null);
   const [theme, setTheme] = useState<ThemeId>("altitude");
+  // Which platform format the single-card stage previews (the export sheet
+  // still offers the full set); the 4:5 master is the default.
+  const [previewFormat, setPreviewFormat] =
+    useState<ExportFormatId>(DEFAULT_FORMAT_ID);
   // Carousel themes have their own id space (Trace, Ascent, …), so the
   // carousel keeps its own selection separate from the single-card theme.
   const [carouselTheme, setCarouselTheme] = useState<CarouselThemeId>(
@@ -623,7 +632,9 @@ export default function Home() {
             />
           ) : (
             <EditState
+              format={getFormat(previewFormat)}
               onExport={handleDownload}
+              onFormatChange={setPreviewFormat}
               onThemeChange={handleSingleThemeChange}
               session={session}
               theme={theme}
