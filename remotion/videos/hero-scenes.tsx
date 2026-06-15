@@ -7,7 +7,6 @@
 
 import {
   AbsoluteFill,
-  Img,
   interpolate,
   spring,
   staticFile,
@@ -23,7 +22,7 @@ import type { ThemeId } from "@/components/themes";
 import { CarouselDeck } from "@/components/themes/carousel/deck";
 import { CAROUSEL_THEMES } from "@/components/themes/carousel/registry";
 import { carouselArgs } from "@/components/themes/carousel/story-support";
-import { type Coord, mixHex } from "@/lib/chart-helpers";
+import { mixHex } from "@/lib/chart-helpers";
 import { Backdrop } from "../components/backdrop";
 import { CardScaled } from "../components/card-showcase";
 import { FileIcon } from "../components/file-icon";
@@ -44,6 +43,7 @@ import {
   TRACKING,
   TYPE,
 } from "../design/tokens";
+import { HERO_ROUTE } from "./hero-route";
 
 const RIDE_PHOTO = "images/ride.jpg";
 const DUNES_PHOTO = "images/dunes.webp";
@@ -56,25 +56,6 @@ function usePortrait(): boolean {
   const { height, width } = useVideoConfig();
   return height > width;
 }
-
-// A hard alpine climb: hairpin switchbacks of uneven width tightening toward a
-// summit, finished with a little summit hook. Reads as a genuine challenge.
-function genClimb(n: number): Coord[] {
-  const out: Coord[] = [];
-  for (let i = 0; i < n; i++) {
-    const t = i / (n - 1);
-    const phase = t * 5.5;
-    const tri = 2 * Math.abs(phase - Math.round(phase)) - 1;
-    const ampVar = 0.62 + 0.5 * Math.sin(t * 8.5 + 0.7);
-    const amp = (1 - 0.52 * t) * ampVar;
-    const hook = t > 0.86 ? Math.sin((t - 0.86) * 22) * 0.4 : 0;
-    const x = tri * amp + hook + 0.05 * Math.sin(t * 37);
-    const y = (0.5 - t) * 1.9 + 0.07 * Math.cos(t * 24) + (t > 0.9 ? 0.08 : 0);
-    out.push([x, y]);
-  }
-  return out;
-}
-const CLIMB_ROUTE = genClimb(260);
 
 /* ───────────────────────── shared bold-text layout ───────────────────────── */
 
@@ -90,17 +71,20 @@ function BoldHeadline({
   lines,
   size,
 }: {
-  align?: "left" | "center";
+  align?: "left" | "center" | "right";
   frame: number;
   lines: HeadlineLine[];
   size: number;
 }) {
+  const items = { center: "center", left: "flex-start", right: "flex-end" }[
+    align
+  ];
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
-        alignItems: align === "center" ? "center" : "flex-start",
+        alignItems: items,
         textAlign: align,
       }}
     >
@@ -174,7 +158,7 @@ function SplitScene({
         >
           <div style={{ width: "100%" }}>
             <Overline label={label} />
-            <BoldHeadline frame={frame} lines={lines} size={width * 0.13} />
+            <BoldHeadline frame={frame} lines={lines} size={width * 0.155} />
           </div>
           <div style={{ alignSelf: "center" }}>{visual}</div>
         </AbsoluteFill>
@@ -190,13 +174,23 @@ function SplitScene({
       <Backdrop grain variant="ink" />
       <Stage3D perspective={1250}>
         <Plane3D
-          rotateY={textLeft ? 20 : -20}
-          x={textLeft ? -width * 0.25 : width * 0.25}
-          z={-30}
+          rotateY={textLeft ? 19 : -19}
+          x={textLeft ? -width * 0.24 : width * 0.24}
+          z={-20}
         >
-          <div style={{ width: width * 0.4 }}>
+          <div
+            style={{
+              textAlign: textLeft ? "right" : "left",
+              width: width * 0.46,
+            }}
+          >
             <Overline label={label} />
-            <BoldHeadline frame={frame} lines={lines} size={width * 0.072} />
+            <BoldHeadline
+              align={textLeft ? "right" : "left"}
+              frame={frame}
+              lines={lines}
+              size={width * 0.08}
+            />
           </div>
         </Plane3D>
         <Plane3D
@@ -238,7 +232,7 @@ export function OpeningScene() {
   const { fps, height, width } = useVideoConfig();
   const portrait = usePortrait();
 
-  const effortSize = (portrait ? 0.92 : 1.12) * TYPE.claim;
+  const effortSize = (portrait ? 1.08 : 1.36) * TYPE.claim;
   const m = interpolate(frame, [96, 142], [0, 1], {
     easing: EASE_GLIDE,
     extrapolateLeft: "clamp",
@@ -279,7 +273,8 @@ export function OpeningScene() {
     <VideoFrame>
       <Backdrop grain variant="ink" />
       <Stage3D perspective={1150}>
-        {/* The hard climb, sharply angled on the right plane — phase one. */}
+        {/* The real run — a genuine GPS route — sharply angled on the right
+            plane, drawing itself in. Phase one. */}
         <Plane3D
           opacity={claim1Op * 0.95}
           rotateY={-26}
@@ -288,7 +283,7 @@ export function OpeningScene() {
           z={-90}
         >
           <RouteDraw
-            coords={CLIMB_ROUTE}
+            coords={HERO_ROUTE}
             durationInFrames={80}
             height={portrait ? height * 0.32 : height * 0.66}
             stroke={RUST}
@@ -430,36 +425,63 @@ export function IngestRevealScene({
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const inputsOp = interpolate(frame, [mStart, mStart + 18], [1, 0.0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
   const headlineOp = interpolate(frame, [mStart, mStart + 16], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
 
-  // The morphing tile: starts at the GPX sheet's size/place, grows into the card.
+  // Every source tile morphs the same way — each glides to the centre, grows to
+  // card size and folds into the one card (three inputs → one card worth
+  // sharing). The card fades up underneath as the sheets peel away.
   const iconH = portrait ? 250 : 300;
   const cardH = height * (portrait ? 0.6 : 0.78);
-  const tileH = interpolate(grow, [0, 1], [iconH, cardH]);
-  const tileW = tileH * 0.8;
-  const startX = portrait ? 0 : width * 0.17;
-  const startY = portrait ? -height * 0.04 : 0;
-  const tileX = interpolate(grow, [0, 1], [startX, 0]) + breathe(frame, 4, 200);
-  const tileY = interpolate(grow, [0, 1], [startY, 0]);
-  const tileRot = interpolate(grow, [0, 1], [12, 0]);
-  const fileOp = interpolate(grow, [0.18, 0.55], [1, 0], {
+  const cardOp = interpolate(grow, [0.5, 0.86], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const cardOp = interpolate(grow, [0.4, 0.82], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  const tiles = portrait
+    ? [
+        { accent: RUST_BRIGHT, ext: ".GPX", rot: 7, x: 0, y: 0 },
+        {
+          accent: "#2f6f86",
+          ext: ".FIT",
+          rot: -11,
+          x: -width * 0.2,
+          y: -height * 0.03,
+        },
+        {
+          accent: "#fc5200",
+          ext: "STRAVA",
+          rot: 13,
+          x: width * 0.2,
+          y: -height * 0.03,
+        },
+      ]
+    : [
+        {
+          accent: RUST_BRIGHT,
+          ext: ".GPX",
+          rot: 6,
+          x: width * 0.2,
+          y: height * 0.02,
+        },
+        {
+          accent: "#2f6f86",
+          ext: ".FIT",
+          rot: -11,
+          x: width * 0.29,
+          y: -height * 0.18,
+        },
+        {
+          accent: "#fc5200",
+          ext: "STRAVA",
+          rot: 13,
+          x: width * 0.29,
+          y: height * 0.2,
+        },
+      ];
 
-  const headlineSize =
-    (portrait ? 0.12 : 0.135) * Math.min(width, height * 1.4);
+  const headlineSize = (portrait ? 0.15 : 0.092) * width;
 
   return (
     <VideoFrame>
@@ -468,10 +490,11 @@ export function IngestRevealScene({
       <Stage3D perspective={1250}>
         {/* bold claim on the left, fading as the morph takes over */}
         {!portrait && (
-          <Plane3D opacity={headlineOp} rotateY={22} x={-width * 0.26} z={-40}>
-            <div style={{ maxWidth: width * 0.4 }}>
+          <Plane3D opacity={headlineOp} rotateY={19} x={-width * 0.24} z={-20}>
+            <div style={{ textAlign: "right", width: width * 0.46 }}>
               <Overline label="Any file, any sport" />
               <BoldHeadline
+                align="right"
                 frame={frame}
                 lines={[{ text: "Drop" }, { text: "it in." }]}
                 size={headlineSize}
@@ -480,64 +503,51 @@ export function IngestRevealScene({
           </Plane3D>
         )}
 
-        {/* the secondary inputs (.fit + Strava), fanned behind the GPX sheet */}
-        <Plane3D
-          opacity={inputsOp}
-          rotateY={-16}
-          x={portrait ? width * 0.22 : width * 0.32}
-          y={portrait ? -height * 0.04 : height * 0.02}
-          z={-120}
-        >
-          <FileIcon accent="#2f6f86" ext=".FIT" width={portrait ? 150 : 190} />
-        </Plane3D>
+        {/* the card the tiles become — fades up underneath them */}
         <div
           style={{
-            left: "50%",
-            opacity: inputsOp,
-            position: "absolute",
-            top: "50%",
-            transform: `translate(-50%, -50%) translate(${portrait ? 0 : width * 0.18}px, ${-height * 0.27}px)`,
+            opacity: cardOp,
+            transform: `translateX(${breathe(frame, 4, 200)}px)`,
           }}
         >
-          <Img
-            src={staticFile("strava/btn-connect-with-strava-orange.svg")}
-            style={{ display: "block", height: portrait ? 64 : 78 }}
-          />
+          <CardScaled height={cardH}>
+            <ThemeCard
+              data={SAMPLE_RIDE}
+              id="altitude"
+              photoUrl={staticFile(RIDE_PHOTO)}
+            />
+          </CardScaled>
         </div>
 
-        {/* the morphing tile: GPX sheet → Altitude card */}
-        <div
-          style={{
-            borderRadius: interpolate(grow, [0, 1], [16, 6]),
-            boxShadow: "0 60px 120px -40px rgba(0,0,0,0.7)",
-            height: tileH,
-            left: "50%",
-            overflow: "hidden",
-            position: "absolute",
-            top: "50%",
-            transform: `translate(-50%, -50%) translate(${tileX}px, ${tileY}px) perspective(1100px) rotateY(${tileRot}deg)`,
-            width: tileW,
-          }}
-        >
-          <div
-            style={{
-              inset: 0,
-              opacity: fileOp,
-              position: "absolute",
-            }}
-          >
-            <FileIcon ext=".GPX" width={tileW} />
-          </div>
-          <div style={{ inset: 0, opacity: cardOp, position: "absolute" }}>
-            <CardScaled height={tileH} shadow={false}>
-              <ThemeCard
-                data={SAMPLE_RIDE}
-                id="altitude"
-                photoUrl={staticFile(RIDE_PHOTO)}
-              />
-            </CardScaled>
-          </div>
-        </div>
+        {/* every source tile morphs the same way: glide to centre, grow to card
+            size, fold away revealing the card */}
+        {tiles.map((t, i) => {
+          const tileH = interpolate(grow, [0, 1], [iconH, cardH]);
+          const tx =
+            interpolate(grow, [0, 1], [t.x, 0]) + breathe(frame, 4, 200);
+          const ty = interpolate(grow, [0, 1], [t.y, 0]);
+          const trot = interpolate(grow, [0, 1], [t.rot, 0]);
+          const fop = interpolate(
+            grow,
+            [0.22 + i * 0.05, 0.52 + i * 0.05],
+            [1, 0],
+            { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+          );
+          return (
+            <div
+              key={t.ext}
+              style={{
+                left: "50%",
+                opacity: fop,
+                position: "absolute",
+                top: "50%",
+                transform: `translate(-50%, -50%) translate(${tx}px, ${ty}px) perspective(1100px) rotateY(${trot}deg)`,
+              }}
+            >
+              <FileIcon accent={t.accent} ext={t.ext} width={tileH * 0.8} />
+            </div>
+          );
+        })}
       </Stage3D>
     </VideoFrame>
   );
@@ -558,14 +568,28 @@ export function ThemesScene({
   durationInFrames: number;
 }) {
   const frame = useCurrentFrame();
-  const { height } = useVideoConfig();
+  const { height, width } = useVideoConfig();
   const portrait = usePortrait();
   const step = Math.floor(durationInFrames / THEME_TOUR.length);
   const active = Math.min(THEME_TOUR.length - 1, Math.floor(frame / step));
   const local = frame - active * step;
   const entry = THEME_TOUR[active];
+  const isFirst = active === 0;
 
-  // Fly in from behind the viewer: huge + blurred + tipped, recedes home fast.
+  // First card: hand off from the ingest morph — it sits centred (where the
+  // card just formed) and quickly glides across to its place beside the
+  // headline, so it animates over rather than vanishing and reappearing.
+  const glide = interpolate(local, [0, 22], [0, 1], {
+    easing: EASE_GLIDE,
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const firstOp = interpolate(local, [step - 9, step], [1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+
+  // Every later theme flies in from behind the viewer: huge + blurred + tipped.
   const z = interpolate(local, [0, 13], [820, 0], {
     easing: EASE_GLIDE,
     extrapolateRight: "clamp",
@@ -581,12 +605,18 @@ export function ThemesScene({
     extrapolateRight: "clamp",
   });
 
+  // The split places the visual at +0.21·w; cancel that on the first frame so it
+  // starts dead-centre (matching the ingest card) at the ingest card's size.
+  const firstTransform = `translateX(${interpolate(glide, [0, 1], [-width * 0.21, 0])}px) scale(${interpolate(glide, [0, 1], [1.22, 1])})`;
+
   const visual = (
     <div
       style={{
-        filter: `blur(${blur}px)`,
-        opacity: fade,
-        transform: `translateZ(${z}px) rotateY(${rot}deg)`,
+        filter: isFirst ? undefined : `blur(${blur}px)`,
+        opacity: isFirst ? firstOp : fade,
+        transform: isFirst
+          ? firstTransform
+          : `translateZ(${z}px) rotateY(${rot}deg)`,
         transformStyle: "preserve-3d",
       }}
     >
@@ -779,12 +809,12 @@ export function CarouselScene({
           style={{
             color: PAPER,
             fontFamily: FONT.heading,
-            fontSize: (portrait ? 0.07 : 0.05) * width,
+            fontSize: (portrait ? 0.085 : 0.062) * width,
             letterSpacing: TRACKING.heading,
             textTransform: "uppercase",
           }}
         >
-          {frame < hold + 20 ? "Not just one image" : "A whole carousel"}
+          {frame < hold + 20 ? "Choose a single image" : "Or a whole carousel"}
         </div>
       </div>
     </VideoFrame>
