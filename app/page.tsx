@@ -3,11 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { CarouselEditState } from "@/components/app/carousel-edit-state";
-import { DownloadState } from "@/components/app/download-state";
 import { EditState } from "@/components/app/edit-state";
 import type { EditorSession } from "@/components/app/editor-session";
 import { EffortWordmark } from "@/components/app/effort-wordmark";
 import { EmptyState } from "@/components/app/empty-state";
+import { ExportSheet } from "@/components/app/export-sheet";
 import { type CardMode, ModeToggle } from "@/components/app/mode-toggle";
 import type { OnboardingResult } from "@/components/app/onboarding-wizard";
 import type { ThemeId } from "@/components/app/render-theme";
@@ -623,7 +623,7 @@ export default function Home() {
             />
           ) : (
             <EditState
-              onDownload={handleDownload}
+              onExport={handleDownload}
               onThemeChange={handleSingleThemeChange}
               session={session}
               theme={theme}
@@ -632,7 +632,7 @@ export default function Home() {
         </div>
       ) : null}
       {state === "download" && visibleData ? (
-        <DownloadState
+        <ExportSheet
           colors={colors}
           config={activeConfig}
           data={visibleData}
