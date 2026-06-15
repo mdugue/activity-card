@@ -198,14 +198,32 @@ export function contentBox(format: ExportFormat): {
 }
 
 /**
- * Place the master content block (default 1080×1350) inside a format's safe box,
- * preserving its aspect and honouring the placement anchor. Returns the scale
- * and the top-left offset in format-space px — what the Hybrid frame uses to
- * position the (transparent-surface) theme over the full-bleed background.
- *
- * The block fills as much of the safe box as its aspect allows — it is never
- * shrunk below what the box permits, so this is "fill the safe zone", not
- * "tiny thing in the middle".
+ * Cover-fit the master block to a format: scaled to FILL the whole canvas
+ * (cropping the overflow), centred. The Hybrid frame uses this for the
+ * full-bleed "back" layer — scrims and route/elevation lines run off every
+ * edge rather than being boxed into the safe zone.
+ */
+export function coverFit(
+  format: ExportFormat,
+  contentW = 1080,
+  contentH = 1350
+): { h: number; scale: number; w: number; x: number; y: number } {
+  const scale = Math.max(format.width / contentW, format.height / contentH);
+  const w = contentW * scale;
+  const h = contentH * scale;
+  return {
+    scale,
+    w,
+    h,
+    x: (format.width - w) / 2,
+    y: (format.height - h) / 2,
+  };
+}
+
+/**
+ * Contain-fit the readable "front" layer inside a format's safe box, preserving
+ * aspect and honouring the placement anchor. Fills as much of the safe box as
+ * the aspect allows — "fill the safe zone", not "a tiny thing in the middle".
  */
 export function placeContent(
   format: ExportFormat,

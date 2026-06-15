@@ -128,7 +128,13 @@ export function ThemeEditorial({
   photoUrl,
   imageTransform,
   colors,
+  layer = "all",
 }: ThemeProps<(typeof USES)[number]>) {
+  // Poster: contained card (see ThemePath) — nothing in the bleed layer.
+  const framed = layer !== "all";
+  if (layer === "back") {
+    return null;
+  }
   const accent = colors?.primary ?? DEFAULT_ACCENT;
   const sport = data.sport;
   const multi = isMultiActivity(data);
@@ -182,7 +188,7 @@ export function ThemeEditorial({
       style={{
         width: 1080,
         height: 1350,
-        background: PAPER,
+        background: framed ? "transparent" : PAPER,
         color: INK,
         fontFamily: "var(--font-geist-mono), monospace",
         padding: "110px 110px 90px 110px",
@@ -193,7 +199,7 @@ export function ThemeEditorial({
         overflow: "hidden",
       }}
     >
-      {photoUrl ? (
+      {photoUrl && !framed ? (
         <PhotoBackdrop
           imageTransform={imageTransform}
           photoUrl={photoUrl}

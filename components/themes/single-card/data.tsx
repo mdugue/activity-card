@@ -179,7 +179,13 @@ export function ThemeData({
   photoUrl,
   imageTransform,
   colors,
+  layer = "all",
 }: ThemeProps<(typeof USES)[number]>) {
+  // Poster: contained card (see ThemePath) — nothing in the bleed layer.
+  const framed = layer !== "all";
+  if (layer === "back") {
+    return null;
+  }
   const accent = colors?.primary ?? DEFAULT_ACCENT;
   const sport = data.sport;
   const multi = isMultiActivity(data);
@@ -326,7 +332,7 @@ export function ThemeData({
       style={{
         width: 1080,
         height: 1350,
-        background: BG,
+        background: framed ? "transparent" : BG,
         color: INK,
         fontFamily: "var(--font-mono), monospace",
         padding: "60px 56px 52px 56px",
@@ -339,7 +345,7 @@ export function ThemeData({
         flexDirection: "column",
       }}
     >
-      {photoUrl ? (
+      {photoUrl && !framed ? (
         <PhotoUnderlay imageTransform={imageTransform} photoUrl={photoUrl} />
       ) : null}
       <div

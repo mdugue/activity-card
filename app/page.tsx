@@ -642,6 +642,7 @@ export default function Home() {
           photoBackdropEnabled={visibility.photoBackdrop}
           photoEffects={photoEffects}
           photoUrl={photoUrl}
+          routeCoordinates={data?.routeCoordinates}
           theme={theme}
         />
       ) : null}

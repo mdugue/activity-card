@@ -458,12 +458,16 @@ export function ThemeAltitude({
   photoUrl,
   imageTransform,
   surface = "opaque",
+  layer = "all",
   config = DEFAULT_ALTITUDE_CONFIG,
 }: ThemeAltitudeProps) {
   // Transparent surface: the Hybrid frame paints the full-bleed photo behind
-  // this content, so we drop our own photo layer and base fill (but keep the
-  // legibility scrim, which darkens the frame's photo within the content box).
+  // this content, so we drop our own photo layer and base fill.
   const transparent = surface === "transparent";
+  // Two-pass split: the elevation band bleeds full-frame (layer "back"); the
+  // claim (solid, never sliced when framed) + supporting stats + meta stay
+  // readable in the safe zone (layer "front"). The frame draws its own scrim.
+  const framed = layer !== "all";
   const claim = resolveClaim(config.claim, data);
   const stats = config.secondLine
     ? supportingStats(data, claim?.key ?? null)
@@ -493,7 +497,9 @@ export function ThemeAltitude({
 
   const font = FONT_FAMILY[config.font];
   const fontWeight = FONT_WEIGHT[config.font];
-  const cutout = config.claimStyle === "cutout" && claim !== null;
+  // The number-sliced-by-the-line cutout fuses text + viz; in the frame they
+  // split across layers, so the claim renders solid there.
+  const cutout = config.claimStyle === "cutout" && claim !== null && !framed;
   const belowOpacity = Math.min(1, Math.max(0, config.cutoutOpacity / 100));
   const layout = claim
     ? layoutClaim(claim.value, config.font, claim.isText, CONTENT_W)
@@ -524,98 +530,128 @@ export function ThemeAltitude({
         <PhotoLayer imageTransform={imageTransform} photoUrl={photoUrl} />
       ) : null}
 
-      {/* Legibility scrim, tuned to where the claim sits. */}
-      <div
-        aria-hidden
-        style={{
-          position: "absolute",
-          inset: 0,
-          zIndex: 1,
-          background: scrimBackground(config.position),
-        }}
-      />
+      {/* Legibility scrim, tuned to where the claim sits — native master only;
+          the Hybrid frame draws its own soft, placement-aware scrim. */}
+      {framed ? null : (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 1,
+            background: scrimBackground(config.position),
+          }}
+        />
+      )}
 
-      <div style={clusterPosition(config.position)}>
-        {claim && cutout && layout ? (
-          <div>
-            <ClaimText
-              belowOpacity={belowOpacity}
-              curves={curves}
-              cut
-              fontFamily={font}
-              fontWeight={fontWeight}
-              layout={layout}
-              uid={uid}
-            />
-            <FooterRow
-              marginTop={16}
-              stats={stats}
-              unit={claim.unit}
-              unitFontFamily={font}
-              unitFontSize={unitFontSize}
-            />
-          </div>
-        ) : null}
+      {/* Bleed layer: the elevation runs full-frame (off the L/R edges). */}
+      {layer === "back" && hasLine ? (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            top: "50%",
+            transform: "translateY(-50%)",
+            height: 380,
+            zIndex: 2,
+          }}
+        >
+          <MultiLineBand
+            curves={curves}
+            strokeWidth={4}
+            style={{ height: "100%" }}
+          />
+        </div>
+      ) : null}
 
-        {claim && !cutout && layout ? (
-          <div>
-            <div
-              style={{
-                fontFamily: "var(--font-mono), monospace",
-                fontSize: 24,
-                letterSpacing: "0.28em",
-                opacity: 0.82,
-                marginBottom: 16,
-                textShadow: "0 2px 12px rgba(0,0,0,0.5)",
-              }}
-            >
-              {claim.label}
-              {claim.unit ? ` · ${claim.unit}` : ""}
-            </div>
-            <ClaimText
-              belowOpacity={1}
-              curves={curves}
-              cut={false}
-              fontFamily={font}
-              fontWeight={fontWeight}
-              layout={layout}
-              uid={uid}
-            />
-            {hasLine ? (
-              <div style={{ height: 104, marginTop: 22, width: "100%" }}>
-                <MultiLineBand curves={curves} style={{ height: "100%" }} />
-              </div>
-            ) : null}
-            <FooterRow
-              marginTop={18}
-              stats={stats}
-              unitFontFamily={font}
-              unitFontSize={unitFontSize}
-            />
-          </div>
-        ) : null}
-
-        {/* No claim: the line becomes the hero element. */}
-        {!claim && hasLine ? (
-          <div>
-            <div style={{ height: 232, width: "100%" }}>
-              <MultiLineBand
+      {layer === "back" ? null : (
+        <div style={clusterPosition(config.position)}>
+          {claim && cutout && layout ? (
+            <div>
+              <ClaimText
+                belowOpacity={belowOpacity}
                 curves={curves}
-                strokeWidth={4}
-                style={{ height: "100%" }}
+                cut
+                fontFamily={font}
+                fontWeight={fontWeight}
+                layout={layout}
+                uid={uid}
+              />
+              <FooterRow
+                marginTop={16}
+                stats={stats}
+                unit={claim.unit}
+                unitFontFamily={font}
+                unitFontSize={unitFontSize}
               />
             </div>
-            <FooterRow
-              marginTop={20}
-              stats={stats}
-              unitFontFamily={font}
-              unitFontSize={unitFontSize}
-            />
-          </div>
-        ) : null}
-      </div>
+          ) : null}
 
-      {metaBits.length > 0 ? (
+          {claim && !cutout && layout ? (
+            <div>
+              <div
+                style={{
+                  fontFamily: "var(--font-mono), monospace",
+                  fontSize: 24,
+                  letterSpacing: "0.28em",
+                  opacity: 0.82,
+                  marginBottom: 16,
+                  textShadow: "0 2px 12px rgba(0,0,0,0.5)",
+                }}
+              >
+                {claim.label}
+                {claim.unit ? ` · ${claim.unit}` : ""}
+              </div>
+              <ClaimText
+                belowOpacity={1}
+                curves={curves}
+                cut={false}
+                fontFamily={font}
+                fontWeight={fontWeight}
+                layout={layout}
+                uid={uid}
+              />
+              {hasLine && !framed ? (
+                <div style={{ height: 104, marginTop: 22, width: "100%" }}>
+                  <MultiLineBand curves={curves} style={{ height: "100%" }} />
+                </div>
+              ) : null}
+              <FooterRow
+                marginTop={18}
+                stats={stats}
+                unitFontFamily={font}
+                unitFontSize={unitFontSize}
+              />
+            </div>
+          ) : null}
+
+          {/* No claim: the line becomes the hero element (bleeds via the back
+            layer when framed, so only the supporting stats stay here). */}
+          {!claim && hasLine ? (
+            <div>
+              {framed ? null : (
+                <div style={{ height: 232, width: "100%" }}>
+                  <MultiLineBand
+                    curves={curves}
+                    strokeWidth={4}
+                    style={{ height: "100%" }}
+                  />
+                </div>
+              )}
+              <FooterRow
+                marginTop={20}
+                stats={stats}
+                unitFontFamily={font}
+                unitFontSize={unitFontSize}
+              />
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {layer !== "back" && metaBits.length > 0 ? (
         <div
           style={{
             position: "absolute",

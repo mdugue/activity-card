@@ -42,11 +42,16 @@ interface ExportSheetProps {
   photoBackdropEnabled: boolean;
   photoEffects: PhotoEffects;
   photoUrl: string | null;
+  /** the activity's route for the background draw-on — from the FULL data, so
+   *  it shows even on themes (e.g. Altitude) that don't render the route. */
+  routeCoordinates?: [number, number][];
   theme: ThemeId;
 }
 
-const CELL_W = 184;
-const CELL_H = 248;
+// Each tile takes the format's TRUE shape (fit into this bounding box), so
+// there's no letterbox whitespace inside the tile.
+const TILE_MAX_W = 200;
+const TILE_MAX_H = 280;
 
 function fileFor(data: ActivityData, format: ExportFormat): string {
   return `effort_${data.sport}_${effortDateSlug(data.date)}_${format.id}.png`;
@@ -110,7 +115,10 @@ export function ExportSheet(props: ExportSheetProps) {
 
   return (
     <div className="relative flex flex-1 flex-col items-center px-6 py-10">
-      <RouteAura colors={colors} coords={data.routeCoordinates} />
+      <RouteAura
+        colors={colors}
+        coords={props.routeCoordinates ?? data.routeCoordinates}
+      />
 
       <div className="relative w-full max-w-5xl">
         <div className="font-mono font-semibold text-xs tracking-[0.32em] opacity-55">
@@ -202,51 +210,42 @@ function FormatTile({
   photoEffects,
   photoUrl,
 }: FormatTileProps) {
-  const scale = Math.min(CELL_W / format.width, CELL_H / format.height);
-  const dispW = format.width * scale;
-  const dispH = format.height * scale;
+  const scale = Math.min(TILE_MAX_W / format.width, TILE_MAX_H / format.height);
+  const tileW = format.width * scale;
+  const tileH = format.height * scale;
   const isBusy = busy === format.id;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2" style={{ width: tileW }}>
       <div
-        className="relative overflow-hidden rounded-md bg-muted/40 shadow-sm ring-1 ring-foreground/10"
-        style={{ width: CELL_W, height: CELL_H }}
+        className="relative overflow-hidden rounded-md shadow-sm ring-1 ring-foreground/10"
+        style={{ width: tileW, height: tileH }}
       >
+        {/* Native-size mount, scaled to fill the tile (the format's true shape);
+            reffed as the export source (html-to-image forces transform:none +
+            native width/height). */}
         <div
-          className="absolute"
+          ref={registerMount}
           style={{
-            left: (CELL_W - dispW) / 2,
-            top: (CELL_H - dispH) / 2,
-            width: dispW,
-            height: dispH,
+            width: format.width,
+            height: format.height,
+            transform: `scale(${scale})`,
+            transformOrigin: "top left",
           }}
         >
-          {/* Native-size mount, scaled to fit the cell; reffed as the export
-              source (html-to-image forces transform:none + native width/height). */}
-          <div
-            ref={registerMount}
-            style={{
-              width: format.width,
-              height: format.height,
-              transform: `scale(${scale})`,
-              transformOrigin: "top left",
-            }}
-          >
-            <RenderTheme
-              colors={colors}
-              config={config}
-              data={data}
-              format={format}
-              imageTransform={imageTransform}
-              photoBackdropEnabled={photoBackdropEnabled}
-              photoEffects={photoEffects}
-              photoUrl={photoUrl}
-              theme={theme}
-            />
-          </div>
-          {safeZones ? <SafeZoneOverlay format={format} scale={scale} /> : null}
+          <RenderTheme
+            colors={colors}
+            config={config}
+            data={data}
+            format={format}
+            imageTransform={imageTransform}
+            photoBackdropEnabled={photoBackdropEnabled}
+            photoEffects={photoEffects}
+            photoUrl={photoUrl}
+            theme={theme}
+          />
         </div>
+        {safeZones ? <SafeZoneOverlay format={format} scale={scale} /> : null}
       </div>
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
@@ -361,22 +360,22 @@ function RouteAura({
     return (
       <svg
         aria-hidden
-        className="pointer-events-none absolute inset-0 size-full opacity-[0.12]"
+        className="pointer-events-none absolute inset-0 size-full opacity-25"
         preserveAspectRatio="xMidYMid meet"
         viewBox="0 0 1200 900"
       >
         <title>route</title>
         <path
-          d={routePath(coords, 1200, 900, 120)}
+          d={routePath(coords, 1200, 900, 140)}
           fill="none"
           pathLength={1}
           stroke={accent}
           strokeLinecap="round"
           strokeLinejoin="round"
-          strokeWidth={6}
+          strokeWidth={9}
           style={{
             strokeDasharray: 1,
-            animation: "effort-route-draw 2.6s ease-out forwards",
+            animation: "effort-route-draw 2.8s ease-out forwards",
           }}
         />
       </svg>

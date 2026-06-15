@@ -38,7 +38,15 @@ export function ThemePath({
   photoUrl,
   imageTransform,
   colors,
+  layer = "all",
 }: ThemeProps<(typeof USES)[number]>) {
+  // Poster: a contained card. In the Hybrid frame it contributes nothing to the
+  // full-bleed "back" layer (the frame's matte fills it); the whole card rides
+  // the "front" layer, transparent so the matte shows through seamlessly.
+  const framed = layer !== "all";
+  if (layer === "back") {
+    return null;
+  }
   const accent = colors?.primary ?? DEFAULT_ACCENT;
   const isPool = data.sport === "swim";
   const sport = data.sport;
@@ -98,7 +106,7 @@ export function ThemePath({
       style={{
         width: 1080,
         height: 1350,
-        background: "#ffffff",
+        background: framed ? "transparent" : "#ffffff",
         color: "#1a1714",
         fontFamily: "var(--font-manrope), sans-serif",
         position: "relative",
@@ -109,7 +117,7 @@ export function ThemePath({
         overflow: "hidden",
       }}
     >
-      {photoUrl ? (
+      {photoUrl && !framed ? (
         <PhotoBackdrop
           imageTransform={imageTransform}
           photoUrl={photoUrl}

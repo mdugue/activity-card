@@ -55,6 +55,7 @@ export function RenderTheme({
   const imageSize = useImageNaturalSize(photo);
   const Component = descriptor.Component;
   const resolvedColors = colors ?? descriptor.colors.default;
+  const themeData = pickThemeData(descriptor, data);
 
   // The 4:5 master (or no format) renders natively — pixel-identical to legacy.
   const framed = format !== undefined && !isDefaultFormat(format.id);
@@ -62,17 +63,6 @@ export function RenderTheme({
   // shows through; poster themes stay opaque and the frame mattes their colour.
   const surface =
     framed && descriptor.frame?.photoBleed ? "transparent" : "opaque";
-
-  const component = (
-    <Component
-      colors={resolvedColors}
-      config={config}
-      data={pickThemeData(descriptor, data)}
-      imageTransform={imageTransform}
-      photoUrl={photo}
-      surface={surface}
-    />
-  );
 
   return (
     <PhotoFxProvider value={{ effects: photoEffects, imageSize }}>
@@ -83,11 +73,27 @@ export function RenderTheme({
           frame={descriptor.frame}
           imageTransform={imageTransform}
           photoUrl={photo}
-        >
-          {component}
-        </FormatFrame>
+          renderLayer={(layer) => (
+            <Component
+              colors={resolvedColors}
+              config={config}
+              data={themeData}
+              imageTransform={imageTransform}
+              layer={layer}
+              photoUrl={photo}
+              surface={surface}
+            />
+          )}
+        />
       ) : (
-        component
+        <Component
+          colors={resolvedColors}
+          config={config}
+          data={themeData}
+          imageTransform={imageTransform}
+          photoUrl={photo}
+          surface="opaque"
+        />
       )}
     </PhotoFxProvider>
   );

@@ -83,6 +83,18 @@ export type ActivityView = Omit<ActivityData, GovernedField> &
  */
 export type ThemeSurface = "opaque" | "transparent";
 
+/**
+ * Which slice of a theme to render, for the Hybrid frame's two-pass layout:
+ * - `"all"` (default) renders everything — the native 4:5 master, unchanged.
+ * - `"back"` renders only the **full-bleed** elements (scrims, route/elevation
+ *   lines, decorative washes) — the frame cover-scales this so they run off
+ *   every edge.
+ * - `"front"` renders only the **readable** elements (headline, hero number,
+ *   stat labels/values, date, place, athlete) — the frame contain-scales this
+ *   into the platform safe zone.
+ */
+export type ThemeLayer = "all" | "back" | "front";
+
 /** Props every single-card theme component receives. */
 export interface ThemeProps<
   K extends CapabilityKey = CapabilityKey,
@@ -97,6 +109,8 @@ export interface ThemeProps<
   data: ThemeData<K>;
   /** Pan/zoom for the background photo — applied wherever a theme shows one. */
   imageTransform?: ImageTransform | null;
+  /** Which slice to render for the Hybrid frame's two-pass layout; `"all"`. */
+  layer?: ThemeLayer;
   photoUrl?: string | null;
   /** Background-paint mode for the Hybrid frame; defaults to `"opaque"`. */
   surface?: ThemeSurface;

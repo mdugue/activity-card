@@ -87,11 +87,16 @@ export function ThemePhoto({
   colors,
   imageTransform,
   surface = "opaque",
+  layer = "all",
 }: ThemePhotoProps) {
   // Transparent surface: the Hybrid frame paints the full-bleed photo behind
-  // this content, so we drop our own photo layer and placeholder fill (the
-  // neutral vignette + masthead/stat overlays still render for legibility).
+  // this content, so we drop our own photo layer and placeholder fill.
   const transparent = surface === "transparent";
+  // Two-pass split: the route trace bleeds (back); the masthead / title / hero
+  // stats / byline stay readable in the safe zone (front). The frame draws its
+  // own soft scrim, so the theme's vignette only shows in the native master.
+  const back = layer === "all" || layer === "back";
+  const front = layer === "all" || layer === "front";
   const sport = data.sport;
   const isPool = sport === "swim";
   const multi = isMultiActivity(data);
@@ -187,78 +192,82 @@ export function ThemePhoto({
         </svg>
       )}
 
-      {/* Neutral vignette — pure black to read consistently across any photo. */}
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          background:
-            "linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.7) 100%)",
-        }}
-      />
-
-      {/* Top masthead */}
-      <div
-        style={{
-          position: "absolute",
-          top: 70,
-          left: 80,
-          right: 80,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-        }}
-      >
-        <div>
-          <div
-            style={{
-              fontFamily: "var(--font-playfair), serif",
-              fontSize: 52,
-              fontStyle: "italic",
-              letterSpacing: "-0.01em",
-              color: "var(--accent-2)",
-            }}
-          >
-            Effort
-          </div>
-          <div
-            style={{
-              fontSize: 26,
-              letterSpacing: "0.28em",
-              marginTop: 12,
-              color: "var(--body)",
-              fontWeight: 700,
-            }}
-          >
-            {["VOL. 01", formatDateUpper(data.date)]
-              .filter(Boolean)
-              .join(" · ")}
-          </div>
-        </div>
+      {/* Neutral vignette — native master only; the frame draws its own scrim. */}
+      {layer === "all" ? (
         <div
           style={{
-            textAlign: "right",
-            fontSize: 26,
-            letterSpacing: "0.2em",
-            color: "var(--headline)",
-            fontWeight: 700,
-            lineHeight: 1.45,
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.7) 100%)",
+          }}
+        />
+      ) : null}
+
+      {/* Top masthead */}
+      {front ? (
+        <div
+          style={{
+            position: "absolute",
+            top: 70,
+            left: 80,
+            right: 80,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
           }}
         >
-          {storyLabel}
-          {data.location ? (
-            <>
-              <br />
-              <span style={{ color: "var(--body)" }}>
-                {data.location.toUpperCase()}
-              </span>
-            </>
-          ) : null}
+          <div>
+            <div
+              style={{
+                fontFamily: "var(--font-playfair), serif",
+                fontSize: 52,
+                fontStyle: "italic",
+                letterSpacing: "-0.01em",
+                color: "var(--accent-2)",
+              }}
+            >
+              Effort
+            </div>
+            <div
+              style={{
+                fontSize: 26,
+                letterSpacing: "0.28em",
+                marginTop: 12,
+                color: "var(--body)",
+                fontWeight: 700,
+              }}
+            >
+              {["VOL. 01", formatDateUpper(data.date)]
+                .filter(Boolean)
+                .join(" · ")}
+            </div>
+          </div>
+          <div
+            style={{
+              textAlign: "right",
+              fontSize: 26,
+              letterSpacing: "0.2em",
+              color: "var(--headline)",
+              fontWeight: 700,
+              lineHeight: 1.45,
+            }}
+          >
+            {storyLabel}
+            {data.location ? (
+              <>
+                <br />
+                <span style={{ color: "var(--body)" }}>
+                  {data.location.toUpperCase()}
+                </span>
+              </>
+            ) : null}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {/* Route trace — always white for legibility across arbitrary photos. */}
-      {!isPool && (
+      {back && !isPool && (
         <svg
           aria-hidden="true"
           style={{
@@ -296,114 +305,118 @@ export function ThemePhoto({
         </svg>
       )}
 
-      <div style={{ position: "absolute", bottom: 220, left: 80, right: 80 }}>
-        <div
-          aria-hidden
-          style={{
-            width: 120,
-            height: 4,
-            background:
-              "linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%)",
-            marginBottom: 28,
-            boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
-          }}
-        />
-        <h1
-          style={{
-            fontFamily: "var(--font-playfair), serif",
-            fontWeight: 400,
-            fontStyle: "italic",
-            fontSize: 92,
-            lineHeight: 0.95,
-            letterSpacing: "-0.015em",
-            margin: 0,
-            color: "var(--headline)",
-            textShadow: "0 4px 24px rgba(0,0,0,0.4)",
-            textWrap: "pretty",
-            maxWidth: 800,
-          }}
-        >
-          {data.title}
-        </h1>
-      </div>
+      {front ? (
+        <div style={{ position: "absolute", bottom: 220, left: 80, right: 80 }}>
+          <div
+            aria-hidden
+            style={{
+              width: 120,
+              height: 4,
+              background:
+                "linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%)",
+              marginBottom: 28,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
+            }}
+          />
+          <h1
+            style={{
+              fontFamily: "var(--font-playfair), serif",
+              fontWeight: 400,
+              fontStyle: "italic",
+              fontSize: 92,
+              lineHeight: 0.95,
+              letterSpacing: "-0.015em",
+              margin: 0,
+              color: "var(--headline)",
+              textShadow: "0 4px 24px rgba(0,0,0,0.4)",
+              textWrap: "pretty",
+              maxWidth: 800,
+            }}
+          >
+            {data.title}
+          </h1>
+        </div>
+      ) : null}
 
       {/* Hero stat block + small stats — bottom strip */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 70,
-          left: 80,
-          right: 80,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-end",
-        }}
-      >
-        <div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
-            <span
+      {front ? (
+        <div
+          style={{
+            position: "absolute",
+            bottom: 70,
+            left: 80,
+            right: 80,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+          }}
+        >
+          <div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+              <span
+                style={{
+                  fontFamily: "var(--font-playfair), serif",
+                  fontSize: 130,
+                  fontWeight: 400,
+                  lineHeight: 1,
+                  letterSpacing: "-0.04em",
+                  color: "var(--accent)",
+                }}
+              >
+                {hero.big}
+              </span>
+              <span
+                style={{
+                  fontSize: 40,
+                  color: "var(--accent-2)",
+                  fontStyle: "italic",
+                  fontFamily: "var(--font-playfair), serif",
+                }}
+              >
+                {hero.unit}
+              </span>
+            </div>
+            <div
               style={{
-                fontFamily: "var(--font-playfair), serif",
-                fontSize: 130,
-                fontWeight: 400,
-                lineHeight: 1,
-                letterSpacing: "-0.04em",
-                color: "var(--accent)",
+                fontSize: 26,
+                letterSpacing: "0.16em",
+                color: "var(--body)",
+                marginTop: 14,
+                fontWeight: 700,
               }}
             >
-              {hero.big}
-            </span>
-            <span
+              {hero.sub.toUpperCase()}
+            </div>
+          </div>
+          {data.athleteName && (
+            <div
               style={{
-                fontSize: 40,
-                color: "var(--accent-2)",
-                fontStyle: "italic",
-                fontFamily: "var(--font-playfair), serif",
+                textAlign: "right",
+                fontSize: 24,
+                letterSpacing: "0.22em",
+                color: "var(--body)",
+                paddingBottom: 18,
+                fontWeight: 700,
               }}
             >
-              {hero.unit}
-            </span>
-          </div>
-          <div
-            style={{
-              fontSize: 26,
-              letterSpacing: "0.16em",
-              color: "var(--body)",
-              marginTop: 14,
-              fontWeight: 700,
-            }}
-          >
-            {hero.sub.toUpperCase()}
-          </div>
+              BY
+              <br />
+              <span
+                style={{
+                  fontFamily: "var(--font-playfair), serif",
+                  fontStyle: "italic",
+                  fontSize: 42,
+                  letterSpacing: "0",
+                  fontWeight: 400,
+                  color: "var(--accent-2)",
+                }}
+              >
+                {data.athleteName}
+              </span>
+            </div>
+          )}
         </div>
-        {data.athleteName && (
-          <div
-            style={{
-              textAlign: "right",
-              fontSize: 24,
-              letterSpacing: "0.22em",
-              color: "var(--body)",
-              paddingBottom: 18,
-              fontWeight: 700,
-            }}
-          >
-            BY
-            <br />
-            <span
-              style={{
-                fontFamily: "var(--font-playfair), serif",
-                fontStyle: "italic",
-                fontSize: 42,
-                letterSpacing: "0",
-                fontWeight: 400,
-                color: "var(--accent-2)",
-              }}
-            >
-              {data.athleteName}
-            </span>
-          </div>
-        )}
-      </div>
+      ) : null}
     </div>
   );
 }
