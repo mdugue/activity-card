@@ -26,8 +26,8 @@ const CAROUSEL = 180;
 const SPORTS = 120;
 const CTA = 150;
 
-const CUT = 14;
-const FADE = 12;
+const CUT = 9;
+const FADE = 7;
 
 export const HERO_FPS = FPS;
 export const HERO_WIDTH = LANDSCAPE.width;

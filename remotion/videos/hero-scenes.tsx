@@ -25,7 +25,7 @@ import { carouselArgs } from "@/components/themes/carousel/story-support";
 import { mixHex } from "@/lib/chart-helpers";
 import { Backdrop } from "../components/backdrop";
 import { CardScaled } from "../components/card-showcase";
-import { FileIcon } from "../components/file-icon";
+import { FileIcon, StravaChip } from "../components/file-icon";
 import { LogoSting } from "../components/logo-sting";
 import { PreloadImg } from "../components/preload-img";
 import { RouteDraw } from "../components/route-draw";
@@ -34,12 +34,13 @@ import { ThemeCard } from "../components/theme-card";
 import { VideoFrame } from "../components/video-frame";
 import { breathe, EASE_GLIDE } from "../design/motion";
 import {
+  BOUNCE_SPRING,
+  EASE_ALPHA,
   FONT,
   PAPER,
   PAPER_DIM,
   RUST,
   RUST_BRIGHT,
-  SETTLE_SPRING,
   TRACKING,
   TYPE,
 } from "../design/tokens";
@@ -55,6 +56,63 @@ const SEAM_KEYS = ["seam-a", "seam-b", "seam-c", "seam-d", "seam-e"];
 function usePortrait(): boolean {
   const { height, width } = useVideoConfig();
   return height > width;
+}
+
+function clamp01(v: number): number {
+  return Math.min(1, Math.max(0, v));
+}
+
+// The deliberately dull "any stats app" panel — cold greys, system font. The
+// thing the bold claim is set against on the left of the opening's second beat.
+function BoringStats({ width }: { width: number }) {
+  const rows = [
+    ["Distance", "18.43 km"],
+    ["Moving time", "1:32:04"],
+    ["Avg pace", "4:59 /km"],
+    ["Elevation", "86 m"],
+  ];
+  return (
+    <div
+      style={{
+        backgroundColor: "#17191c",
+        border: "1px solid #24272b",
+        borderRadius: 10,
+        boxShadow: "0 40px 80px -30px rgba(0,0,0,0.6)",
+        padding: 30,
+        width,
+      }}
+    >
+      <div
+        style={{
+          color: "#9aa0a6",
+          fontFamily: "system-ui, sans-serif",
+          fontSize: width * 0.07,
+          fontWeight: 600,
+          marginBottom: 18,
+        }}
+      >
+        Activity · 03 Jun 2026
+      </div>
+      {rows.map(([label, value]) => (
+        <div
+          key={label}
+          style={{
+            alignItems: "center",
+            borderTop: "1px solid #24272b",
+            color: "#777c82",
+            display: "flex",
+            fontFamily: "system-ui, sans-serif",
+            fontSize: width * 0.058,
+            justifyContent: "space-between",
+            padding: `${width * 0.04}px 0`,
+          }}
+        >
+          <span>{label}</span>
+          <span style={{ color: "#aeb4bb", fontWeight: 600 }}>{value}</span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 /* ───────────────────────── shared bold-text layout ───────────────────────── */
@@ -130,18 +188,24 @@ function SplitScene({
   label,
   lines,
   side,
+  spread = 0,
   visual,
 }: {
   /** rust mono overline */
   label: string;
   lines: HeadlineLine[];
   side: "text-left" | "text-right";
+  /** extra horizontal separation (fraction of width) — widen for wide visuals
+   *  like the sports fan so the text never sits under a card */
+  spread?: number;
   visual: React.ReactNode;
 }) {
   const frame = useCurrentFrame();
   const { height, width } = useVideoConfig();
   const portrait = usePortrait();
   const textLeft = side === "text-left";
+  const textX = (0.24 + spread) * width;
+  const visualX = (0.2 + spread) * width;
 
   if (portrait) {
     return (
@@ -175,7 +239,7 @@ function SplitScene({
       <Stage3D perspective={1250}>
         <Plane3D
           rotateY={textLeft ? 19 : -19}
-          x={textLeft ? -width * 0.24 : width * 0.24}
+          x={textLeft ? -textX : textX}
           z={-20}
         >
           <div
@@ -193,10 +257,7 @@ function SplitScene({
             />
           </div>
         </Plane3D>
-        <Plane3D
-          rotateY={textLeft ? -9 : 9}
-          x={textLeft ? width * 0.2 : -width * 0.2}
-        >
+        <Plane3D rotateY={textLeft ? -9 : 9} x={textLeft ? visualX : -visualX}>
           {visual}
         </Plane3D>
       </Stage3D>
@@ -233,66 +294,95 @@ export function OpeningScene() {
   const portrait = usePortrait();
 
   const effortSize = (portrait ? 1.08 : 1.36) * TYPE.claim;
-  const m = interpolate(frame, [96, 142], [0, 1], {
-    easing: EASE_GLIDE,
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const intro = spring({
-    config: SETTLE_SPRING,
-    durationInFrames: 24,
-    fps,
-    frame,
-  });
-
-  const ex =
-    interpolate(m, [0, 1], [-width * 0.17, 0]) + breathe(frame, 5, 240);
-  const ey = interpolate(m, [0, 1], [-height * 0.03, -height * 0.11]);
-  const escale =
-    interpolate(m, [0, 1], [1, 0.92]) * interpolate(intro, [0, 1], [0.9, 1]);
-  // Strong perspective swing: from sharply angled to face-on as it lands.
-  const erot = interpolate(m, [0, 1], [34, 0]);
-  const ecolor = mixHex(PAPER, RUST_BRIGHT, m);
-
-  const claim1Op = interpolate(frame, [108, 132], [1, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const claim2Op = interpolate(frame, [136, 162], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const strike = interpolate(frame, [170, 198], [0, 1], {
-    easing: EASE_GLIDE,
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
   const smallSize = effortSize * 0.26;
+
+  // EFFORT arrives late and with a bounce — it's the word that matters.
+  const intro = spring({
+    config: BOUNCE_SPRING,
+    durationInFrames: 20,
+    fps,
+    frame: frame - 16,
+  });
+  // …then sweeps quickly across to the second claim, overshooting and settling
+  // (a bouncy container move, not a slow glide).
+  const m = spring({
+    config: BOUNCE_SPRING,
+    durationInFrames: 22,
+    fps,
+    frame: frame - 96,
+  });
+  const mc = clamp01(m);
+
+  // Phase-one home: left of centre, angled. Phase-two home: over on the right,
+  // face-on, where the full claim assembles and the boring stats sit opposite.
+  const x1 = portrait ? -width * 0.04 : -width * 0.13;
+  const x2 = portrait ? 0 : width * 0.2;
+  const y1 = portrait ? -height * 0.16 : -height * 0.02;
+  const y2 = portrait ? -height * 0.04 : -height * 0.05;
+
+  const ex = interpolate(m, [0, 1], [x1, x2]) + breathe(frame, 4, 240);
+  const ey = interpolate(m, [0, 1], [y1, y2]);
+  const erot = interpolate(mc, [0, 1], [30, 0]);
+  const escale =
+    interpolate(m, [0, 1], [1, 0.82]) * interpolate(intro, [0, 1], [0.5, 1]);
+  const ecolor = mixHex(PAPER, RUST_BRIGHT, mc);
+
+  const claim1Op =
+    interpolate(frame, [0, 10], [0, 1], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    }) *
+    interpolate(frame, [92, 106], [1, 0], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    });
+  const claim2Op = interpolate(frame, [112, 132], [0, 1], {
+    easing: EASE_ALPHA,
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const strike = interpolate(frame, [138, 162], [0, 1], {
+    easing: EASE_GLIDE,
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
 
   return (
     <VideoFrame>
       <Backdrop grain variant="ink" />
       <Stage3D perspective={1150}>
-        {/* The real run — a genuine GPS route — sharply angled on the right
-            plane, drawing itself in. Phase one. */}
+        {/* The real run — a genuine GPS route — angled on the right. Phase one. */}
         <Plane3D
           opacity={claim1Op * 0.95}
           rotateY={-26}
           x={width * (portrait ? 0 : 0.24)}
-          y={portrait ? -height * 0.27 : 0}
+          y={portrait ? -height * 0.28 : 0}
           z={-90}
         >
           <RouteDraw
             coords={HERO_ROUTE}
             durationInFrames={80}
-            height={portrait ? height * 0.32 : height * 0.66}
+            height={portrait ? height * 0.3 : height * 0.66}
             stroke={RUST}
             strokeWidth={8}
             width={portrait ? width * 0.72 : width * 0.44}
           />
         </Plane3D>
 
-        {/* "YOU PUT IN THE" — phase one, riding the left plane. */}
+        {/* The boring stats slide in on the left as the claim lands right. */}
+        <div
+          style={{
+            left: "50%",
+            opacity: claim2Op,
+            position: "absolute",
+            top: "50%",
+            transform: `translate(-50%, -50%) translate(${-width * 0.24}px, ${interpolate(claim2Op, [0, 1], [40, 0])}px) perspective(1200px) rotateY(16deg)`,
+          }}
+        >
+          <BoringStats width={portrait ? width * 0.5 : width * 0.32} />
+        </div>
+
+        {/* "YOU PUT IN THE" — phase one, by the phase-one EFFORT. */}
         <div
           style={{
             color: PAPER_DIM,
@@ -305,14 +395,14 @@ export function OpeningScene() {
             position: "absolute",
             textTransform: "uppercase",
             top: "50%",
-            transform: `translate(-50%, -50%) translate(${-width * 0.17}px, ${-height * 0.03 - effortSize * 0.62}px) perspective(1000px) rotateY(28deg)`,
+            transform: `translate(-50%, -50%) translate(${x1}px, ${y1 - effortSize * 0.6}px) perspective(1000px) rotateY(28deg)`,
             whiteSpace: "nowrap",
           }}
         >
           You put in the
         </div>
 
-        {/* "YOUR" — phase two, above EFFORT. */}
+        {/* "YOUR" — phase two, above the landed EFFORT. */}
         <div
           style={{
             color: PAPER,
@@ -325,7 +415,7 @@ export function OpeningScene() {
             position: "absolute",
             textTransform: "uppercase",
             top: "50%",
-            transform: `translate(-50%, -50%) translate(0px, ${-height * 0.11 - effortSize * 0.92 * 0.74}px)`,
+            transform: `translate(-50%, -50%) translate(${x2}px, ${y2 - effortSize * 0.82 * 0.72}px)`,
           }}
         >
           Your
@@ -340,7 +430,7 @@ export function OpeningScene() {
             left: "50%",
             letterSpacing: TRACKING.heading,
             lineHeight: 1,
-            opacity: intro,
+            opacity: clamp01(intro),
             position: "absolute",
             textShadow: "0 30px 70px rgba(0,0,0,0.55)",
             textTransform: "uppercase",
@@ -362,14 +452,14 @@ export function OpeningScene() {
             opacity: claim2Op,
             position: "absolute",
             top: "50%",
-            transform: `translate(-50%, -50%) translate(0px, ${-height * 0.11 + effortSize * 0.92 * 0.92}px)`,
+            transform: `translate(-50%, -50%) translate(${x2}px, ${y2 + effortSize * 0.82 * 0.9}px)`,
           }}
         >
           <span
             style={{
               color: PAPER_DIM,
               fontFamily: FONT.sans,
-              fontSize: effortSize * 0.22,
+              fontSize: effortSize * 0.2,
             }}
           >
             deserves more than just
@@ -379,7 +469,7 @@ export function OpeningScene() {
               style={{
                 color: PAPER,
                 fontFamily: FONT.heading,
-                fontSize: effortSize * 0.42,
+                fontSize: effortSize * 0.4,
                 letterSpacing: TRACKING.heading,
                 textTransform: "uppercase",
               }}
@@ -420,31 +510,31 @@ export function IngestRevealScene({
 
   const mStart = durationInFrames - 132;
   const mEnd = durationInFrames - 96;
-  const grow = interpolate(frame, [mStart, mEnd], [0, 1], {
-    easing: EASE_GLIDE,
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
   const headlineOp = interpolate(frame, [mStart, mStart + 16], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
 
-  // Every source tile morphs the same way — each glides to the centre, grows to
-  // card size and folds into the one card (three inputs → one card worth
-  // sharing). The card fades up underneath as the sheets peel away.
+  // Every source folds into the one card with a Material "container transform":
+  // each tile glides to the centre and scales up while its source cross-fades
+  // (fade-through) into the Altitude card, its box distorting to the card's
+  // aspect, and lands with a small bounce. Staggered so they resolve in turn.
   const iconH = portrait ? 250 : 300;
   const cardH = height * (portrait ? 0.6 : 0.78);
-  const cardOp = interpolate(grow, [0.5, 0.86], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const tiles = portrait
+  const tiles: {
+    accent: string;
+    ext: string;
+    kind: "file" | "strava";
+    rot: number;
+    x: number;
+    y: number;
+  }[] = portrait
     ? [
-        { accent: RUST_BRIGHT, ext: ".GPX", rot: 7, x: 0, y: 0 },
+        { accent: RUST_BRIGHT, ext: ".GPX", kind: "file", rot: 7, x: 0, y: 0 },
         {
           accent: "#2f6f86",
           ext: ".FIT",
+          kind: "file",
           rot: -11,
           x: -width * 0.2,
           y: -height * 0.03,
@@ -452,6 +542,7 @@ export function IngestRevealScene({
         {
           accent: "#fc5200",
           ext: "STRAVA",
+          kind: "strava",
           rot: 13,
           x: width * 0.2,
           y: -height * 0.03,
@@ -461,6 +552,7 @@ export function IngestRevealScene({
         {
           accent: RUST_BRIGHT,
           ext: ".GPX",
+          kind: "file",
           rot: 6,
           x: width * 0.2,
           y: height * 0.02,
@@ -468,6 +560,7 @@ export function IngestRevealScene({
         {
           accent: "#2f6f86",
           ext: ".FIT",
+          kind: "file",
           rot: -11,
           x: width * 0.29,
           y: -height * 0.18,
@@ -475,6 +568,7 @@ export function IngestRevealScene({
         {
           accent: "#fc5200",
           ext: "STRAVA",
+          kind: "strava",
           rot: 13,
           x: width * 0.29,
           y: height * 0.2,
@@ -503,48 +597,83 @@ export function IngestRevealScene({
           </Plane3D>
         )}
 
-        {/* the card the tiles become — fades up underneath them */}
-        <div
-          style={{
-            opacity: cardOp,
-            transform: `translateX(${breathe(frame, 4, 200)}px)`,
-          }}
-        >
-          <CardScaled height={cardH}>
-            <ThemeCard
-              data={SAMPLE_RIDE}
-              id="altitude"
-              photoUrl={staticFile(RIDE_PHOTO)}
-            />
-          </CardScaled>
-        </div>
-
-        {/* every source tile morphs the same way: glide to centre, grow to card
-            size, fold away revealing the card */}
         {tiles.map((t, i) => {
-          const tileH = interpolate(grow, [0, 1], [iconH, cardH]);
-          const tx =
-            interpolate(grow, [0, 1], [t.x, 0]) + breathe(frame, 4, 200);
-          const ty = interpolate(grow, [0, 1], [t.y, 0]);
-          const trot = interpolate(grow, [0, 1], [t.rot, 0]);
-          const fop = interpolate(
-            grow,
-            [0.22 + i * 0.05, 0.52 + i * 0.05],
-            [1, 0],
-            { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+          const span = 6;
+          const tg = interpolate(
+            frame,
+            [mStart + i * span, mEnd + i * span],
+            [0, 1],
+            {
+              easing: EASE_GLIDE,
+              extrapolateLeft: "clamp",
+              extrapolateRight: "clamp",
+            }
           );
+          // a small landing bounce on the scale
+          const bounce =
+            1 +
+            0.05 *
+              Math.sin(Math.min(1, Math.max(0, (tg - 0.78) / 0.22)) * Math.PI);
+          const th = interpolate(tg, [0, 1], [iconH, cardH]) * bounce;
+          const tw = th * interpolate(tg, [0, 1], [0.77, 0.8]);
+          const tx = interpolate(tg, [0, 1], [t.x, 0]) + breathe(frame, 4, 200);
+          const ty = interpolate(tg, [0, 1], [t.y, 0]);
+          const trot = interpolate(tg, [0, 1], [t.rot, 0]);
+          // fade-through: source clears over the first third, card arrives over
+          // the rest — eased so the swap reads as one continuous surface.
+          const srcOp = interpolate(tg, [0, 0.34], [1, 0], {
+            easing: EASE_ALPHA,
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+          });
+          const cardOp = interpolate(tg, [0.3, 0.92], [0, 1], {
+            easing: EASE_ALPHA,
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+          });
           return (
             <div
-              key={t.ext}
+              key={t.kind + t.ext}
               style={{
                 left: "50%",
-                opacity: fop,
                 position: "absolute",
                 top: "50%",
-                transform: `translate(-50%, -50%) translate(${tx}px, ${ty}px) perspective(1100px) rotateY(${trot}deg)`,
+                transform: `translate(${tx}px, ${ty}px) perspective(1100px) rotateY(${trot}deg)`,
+                zIndex: i,
               }}
             >
-              <FileIcon accent={t.accent} ext={t.ext} width={tileH * 0.8} />
+              <div
+                style={{
+                  left: 0,
+                  opacity: srcOp,
+                  position: "absolute",
+                  top: 0,
+                  transform: `translate(-50%, -50%) scaleX(${tw / (th * 0.77)})`,
+                }}
+              >
+                {t.kind === "strava" ? (
+                  <StravaChip coords={HERO_ROUTE} width={th * 0.77} />
+                ) : (
+                  <FileIcon accent={t.accent} ext={t.ext} width={th * 0.77} />
+                )}
+              </div>
+              <div
+                style={{
+                  left: 0,
+                  opacity: cardOp,
+                  position: "absolute",
+                  top: 0,
+                  transform: "translate(-50%, -50%)",
+                }}
+              >
+                <CardScaled height={th}>
+                  <ThemeCard
+                    data={SAMPLE_RIDE}
+                    id="altitude"
+                    photoUrl={staticFile(RIDE_PHOTO)}
+                  />
+                </CardScaled>
+              </div>
             </div>
           );
         })}
@@ -652,22 +781,38 @@ const MOOD_BEATS: { label: string; mood: string }[] = [
 
 export function ColorScene({ durationInFrames }: { durationInFrames: number }) {
   const frame = useCurrentFrame();
-  const { height } = useVideoConfig();
+  const { height, width } = useVideoConfig();
   const portrait = usePortrait();
   const step = Math.floor(durationInFrames / MOOD_BEATS.length);
   const active = Math.min(MOOD_BEATS.length - 1, Math.floor(frame / step));
   const local = frame - active * step;
   const beat = MOOD_BEATS[active];
+  const isFirst = active === 0;
   const pop = interpolate(local, [0, 12], [0.94, 1], {
     easing: EASE_GLIDE,
     extrapolateRight: "clamp",
   });
   const swap = interpolate(local, [0, 8], [0, 1], {
+    easing: EASE_ALPHA,
     extrapolateRight: "clamp",
   });
+  // Hand off from the themes card (which sat on the right): the first mood
+  // glides across to its home on the left rather than popping in.
+  const enterX = isFirst
+    ? interpolate(local, [0, 22], [width * 0.4, 0], {
+        easing: EASE_GLIDE,
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      })
+    : 0;
 
   const visual = (
-    <div style={{ opacity: swap, transform: `scale(${pop})` }}>
+    <div
+      style={{
+        opacity: isFirst ? 1 : swap,
+        transform: `translateX(${enterX}px) scale(${pop})`,
+      }}
+    >
       <CardScaled height={height * (portrait ? 0.46 : 0.66)}>
         <ThemeCard
           config={{ mood: beat.mood }}
@@ -881,6 +1026,7 @@ export function SportsScene() {
       label="Ride · Run · Swim · Tri"
       lines={[{ text: "Every" }, { text: "sport.", accent: true }]}
       side="text-left"
+      spread={portrait ? 0 : 0.07}
       visual={visual}
     />
   );

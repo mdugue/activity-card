@@ -117,5 +117,20 @@ export const DUR = {
 /** The app's no-bounce entrance spring (`damping: 200`). */
 export const SETTLE_SPRING = { damping: 200 } as const;
 
+/** A lively entrance with a small overshoot — for the beats that earn a bounce
+ *  (the EFFORT word landing, a card settling). The one place the brand's calm
+ *  motion is allowed a little spring. */
+export const BOUNCE_SPRING = {
+  damping: 12,
+  mass: 0.8,
+  stiffness: 150,
+} as const;
+/** A touch more overshoot, for a single hero accent. */
+export const POP_SPRING = { damping: 9, mass: 0.7, stiffness: 170 } as const;
+
+/** A snappy ease-in-out for cross-fade alpha (Material "fade-through" style):
+ *  outgoing clears over the first third, incoming arrives over the rest. */
+export const EASE_ALPHA = Easing.bezier(0.4, 0, 0.2, 1);
+
 /** Stagger between sibling entrances, in frames (the intro's 0.18s / 0.09s). */
 export const STAGGER = { slices: 5, items: 3 } as const;

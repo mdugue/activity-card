@@ -1,11 +1,7 @@
-import {
-  FONT,
-  INK,
-  PAPER,
-  RADIUS,
-  RUST_BRIGHT,
-  TRACKING,
-} from "../design/tokens";
+import { type Coord, routePath } from "@/lib/chart-helpers";
+import { FONT, INK, PAPER, RUST_BRIGHT } from "../design/tokens";
+
+const STRAVA_ORANGE = "#fc5200";
 
 /**
  * A document icon with a folded corner and a format badge — the "any file
@@ -75,47 +71,68 @@ export function FileIcon({
   );
 }
 
-/** A compact "Strava activity" plate — pairs with the official connect button
- *  elsewhere. Uses the brand orange, the wordmark stays on the official asset. */
-export function SourcePlate({
-  accent = RUST_BRIGHT,
-  label,
-  width = 300,
+/**
+ * A Strava activity chip — an orange tile carrying a stylised "S" and the
+ * activity's route as a sparkline. Same footprint as `FileIcon` so the three
+ * input sources weigh the same in the ingest beat and morph identically.
+ *
+ * Deliberately a generic stylised mark in the app's own typeface (not a
+ * reproduction of Strava's logo / wordmark) — see docs/strava.md §2.
+ */
+export function StravaChip({
+  coords,
+  width = 220,
 }: {
-  accent?: string;
-  label: string;
+  coords: Coord[];
   width?: number;
 }) {
+  const height = width * 1.3;
   return (
-    <div
+    <svg
+      height={height}
       style={{
-        alignItems: "center",
-        backgroundColor: "rgba(247,243,236,0.06)",
-        border: "1px solid rgba(247,243,236,0.16)",
-        borderRadius: RADIUS.md,
-        boxShadow: "0 40px 70px -30px rgba(0,0,0,0.6)",
-        color: PAPER,
-        display: "flex",
-        fontFamily: FONT.mono,
-        fontSize: 22,
-        fontWeight: 600,
-        gap: 18,
-        letterSpacing: TRACKING.micro,
-        padding: "26px 34px",
-        textTransform: "uppercase",
-        width,
+        display: "block",
+        filter: "drop-shadow(0 40px 60px rgba(0,0,0,0.55))",
       }}
+      viewBox="0 0 100 130"
+      width={width}
     >
-      <span
-        style={{
-          backgroundColor: accent,
-          borderRadius: 6,
-          flex: "none",
-          height: 26,
-          width: 26,
-        }}
-      />
-      {label}
-    </div>
+      <title>Strava activity</title>
+      <rect fill={STRAVA_ORANGE} height={118} rx={10} width={88} x={6} y={6} />
+      {/* the "S" roundel */}
+      <circle cx={26} cy={30} fill={PAPER} r={14} />
+      <text
+        fill={STRAVA_ORANGE}
+        fontFamily={FONT.heading}
+        fontSize={22}
+        fontWeight={700}
+        textAnchor="middle"
+        x={26}
+        y={38}
+      >
+        S
+      </text>
+      <text
+        fill={PAPER}
+        fontFamily={FONT.heading}
+        fontSize={15}
+        letterSpacing={1}
+        x={46}
+        y={36}
+      >
+        STRAVA
+      </text>
+      {/* the route, as a sparkline */}
+      <g transform="translate(12, 58)">
+        <path
+          d={routePath(coords, 76, 56, 4)}
+          fill="none"
+          stroke={PAPER}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2.6}
+        />
+      </g>
+    </svg>
   );
 }

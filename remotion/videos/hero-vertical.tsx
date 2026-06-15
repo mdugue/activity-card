@@ -23,8 +23,8 @@ const CAROUSEL = 165;
 const SPORTS = 104;
 const CTA = 140;
 
-const CUT = 14;
-const FADE = 12;
+const CUT = 9;
+const FADE = 7;
 
 export const HERO_VERTICAL_FPS = FPS;
 export const HERO_VERTICAL_WIDTH = PORTRAIT.width;
