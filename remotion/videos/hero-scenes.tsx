@@ -505,7 +505,7 @@ export function IngestRevealScene({
   durationInFrames: number;
 }) {
   const frame = useCurrentFrame();
-  const { height, width } = useVideoConfig();
+  const { fps, height, width } = useVideoConfig();
   const portrait = usePortrait();
 
   const mStart = durationInFrames - 132;
@@ -515,10 +515,11 @@ export function IngestRevealScene({
     extrapolateRight: "clamp",
   });
 
-  // Every source folds into the one card with a Material "container transform":
-  // each tile glides to the centre and scales up while its source cross-fades
-  // (fade-through) into the Altitude card, its box distorting to the card's
-  // aspect, and lands with a small bounce. Staggered so they resolve in turn.
+  // The three sources gather into ONE card — a Material container transform with
+  // a single destination, so there are never ghosted duplicate cards. Each input
+  // glides to the centre and grows to card size, the trio settling into a small
+  // stack; then the one Altitude card resolves in their place with a soft
+  // landing as the sources fade through.
   const iconH = portrait ? 250 : 300;
   const cardH = height * (portrait ? 0.6 : 0.78);
   const tiles: {
@@ -577,6 +578,33 @@ export function IngestRevealScene({
 
   const headlineSize = (portrait ? 0.15 : 0.092) * width;
 
+  const grow = interpolate(frame, [mStart, mEnd], [0, 1], {
+    easing: EASE_GLIDE,
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  // the gathered stack fades through to the single card
+  const sourcesOp = interpolate(grow, [0.6, 0.84], [1, 0], {
+    easing: EASE_ALPHA,
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const cardOp = interpolate(grow, [0.66, 0.94], [0, 1], {
+    easing: EASE_ALPHA,
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  // soft landing bounce on the one card
+  const cardLand = clamp01(
+    spring({
+      config: BOUNCE_SPRING,
+      durationInFrames: 22,
+      fps,
+      frame: frame - (mEnd - 12),
+    })
+  );
+  const cardScale = interpolate(cardLand, [0, 1], [0.94, 1]);
+
   return (
     <VideoFrame>
       <Backdrop grain variant="ink" />
@@ -597,45 +625,20 @@ export function IngestRevealScene({
           </Plane3D>
         )}
 
+        {/* the three sources glide in and settle into a small stack */}
         {tiles.map((t, i) => {
-          const span = 6;
-          const tg = interpolate(
-            frame,
-            [mStart + i * span, mEnd + i * span],
-            [0, 1],
-            {
-              easing: EASE_GLIDE,
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-            }
-          );
-          // a small landing bounce on the scale
-          const bounce =
-            1 +
-            0.05 *
-              Math.sin(Math.min(1, Math.max(0, (tg - 0.78) / 0.22)) * Math.PI);
-          const th = interpolate(tg, [0, 1], [iconH, cardH]) * bounce;
-          const tw = th * interpolate(tg, [0, 1], [0.77, 0.8]);
-          const tx = interpolate(tg, [0, 1], [t.x, 0]) + breathe(frame, 4, 200);
-          const ty = interpolate(tg, [0, 1], [t.y, 0]);
-          const trot = interpolate(tg, [0, 1], [t.rot, 0]);
-          // fade-through: source clears over the first third, card arrives over
-          // the rest — eased so the swap reads as one continuous surface.
-          const srcOp = interpolate(tg, [0, 0.34], [1, 0], {
-            easing: EASE_ALPHA,
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-          });
-          const cardOp = interpolate(tg, [0.3, 0.92], [0, 1], {
-            easing: EASE_ALPHA,
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-          });
+          const th = interpolate(grow, [0, 1], [iconH, cardH]);
+          const tx =
+            interpolate(grow, [0, 1], [t.x, 0]) + breathe(frame, 4, 200);
+          const ty = interpolate(grow, [0, 1], [t.y, 0]);
+          // settle from their scattered angles into a tidy fanned stack
+          const trot = interpolate(grow, [0, 1], [t.rot, (i - 1) * 4]);
           return (
             <div
               key={t.kind + t.ext}
               style={{
                 left: "50%",
+                opacity: sourcesOp,
                 position: "absolute",
                 top: "50%",
                 transform: `translate(${tx}px, ${ty}px) perspective(1100px) rotateY(${trot}deg)`,
@@ -645,38 +648,40 @@ export function IngestRevealScene({
               <div
                 style={{
                   left: 0,
-                  opacity: srcOp,
-                  position: "absolute",
-                  top: 0,
-                  transform: `translate(-50%, -50%) scaleX(${tw / (th * 0.77)})`,
-                }}
-              >
-                {t.kind === "strava" ? (
-                  <StravaChip coords={HERO_ROUTE} width={th * 0.77} />
-                ) : (
-                  <FileIcon accent={t.accent} ext={t.ext} width={th * 0.77} />
-                )}
-              </div>
-              <div
-                style={{
-                  left: 0,
-                  opacity: cardOp,
                   position: "absolute",
                   top: 0,
                   transform: "translate(-50%, -50%)",
                 }}
               >
-                <CardScaled height={th}>
-                  <ThemeCard
-                    data={SAMPLE_RIDE}
-                    id="altitude"
-                    photoUrl={staticFile(RIDE_PHOTO)}
-                  />
-                </CardScaled>
+                {t.kind === "strava" ? (
+                  <StravaChip coords={HERO_ROUTE} width={th * 0.78} />
+                ) : (
+                  <FileIcon accent={t.accent} ext={t.ext} width={th * 0.78} />
+                )}
               </div>
             </div>
           );
         })}
+
+        {/* the ONE destination card, resolving in their place */}
+        <div
+          style={{
+            left: "50%",
+            opacity: cardOp,
+            position: "absolute",
+            top: "50%",
+            transform: `translate(-50%, -50%) translate(${breathe(frame, 4, 200)}px, 0) scale(${cardScale})`,
+            zIndex: 5,
+          }}
+        >
+          <CardScaled height={cardH}>
+            <ThemeCard
+              data={SAMPLE_RIDE}
+              id="altitude"
+              photoUrl={staticFile(RIDE_PHOTO)}
+            />
+          </CardScaled>
+        </div>
       </Stage3D>
     </VideoFrame>
   );
@@ -787,13 +792,13 @@ export function ColorScene({ durationInFrames }: { durationInFrames: number }) {
   const active = Math.min(MOOD_BEATS.length - 1, Math.floor(frame / step));
   const local = frame - active * step;
   const beat = MOOD_BEATS[active];
+  const prev = active > 0 ? MOOD_BEATS[active - 1] : null;
   const isFirst = active === 0;
-  const pop = interpolate(local, [0, 12], [0.94, 1], {
-    easing: EASE_GLIDE,
-    extrapolateRight: "clamp",
-  });
-  const swap = interpolate(local, [0, 8], [0, 1], {
+  // Cross-blend one mood into the next — same theme, same layout, only the
+  // colour dissolves — so it reads as recolouring rather than card-swapping.
+  const blend = interpolate(local, [0, 16], [0, 1], {
     easing: EASE_ALPHA,
+    extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
   // Hand off from the themes card (which sat on the right): the first mood
@@ -805,21 +810,39 @@ export function ColorScene({ durationInFrames }: { durationInFrames: number }) {
         extrapolateRight: "clamp",
       })
     : 0;
+  const cardHeight = height * (portrait ? 0.46 : 0.66);
 
   const visual = (
     <div
       style={{
-        opacity: isFirst ? 1 : swap,
-        transform: `translateX(${enterX}px) scale(${pop})`,
+        height: cardHeight,
+        position: "relative",
+        transform: `translateX(${enterX}px)`,
+        width: cardHeight * 0.8,
       }}
     >
-      <CardScaled height={height * (portrait ? 0.46 : 0.66)}>
-        <ThemeCard
-          config={{ mood: beat.mood }}
-          data={SAMPLE_RIDE}
-          id="strata"
-        />
-      </CardScaled>
+      {prev && blend < 0.999 ? (
+        <div style={{ inset: 0, position: "absolute" }}>
+          <CardScaled height={cardHeight}>
+            <ThemeCard
+              config={{ mood: prev.mood }}
+              data={SAMPLE_RIDE}
+              id="strata"
+            />
+          </CardScaled>
+        </div>
+      ) : null}
+      <div
+        style={{ inset: 0, opacity: isFirst ? 1 : blend, position: "absolute" }}
+      >
+        <CardScaled height={cardHeight}>
+          <ThemeCard
+            config={{ mood: beat.mood }}
+            data={SAMPLE_RIDE}
+            id="strata"
+          />
+        </CardScaled>
+      </div>
     </div>
   );
 
@@ -848,23 +871,36 @@ export function CarouselScene({
   const theme = CAROUSEL_THEMES.exposure;
   const slideCount = theme.panels.length;
 
-  const hold = 40;
-  const reveal = interpolate(frame, [hold, durationInFrames - 10], [0, 1], {
+  // Three phases driven off one timeline: hold on a single image, uncrop (zoom
+  // out so the seamless photo widens into the full strip), then ease the three
+  // panels apart so it's unmistakable they're separate slides.
+  const hold = 36;
+  const sepStart = durationInFrames - 52;
+  const reveal = interpolate(frame, [hold, sepStart], [0, 1], {
     easing: EASE_GLIDE,
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
+  const separate = interpolate(
+    frame,
+    [sepStart, durationInFrames - 6],
+    [0, 1],
+    {
+      easing: EASE_GLIDE,
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    }
+  );
 
-  // Scale: zoomed so one slide nearly fills the frame → pulled back so the full
-  // strip fits the width. The strip never moves; the crop window just widens.
-  const startScale = (height * (portrait ? 0.58 : 0.82)) / 1350;
-  const endScale = (width * (portrait ? 0.92 : 0.96)) / (slideCount * 1080);
+  // Scale: one slide nearly fills the frame → pulled back so the whole strip
+  // fits (with room for the gaps that open as the panels separate).
+  const startScale = (height * (portrait ? 0.56 : 0.82)) / 1350;
+  const endScale = (width * (portrait ? 0.9 : 0.84)) / (slideCount * 1080);
   const scale = interpolate(reveal, [0, 1], [startScale, endScale]);
-  const stripDispW = slideCount * 1080 * scale;
-  const stripDispH = 1350 * scale;
-  const slideDispW = 1080 * scale;
-  // crop window grows from one slide to the whole strip
-  const cropW = interpolate(reveal, [0, 1], [slideDispW, stripDispW]);
+  const panelW = 1080 * scale;
+  const panelH = 1350 * scale;
+  const gap = interpolate(separate, [0, 1], [0, width * 0.022]);
+  const radius = interpolate(separate, [0, 1], [0, 8]);
 
   return (
     <VideoFrame>
@@ -874,69 +910,45 @@ export function CarouselScene({
         style={{
           alignItems: "center",
           justifyContent: "center",
-          paddingBottom: height * (portrait ? 0.16 : 0.16),
+          paddingBottom: height * 0.14,
         }}
       >
-        <div
-          style={{
-            boxShadow: "0 60px 120px -40px rgba(0,0,0,0.65)",
-            height: stripDispH,
-            overflow: "hidden",
-            position: "relative",
-            width: cropW,
-          }}
-        >
-          {/* the full strip, centred in the crop window — widening the window
-              uncrops the same continuous photo into a carousel */}
-          <div
-            style={{
-              height: stripDispH,
-              left: "50%",
-              position: "absolute",
-              top: 0,
-              transform: "translateX(-50%)",
-              width: stripDispW,
-            }}
-          >
+        {/* the deck, rendered once per slide and clipped to that slide — at
+            gap 0 the panels abut into one continuous photo; opening the gap
+            separates the same image into discrete slides */}
+        <div style={{ alignItems: "center", display: "flex", gap }}>
+          {Array.from({ length: slideCount }, (_, i) => (
             <div
+              key={SEAM_KEYS[i]}
               style={{
-                height: 1350,
-                transform: `scale(${scale})`,
-                transformOrigin: "top left",
-                width: slideCount * 1080,
+                borderRadius: radius,
+                boxShadow: "0 60px 120px -40px rgba(0,0,0,0.65)",
+                height: panelH,
+                overflow: "hidden",
+                position: "relative",
+                width: panelW,
               }}
             >
-              <CarouselDeck
-                data={SAMPLE_RIDE}
-                {...carouselArgs("exposure")}
-                imageSize={DUNES_SIZE}
-                photoUrl={staticFile(DUNES_PHOTO)}
-              />
+              <div
+                style={{
+                  height: 1350,
+                  left: -i * panelW,
+                  position: "absolute",
+                  top: 0,
+                  transform: `scale(${scale})`,
+                  transformOrigin: "top left",
+                  width: slideCount * 1080,
+                }}
+              >
+                <CarouselDeck
+                  data={SAMPLE_RIDE}
+                  {...carouselArgs("exposure")}
+                  imageSize={DUNES_SIZE}
+                  photoUrl={staticFile(DUNES_PHOTO)}
+                />
+              </div>
             </div>
-          </div>
-          {/* seam ticks once the carousel is clearly revealed */}
-          {reveal > 0.55
-            ? Array.from({ length: slideCount - 1 }, (_, i) => {
-                const leftPx = (i + 1) * slideDispW - (stripDispW - cropW) / 2;
-                return (
-                  <div
-                    key={SEAM_KEYS[i]}
-                    style={{
-                      backgroundColor: "rgba(247,243,236,0.4)",
-                      bottom: 0,
-                      left: leftPx,
-                      opacity: interpolate(reveal, [0.55, 0.7], [0, 1], {
-                        extrapolateLeft: "clamp",
-                        extrapolateRight: "clamp",
-                      }),
-                      position: "absolute",
-                      top: 0,
-                      width: 2,
-                    }}
-                  />
-                );
-              })
-            : null}
+          ))}
         </div>
       </AbsoluteFill>
 
