@@ -432,6 +432,8 @@ export const pathTheme = defineTheme({
   tagline: "route is the hero",
   uses: USES,
   colors: { default: { primary: DEFAULT_ACCENT }, userAdjustable: true },
+  // Poster: stays opaque; the frame mattes its paper-white bg into the bands.
+  frame: { backdrop: "#ffffff" },
   photo: { defaultOn: true },
   Component: ThemePath,
 });

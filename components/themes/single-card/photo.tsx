@@ -86,7 +86,12 @@ export function ThemePhoto({
   photoUrl,
   colors,
   imageTransform,
+  surface = "opaque",
 }: ThemePhotoProps) {
+  // Transparent surface: the Hybrid frame paints the full-bleed photo behind
+  // this content, so we drop our own photo layer and placeholder fill (the
+  // neutral vignette + masthead/stat overlays still render for legibility).
+  const transparent = surface === "transparent";
   const sport = data.sport;
   const isPool = sport === "swim";
   const multi = isMultiActivity(data);
@@ -143,17 +148,17 @@ export function ThemePhoto({
         ...cssVars,
         width: 1080,
         height: 1350,
-        background: placeholderBg,
+        background: transparent ? "transparent" : placeholderBg,
         fontFamily: "var(--font-dm-sans), sans-serif",
         color: "var(--headline)",
         position: "relative",
         overflow: "hidden",
       }}
     >
-      {photoUrl ? (
+      {photoUrl && !transparent ? (
         <PhotoLayer imageTransform={imageTransform} photoUrl={photoUrl} />
       ) : null}
-      {!photoUrl && (
+      {!(photoUrl || transparent) && (
         <svg
           aria-hidden="true"
           height="100%"
@@ -414,6 +419,12 @@ export const photoTheme = defineTheme({
     default: { primary: "#c89d6e", onPrimary: "#0a0a0a" },
     defaultChoice: { kind: "photo", variant: "vibrant" },
     userAdjustable: true,
+  },
+  // Photo-led: the frame bleeds the photo full-frame; a deep neutral gradient
+  // backs the letterbox bands when no photo is set.
+  frame: {
+    backdrop: "linear-gradient(180deg, #2c3848 0%, #11151b 100%)",
+    photoBleed: true,
   },
   photo: { defaultOn: true },
   Component: ThemePhoto,

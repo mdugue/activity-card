@@ -177,7 +177,7 @@ export function isExportFormatId(id: string): id is ExportFormatId {
 }
 
 /** The legacy/master 4:5 canvas — rendered without the Hybrid frame. */
-export function isDefaultFormat(id: ExportFormatId): boolean {
+export function isDefaultFormat(id: string): boolean {
   return id === DEFAULT_FORMAT_ID;
 }
 
