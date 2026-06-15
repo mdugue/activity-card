@@ -294,20 +294,13 @@ export function ThemeStrata({
   photoUrl,
   imageTransform,
   config = DEFAULT_STRATA_CONFIG,
-  layer = "all",
 }: ThemeStrataProps) {
-  // Poster: contained card (see ThemePath) — nothing in the bleed layer.
-  const framed = layer !== "all";
   const tokens = STRATA_MOODS[config.mood];
   const stats = statRow(data);
   const statText = tokens.inkStat ? tokens.text : "#fff";
   const overPhoto = Boolean(photoUrl);
   const fx = usePhotoEffects();
   const imageSize = usePhotoImageSize();
-  // Hooks must run unconditionally, so the bleed-layer skip comes after them.
-  if (layer === "back") {
-    return null;
-  }
   const metaParts = [
     (data.location || "").toUpperCase(),
     formatDateUpper(data.date),
@@ -318,7 +311,7 @@ export function ThemeStrata({
       style={{
         width: 1080,
         height: 1350,
-        background: framed ? "transparent" : tokens.bg,
+        background: tokens.bg,
         color: tokens.text,
         fontFamily: MONO,
         position: "relative",
@@ -335,7 +328,7 @@ export function ThemeStrata({
       {/* Optional background photo + a mood-tinted legibility scrim. Both sit at
           z-index -1 (above the solid mood background, below all content) so the
           woven field and type ride on top without rewrapping the layout. */}
-      {photoUrl && !framed ? (
+      {photoUrl ? (
         <>
           <div
             aria-hidden

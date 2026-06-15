@@ -6,10 +6,10 @@ import {
   EXPORT_FORMATS,
   type ExportFormatId,
   FORMAT_ORDER,
+  frameFit,
   getFormat,
   isDefaultFormat,
   isExportFormatId,
-  placeContent,
 } from "@/lib/export-formats";
 
 const ALL_IDS = Object.keys(EXPORT_FORMATS) as ExportFormatId[];
@@ -61,50 +61,41 @@ describe("contentBox", () => {
   });
 });
 
-describe("placeContent", () => {
-  test("default 4:5 fills the canvas (scale ~1, no offset of note)", () => {
-    // Feed has small symmetric insets → content scaled to the inset box.
-    const f = getFormat("instagram-feed");
-    const p = placeContent(f);
-    // box is 984×1254; content 1080×1350 fits by width (scale 984/1080),
-    // leaving a little vertical slack → x sits at the inset, y is centred.
-    expect(p.scale).toBeCloseTo((1080 - 96) / 1080, 5);
-    expect(p.w).toBeCloseTo(984, 3);
-    expect(p.x).toBeCloseTo(48, 3);
-    expect(p.y).toBeGreaterThan(48);
+describe("frameFit", () => {
+  test("9:16 keeps the intact 4:5 card at full width (scale 1), centred", () => {
+    // 1080-wide target → the 1080×1350 master fills the width unscaled and the
+    // photo extends top/bottom. This is the exact Feed composition preserved.
+    // (whatsapp-status uses 'center' placement.)
+    const f = getFormat("whatsapp-status");
+    const p = frameFit(f);
+    expect(p.scale).toBeCloseTo(1, 6);
+    expect(p.w).toBeCloseTo(1080, 3);
+    expect(p.x).toBeCloseTo(0, 3);
+    expect(p.y).toBeCloseTo((1920 - 1350) / 2, 3);
   });
 
-  test("story 'lower' anchors the block toward the bottom of the safe box", () => {
-    const f = getFormat("instagram-story");
-    const p = placeContent(f);
-    const box = contentBox(f);
-    // bottom edge of the content sits at the bottom of the safe box
-    expect(p.y + p.h).toBeCloseTo(box.y + box.h, 3);
+  test("16:9 fits by height; the card never overflows, leaving side bands", () => {
+    const f = getFormat("x-landscape");
+    const p = frameFit(f);
+    expect(p.scale).toBeCloseTo(900 / 1350, 6);
+    expect(p.h).toBeCloseTo(900, 3);
+    expect(p.x).toBeGreaterThan(0); // photo bleeds the horizontal leftover
+    expect(p.y).toBeCloseTo(0, 3);
   });
 
-  test("tiktok 'upper' anchors the block to the top of the safe box", () => {
-    const f = getFormat("tiktok");
-    const p = placeContent(f);
-    expect(p.y).toBeCloseTo(f.safe.top, 3);
+  test("placement anchors on the leftover axis (upper/lower/center)", () => {
+    const lower = frameFit(getFormat("instagram-story")); // 'lower'
+    expect(lower.y).toBeCloseTo(1920 - 1350, 3);
+    const upper = frameFit(getFormat("tiktok")); // 'upper'
+    expect(upper.y).toBeCloseTo(0, 3);
   });
 
-  test("strava centres the block vertically and keeps it off the side edges", () => {
-    const f = getFormat("strava");
-    const p = placeContent(f);
-    const box = contentBox(f);
-    expect(p.y - box.y).toBeCloseTo(box.y + box.h - (p.y + p.h), 1);
-    // never touches the literal canvas edge
-    expect(p.x).toBeGreaterThanOrEqual(f.safe.left);
-    expect(p.x + p.w).toBeLessThanOrEqual(f.width - f.safe.right + 0.01);
-  });
-
-  test("content never overflows the safe box", () => {
+  test("contains the full frame without cropping for every format", () => {
     for (const id of ALL_IDS) {
       const f = getFormat(id);
-      const p = placeContent(f);
-      const box = contentBox(f);
-      expect(p.w).toBeLessThanOrEqual(box.w + 0.01);
-      expect(p.h).toBeLessThanOrEqual(box.h + 0.01);
+      const p = frameFit(f);
+      expect(p.w).toBeLessThanOrEqual(f.width + 0.01);
+      expect(p.h).toBeLessThanOrEqual(f.height + 0.01);
       expect(p.scale).toBeGreaterThan(0);
     }
   });

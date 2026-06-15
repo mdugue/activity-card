@@ -198,50 +198,30 @@ export function contentBox(format: ExportFormat): {
 }
 
 /**
- * Cover-fit the master block to a format: scaled to FILL the whole canvas
- * (cropping the overflow), centred. The Hybrid frame uses this for the
- * full-bleed "back" layer — scrims and route/elevation lines run off every
- * edge rather than being boxed into the safe zone.
+ * Fit the intact master composition (default 1080×1350) into a format by
+ * CONTAINing the FULL target frame — uniform scale, no crop — anchored on the
+ * leftover axis by `placement`. The background bleeds full-frame behind it, so
+ * the leftover axis shows the continued photo, not whitespace. This keeps the
+ * 4:5 Feed composition intact across every format (9:16 = the exact Feed card +
+ * photo extending top/bottom; 1:1 / 16:9 = the Feed uniformly scaled).
  */
-export function coverFit(
+export function frameFit(
   format: ExportFormat,
   contentW = 1080,
   contentH = 1350
 ): { h: number; scale: number; w: number; x: number; y: number } {
-  const scale = Math.max(format.width / contentW, format.height / contentH);
+  const scale = Math.min(format.width / contentW, format.height / contentH);
   const w = contentW * scale;
   const h = contentH * scale;
-  return {
-    scale,
-    w,
-    h,
-    x: (format.width - w) / 2,
-    y: (format.height - h) / 2,
-  };
-}
-
-/**
- * Contain-fit the readable "front" layer inside a format's safe box, preserving
- * aspect and honouring the placement anchor. Fills as much of the safe box as
- * the aspect allows — "fill the safe zone", not "a tiny thing in the middle".
- */
-export function placeContent(
-  format: ExportFormat,
-  contentW = 1080,
-  contentH = 1350
-): { h: number; scale: number; w: number; x: number; y: number } {
-  const box = contentBox(format);
-  const scale = Math.min(box.w / contentW, box.h / contentH);
-  const w = contentW * scale;
-  const h = contentH * scale;
-  const x = box.x + (box.w - w) / 2;
+  const x = (format.width - w) / 2;
+  const slack = format.height - h;
   let y: number;
   if (format.placement === "upper") {
-    y = box.y;
+    y = 0;
   } else if (format.placement === "lower") {
-    y = box.y + (box.h - h);
+    y = slack;
   } else {
-    y = box.y + (box.h - h) / 2;
+    y = slack / 2;
   }
-  return { scale, x, y, w, h };
+  return { scale, w, h, x, y };
 }

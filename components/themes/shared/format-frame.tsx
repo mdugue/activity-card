@@ -1,27 +1,23 @@
-// The Hybrid frame — retargets a single-card theme (authored at 1080×1350)
-// into another aspect ratio without re-laying-out the theme.
+// The Hybrid frame — retargets a single-card theme (authored at 1080×1350) into
+// another aspect ratio WITHOUT taking the composition apart. The Instagram Feed
+// (4:5) master is the benchmark: every element relationship (Altitude's
+// number-sliced-by-the-curve, the photo themes' top/bottom protection, spacing)
+// is preserved because the theme renders intact and is reframed as one unit.
 //
-// It renders the theme TWICE, element-aware:
-//   • "back"  — cover-scaled to FILL the frame, so the theme's full-bleed
-//     elements (scrims, route/elevation lines, decorative washes) run off every
-//     edge instead of being boxed.
-//   • "front" — contain-scaled into the platform SAFE ZONE (`placeContent`), so
-//     the readable elements (headline, hero number, stats, date) stay clear of
-//     platform UI and are never cropped.
-// A soft, placement-aware scrim sits between them for photo-led themes, so text
-// stays legible without the hard-edged box the single-pass version produced.
+//   • one continuous full-bleed background — the photo cover-fills the target
+//     (a single layer, so there's no seam), or the theme's backdrop colour;
+//   • the INTACT theme, contained into the FULL frame (`frameFit`, anchored by
+//     `placement`) — so 9:16 is the exact Feed card with the photo extending
+//     top/bottom, and 1:1 / 16:9 are the Feed composition uniformly scaled with
+//     the photo bleeding the leftover axis.
 //
 // Pure inline CSS so html-to-image captures it identically to the preview.
 
 import type { ReactNode } from "react";
 import type { ColorScheme } from "@/lib/colors";
-import {
-  coverFit,
-  type ExportFormat,
-  placeContent,
-} from "@/lib/export-formats";
+import { type ExportFormat, frameFit } from "@/lib/export-formats";
 import type { ImageTransform } from "@/lib/image-transform";
-import type { ThemeFramePolicy, ThemeLayer } from "@/lib/theme-contract";
+import type { ThemeFramePolicy } from "@/lib/theme-contract";
 import { CoverPhoto } from "./cover-photo";
 import { usePhotoEffects, usePhotoImageSize } from "./photo-fx";
 
@@ -29,6 +25,8 @@ const CONTENT_W = 1080;
 const CONTENT_H = 1350;
 
 interface FormatFrameProps {
+  /** the INTACT theme render (photo-led themes pass surface="transparent") */
+  children: ReactNode;
   colors?: ColorScheme;
   format: ExportFormat;
   /** the active theme's frame policy (backdrop colour + photo-bleed flag) */
@@ -36,32 +34,17 @@ interface FormatFrameProps {
   imageTransform?: ImageTransform | null;
   /** null when the backdrop toggle is off — then no full-bleed photo is drawn */
   photoUrl?: string | null;
-  /** render the theme for a given layer (called for "back" and "front") */
-  renderLayer: (layer: ThemeLayer) => ReactNode;
-}
-
-/** A soft full-frame scrim that darkens toward where the content sits, so text
- *  reads over the bled photo without a hard edge. */
-function softScrim(format: ExportFormat): string {
-  if (format.placement === "upper") {
-    return "linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.12) 38%, rgba(0,0,0,0) 62%)";
-  }
-  if (format.placement === "lower") {
-    return "linear-gradient(0deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.14) 40%, rgba(0,0,0,0) 66%)";
-  }
-  return "radial-gradient(120% 75% at 50% 50%, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.12) 55%, rgba(0,0,0,0) 100%)";
 }
 
 export function FormatFrame({
+  children,
   colors,
   format,
   frame,
   imageTransform,
   photoUrl,
-  renderLayer,
 }: FormatFrameProps) {
-  const place = placeContent(format, CONTENT_W, CONTENT_H);
-  const cover = coverFit(format, CONTENT_W, CONTENT_H);
+  const fit = frameFit(format, CONTENT_W, CONTENT_H);
   const effects = usePhotoEffects();
   const imageSize = usePhotoImageSize();
 
@@ -93,46 +76,34 @@ export function FormatFrame({
         />
       ) : null}
 
-      {/* full-bleed BACK layer — scrims/route/elevation run off every edge */}
-      <div
-        style={{
-          position: "absolute",
-          left: cover.x,
-          top: cover.y,
-          width: CONTENT_W,
-          height: CONTENT_H,
-          transform: `scale(${cover.scale})`,
-          transformOrigin: "top left",
-        }}
-      >
-        {renderLayer("back")}
-      </div>
-
-      {/* soft, placement-aware legibility scrim (photo-led themes only) */}
-      {frame?.photoBleed ? (
+      {/* Gentle, uniform darken over the bled photo so the leftover bands don't
+          jump in brightness against the card's own scrim edge. Subtle and
+          additive — it does NOT replace the theme's own protection, and the 4:5
+          master never goes through the frame so it's unaffected. */}
+      {bleedPhoto ? (
         <div
           aria-hidden
           style={{
             position: "absolute",
             inset: 0,
-            background: softScrim(format),
+            background: "rgba(0,0,0,0.1)",
           }}
         />
       ) : null}
 
-      {/* readable FRONT layer — placed inside the platform safe zone */}
+      {/* The INTACT composition, contained into the full frame. */}
       <div
         style={{
           position: "absolute",
-          left: place.x,
-          top: place.y,
+          left: fit.x,
+          top: fit.y,
           width: CONTENT_W,
           height: CONTENT_H,
-          transform: `scale(${place.scale})`,
+          transform: `scale(${fit.scale})`,
           transformOrigin: "top left",
         }}
       >
-        {renderLayer("front")}
+        {children}
       </div>
     </div>
   );

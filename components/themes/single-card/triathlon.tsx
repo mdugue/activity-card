@@ -91,16 +91,9 @@ export function ThemeTriathlon({
   data,
   photoUrl,
   imageTransform,
-  layer = "all",
 }: ThemeProps<(typeof USES)[number]>) {
-  // Poster: contained card (see ThemePath) — nothing in the bleed layer.
-  const framed = layer !== "all";
   const sports = data.segments || [];
   const transitions = data.transitions || [];
-
-  if (layer === "back") {
-    return null;
-  }
 
   if (data.sport !== "triathlon" || sports.length === 0) {
     return (
@@ -108,7 +101,7 @@ export function ThemeTriathlon({
         style={{
           width: 1080,
           height: 1350,
-          background: framed ? "transparent" : PAPER,
+          background: PAPER,
           color: INK,
           fontFamily: "var(--font-ibm-plex-mono), monospace",
           padding: "120px 90px",
@@ -172,7 +165,7 @@ export function ThemeTriathlon({
       style={{
         width: 1080,
         height: 1350,
-        background: framed ? "transparent" : PAPER,
+        background: PAPER,
         color: INK,
         fontFamily: "var(--font-ibm-plex-mono), monospace",
         position: "relative",
@@ -185,7 +178,7 @@ export function ThemeTriathlon({
         flexDirection: "column",
       }}
     >
-      {photoUrl && !framed ? (
+      {photoUrl ? (
         <PhotoUnderlay imageTransform={imageTransform} photoUrl={photoUrl} />
       ) : null}
       <div

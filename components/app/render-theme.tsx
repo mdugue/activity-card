@@ -59,10 +59,22 @@ export function RenderTheme({
 
   // The 4:5 master (or no format) renders natively — pixel-identical to legacy.
   const framed = format !== undefined && !isDefaultFormat(format.id);
-  // Photo-led themes drop their own background so the frame's full-bleed photo
-  // shows through; poster themes stay opaque and the frame mattes their colour.
+  // Photo-led themes drop their OWN photo so the frame's single full-bleed photo
+  // shows through (no seam); they keep their scrim + every element intact. The
+  // frame reframes that intact composition as one unit.
   const surface =
     framed && descriptor.frame?.photoBleed ? "transparent" : "opaque";
+
+  const component = (
+    <Component
+      colors={resolvedColors}
+      config={config}
+      data={themeData}
+      imageTransform={imageTransform}
+      photoUrl={photo}
+      surface={surface}
+    />
+  );
 
   return (
     <PhotoFxProvider value={{ effects: photoEffects, imageSize }}>
@@ -73,18 +85,9 @@ export function RenderTheme({
           frame={descriptor.frame}
           imageTransform={imageTransform}
           photoUrl={photo}
-          renderLayer={(layer) => (
-            <Component
-              colors={resolvedColors}
-              config={config}
-              data={themeData}
-              imageTransform={imageTransform}
-              layer={layer}
-              photoUrl={photo}
-              surface={surface}
-            />
-          )}
-        />
+        >
+          {component}
+        </FormatFrame>
       ) : (
         <Component
           colors={resolvedColors}
