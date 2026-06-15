@@ -49,9 +49,10 @@ interface ExportSheetProps {
 }
 
 // Each tile takes the format's TRUE shape (fit into this bounding box), so
-// there's no letterbox whitespace inside the tile.
-const TILE_MAX_W = 200;
-const TILE_MAX_H = 280;
+// there's no letterbox whitespace inside the tile. Kept small so a few fit per
+// row on mobile (and the grid stays dense on desktop).
+const TILE_MAX_W = 150;
+const TILE_MAX_H = 210;
 
 function fileFor(data: ActivityData, format: ExportFormat): string {
   return `effort_${data.sport}_${effortDateSlug(data.date)}_${format.id}.png`;
@@ -114,26 +115,26 @@ export function ExportSheet(props: ExportSheetProps) {
   };
 
   return (
-    <div className="relative flex flex-1 flex-col items-center px-6 py-10">
+    <div className="relative flex flex-1 flex-col items-center px-4 py-6 sm:px-6 sm:py-10">
       <RouteAura
         colors={colors}
         coords={props.routeCoordinates ?? data.routeCoordinates}
       />
 
       <div className="relative w-full max-w-5xl">
-        <div className="font-mono font-semibold text-xs tracking-[0.32em] opacity-55">
+        <div className="font-mono font-semibold text-[11px] tracking-[0.32em] opacity-55">
           READY TO SHARE
         </div>
-        <h2 className="mt-3 font-heading text-5xl uppercase leading-[0.9] tracking-tight sm:text-6xl">
+        <h2 className="mt-1.5 font-heading text-3xl uppercase leading-[0.92] tracking-tight sm:mt-3 sm:text-5xl lg:text-6xl">
           Pick a <span className="text-primary">format.</span>
         </h2>
-        <p className="mt-4 max-w-xl text-sm leading-relaxed opacity-70">
+        <p className="mt-2 max-w-xl text-xs leading-relaxed opacity-70 sm:mt-4 sm:text-sm">
           Each card is optimised for its platform — aspect ratio and safe zones
           baked in. Download one, or grab the whole set.
         </p>
 
-        <div className="mt-6 flex flex-wrap items-center gap-4">
-          <Button disabled={busy !== null} onClick={handleAll} size="lg">
+        <div className="mt-4 flex flex-wrap items-center gap-2 sm:mt-6 sm:gap-3">
+          <Button disabled={busy !== null} onClick={handleAll}>
             <DownloadSimpleIcon
               aria-hidden
               className="size-4"
@@ -141,32 +142,37 @@ export function ExportSheet(props: ExportSheetProps) {
             />
             {busy === "all" ? "Exporting…" : "Download all"}
           </Button>
-          <Button onClick={onKeepEditing} size="lg" variant="outline">
+          <Button onClick={onKeepEditing} size="sm" variant="outline">
             <ArrowLeftIcon aria-hidden className="size-4" weight="duotone" />
             Keep editing
           </Button>
-          <Button onClick={onNew} size="lg" variant="ghost">
+          <Button onClick={onNew} size="sm" variant="ghost">
             <PlusIcon aria-hidden className="size-4" weight="duotone" />
             New
           </Button>
-          <div className="ml-auto w-full max-w-[260px] space-y-2 rounded-md border border-foreground/15 px-3 py-2">
-            <ToggleRow
-              checked={safeZones}
-              label="Show safe zones"
-              onCheckedChange={setSafeZones}
-            />
-            <ToggleRow
-              checked={gps}
-              label="Embed location (GPS)"
-              onCheckedChange={setGps}
-            />
-            <p className="caption-micro opacity-60">
-              Attribution is always written. Most apps strip metadata on upload.
-            </p>
-          </div>
         </div>
 
-        <div className="mt-8 flex flex-wrap gap-5">
+        <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-md border border-foreground/12 px-3 py-2">
+          <div className="min-w-[150px] flex-1 sm:flex-none">
+            <ToggleRow
+              checked={safeZones}
+              label="Safe zones"
+              onCheckedChange={setSafeZones}
+            />
+          </div>
+          <div className="min-w-[150px] flex-1 sm:flex-none">
+            <ToggleRow
+              checked={gps}
+              label="Location (GPS)"
+              onCheckedChange={setGps}
+            />
+          </div>
+          <p className="caption-micro w-full opacity-55 lg:max-w-xs">
+            Attribution is always written; most apps strip metadata on upload.
+          </p>
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-3 sm:mt-7 sm:gap-5">
           {FORMAT_ORDER.map((id) => (
             <FormatTile
               busy={busy}

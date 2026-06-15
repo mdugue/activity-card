@@ -1,6 +1,7 @@
 "use client";
 
 import { ShareNetworkIcon } from "@phosphor-icons/react";
+import { useState } from "react";
 import { SINGLE_CARD_THEMES, THEME_ORDER } from "@/components/themes/index";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { ExportFormat, ExportFormatId } from "@/lib/export-formats";
@@ -31,10 +32,17 @@ export function EditState({
   onExport,
 }: EditStateProps) {
   const { data, visibility, color, config, photo } = session;
+  // The safe-zone guide is an editor-only preview overlay; the FORMAT tool
+  // toggles it and the preview reads it.
+  const [showSafe, setShowSafe] = useState(false);
 
   const tools = useActivityTools({
     mode: "single",
     session,
+    format,
+    onFormatChange,
+    showSafe,
+    onShowSafeChange: setShowSafe,
     themeControl: (
       <ThemeRail
         labels={SINGLE_CARD_THEMES}
@@ -64,11 +72,11 @@ export function EditState({
             data={data}
             format={format}
             imageTransform={photo.transform}
-            onFormatChange={onFormatChange}
             onImageTransformChange={photo.onTransformChange}
             photoBackdropEnabled={visibility.photoBackdrop}
             photoEffects={photo.effects}
             photoUrl={photo.url}
+            showSafe={showSafe}
             theme={theme}
           />
         }

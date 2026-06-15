@@ -602,9 +602,11 @@ export default function Home() {
         state !== "edit" && state !== "empty" && "min-h-screen"
       )}
     >
-      {/* The empty-state landing renders its own wordmark header per section;
-          every other non-editor screen gets the shared top header. */}
-      {state === "edit" || state === "empty" ? null : (
+      {/* The empty-state landing renders its own wordmark header per section,
+          the editor has its own top bar, and the export sheet carries its own
+          heading — so the shared (absolute) header would overlap there. Show it
+          only on the remaining non-editor screens (e.g. the Strava picker). */}
+      {state === "edit" || state === "empty" || state === "download" ? null : (
         <Header date={data?.date} />
       )}
       {state === "empty" ? (
