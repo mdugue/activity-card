@@ -33,7 +33,7 @@ If a decision is in SPEC.md, follow it. If you want to deviate, raise it and ask
 - Tailwind v4
 - `html-to-image` for DOM-to-PNG
 - `fast-xml-parser` for GPX, `fit-file-parser` for .fit
-- Deployed as a static site (Cloudflare Pages or Vercel)
+- Deployed on Vercel (Node runtime — the Strava OAuth Route Handlers rule out a fully static export)
 - No database, no API routes that hold state (MVP)
 
 ## Commands
@@ -47,6 +47,10 @@ bun typecheck
 bun run test     # unit tests (bun:test, scoped to ./lib)
 bun run test:e2e # Playwright e2e
 ```
+
+Strava OAuth needs env vars — copy `.env.example` to `.env.local` (see
+[`docs/strava.md`](./docs/strava.md)). File upload works without any
+configuration.
 
 ## Testing
 
@@ -140,8 +144,9 @@ appear.
 - **Every theme ships a colocated story** — single-card *and* carousel. Adding or
   renaming a theme isn't complete without its `*.stories.tsx`; see [Storybook](#storybook).
 - **Commit messages**: Conventional Commits (`feat:`, `fix:`, `refactor:`, etc.).
-- **Lint + typecheck must be green** before pushing: `bun lint && bun typecheck`. Keep
-  `bun run build-storybook` green too when you touch themes or stories.
+- **Lint + typecheck must be green** before pushing: `bun lint && bun typecheck`.
+  `bun run build-storybook` is a useful local smoke check when you touch themes
+  or stories; it is deliberately not a CI gate.
 
 ## File structure
 

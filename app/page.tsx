@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 import { CarouselEditState } from "@/components/app/carousel-edit-state";
 import { DownloadState } from "@/components/app/download-state";
 import { EditState } from "@/components/app/edit-state";
@@ -10,6 +9,13 @@ import { EffortWordmark } from "@/components/app/effort-wordmark";
 import { EmptyState } from "@/components/app/empty-state";
 import { type CardMode, ModeToggle } from "@/components/app/mode-toggle";
 import type { OnboardingResult } from "@/components/app/onboarding-wizard";
+import {
+  loadPersistedUi,
+  migrateCarouselTheme,
+  migrateColorChoice,
+  migrateThemeConfigs,
+  savePersistedUi,
+} from "@/components/app/persisted-ui";
 import type { ThemeId } from "@/components/app/render-theme";
 import { StravaFooter } from "@/components/app/strava-footer";
 import { StravaPicker } from "@/components/app/strava-picker";
@@ -19,20 +25,16 @@ import {
   type CarouselThemeId,
   DEFAULT_CAROUSEL_THEME,
 } from "@/components/themes/carousel/registry";
+import { useCardPhoto } from "@/hooks/use-card-photo";
 import { useCarousel } from "@/hooks/use-carousel";
 import { useImagePalette } from "@/hooks/use-image-palette";
+import { useStravaReturnToast } from "@/hooks/use-strava-return-toast";
 import type { ActivityData, ActivitySource, Sport } from "@/lib/activity";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
-import {
-  type ColorChoice,
-  coerceColorChoice,
-  resolveColors,
-} from "@/lib/colors";
+import { type ColorChoice, resolveColors } from "@/lib/colors";
 import { formatDateUpper } from "@/lib/format";
-import { IDENTITY_TRANSFORM, type ImageTransform } from "@/lib/image-transform";
 import { coerceConfig } from "@/lib/params/resolve";
 import type { ParsedActivity } from "@/lib/parse-activity";
-import { NO_EFFECTS, type PhotoEffects } from "@/lib/photo-effects";
 import {
   effectiveChoiceFor,
   type ThemeBase,
@@ -47,25 +49,6 @@ import {
 } from "@/lib/visibility";
 
 type AppState = "empty" | "picking-strava" | "edit" | "download";
-const STORAGE_KEY = "effort:ui:v1";
-
-interface PersistedUi {
-  // Legacy keys (pre-colour/param-schema): read once on load, migrated, and
-  // dropped on the next save.
-  accent?: unknown;
-  altitudeConfig?: unknown;
-  athleteName?: string;
-  carouselTheme: CarouselThemeId;
-  /** the user's colour choice; null/absent = the active theme's default */
-  colorChoice?: unknown;
-  mode: CardMode;
-  photoMood?: unknown;
-  strataConfig?: unknown;
-  theme: ThemeId;
-  /** per-theme parameter configs, keyed by theme/config key */
-  themeConfigs: Record<string, unknown>;
-  visibility: Visibility;
-}
 
 function adoptParsed(
   parsed: ParsedActivity,
@@ -82,111 +65,6 @@ function adoptParsed(
   };
 }
 
-function loadPersistedUi(): Partial<PersistedUi> {
-  if (typeof window === "undefined") {
-    return {};
-  }
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return {};
-    }
-    const parsed: unknown = JSON.parse(raw);
-    // `JSON.parse("null")` returns null and `JSON.parse("42")` returns a
-    // number — both would crash the property access on mount. Only accept
-    // plain object shapes.
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return {};
-    }
-    return parsed as Partial<PersistedUi>;
-  } catch {
-    return {};
-  }
-}
-
-interface MigratedCarouselTheme {
-  /** seed for the merged theme's ATMOSPHERE param (legacy Dusk/Dawn ids) */
-  atmosphere?: "dawn" | "dusk";
-  id: CarouselThemeId;
-}
-
-/** Pre-merge carousel ids (Trace/Ascent shipped as Dawn/Dusk pairs): map a
- *  stale persisted id onto the merged theme and carry the light choice into its
- *  ATMOSPHERE param. */
-const LEGACY_CAROUSEL_THEMES: Record<string, MigratedCarouselTheme> = {
-  traceDawn: { id: "trace", atmosphere: "dawn" },
-  traceDusk: { id: "trace", atmosphere: "dusk" },
-  ascentDawn: { id: "ascent", atmosphere: "dawn" },
-  ascentDusk: { id: "ascent", atmosphere: "dusk" },
-};
-
-/** The persisted carousel selection, validated against the current theme set,
- *  with legacy Dawn/Dusk ids folded onto the merged themes. `null` = nothing
- *  usable persisted (keep the default). */
-function migrateCarouselTheme(
-  persisted: Partial<PersistedUi>
-): MigratedCarouselTheme | null {
-  const stored = persisted.carouselTheme;
-  if (!stored) {
-    return null;
-  }
-  if (stored in CAROUSEL_THEMES) {
-    return { id: stored };
-  }
-  return LEGACY_CAROUSEL_THEMES[stored] ?? null;
-}
-
-/** The persisted theme configs, with any legacy single-key configs (pre-param-
- *  schema) folded in so existing users keep their tuned themes. Each value is
- *  coerced on read by `resolveThemeConfig`, so raw migration is safe. */
-function migrateThemeConfigs(
-  persisted: Partial<PersistedUi>,
-  carousel: MigratedCarouselTheme | null
-): Record<string, unknown> {
-  const configs: Record<string, unknown> = { ...persisted.themeConfigs };
-  if (persisted.altitudeConfig && configs.altitude === undefined) {
-    configs.altitude = persisted.altitudeConfig;
-  }
-  if (persisted.strataConfig && configs.strata === undefined) {
-    configs.strata = persisted.strataConfig;
-  }
-  if (carousel?.atmosphere && configs[carousel.id] === undefined) {
-    configs[carousel.id] = { atmosphere: carousel.atmosphere };
-  }
-  return configs;
-}
-
-/** The persisted colour choice, with legacy formats folded in: the pre-round-2
- *  `accent` hex becomes a preset choice; a Photo-theme user's PhotoMood (or its
- *  round-1 `themeConfigs.photo.palette` form) becomes a photo-derived choice. */
-function migrateColorChoice(
-  persisted: Partial<PersistedUi>
-): ColorChoice | null {
-  const direct = coerceColorChoice(persisted.colorChoice);
-  if (direct) {
-    return direct;
-  }
-  if (persisted.theme === "photo") {
-    const photoCfg = persisted.themeConfigs?.photo as
-      | { palette?: unknown }
-      | undefined;
-    const legacyMood = coerceColorChoice({
-      kind: "photo",
-      variant: photoCfg?.palette ?? persisted.photoMood,
-    });
-    if (legacyMood) {
-      return legacyMood;
-    }
-  }
-  if (typeof persisted.accent === "string") {
-    return coerceColorChoice({
-      kind: "preset",
-      scheme: { primary: persisted.accent },
-    });
-  }
-  return null;
-}
-
 export default function Home() {
   const [state, setState] = useState<AppState>("empty");
   // Set after the Strava OAuth round-trip so the empty state opens the wizard
@@ -199,14 +77,9 @@ export default function Home() {
   const [carouselTheme, setCarouselTheme] = useState<CarouselThemeId>(
     DEFAULT_CAROUSEL_THEME
   );
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
-  // Pan/zoom for the background photo in hero themes. Tied to the current
-  // photo, so it resets whenever the photo is swapped or removed.
-  const [imageTransform, setImageTransform] =
-    useState<ImageTransform>(IDENTITY_TRANSFORM);
-  // Rotate / mirror / filter for the photo. Like the transform, tied to the
-  // current photo and reset when it's swapped or removed.
-  const [photoEffects, setPhotoEffects] = useState<PhotoEffects>(NO_EFFECTS);
+  // The background photo cluster: object URL + pan/zoom + filter effects,
+  // including the object-URL revocation lifecycle (see the hook).
+  const photo = useCardPhoto();
   // The user's colour choice — a preset scheme or a photo-derived strategy.
   // `null` means "the active theme's default", so each theme keeps its own
   // signature colours until the user explicitly picks.
@@ -246,7 +119,7 @@ export default function Home() {
   // available. One palette extraction serves the whole app (the colour
   // control's swatches + any photo-derived choice).
   const effectiveColorChoice = effectiveChoiceFor(activeTheme, colorChoice);
-  const photoPalette = useImagePalette(photoUrl);
+  const photoPalette = useImagePalette(photo.url);
   const colors = resolveColors(
     effectiveColorChoice,
     activeTheme.colors.default,
@@ -293,10 +166,7 @@ export default function Home() {
   // Persist on change. Athlete name comes from `data` (which the user edits
   // in-place), so it shares this effect rather than getting its own.
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    const payload: PersistedUi = {
+    savePersistedUi({
       theme,
       carouselTheme,
       colorChoice: colorChoice ?? undefined,
@@ -304,12 +174,7 @@ export default function Home() {
       themeConfigs,
       mode,
       athleteName: data?.athleteName || persistedAthleteNameRef.current,
-    };
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-    } catch {
-      // localStorage may be unavailable (private mode, quota); soft-fail.
-    }
+    });
   }, [
     theme,
     carouselTheme,
@@ -320,60 +185,9 @@ export default function Home() {
     data?.athleteName,
   ]);
 
-  // Object URLs need cleanup or they leak into memory.
-  useEffect(() => {
-    if (!photoUrl) {
-      return;
-    }
-    return () => URL.revokeObjectURL(photoUrl);
-  }, [photoUrl]);
-
-  // After the Strava OAuth round-trip we land on `/?strava=...`. This is a
-  // one-shot cold-start read of an external system (URL) — the same
-  // pattern as the localStorage hydration above, hence the same disable.
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    const params = new URLSearchParams(window.location.search);
-    const flag = params.get("strava");
-    if (!flag) {
-      return;
-    }
-    /* eslint-disable react-hooks/set-state-in-effect */
-    switch (flag) {
-      case "connected":
-        toast.success("Connected to Strava");
-        // Stay on the empty state; the wizard + its Strava picker open instead.
-        setAutoStravaPicker(true);
-        break;
-      case "denied":
-        toast.error("You declined to connect Strava. You can try again.");
-        break;
-      case "state_mismatch":
-        toast.error("Couldn't verify the Strava sign-in. Please try again.");
-        break;
-      case "token_exchange":
-        toast.error("Strava rejected the sign-in. Try again in a moment.");
-        break;
-      case "failed":
-        toast.error("Couldn't start the Strava sign-in. Try again.");
-        break;
-      case "bounce_rejected":
-        toast.error(
-          "The Strava sign-in was redirected to an unrecognised host. Aborted."
-        );
-        break;
-      default:
-        toast.error(`Couldn't connect to Strava (${flag})`);
-    }
-    /* eslint-enable react-hooks/set-state-in-effect */
-    // Strip the param so a reload doesn't re-fire the toast.
-    const url = new URL(window.location.href);
-    url.searchParams.delete("strava");
-    url.searchParams.delete("reason");
-    window.history.replaceState({}, "", url.toString());
-  }, []);
+  // After the Strava OAuth round-trip we land on `/?strava=...` — toast the
+  // outcome and, on success, open the wizard with the Strava picker showing.
+  useStravaReturnToast(() => setAutoStravaPicker(true));
 
   const adoptParts = (
     parts: ParsedActivity[],
@@ -439,46 +253,27 @@ export default function Home() {
 
   const activePhotoPolicy = activeTheme.photo;
 
-  /** A theme's photo effects (its signature filter + grain) over a base. */
-  const policyEffects = (
-    policy: ThemePhotoPolicy,
-    base: PhotoEffects
-  ): PhotoEffects => ({
-    ...base,
-    filter: policy.defaultFilter ?? "none",
-    grain: policy.defaultGrain ?? false,
-  });
-
   // Selecting a theme (either family) applies its photo policy: its default
   // backdrop state (STRATA / Data / Triathlon default OFF; the photo-led
   // themes default ON) and — when there's a photo to affect — its signature
   // filter + grain. The user can still change both afterwards.
   const applyThemePhotoPolicy = (policy: ThemePhotoPolicy) => {
     setVisibility((v) => ({ ...v, photoBackdrop: policy.defaultOn }));
-    if (photoUrl) {
-      setPhotoEffects((prev) => policyEffects(policy, prev));
+    if (photo.url) {
+      photo.applyPolicyEffects(policy);
     }
   };
 
   const handlePhotoChange = (file: File | null) => {
-    setPhotoUrl((prev) => {
-      if (prev) {
-        URL.revokeObjectURL(prev);
-      }
-      return file ? URL.createObjectURL(file) : null;
-    });
     // A new (or removed) photo invalidates any previous pan/zoom. A fresh photo
     // adopts the active theme's photo policy from scratch (effects reset, not
     // carried over from the previous photo).
-    setImageTransform(IDENTITY_TRANSFORM);
+    photo.adopt(file, activePhotoPolicy);
     if (file) {
       setVisibility((v) => ({
         ...v,
         photoBackdrop: activePhotoPolicy.defaultOn,
       }));
-      setPhotoEffects(policyEffects(activePhotoPolicy, NO_EFFECTS));
-    } else {
-      setPhotoEffects(NO_EFFECTS);
     }
   };
 
@@ -491,7 +286,7 @@ export default function Home() {
   // optional background photo, then drops the user into the editor pre-filled.
   const handleOnboardingComplete = ({
     parts,
-    photo,
+    photo: onboardingPhoto,
     sample,
     source,
   }: OnboardingResult) => {
@@ -500,8 +295,8 @@ export default function Home() {
       return;
     }
     setData(next);
-    if (photo) {
-      handlePhotoChange(photo);
+    if (onboardingPhoto) {
+      handlePhotoChange(onboardingPhoto);
     }
     carousel.regenerate();
     setState("edit");
@@ -522,12 +317,8 @@ export default function Home() {
 
   const handleNew = () => {
     setData(null);
-    if (photoUrl) {
-      URL.revokeObjectURL(photoUrl);
-    }
-    setPhotoUrl(null);
-    setImageTransform(IDENTITY_TRANSFORM);
-    setPhotoEffects(NO_EFFECTS);
+    // The hook's effect cleanup revokes the dropped object URL.
+    photo.clear();
     setAutoStravaPicker(false);
     setState("empty");
   };
@@ -569,12 +360,12 @@ export default function Home() {
             value: activeConfig,
           },
           photo: {
-            effects: photoEffects,
+            effects: photo.effects,
             onChange: handlePhotoChange,
-            onEffectsChange: setPhotoEffects,
-            onTransformChange: setImageTransform,
-            transform: imageTransform,
-            url: photoUrl,
+            onEffectsChange: photo.setEffects,
+            onTransformChange: photo.setTransform,
+            transform: photo.transform,
+            url: photo.url,
           },
         }
       : null;
@@ -636,12 +427,12 @@ export default function Home() {
           colors={colors}
           config={activeConfig}
           data={visibleData}
-          imageTransform={imageTransform}
+          imageTransform={photo.transform}
           onKeepEditing={handleKeepEditing}
           onNew={handleNew}
           photoBackdropEnabled={visibility.photoBackdrop}
-          photoEffects={photoEffects}
-          photoUrl={photoUrl}
+          photoEffects={photo.effects}
+          photoUrl={photo.url}
           theme={theme}
         />
       ) : null}

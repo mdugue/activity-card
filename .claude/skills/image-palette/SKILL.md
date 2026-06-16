@@ -71,7 +71,16 @@ A grey photo should get a clean neutral accent, never an invented brown. The gua
 
 ## Performance
 
-Quantization is the slow stage and can jank on large photos. node-vibrant v4 ships a worker entry (`node-vibrant/worker` + `WorkerPipeline`). Move extraction off-thread only after confirming jank on real uploads — premature for the first cut. The hook's API is unchanged either way.
+Quantization is the slow stage and janked on large photos, so extraction now
+runs **off-thread**: `lib/palette.ts` lazily installs node-vibrant's
+`WorkerPipeline` (worker script: `lib/palette.worker.ts`, which just runs
+`node-vibrant/worker.worker`). The `node-vibrant/browser` import keeps the
+in-thread pipeline registered as the baseline, so environments without
+`Worker` (SSR module evaluation, tests) still work — `ensureWorkerPipeline()`
+upgrades on first extraction in the browser. Image *decode* stays on the main
+thread (it needs the DOM); only the pixel crunching ships off. The hook's API
+is unchanged. Verified e2e: `e2e/export-photo.spec.ts` asserts the "FROM YOUR
+PHOTO" swatch row appears after an upload in the production build.
 
 ## Consuming the theme
 
