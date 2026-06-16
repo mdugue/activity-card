@@ -11,6 +11,7 @@
 
 import { ArrowsOutCardinalIcon, ImagesIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { CarouselDeck } from "@/components/themes/carousel/deck";
 import {
   CAROUSEL_THEME_ORDER,
@@ -185,6 +186,8 @@ export function CarouselEditState({
         count,
         carouselBaseName(data.sport, data.date)
       );
+    } catch {
+      toast.error("Export failed — please try again.");
     } finally {
       setIsExporting(false);
     }

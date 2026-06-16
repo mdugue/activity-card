@@ -44,4 +44,15 @@ export interface StravaStream<T> {
   type: string;
 }
 
+/**
+ * One item of `/activities/{id}/photos?size=N&photo_sources=true`. The
+ * Swagger spec doesn't model this endpoint; the shape is observed from the
+ * live API — `urls` is keyed by the requested size.
+ */
+export interface StravaPhotoListItem {
+  source?: number;
+  unique_id?: string;
+  urls?: Record<string, string>;
+}
+
 export type StravaStreams = Record<string, StravaStream<unknown>>;

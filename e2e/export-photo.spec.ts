@@ -90,6 +90,19 @@ test("single-card Photo export embeds the uploaded background", async ({
   expect(fraction).toBeGreaterThan(0.2);
 });
 
+test("photo upload yields FROM YOUR PHOTO colour schemes (worker palette extraction)", async ({
+  page,
+}) => {
+  // The COLOUR control only renders the photo-derived swatch row once
+  // node-vibrant's extraction resolves — since extraction now runs in a Web
+  // Worker, this asserts the worker round-trip works in the production build.
+  await enterEditViaUpload(page);
+  await page.locator(PHOTO_INPUT).setInputFiles(MAGENTA_PHOTO);
+  await expect(page.getByText(/from your photo/i)).toBeVisible({
+    timeout: 10_000,
+  });
+});
+
 test("carousel Exposure export embeds the uploaded background", async ({
   page,
 }) => {

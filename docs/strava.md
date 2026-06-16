@@ -97,13 +97,16 @@ skew), so the picker and detail handlers don't need refresh logic.
 | `app/api/strava/me/route.ts` | Reads the athlete cookie. The only endpoint the client polls. |
 | `app/api/strava/activities/route.ts` | Lists activities for the requested `?page=N&per_page=M` (defaults: 30, 1). |
 | `app/api/strava/stats/route.ts` | Returns `{ totalCount, totalPages }` from Strava's `/athletes/{id}/stats`. Only counts ride / run / swim — the picker treats it as a hint and still trusts `canGoNext` (full page) for the actual end of the list. |
-| `app/api/strava/activity/[id]/route.ts` | Detail + streams → `ParsedActivity[]`. |
-| `app/api/strava/disconnect/route.ts` | Clears all four cookies. |
+| `app/api/strava/activity/[id]/route.ts` | Detail + streams + photo list → `ParsedActivity[]` (photo previews attached as `stravaPhotos`). |
+| `app/api/strava/photo/route.ts` | Streams one of an activity's photos through our origin (`?activity=ID&index=N`). The image URL is re-resolved server-side from Strava's photo list — the client never supplies a URL — and the same-origin response keeps the export canvas untainted. |
+| `app/api/strava/disconnect/route.ts` | Clears all four cookies. Rejects cross-site POSTs via fetch-metadata. |
 | `lib/strava-cookies.ts` | `readTokens`, `writeTokens`, `clearTokens`, `ensureFreshToken`, `forceRefreshToken`, OAuth state. Single source of truth for the cookie flow. |
 | `lib/strava-client.ts` | `stravaFetch` / `stravaFetchOptional` — the only way handlers talk to Strava. Handles 401-retry, 429, and upstream errors; `stravaErrorResponse` maps thrown errors to HTTP responses. |
 | `lib/strava-types.ts` | Strava model types. Base shapes derive from the generated spec; the `ActivityExtras` layer adds fields the spec omits. |
 | `lib/strava-api.generated.ts` | Auto-generated from Strava's OpenAPI spec via `bun run strava:types`. Do not edit — regenerate. Lint/format/eslint skip it. |
 | `lib/strava-to-parsed.ts` | Maps Strava streams + detail into the same `TrackPoint`/`ParsedActivity` shape the GPX/.fit parsers produce. Reuses `finalise()` and `detectSport()` from `lib/parse-shared.ts`. |
+| `lib/strava-photos.ts` | Client helpers for the photo strip: the proxy URL builder and `fetchStravaPhotoFile()` (proxy download → `File`, so a Strava photo flows through the exact pipeline an upload uses). |
+| `components/app/strava-photo-strip.tsx` | The "images from Strava" thumbnail row, shared by the onboarding wizard's photo step and the editor's PHOTO group. Previews render off Strava's CDN; activation downloads via the proxy. |
 | `components/app/strava-picker.tsx` | Activity-list screen (`AppState === "picking-strava"`) — shadcn `Item`/`Pagination`/`Switch`/`Checkbox`. Owns single-pick, multi-select, pagination, and the per-error-kind `<StravaErrorAlert>` rendering. Its `PickerConnection` header row shows "Connected as … / Disconnect". |
 | `components/app/strava-connect-button.tsx` | Official 237×48 "Connect with Strava" SVG (per §1.1) wrapped in an anchor → `/api/strava/authorize`. The asset is at `public/strava/btn-connect-with-strava-orange.svg` and must not be modified. |
 | `components/app/strava-footer.tsx` | Plain-text "Compatible with Strava" reference. Rendered on the empty + picker states from `app/page.tsx`. |
@@ -164,8 +167,10 @@ bun dev
 The mock auto-approves OAuth (the `/oauth/authorize` endpoint
 immediately 302s back to `redirect_uri` with `code=mock-auth-code`),
 returns three fixed activities — Ride / Run / Swim — and synthesises
-60-point streams for any activity id. There is no per-test state to
-reset; the mock is pure.
+60-point streams for any activity id. The ride (1001) carries two photo
+fixtures and the run (1002) one, served by the mock itself, so the
+photo strip and the `/api/strava/photo` proxy are coverable offline.
+There is no per-test state to reset; the mock is pure.
 
 **Where the mock lives**: `e2e/strava-mock.ts`. To add a new fixture
 activity, append to `ACTIVITIES` there.

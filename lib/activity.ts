@@ -44,6 +44,21 @@ export interface Transition {
 
 export type ActivitySource = "upload" | "strava";
 
+/**
+ * A photo Strava attached to the activity. The preview URL renders directly
+ * in pickers (`<img>`, never exported); activating a photo downloads the
+ * full-size image through `/api/strava/photo` (same-origin, so the export
+ * canvas stays untainted) and feeds it through the normal File pipeline.
+ */
+export interface StravaPhotoRef {
+  /** Strava activity the photo belongs to (the proxy's fetch key). */
+  activityId: number;
+  /** Index within that activity's photo list. */
+  index: number;
+  /** Small CDN URL for thumbnails. */
+  previewUrl: string;
+}
+
 export interface ActivityData {
   athleteName: string;
   avgCadence?: number;
@@ -80,6 +95,9 @@ export interface ActivityData {
    * activity → `[id]`. Combined triathlon → segment-aligned with `null`
    * entries for file-sourced parts. Unset for pure GPX/.fit uploads. */
   stravaActivityIds?: (number | null)[];
+  /** Photos Strava attached to the activity, offered as one-click
+   * backgrounds. Unset for uploads and photo-less activities. */
+  stravaPhotos?: StravaPhotoRef[];
   strokeCountAvg?: number; // swim
   swolf?: number; // swim
   title: string;

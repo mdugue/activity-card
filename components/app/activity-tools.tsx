@@ -21,11 +21,14 @@ import {
   StarIcon,
   TextAaIcon,
 } from "@phosphor-icons/react";
-import { useId } from "react";
+import { useId, useState } from "react";
+import { toast } from "sonner";
 import type { ControlTool } from "@/components/app/control-deck";
 import type { CardMode } from "@/components/app/mode-toggle";
-import type { Sport } from "@/lib/activity";
+import { StravaPhotoStrip } from "@/components/app/strava-photo-strip";
+import type { Sport, StravaPhotoRef } from "@/lib/activity";
 import type { ParamCtx } from "@/lib/params/kinds";
+import { fetchStravaPhotoFile, stravaPhotoKey } from "@/lib/strava-photos";
 import type { Visibility } from "@/lib/visibility";
 import { ActivitySource } from "./activity-source";
 import { ColorControl } from "./color-control";
@@ -151,6 +154,26 @@ export function useActivityTools({
   const set = (key: keyof Visibility, checked: boolean) =>
     onVisibilityChange({ ...visibility, [key]: checked });
 
+  // One-click "use this Strava photo": download the full size through the
+  // proxy and hand it to the same File pipeline an upload uses.
+  const [pickingStravaPhoto, setPickingStravaPhoto] = useState<string | null>(
+    null
+  );
+  const pickStravaPhoto = async (ref: StravaPhotoRef) => {
+    if (pickingStravaPhoto) {
+      return;
+    }
+    setPickingStravaPhoto(stravaPhotoKey(ref));
+    try {
+      const file = await fetchStravaPhotoFile(ref);
+      photo.onChange(file);
+    } catch {
+      toast.error("Couldn't load the photo from Strava.");
+    } finally {
+      setPickingStravaPhoto(null);
+    }
+  };
+
   const renderToggle = ({ key, label }: ToggleDef) => {
     const avail = available[key];
     const lockedCore = CORE_METRICS.has(key) && mode === "single";
@@ -221,6 +244,7 @@ export function useActivityTools({
   // background" switch is the shared `photoBackdrop` visibility flag; the
   // adjustment controls only show while the photo is actually displayed.
   const photoActive = Boolean(photo.url) && visibility.photoBackdrop;
+  const stravaPhotos = data.stravaPhotos ?? [];
   tools.push({
     id: "photo",
     label: "PHOTO",
@@ -232,6 +256,16 @@ export function useActivityTools({
           photoUrl={photo.url}
           prominent
         />
+        {stravaPhotos.length > 0 ? (
+          <div className="mt-3">
+            <div className="caption-micro mb-1.5">FROM STRAVA</div>
+            <StravaPhotoStrip
+              onPick={pickStravaPhoto}
+              photos={stravaPhotos}
+              pickingKey={pickingStravaPhoto}
+            />
+          </div>
+        ) : null}
         {photo.url ? (
           <div className="mt-3">
             <ToggleRow
