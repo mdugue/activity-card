@@ -133,8 +133,8 @@ export function ExportSheet(props: ExportSheetProps) {
           baked in. Download one, or grab the whole set.
         </p>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2 sm:mt-6 sm:gap-3">
-          <Button disabled={busy !== null} onClick={handleAll}>
+        <div className="mt-4 flex flex-nowrap items-center gap-2 sm:mt-6 sm:gap-3">
+          <Button disabled={busy !== null} onClick={handleAll} size="sm">
             <DownloadSimpleIcon
               aria-hidden
               className="size-4"
@@ -144,7 +144,7 @@ export function ExportSheet(props: ExportSheetProps) {
           </Button>
           <Button onClick={onKeepEditing} size="sm" variant="outline">
             <ArrowLeftIcon aria-hidden className="size-4" weight="duotone" />
-            Keep editing
+            Edit
           </Button>
           <Button onClick={onNew} size="sm" variant="ghost">
             <PlusIcon aria-hidden className="size-4" weight="duotone" />
@@ -172,7 +172,7 @@ export function ExportSheet(props: ExportSheetProps) {
           </p>
         </div>
 
-        <div className="mt-5 flex flex-wrap gap-3 sm:mt-7 sm:gap-5">
+        <div className="mt-5 flex flex-wrap justify-center gap-3 sm:mt-7 sm:gap-5">
           {FORMAT_ORDER.map((id) => (
             <FormatTile
               busy={busy}

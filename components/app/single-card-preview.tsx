@@ -87,7 +87,10 @@ export function SingleCardPreview({
   }, [adjusting, adjustAvailable]);
 
   return (
-    <CardStage maxWidthClassName="max-w-[400px] lg:max-w-[460px]">
+    <CardStage
+      aspectRatio={format.width / format.height}
+      maxWidthClassName="max-w-[400px] lg:max-w-[460px]"
+    >
       <div
         className="@container relative w-full overflow-hidden bg-white shadow-2xl"
         style={{ aspectRatio: `${format.width} / ${format.height}` }}

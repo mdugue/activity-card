@@ -11,7 +11,6 @@
 
 import {
   ChartBarIcon,
-  FrameCornersIcon,
   ImageIcon,
   LayoutIcon,
   MedalIcon,
@@ -26,12 +25,6 @@ import { useId } from "react";
 import type { ControlTool } from "@/components/app/control-deck";
 import type { CardMode } from "@/components/app/mode-toggle";
 import type { Sport } from "@/lib/activity";
-import {
-  type ExportFormat,
-  type ExportFormatId,
-  FORMAT_ORDER,
-  getFormat,
-} from "@/lib/export-formats";
 import type { ParamCtx } from "@/lib/params/kinds";
 import type { Visibility } from "@/lib/visibility";
 import { ActivitySource } from "./activity-source";
@@ -86,16 +79,6 @@ const SPORT_OPTIONS: RichSelectOption[] = [
   },
 ];
 
-const FORMAT_OPTIONS: RichSelectOption[] = FORMAT_ORDER.map((id) => {
-  const f = getFormat(id);
-  return {
-    value: id,
-    primary: f.label,
-    hint: `${f.platform} · ${f.aspectLabel}`,
-    icon: <FrameCornersIcon {...ICON_PROPS} />,
-  };
-});
-
 interface ToggleDef {
   key: keyof Visibility;
   label: string;
@@ -131,14 +114,8 @@ const CAROUSEL_TOGGLES: ToggleDef[] = [
 ];
 
 interface UseActivityToolsProps {
-  /** single-card export-format picker state (omit for carousel) */
-  format?: ExportFormat;
   mode: CardMode;
-  onFormatChange?: (id: ExportFormatId) => void;
-  onShowSafeChange?: (show: boolean) => void;
   session: EditorSession;
-  /** whether the preview overlays the platform safe-zone guides */
-  showSafe?: boolean;
   /** the theme rail for this mode (rendered at the top of the STYLE section) */
   themeControl: React.ReactNode;
 }
@@ -147,10 +124,6 @@ export function useActivityTools({
   mode,
   session,
   themeControl,
-  format,
-  onFormatChange,
-  showSafe,
-  onShowSafeChange,
 }: UseActivityToolsProps): ControlTool[] {
   const {
     data,
@@ -242,38 +215,6 @@ export function useActivityTools({
       </div>
     ),
   });
-
-  // FORMAT — the export aspect ratio previewed in the stage + the safe-zone
-  // guide toggle. Single-card only; lives in the dock so the preview area stays
-  // clear of the focused toolbar on mobile.
-  if (mode === "single" && format && onFormatChange) {
-    tools.push({
-      id: "format",
-      label: "FORMAT",
-      icon: <FrameCornersIcon {...ICON_PROPS} />,
-      content: (
-        <ControlBlock label="EXPORT FORMAT">
-          <RichSelect
-            ariaLabel="Preview format"
-            onValueChange={(v) => onFormatChange(v as ExportFormatId)}
-            options={FORMAT_OPTIONS}
-            value={format.id}
-          />
-          <div className="mt-3">
-            <ToggleRow
-              checked={showSafe ?? false}
-              label="Show safe zones"
-              onCheckedChange={(c) => onShowSafeChange?.(c)}
-            />
-          </div>
-          <p className="caption-micro mt-2">
-            Same photo, platform-perfect crops — toggle the guides to see each
-            platform’s safe area.
-          </p>
-        </ControlBlock>
-      ),
-    });
-  }
 
   // The photo is a prominent control — every theme can show one, adjustable via
   // the same filter / grain / transform presets in both modes. The "Use as

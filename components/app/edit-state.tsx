@@ -8,6 +8,7 @@ import type { ExportFormat, ExportFormatId } from "@/lib/export-formats";
 import { useActivityTools } from "./activity-tools";
 import { ControlDeck } from "./control-deck";
 import type { EditorSession } from "./editor-session";
+import { FormatControl } from "./format-control";
 import type { ThemeId } from "./render-theme";
 import { SingleCardPreview } from "./single-card-preview";
 import { ThemeRail } from "./theme-rail";
@@ -32,17 +33,13 @@ export function EditState({
   onExport,
 }: EditStateProps) {
   const { data, visibility, color, config, photo } = session;
-  // The safe-zone guide is an editor-only preview overlay; the FORMAT tool
+  // The safe-zone guide is an editor-only preview overlay; the FORMAT control
   // toggles it and the preview reads it.
   const [showSafe, setShowSafe] = useState(false);
 
   const tools = useActivityTools({
     mode: "single",
     session,
-    format,
-    onFormatChange,
-    showSafe,
-    onShowSafeChange: setShowSafe,
     themeControl: (
       <ThemeRail
         labels={SINGLE_CARD_THEMES}
@@ -78,6 +75,14 @@ export function EditState({
             photoUrl={photo.url}
             showSafe={showSafe}
             theme={theme}
+          />
+        }
+        previewControl={
+          <FormatControl
+            format={format}
+            onFormatChange={onFormatChange}
+            onShowSafeChange={setShowSafe}
+            showSafe={showSafe}
           />
         }
         tools={tools}
