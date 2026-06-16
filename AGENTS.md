@@ -14,6 +14,7 @@ Single-page, fully client-side, no backend, no auth (for MVP). The card is a Rea
 2. Skills in `.claude/skills/` — focused technical references:
    - `activity-card-spec/` — quick reference to scope and phases
    - `card-rendering/` — `html-to-image` gotchas, route SVG math, the single-card theme component contract
+   - `theme-architecture/` — invariants for CROSS-CUTTING theme concerns (output formats, safe zones, shared photo/colour): single source of truth, no inversion of control, no dead contracts. Read before wrapping a theme in anything or adding a global rendering knob.
    - `carousel-themes/` — the Carousel ("accordion") theme system: tokens, decks, photo handling
    - `sport-data/` — sport-specific metrics, units, parsing normalisation
 3. Topic-specific docs under `docs/`:
