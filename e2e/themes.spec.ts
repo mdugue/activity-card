@@ -60,7 +60,7 @@ test.describe("themes", () => {
     expect(feed.readUInt32BE(16)).toBe(2160);
     expect(feed.readUInt32BE(20)).toBe(2700);
 
-    // The Hybrid frame retargets the same theme to a 9:16 story (2× = 2160×3840).
+    // The same theme renders format-aware into a 9:16 story (2× = 2160×3840).
     const storyPromise = page.waitForEvent("download");
     await page
       .getByRole("button", { name: /download instagram story/i })

@@ -1,6 +1,6 @@
 import { toPng } from "html-to-image";
 import type { ActivityData } from "./activity";
-import { effortDateSlug, isIos, waitForFonts } from "./export-shared";
+import { isIos, waitForFonts } from "./export-shared";
 import {
   applyMetadata,
   type MetadataInput,
@@ -108,8 +108,4 @@ export function activityMetadata(
     title: data.title || undefined,
     url,
   };
-}
-
-export function defaultFilename(sport: string, date: string): string {
-  return `effort_${sport}_${effortDateSlug(date)}.png`;
 }

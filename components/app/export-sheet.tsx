@@ -13,6 +13,7 @@ import {
   PlusIcon,
 } from "@phosphor-icons/react";
 import { useCallback, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { ActivityData } from "@/lib/activity";
 import { routePath } from "@/lib/chart-helpers";
@@ -75,13 +76,20 @@ export function ExportSheet(props: ExportSheetProps) {
       if (!node) {
         return;
       }
-      await exportCard(node, {
-        filename: fileFor(data, format),
-        width: format.width,
-        height: format.height,
-        metadata,
-        metadataOptions: { gps },
-      });
+      // Errors are surfaced here (not bubbled) so a failed format in
+      // `handleAll` never aborts the rest of the set — matching the toast the
+      // single-card editor showed before the export sheet.
+      try {
+        await exportCard(node, {
+          filename: fileFor(data, format),
+          width: format.width,
+          height: format.height,
+          metadata,
+          metadataOptions: { gps },
+        });
+      } catch {
+        toast.error("Export failed — please try again.");
+      }
     },
     [data, metadata, gps]
   );
