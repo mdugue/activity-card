@@ -557,6 +557,8 @@ export const triathlonTheme = defineTheme({
   uses: USES,
   // Fixed: the per-discipline swim/bike/run colour identity IS the theme.
   colors: { default: { primary: "#11151a" }, userAdjustable: false },
+  // Poster: stays opaque; the frame mattes its white bg into the bands.
+  frame: { backdrop: "#ffffff" },
   photo: { defaultOn: false },
   Component: ThemeTriathlon,
 });

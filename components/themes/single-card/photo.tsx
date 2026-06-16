@@ -86,7 +86,12 @@ export function ThemePhoto({
   photoUrl,
   colors,
   imageTransform,
+  surface = "opaque",
 }: ThemePhotoProps) {
+  // Transparent surface (Hybrid frame): drop our OWN photo layer + placeholder
+  // fill so the frame's single full-bleed photo shows through — but keep the
+  // whole composition intact (vignette protection, masthead, route, hero).
+  const transparent = surface === "transparent";
   const sport = data.sport;
   const isPool = sport === "swim";
   const multi = isMultiActivity(data);
@@ -143,17 +148,17 @@ export function ThemePhoto({
         ...cssVars,
         width: 1080,
         height: 1350,
-        background: placeholderBg,
+        background: transparent ? "transparent" : placeholderBg,
         fontFamily: "var(--font-dm-sans), sans-serif",
         color: "var(--headline)",
         position: "relative",
         overflow: "hidden",
       }}
     >
-      {photoUrl ? (
+      {photoUrl && !transparent ? (
         <PhotoLayer imageTransform={imageTransform} photoUrl={photoUrl} />
       ) : null}
-      {!photoUrl && (
+      {!(photoUrl || transparent) && (
         <svg
           aria-hidden="true"
           height="100%"
@@ -181,7 +186,6 @@ export function ThemePhoto({
           <rect fill="url(#ph-grain)" height="100%" width="100%" />
         </svg>
       )}
-
       {/* Neutral vignette — pure black to read consistently across any photo. */}
       <div
         style={{
@@ -191,7 +195,6 @@ export function ThemePhoto({
             "linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.7) 100%)",
         }}
       />
-
       {/* Top masthead */}
       <div
         style={{
@@ -251,7 +254,6 @@ export function ThemePhoto({
           ) : null}
         </div>
       </div>
-
       {/* Route trace — always white for legibility across arbitrary photos. */}
       {!isPool && (
         <svg
@@ -290,7 +292,6 @@ export function ThemePhoto({
           )}
         </svg>
       )}
-
       <div style={{ position: "absolute", bottom: 220, left: 80, right: 80 }}>
         <div
           aria-hidden
@@ -321,7 +322,6 @@ export function ThemePhoto({
           {data.title}
         </h1>
       </div>
-
       {/* Hero stat block + small stats — bottom strip */}
       <div
         style={{
@@ -414,6 +414,12 @@ export const photoTheme = defineTheme({
     default: { primary: "#c89d6e", onPrimary: "#0a0a0a" },
     defaultChoice: { kind: "photo", variant: "vibrant" },
     userAdjustable: true,
+  },
+  // Photo-led: the frame bleeds the photo full-frame; a deep neutral gradient
+  // backs the letterbox bands when no photo is set.
+  frame: {
+    backdrop: "linear-gradient(180deg, #2c3848 0%, #11151b 100%)",
+    photoBleed: true,
   },
   photo: { defaultOn: true },
   Component: ThemePhoto,

@@ -79,8 +79,10 @@ test("single-card Photo export embeds the uploaded background", async ({
   await page.locator(PHOTO_INPUT).setInputFiles(MAGENTA_PHOTO);
   await expect(page.getByText(/Photo loaded/i)).toBeVisible();
 
+  // Open the export sheet and download the 4:5 Instagram Feed (native render).
+  await page.getByTestId("export-action").click();
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: /download png/i }).click();
+  await page.getByRole("button", { name: /download instagram feed/i }).click();
   const fraction = await magentaFraction(page, await downloadPromise);
 
   // The Photo theme is photo-forward, so the magenta should dominate; a broken

@@ -510,6 +510,9 @@ export const strataTheme = defineTheme({
     default: { primary: "#ffd98a", secondary: "#ff6a3a" },
     userAdjustable: false,
   },
+  // Poster with a mood-driven gradient bg (no single colour matches every
+  // mood) — a deep neutral mat reads as an intentional surround in any mood.
+  frame: { backdrop: "#15121d" },
   photo: { defaultOn: false },
   params: STRATA_PARAMS,
   defaults: DEFAULT_STRATA_CONFIG,

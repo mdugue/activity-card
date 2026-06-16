@@ -1,20 +1,24 @@
 "use client";
 
-import { DownloadSimpleIcon } from "@phosphor-icons/react";
-import { useRef, useState } from "react";
-import { toast } from "sonner";
+import { ShareNetworkIcon } from "@phosphor-icons/react";
+import { useState } from "react";
 import { SINGLE_CARD_THEMES, THEME_ORDER } from "@/components/themes/index";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { defaultFilename, exportCard } from "@/lib/export-card";
+import type { ExportFormat, ExportFormatId } from "@/lib/export-formats";
 import { useActivityTools } from "./activity-tools";
 import { ControlDeck } from "./control-deck";
 import type { EditorSession } from "./editor-session";
-import { RenderTheme, type ThemeId } from "./render-theme";
+import { FormatControl } from "./format-control";
+import type { ThemeId } from "./render-theme";
 import { SingleCardPreview } from "./single-card-preview";
 import { ThemeRail } from "./theme-rail";
 
 interface EditStateProps {
-  onDownload: () => void;
+  /** the format previewed in the stage (the export sheet still offers all) */
+  format: ExportFormat;
+  /** opens the export sheet (where the per-format downloads happen) */
+  onExport: () => void;
+  onFormatChange: (id: ExportFormatId) => void;
   onThemeChange: (theme: ThemeId) => void;
   session: EditorSession;
   theme: ThemeId;
@@ -23,29 +27,15 @@ interface EditStateProps {
 export function EditState({
   session,
   theme,
+  format,
+  onFormatChange,
   onThemeChange,
-  onDownload,
+  onExport,
 }: EditStateProps) {
   const { data, visibility, color, config, photo } = session;
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [isExporting, setIsExporting] = useState(false);
-
-  const handleDownload = async () => {
-    if (!cardRef.current || isExporting) {
-      return;
-    }
-    setIsExporting(true);
-    try {
-      await exportCard(cardRef.current, {
-        filename: defaultFilename(data.sport, data.date),
-      });
-      onDownload();
-    } catch {
-      toast.error("Export failed — please try again.");
-    } finally {
-      setIsExporting(false);
-    }
-  };
+  // The safe-zone guide is an editor-only preview overlay; the FORMAT control
+  // toggles it and the preview reads it.
+  const [showSafe, setShowSafe] = useState(false);
 
   const tools = useActivityTools({
     mode: "single",
@@ -65,53 +55,38 @@ export function EditState({
       <ControlDeck
         action={{
           icon: (
-            <DownloadSimpleIcon
-              aria-hidden
-              className="size-5"
-              weight="duotone"
-            />
+            <ShareNetworkIcon aria-hidden className="size-5" weight="duotone" />
           ),
-          isBusy: isExporting,
-          label: "Download PNG",
-          meta: "1080 × 1350",
-          onAction: handleDownload,
+          isBusy: false,
+          label: "Export",
+          meta: "7 formats",
+          onAction: onExport,
         }}
         preview={
           <SingleCardPreview
             colors={color.scheme}
             config={config.value}
             data={data}
+            format={format}
             imageTransform={photo.transform}
             onImageTransformChange={photo.onTransformChange}
             photoBackdropEnabled={visibility.photoBackdrop}
             photoEffects={photo.effects}
             photoUrl={photo.url}
+            showSafe={showSafe}
             theme={theme}
           />
         }
-        tools={tools}
-      >
-        {/* Native-size mount used by html-to-image. Off-screen via translate
-          (which html-to-image strips when capturing) but laid out at full
-          1080×1350 so the flex columns reflow correctly inside the clone. */}
-        <div
-          aria-hidden
-          className="pointer-events-none fixed top-0 left-0 -z-10"
-          ref={cardRef}
-          style={{ width: 1080, height: 1350, transform: "translateX(-200%)" }}
-        >
-          <RenderTheme
-            colors={color.scheme}
-            config={config.value}
-            data={data}
-            imageTransform={photo.transform}
-            photoBackdropEnabled={visibility.photoBackdrop}
-            photoEffects={photo.effects}
-            photoUrl={photo.url}
-            theme={theme}
+        previewControl={
+          <FormatControl
+            format={format}
+            onFormatChange={onFormatChange}
+            onShowSafeChange={setShowSafe}
+            showSafe={showSafe}
           />
-        </div>
-      </ControlDeck>
+        }
+        tools={tools}
+      />
     </TooltipProvider>
   );
 }

@@ -457,8 +457,13 @@ export function ThemeAltitude({
   data,
   photoUrl,
   imageTransform,
+  surface = "opaque",
   config = DEFAULT_ALTITUDE_CONFIG,
 }: ThemeAltitudeProps) {
+  // Transparent surface (Hybrid frame): drop our OWN photo + base fill so the
+  // frame's single full-bleed photo shows through — but keep the composition
+  // fully intact (scrim, the number-sliced-by-the-curve cutout, stats, meta).
+  const transparent = surface === "transparent";
   const claim = resolveClaim(config.claim, data);
   const stats = config.secondLine
     ? supportingStats(data, claim?.key ?? null)
@@ -511,11 +516,11 @@ export function ThemeAltitude({
         height: H,
         position: "relative",
         overflow: "hidden",
-        background: NO_PHOTO_BG,
+        background: transparent ? "transparent" : NO_PHOTO_BG,
         boxSizing: "border-box",
       }}
     >
-      {photoUrl ? (
+      {photoUrl && !transparent ? (
         <PhotoLayer imageTransform={imageTransform} photoUrl={photoUrl} />
       ) : null}
 
@@ -640,6 +645,9 @@ export const altitudeTheme = defineTheme({
   uses: USES,
   // Fixed: white type + line over the photo is the design.
   colors: { default: { primary: "#ffffff" }, userAdjustable: false },
+  // Photo-led: the frame bleeds the photo full-frame; the gradient is the
+  // no-photo backdrop for the letterbox bands.
+  frame: { backdrop: NO_PHOTO_BG, photoBleed: true },
   photo: { defaultOn: true },
   params: ALTITUDE_PARAMS,
   defaults: DEFAULT_ALTITUDE_CONFIG,

@@ -431,6 +431,8 @@ export const editorialTheme = defineTheme({
     speed: (d) => d.sport === "ride",
   },
   colors: { default: { primary: DEFAULT_ACCENT }, userAdjustable: true },
+  // Poster: stays opaque; the frame mattes its warm paper bg into the bands.
+  frame: { backdrop: "#f9f4ee" },
   photo: { defaultOn: true },
   Component: ThemeEditorial,
 });

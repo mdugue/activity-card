@@ -73,6 +73,16 @@ export type ThemeData<K extends CapabilityKey> = Omit<
 export type ActivityView = Omit<ActivityData, GovernedField> &
   Partial<Pick<ActivityData, GovernedField>>;
 
+/**
+ * How a theme paints its own background. `"opaque"` (default) is the legacy
+ * behaviour — the theme fills its 1080×1350 with its photo / colour. When the
+ * Hybrid frame extends a *photo-led* theme into another aspect ratio it renders
+ * the theme `"transparent"` (no own photo/base fill) so the frame's full-bleed
+ * photo shows seamlessly behind the content. Poster themes ignore this and stay
+ * opaque (the frame mattes their own bg colour instead). See `format-frame`.
+ */
+export type ThemeSurface = "opaque" | "transparent";
+
 /** Props every single-card theme component receives. */
 export interface ThemeProps<
   K extends CapabilityKey = CapabilityKey,
@@ -88,6 +98,20 @@ export interface ThemeProps<
   /** Pan/zoom for the background photo — applied wherever a theme shows one. */
   imageTransform?: ImageTransform | null;
   photoUrl?: string | null;
+  /** Background-paint mode for the Hybrid frame; defaults to `"opaque"`. */
+  surface?: ThemeSurface;
+}
+
+/**
+ * How a theme behaves when the Hybrid frame retargets it to another aspect
+ * ratio. `backdrop` fills the letterbox bands (a seamless extension of the
+ * theme's own background colour for poster themes); `photoBleed` themes are
+ * photo-led — the frame draws the photo full-bleed and renders the theme
+ * `"transparent"` over it.
+ */
+export interface ThemeFramePolicy {
+  backdrop: string;
+  photoBleed?: boolean;
 }
 
 /** Per-theme background-photo policy. */
@@ -111,6 +135,8 @@ export interface ThemePhotoPolicy {
 export interface ThemeBase {
   colors: ThemeColorPolicy;
   defaults: Record<string, unknown>;
+  /** how the theme retargets to other aspect ratios via the Hybrid frame */
+  frame?: ThemeFramePolicy;
   id: string;
   label: string;
   params: ParamDef[];
@@ -156,6 +182,7 @@ export function defineTheme<
   colors: ThemeColorPolicy;
   Component: FC<ThemeProps<K[number], C>>;
   defaults?: C;
+  frame?: ThemeFramePolicy;
   id: string;
   label: string;
   params?: ParamDef[];
@@ -171,6 +198,7 @@ export function defineTheme<
     uses: d.uses,
     usesWhen: d.usesWhen,
     colors: d.colors,
+    frame: d.frame,
     photo: d.photo,
     params: d.params ?? [],
     defaults: d.defaults ?? {},
