@@ -3,8 +3,8 @@
 // The export sheet — replaces the old "that's a keeper" success screen. It is
 // reached by a deliberate tap (not auto-shown after a save dialog, which was
 // the source of the "appears sometimes" bug), and it is where exports actually
-// happen: a grid of platform-optimised formats, each rendered live through the
-// Hybrid frame and downloadable on its own. Behind it the activity's route
+// happen: a grid of platform-optimised formats, each rendered live by the
+// format-aware theme and downloadable on its own. Behind it the activity's route
 // draws itself in — a calm "still working" gesture rather than confetti.
 
 import {

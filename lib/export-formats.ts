@@ -2,11 +2,11 @@
  * Export formats — the platform-optimised output sizes and their safe zones.
  *
  * Effort's master design is authored at 4:5 (1080×1350). To target other
- * platforms we render the same design into a different canvas via the Hybrid
- * frame (`components/themes/shared/format-frame.tsx`): the background (photo /
- * route / colour wash) fills the target *full-bleed*, while the content block
- * (headline + stats + marks) keeps its internal layout and is placed inside the
- * format's **safe zone**.
+ * platforms every theme is *format-aware*: it renders directly at the target
+ * size and reads these dimensions + safe insets from the FormatContext
+ * (`components/themes/shared/format-context.tsx`). The background (photo / route
+ * / colour wash) fills the target *full-bleed*, while the content (headline +
+ * stats + marks) is kept inside the format's **safe zone** via `mergeSafe`.
  *
  * Safe insets are **asymmetric** (the danger sits top / bottom / at the edges,
  * not uniformly "around") and **conservative percentages** baked to px in each
@@ -198,30 +198,23 @@ export function contentBox(format: ExportFormat): {
 }
 
 /**
- * Fit the intact master composition (default 1080×1350) into a format by
- * CONTAINing the FULL target frame — uniform scale, no crop — anchored on the
- * leftover axis by `placement`. The background bleeds full-frame behind it, so
- * the leftover axis shows the continued photo, not whitespace. This keeps the
- * 4:5 Feed composition intact across every format (9:16 = the exact Feed card +
- * photo extending top/bottom; 1:1 / 16:9 = the Feed uniformly scaled).
+ * The per-side keep-out a format-aware theme should actually apply: the larger
+ * of the theme's own aesthetic margin (`natural`) and the platform safe inset.
+ *
+ * This is the heart of the format-aware contract. On the 4:5 master (feed) the
+ * theme's own chrome is wider than the 48 px safe inset, so `natural` wins and
+ * the master renders pixel-identical to the legacy design. On a tall Story /
+ * cover-cropped Strava the platform inset is larger, so the content is pushed
+ * clear of the caption box / action rail while the theme's background bleeds on.
  */
-export function frameFit(
-  format: ExportFormat,
-  contentW = 1080,
-  contentH = 1350
-): { h: number; scale: number; w: number; x: number; y: number } {
-  const scale = Math.min(format.width / contentW, format.height / contentH);
-  const w = contentW * scale;
-  const h = contentH * scale;
-  const x = (format.width - w) / 2;
-  const slack = format.height - h;
-  let y: number;
-  if (format.placement === "upper") {
-    y = 0;
-  } else if (format.placement === "lower") {
-    y = slack;
-  } else {
-    y = slack / 2;
-  }
-  return { scale, w, h, x, y };
+export function mergeSafe(
+  safe: SafeInsets,
+  natural: Partial<SafeInsets> = {}
+): SafeInsets {
+  return {
+    top: Math.max(safe.top, natural.top ?? 0),
+    right: Math.max(safe.right, natural.right ?? 0),
+    bottom: Math.max(safe.bottom, natural.bottom ?? 0),
+    left: Math.max(safe.left, natural.left ?? 0),
+  };
 }

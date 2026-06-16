@@ -36,6 +36,7 @@ import {
   type ThemeProps,
 } from "@/lib/theme-contract";
 import { CoverPhoto } from "../shared/cover-photo";
+import { useFormat, useSafeInsets } from "../shared/format-context";
 import { usePhotoEffects, usePhotoImageSize } from "../shared/photo-fx";
 
 const DISPLAY = "var(--font-syne), sans-serif";
@@ -301,6 +302,10 @@ export function ThemeStrata({
   const overPhoto = Boolean(photoUrl);
   const fx = usePhotoEffects();
   const imageSize = usePhotoImageSize();
+  const { width, height } = useFormat();
+  // The stat strip bleeds to the canvas edges (negative side margins), so the
+  // resolved insets are reused for both the column padding and the strip.
+  const insets = useSafeInsets({ top: 78, right: 80, bottom: 0, left: 80 });
   const metaParts = [
     (data.location || "").toUpperCase(),
     formatDateUpper(data.date),
@@ -309,8 +314,8 @@ export function ThemeStrata({
   return (
     <div
       style={{
-        width: 1080,
-        height: 1350,
+        width,
+        height,
         background: tokens.bg,
         color: tokens.text,
         fontFamily: MONO,
@@ -321,7 +326,10 @@ export function ThemeStrata({
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
-        padding: "78px 80px 0 80px",
+        paddingTop: insets.top,
+        paddingRight: insets.right,
+        paddingBottom: insets.bottom,
+        paddingLeft: insets.left,
         boxSizing: "border-box",
       }}
     >
@@ -336,8 +344,8 @@ export function ThemeStrata({
           >
             {imageSize ? (
               <CoverPhoto
-                boxH={1350}
-                boxW={1080}
+                boxH={height}
+                boxW={width}
                 effects={fx}
                 imageSize={imageSize}
                 photoUrl={photoUrl}
@@ -434,10 +442,14 @@ export function ThemeStrata({
       {/* Stat strip. */}
       <div
         style={{
-          margin: "0 -80px",
+          marginLeft: -insets.left,
+          marginRight: -insets.right,
           background: tokens.statBg,
           borderTop: `1.5px solid ${tokens.statBorder}`,
-          padding: "30px 80px",
+          paddingTop: 30,
+          paddingBottom: 30,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
           display: "flex",
           justifyContent: "space-between",
           gap: 24,
@@ -510,9 +522,6 @@ export const strataTheme = defineTheme({
     default: { primary: "#ffd98a", secondary: "#ff6a3a" },
     userAdjustable: false,
   },
-  // Poster with a mood-driven gradient bg (no single colour matches every
-  // mood) — a deep neutral mat reads as an intentional surround in any mood.
-  frame: { backdrop: "#15121d" },
   photo: { defaultOn: false },
   params: STRATA_PARAMS,
   defaults: DEFAULT_STRATA_CONFIG,

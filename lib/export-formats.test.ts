@@ -6,10 +6,10 @@ import {
   EXPORT_FORMATS,
   type ExportFormatId,
   FORMAT_ORDER,
-  frameFit,
   getFormat,
   isDefaultFormat,
   isExportFormatId,
+  mergeSafe,
 } from "@/lib/export-formats";
 
 const ALL_IDS = Object.keys(EXPORT_FORMATS) as ExportFormatId[];
@@ -61,42 +61,34 @@ describe("contentBox", () => {
   });
 });
 
-describe("frameFit", () => {
-  test("9:16 keeps the intact 4:5 card at full width (scale 1), centred", () => {
-    // 1080-wide target → the 1080×1350 master fills the width unscaled and the
-    // photo extends top/bottom. This is the exact Feed composition preserved.
-    // (whatsapp-status uses 'center' placement.)
-    const f = getFormat("whatsapp-status");
-    const p = frameFit(f);
-    expect(p.scale).toBeCloseTo(1, 6);
-    expect(p.w).toBeCloseTo(1080, 3);
-    expect(p.x).toBeCloseTo(0, 3);
-    expect(p.y).toBeCloseTo((1920 - 1350) / 2, 3);
+describe("mergeSafe", () => {
+  test("a theme's own margin wins when it exceeds the safe inset", () => {
+    // Feed: 48 px safe. A theme authored with wider chrome keeps its margins —
+    // this is what keeps the 4:5 master pixel-identical to the legacy output.
+    const feed = getFormat(DEFAULT_FORMAT_ID);
+    const i = mergeSafe(feed.safe, {
+      top: 110,
+      right: 90,
+      bottom: 80,
+      left: 90,
+    });
+    expect(i).toEqual({ top: 110, right: 90, bottom: 80, left: 90 });
   });
 
-  test("16:9 fits by height; the card never overflows, leaving side bands", () => {
-    const f = getFormat("x-landscape");
-    const p = frameFit(f);
-    expect(p.scale).toBeCloseTo(900 / 1350, 6);
-    expect(p.h).toBeCloseTo(900, 3);
-    expect(p.x).toBeGreaterThan(0); // photo bleeds the horizontal leftover
-    expect(p.y).toBeCloseTo(0, 3);
+  test("the platform safe inset floors a smaller theme margin", () => {
+    // Story: tall top/bottom keep-out. A theme's small margin is pushed clear.
+    const story = getFormat("instagram-story"); // t250 r270 b420 l64
+    const i = mergeSafe(story.safe, {
+      top: 70,
+      right: 80,
+      bottom: 70,
+      left: 80,
+    });
+    expect(i).toEqual({ top: 250, right: 270, bottom: 420, left: 80 });
   });
 
-  test("placement anchors on the leftover axis (upper/lower/center)", () => {
-    const lower = frameFit(getFormat("instagram-story")); // 'lower'
-    expect(lower.y).toBeCloseTo(1920 - 1350, 3);
-    const upper = frameFit(getFormat("tiktok")); // 'upper'
-    expect(upper.y).toBeCloseTo(0, 3);
-  });
-
-  test("contains the full frame without cropping for every format", () => {
-    for (const id of ALL_IDS) {
-      const f = getFormat(id);
-      const p = frameFit(f);
-      expect(p.w).toBeLessThanOrEqual(f.width + 0.01);
-      expect(p.h).toBeLessThanOrEqual(f.height + 0.01);
-      expect(p.scale).toBeGreaterThan(0);
-    }
+  test("missing natural sides default to 0 (safe inset wins)", () => {
+    const story = getFormat("instagram-story");
+    expect(mergeSafe(story.safe)).toEqual(story.safe);
   });
 });

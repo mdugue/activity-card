@@ -28,7 +28,7 @@ interface SingleCardPreviewProps {
   colors: ColorScheme;
   config: Record<string, unknown>;
   data: ActivityData;
-  /** target format previewed via the Hybrid frame (chosen in the FORMAT tool) */
+  /** target format the theme renders itself into (chosen in the FORMAT tool) */
   format: ExportFormat;
   imageTransform: ImageTransform;
   onImageTransformChange: (next: ImageTransform) => void;

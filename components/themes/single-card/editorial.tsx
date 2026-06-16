@@ -18,6 +18,7 @@ import {
   segmentRoutes,
 } from "@/lib/multi-activity";
 import { defineTheme, type ThemeProps } from "@/lib/theme-contract";
+import { SafeArea, useFormat } from "../shared/format-context";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoBackdrop } from "../shared/photo-backdrop";
 
@@ -129,6 +130,7 @@ export function ThemeEditorial({
   imageTransform,
   colors,
 }: ThemeProps<(typeof USES)[number]>) {
+  const { width, height } = useFormat();
   const accent = colors?.primary ?? DEFAULT_ACCENT;
   const sport = data.sport;
   const multi = isMultiActivity(data);
@@ -180,16 +182,12 @@ export function ThemeEditorial({
   return (
     <div
       style={{
-        width: 1080,
-        height: 1350,
+        width,
+        height,
         background: PAPER,
         color: INK,
         fontFamily: "var(--font-geist-mono), monospace",
-        padding: "110px 110px 90px 110px",
-        boxSizing: "border-box",
         position: "relative",
-        display: "flex",
-        flexDirection: "column",
         overflow: "hidden",
       }}
     >
@@ -200,15 +198,10 @@ export function ThemeEditorial({
           treatment="editorial"
         />
       ) : null}
-      {/* Content sits above the backdrop layer. */}
-      <div
-        style={{
-          position: "relative",
-          zIndex: 1,
-          display: "flex",
-          flexDirection: "column",
-          flex: 1,
-        }}
+      {/* Content sits above the backdrop layer, inset by the safe area. */}
+      <SafeArea
+        pad={{ top: 110, right: 110, bottom: 90, left: 110 }}
+        style={{ flex: 1, zIndex: 1 }}
       >
         {/* Top eyebrow */}
         <div
@@ -412,7 +405,7 @@ export function ThemeEditorial({
           <span>— FIN —</span>
           <span style={{ color: accent }}>EFFORT · PRINTED MMXXVI</span>
         </div>
-      </div>
+      </SafeArea>
     </div>
   );
 }
@@ -431,8 +424,6 @@ export const editorialTheme = defineTheme({
     speed: (d) => d.sport === "ride",
   },
   colors: { default: { primary: DEFAULT_ACCENT }, userAdjustable: true },
-  // Poster: stays opaque; the frame mattes its warm paper bg into the bands.
-  frame: { backdrop: "#f9f4ee" },
   photo: { defaultOn: true },
   Component: ThemeEditorial,
 });

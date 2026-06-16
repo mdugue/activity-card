@@ -30,6 +30,7 @@ import {
 import { formatDateUpper } from "@/lib/format";
 import { isMultiActivity, segmentProfiles } from "@/lib/multi-activity";
 import { defineTheme, type ThemeProps } from "@/lib/theme-contract";
+import { useFormat, useSafeInsets } from "../shared/format-context";
 import { PhotoLayer } from "../shared/photo-layer";
 
 const USES = [
@@ -43,10 +44,12 @@ const USES = [
 
 type ThemeAltitudeProps = ThemeProps<(typeof USES)[number], AltitudeConfig>;
 
+// Internal SVG coordinate space for the decorative elevation band (it renders at
+// width:100% of its container, so this is resolution, not a layout dimension).
 const W = 1080;
-const H = 1350;
+// The theme's natural horizontal margin at 4:5 — `useSafeInsets` floors it with
+// the platform safe inset on taller / cover-cropped formats.
 const PAD_X = 84;
-const CONTENT_W = W - PAD_X * 2;
 // Characters that drop below the baseline — used to reserve descender room only
 // when the text actually needs it (numbers/caps stay tight).
 const DESCENDERS = /[gjpqy]/;
@@ -91,12 +94,13 @@ function probeWidth(
   return measureProbe.getBoundingClientRect().width;
 }
 
-/** Largest size (clamped) at which the widest line still fits `CONTENT_W`. */
+/** Largest size (clamped) at which the widest line still fits `contentW`. */
 function fitFontSize(
   lines: string[],
   fontFamily: string,
   fontWeight: number,
-  fallback: number
+  fallback: number,
+  contentW: number
 ): number {
   let widest = 0;
   for (const line of lines) {
@@ -105,7 +109,7 @@ function fitFontSize(
   if (widest <= 0) {
     return fallback;
   }
-  return Math.min(MAX_FIT, Math.max(MIN_FIT, (CONTENT_W / widest) * REF_PX));
+  return Math.min(MAX_FIT, Math.max(MIN_FIT, (contentW / widest) * REF_PX));
 }
 
 const FONT_FAMILY: Record<AltitudeConfig["font"], string> = {
@@ -139,21 +143,27 @@ function scrimBackground(position: AltitudePosition): string {
   return `${pos}, ${FOOTER_SCRIM}, ${FLAT_DARKEN}`;
 }
 
-function clusterPosition(position: AltitudePosition): CSSProperties {
+function clusterPosition(
+  position: AltitudePosition,
+  padLeft: number,
+  padRight: number,
+  topInset: number,
+  bottomInset: number
+): CSSProperties {
   const base: CSSProperties = {
     position: "absolute",
-    left: PAD_X,
-    right: PAD_X,
+    left: padLeft,
+    right: padRight,
     zIndex: 3,
     color: "#fff",
   };
   if (position === "top") {
-    return { ...base, top: 132 };
+    return { ...base, top: topInset };
   }
   if (position === "center") {
     return { ...base, top: "50%", transform: "translateY(-50%)" };
   }
-  return { ...base, bottom: 120 };
+  return { ...base, bottom: bottomInset };
 }
 
 /** Hash identical-content claims to a stable id (clip ids must not collide
@@ -185,8 +195,10 @@ function ClaimText({
   belowOpacity,
   curves,
   uid,
+  contentW,
 }: {
   belowOpacity: number;
+  contentW: number;
   curves: NormalizedCurve[];
   cut: boolean;
   fontFamily: string;
@@ -196,7 +208,13 @@ function ClaimText({
 }) {
   const { lines } = layout;
   // Uniform scale to fill the width — no glyph distortion (see fitFontSize).
-  const fontSize = fitFontSize(lines, fontFamily, fontWeight, layout.fontSize);
+  const fontSize = fitFontSize(
+    lines,
+    fontFamily,
+    fontWeight,
+    layout.fontSize,
+    contentW
+  );
   const hasCurve = cut && curves.length > 0;
   // Tight vertical metrics: caps sit just below the top edge, and we only
   // reserve descender room when the text needs it or the curve dips below the
@@ -238,7 +256,7 @@ function ClaimText({
   const seams = hasCurve
     ? curves.map((c) => {
         const mapped: Coord[] = c.pts.map((p) => [
-          p[0] * CONTENT_W,
+          p[0] * contentW,
           peakY + (1 - p[1]) * bandH,
         ]);
         const lineD = mapped
@@ -249,7 +267,7 @@ function ClaimText({
         // Each leg occupies its own slice of the width; close the clip between
         // its own left and right edges so it only cuts the type it spans.
         const startX = mapped[0]?.[0] ?? 0;
-        const endX = mapped.at(-1)?.[0] ?? CONTENT_W;
+        const endX = mapped.at(-1)?.[0] ?? contentW;
         const aboveD = `${lineD} L${endX.toFixed(1)} ${topY.toFixed(1)} L${startX.toFixed(1)} ${topY.toFixed(1)} Z`;
         return { lineD, aboveD };
       })
@@ -259,7 +277,7 @@ function ClaimText({
     <svg
       aria-hidden="true"
       style={{ display: "block", overflow: "visible", width: "100%" }}
-      viewBox={`0 0 ${CONTENT_W} ${boxH.toFixed(1)}`}
+      viewBox={`0 0 ${contentW} ${boxH.toFixed(1)}`}
     >
       <title>{lines.join(" ")}</title>
       {hasCurve ? (
@@ -457,13 +475,19 @@ export function ThemeAltitude({
   data,
   photoUrl,
   imageTransform,
-  surface = "opaque",
   config = DEFAULT_ALTITUDE_CONFIG,
 }: ThemeAltitudeProps) {
-  // Transparent surface (Hybrid frame): drop our OWN photo + base fill so the
-  // frame's single full-bleed photo shows through — but keep the composition
-  // fully intact (scrim, the number-sliced-by-the-curve cutout, stats, meta).
-  const transparent = surface === "transparent";
+  const { width, height } = useFormat();
+  // The photo + scrim bleed the full canvas; the claim + curve + meta keep to
+  // the safe content width. PAD_X is the natural 4:5 margin, floored by the
+  // platform safe inset on taller / cover-cropped formats.
+  const insets = useSafeInsets({
+    top: 132,
+    right: PAD_X,
+    bottom: 60,
+    left: PAD_X,
+  });
+  const contentW = width - insets.left - insets.right;
   const claim = resolveClaim(config.claim, data);
   const stats = config.secondLine
     ? supportingStats(data, claim?.key ?? null)
@@ -496,7 +520,7 @@ export function ThemeAltitude({
   const cutout = config.claimStyle === "cutout" && claim !== null;
   const belowOpacity = Math.min(1, Math.max(0, config.cutoutOpacity / 100));
   const layout = claim
-    ? layoutClaim(claim.value, config.font, claim.isText, CONTENT_W)
+    ? layoutClaim(claim.value, config.font, claim.isText, contentW)
     : null;
   const uid = `alt-${hashId(`${claim?.value ?? ""}|${config.position}|${config.claimStyle}|${config.cutoutOpacity}|${config.font}`)}`;
 
@@ -512,15 +536,15 @@ export function ThemeAltitude({
   return (
     <div
       style={{
-        width: W,
-        height: H,
+        width,
+        height,
         position: "relative",
         overflow: "hidden",
-        background: transparent ? "transparent" : NO_PHOTO_BG,
+        background: NO_PHOTO_BG,
         boxSizing: "border-box",
       }}
     >
-      {photoUrl && !transparent ? (
+      {photoUrl ? (
         <PhotoLayer imageTransform={imageTransform} photoUrl={photoUrl} />
       ) : null}
 
@@ -535,11 +559,20 @@ export function ThemeAltitude({
         }}
       />
 
-      <div style={clusterPosition(config.position)}>
+      <div
+        style={clusterPosition(
+          config.position,
+          insets.left,
+          insets.right,
+          insets.top,
+          insets.bottom + 60
+        )}
+      >
         {claim && cutout && layout ? (
           <div>
             <ClaimText
               belowOpacity={belowOpacity}
+              contentW={contentW}
               curves={curves}
               cut
               fontFamily={font}
@@ -574,6 +607,7 @@ export function ThemeAltitude({
             </div>
             <ClaimText
               belowOpacity={1}
+              contentW={contentW}
               curves={curves}
               cut={false}
               fontFamily={font}
@@ -619,9 +653,9 @@ export function ThemeAltitude({
         <div
           style={{
             position: "absolute",
-            bottom: 60,
-            left: PAD_X,
-            right: PAD_X,
+            bottom: insets.bottom,
+            left: insets.left,
+            right: insets.right,
             zIndex: 3,
             fontFamily: "var(--font-mono), monospace",
             fontSize: 24,
@@ -645,9 +679,6 @@ export const altitudeTheme = defineTheme({
   uses: USES,
   // Fixed: white type + line over the photo is the design.
   colors: { default: { primary: "#ffffff" }, userAdjustable: false },
-  // Photo-led: the frame bleeds the photo full-frame; the gradient is the
-  // no-photo backdrop for the letterbox bands.
-  frame: { backdrop: NO_PHOTO_BG, photoBleed: true },
   photo: { defaultOn: true },
   params: ALTITUDE_PARAMS,
   defaults: DEFAULT_ALTITUDE_CONFIG,

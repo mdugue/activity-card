@@ -8,9 +8,10 @@ import {
   backgroundArgTypes,
 } from "../../../.storybook/backgrounds";
 
-// Renders one theme across every export format through the Hybrid frame, so the
-// two-pass layout (full-bleed back + safe-zone front) can be eyeballed at once.
-// Add a Background photo (toolbar or per-story upload) to see the bleed.
+// Renders one (format-aware) theme across every export format, so its safe-zone
+// behaviour can be eyeballed at once: the background bleeds the whole canvas
+// while the content keeps clear of each platform's keep-out. Add a Background
+// photo (toolbar or per-story upload) to see the photo-led themes bleed.
 const TILE_W = 220;
 const TILE_H = 300;
 
@@ -98,6 +99,6 @@ type Story = StoryObj<typeof meta>;
 // Photo-led themes bleed the photo + elevation; the claim/stats stay safe.
 export const Altitude: Story = {};
 export const Photo: Story = { args: { theme: "photo" } };
-// Poster themes ride the "front" layer as a contained card on their own matte.
+// Poster themes fill the canvas with their matte; content sits in the safe area.
 export const Path: Story = { args: { theme: "path" } };
 export const Data: Story = { args: { theme: "data" } };

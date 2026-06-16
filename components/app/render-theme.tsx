@@ -1,10 +1,10 @@
 import { SINGLE_CARD_THEMES, type ThemeId } from "@/components/themes";
-import { FormatFrame } from "@/components/themes/shared/format-frame";
+import { FormatProvider } from "@/components/themes/shared/format-context";
 import { PhotoFxProvider } from "@/components/themes/shared/photo-fx";
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
 import type { ActivityData } from "@/lib/activity";
 import type { ColorScheme } from "@/lib/colors";
-import { type ExportFormat, isDefaultFormat } from "@/lib/export-formats";
+import { EXPORT_FORMATS, type ExportFormat } from "@/lib/export-formats";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PhotoEffects } from "@/lib/photo-effects";
 import { pickThemeData } from "@/lib/theme-contract";
@@ -17,8 +17,9 @@ interface RenderThemeProps {
   /** the active theme's coerced parameter config */
   config?: Record<string, unknown>;
   data: ActivityData;
-  /** Target export format. When omitted (or the 4:5 master) the theme renders
-   *  natively; any other format wraps it in the Hybrid {@link FormatFrame}. */
+  /** Target export format. The theme renders itself directly at this size and
+   *  reads its dimensions + safe insets from the FormatContext. Defaults to the
+   *  4:5 feed master (so a bare render matches the legacy canvas). */
   format?: ExportFormat;
   /** Pan/zoom applied to the background photo, wherever a theme shows one. */
   imageTransform?: ImageTransform | null;
@@ -33,9 +34,9 @@ interface RenderThemeProps {
 /**
  * Dispatcher: looks the theme's descriptor up in the registry, strips the data
  * down to the theme's declared capabilities (`pickThemeData`, so the runtime
- * data matches the component's narrowed type), and provides the shared
- * photo-effects context. No per-theme branches — every theme takes the same
- * generic props; the photo is gated only by the `photoBackdrop` flag.
+ * data matches the component's narrowed type), and provides the shared format +
+ * photo-effects context. No per-theme branches and no Hybrid frame — every theme
+ * is format-aware and renders itself at the target dimensions.
  */
 export function RenderTheme({
   theme,
@@ -56,48 +57,19 @@ export function RenderTheme({
   const Component = descriptor.Component;
   const resolvedColors = colors ?? descriptor.colors.default;
   const themeData = pickThemeData(descriptor, data);
-
-  // The 4:5 master (or no format) renders natively — pixel-identical to legacy.
-  const framed = format !== undefined && !isDefaultFormat(format.id);
-  // Photo-led themes drop their OWN photo so the frame's single full-bleed photo
-  // shows through (no seam); they keep their scrim + every element intact. The
-  // frame reframes that intact composition as one unit.
-  const surface =
-    framed && descriptor.frame?.photoBleed ? "transparent" : "opaque";
-
-  const component = (
-    <Component
-      colors={resolvedColors}
-      config={config}
-      data={themeData}
-      imageTransform={imageTransform}
-      photoUrl={photo}
-      surface={surface}
-    />
-  );
+  const activeFormat = format ?? EXPORT_FORMATS["instagram-feed"];
 
   return (
-    <PhotoFxProvider value={{ effects: photoEffects, imageSize }}>
-      {framed && format ? (
-        <FormatFrame
-          colors={resolvedColors}
-          format={format}
-          frame={descriptor.frame}
-          imageTransform={imageTransform}
-          photoUrl={photo}
-        >
-          {component}
-        </FormatFrame>
-      ) : (
+    <FormatProvider value={activeFormat}>
+      <PhotoFxProvider value={{ effects: photoEffects, imageSize }}>
         <Component
           colors={resolvedColors}
           config={config}
           data={themeData}
           imageTransform={imageTransform}
           photoUrl={photo}
-          surface="opaque"
         />
-      )}
-    </PhotoFxProvider>
+      </PhotoFxProvider>
+    </FormatProvider>
   );
 }

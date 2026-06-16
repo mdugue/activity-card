@@ -16,6 +16,7 @@ import {
   segmentRoutes,
 } from "@/lib/multi-activity";
 import { defineTheme, type ThemeProps } from "@/lib/theme-contract";
+import { SafeArea, useFormat } from "../shared/format-context";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoBackdrop } from "../shared/photo-backdrop";
 
@@ -39,6 +40,7 @@ export function ThemePath({
   imageTransform,
   colors,
 }: ThemeProps<(typeof USES)[number]>) {
+  const { width, height } = useFormat();
   const accent = colors?.primary ?? DEFAULT_ACCENT;
   const isPool = data.sport === "swim";
   const sport = data.sport;
@@ -96,16 +98,12 @@ export function ThemePath({
   return (
     <div
       style={{
-        width: 1080,
-        height: 1350,
+        width,
+        height,
         background: "#ffffff",
         color: "#1a1714",
         fontFamily: "var(--font-manrope), sans-serif",
         position: "relative",
-        padding: "90px 90px 80px 90px",
-        boxSizing: "border-box",
-        display: "flex",
-        flexDirection: "column",
         overflow: "hidden",
       }}
     >
@@ -116,15 +114,10 @@ export function ThemePath({
           treatment="path"
         />
       ) : null}
-      {/* Content sits above the backdrop layer. */}
-      <div
-        style={{
-          position: "relative",
-          zIndex: 1,
-          display: "flex",
-          flexDirection: "column",
-          flex: 1,
-        }}
+      {/* Content sits above the backdrop layer, inset by the safe area. */}
+      <SafeArea
+        pad={{ top: 90, right: 90, bottom: 80, left: 90 }}
+        style={{ flex: 1, zIndex: 1 }}
       >
         {/* Top meta band */}
         <div
@@ -280,7 +273,7 @@ export function ThemePath({
             </span>
           </div>
         </div>
-      </div>
+      </SafeArea>
     </div>
   );
 }
@@ -432,8 +425,6 @@ export const pathTheme = defineTheme({
   tagline: "route is the hero",
   uses: USES,
   colors: { default: { primary: DEFAULT_ACCENT }, userAdjustable: true },
-  // Poster: stays opaque; the frame mattes its paper-white bg into the bands.
-  frame: { backdrop: "#ffffff" },
   photo: { defaultOn: true },
   Component: ThemePath,
 });

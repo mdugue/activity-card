@@ -17,6 +17,7 @@ import {
 } from "@/lib/format";
 import { isMultiActivity, segmentRoutes } from "@/lib/multi-activity";
 import { defineTheme, type ThemeProps } from "@/lib/theme-contract";
+import { useFormat, useSafeInsets } from "../shared/format-context";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoLayer } from "../shared/photo-layer";
 
@@ -86,12 +87,10 @@ export function ThemePhoto({
   photoUrl,
   colors,
   imageTransform,
-  surface = "opaque",
 }: ThemePhotoProps) {
-  // Transparent surface (Hybrid frame): drop our OWN photo layer + placeholder
-  // fill so the frame's single full-bleed photo shows through — but keep the
-  // whole composition intact (vignette protection, masthead, route, hero).
-  const transparent = surface === "transparent";
+  const { width, height, safe } = useFormat();
+  // Masthead / title / hero keep to the safe area; the photo + vignette bleed.
+  const insets = useSafeInsets({ top: 70, right: 80, bottom: 70, left: 80 });
   const sport = data.sport;
   const isPool = sport === "swim";
   const multi = isMultiActivity(data);
@@ -146,19 +145,19 @@ export function ThemePhoto({
     <div
       style={{
         ...cssVars,
-        width: 1080,
-        height: 1350,
-        background: transparent ? "transparent" : placeholderBg,
+        width,
+        height,
+        background: placeholderBg,
         fontFamily: "var(--font-dm-sans), sans-serif",
         color: "var(--headline)",
         position: "relative",
         overflow: "hidden",
       }}
     >
-      {photoUrl && !transparent ? (
+      {photoUrl ? (
         <PhotoLayer imageTransform={imageTransform} photoUrl={photoUrl} />
       ) : null}
-      {!(photoUrl || transparent) && (
+      {!photoUrl && (
         <svg
           aria-hidden="true"
           height="100%"
@@ -199,9 +198,9 @@ export function ThemePhoto({
       <div
         style={{
           position: "absolute",
-          top: 70,
-          left: 80,
-          right: 80,
+          top: insets.top,
+          left: insets.left,
+          right: insets.right,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
@@ -260,8 +259,8 @@ export function ThemePhoto({
           aria-hidden="true"
           style={{
             position: "absolute",
-            top: 200,
-            right: 60,
+            top: Math.max(200, safe.top),
+            right: Math.max(60, safe.right),
             width: 320,
             height: 240,
             opacity: 0.9,
@@ -292,7 +291,14 @@ export function ThemePhoto({
           )}
         </svg>
       )}
-      <div style={{ position: "absolute", bottom: 220, left: 80, right: 80 }}>
+      <div
+        style={{
+          position: "absolute",
+          bottom: insets.bottom + 150,
+          left: insets.left,
+          right: insets.right,
+        }}
+      >
         <div
           aria-hidden
           style={{
@@ -326,9 +332,9 @@ export function ThemePhoto({
       <div
         style={{
           position: "absolute",
-          bottom: 70,
-          left: 80,
-          right: 80,
+          bottom: insets.bottom,
+          left: insets.left,
+          right: insets.right,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-end",
@@ -414,12 +420,6 @@ export const photoTheme = defineTheme({
     default: { primary: "#c89d6e", onPrimary: "#0a0a0a" },
     defaultChoice: { kind: "photo", variant: "vibrant" },
     userAdjustable: true,
-  },
-  // Photo-led: the frame bleeds the photo full-frame; a deep neutral gradient
-  // backs the letterbox bands when no photo is set.
-  frame: {
-    backdrop: "linear-gradient(180deg, #2c3848 0%, #11151b 100%)",
-    photoBleed: true,
   },
   photo: { defaultOn: true },
   Component: ThemePhoto,
