@@ -23,7 +23,8 @@ Reward someone who did a beautiful workout with something beautiful in return. T
 - Live preview, theme picker, minimal customisation (accent colour, stat visibility toggles — heart-rate visibility defaults to **on** as of Phase 2A so Strava-sourced cards show HR without an extra click; the toggle can hide it for privacy)
 - Download PNG (1080×1350, Instagram portrait)
 - Native share sheet on mobile (Web Share API with image file)
-- Deploy as static site (Cloudflare Pages)
+- Deploy on Vercel (originally planned as a static Cloudflare Pages site;
+  superseded in Phase 2A — see Architecture → Stack)
 
 ### Step 2 (in progress)
 
@@ -168,4 +169,6 @@ An additive mode alongside the single card (top-level **Carousel ↔ Single Card
 
 ## Non-goals
 
-See AGENTS.md for the binding list. The short version: no backend, no OAuth, no accounts, no maps, no PDF, no event mode — yet.
+See AGENTS.md for the binding list. The short version: no accounts, no maps,
+no PDF, no event mode — yet. Strava OAuth (Phase 2A) IS live; its Route
+Handlers are the one sanctioned exception to the original "no backend" rule.

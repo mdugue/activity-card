@@ -111,6 +111,37 @@ test.describe("strava OAuth + picker", () => {
     ).toBeVisible();
   });
 
+  test("a Strava activity offers its photos; one click sets the background", async ({
+    page,
+  }) => {
+    await connectStrava(page);
+    await page.waitForURL(/\/$/);
+    await page
+      .getByRole("button", { name: /saturday in the elbsandstein/i })
+      .click();
+
+    // Back in the wizard, the photo step offers the ride's two mock photos
+    // next to the regular Browse drop zone.
+    await expect(page.getByText(/from your strava activity/i)).toBeVisible();
+    await expect(page.getByText(/browse photos/i)).toBeVisible();
+    const thumbs = page.getByRole("button", { name: /use strava photo/i });
+    await expect(thumbs).toHaveCount(2);
+    await thumbs.first().click();
+    await expect(page.getByText(/strava photo 1/i)).toBeVisible();
+    // The no-photo path stays one click away even with a photo staged —
+    // both loaded rows (activity + photo) expose a Remove button.
+    await expect(page.getByRole("button", { name: /^remove$/i })).toHaveCount(
+      2
+    );
+
+    await page.getByRole("button", { name: /open the editor/i }).click();
+    await expect(page.getByTestId("export-action")).toBeVisible();
+    // The photo flowed through the proxy → File pipeline: the PHOTO group
+    // shows it loaded, and the Strava strip stays available for swapping.
+    await expect(page.getByText(/photo loaded/i)).toBeVisible();
+    await expect(page.getByText(/^from strava$/i)).toBeVisible();
+  });
+
   test("card itself carries NO in-image Strava mark, regardless of source", async ({
     page,
   }) => {
