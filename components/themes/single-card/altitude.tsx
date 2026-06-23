@@ -4,11 +4,17 @@
 // JetBrains Mono for the supporting line and footer. Parameterised by `config`
 // — see `lib/altitude.ts` for the model and the pure stat resolution.
 //
-// The claim is rendered as SVG <text> so it can (a) stretch to the full content
-// width via `textLength` and (b) be split along the elevation curve in the
-// "cutout" treatment: the portion above the line stays opaque, the portion
-// below fades to the opacity parameter. Both are export-safe (plain inline SVG,
-// no CSS filters / backdrop-filter that html-to-image mishandles).
+// The claim is rendered as SVG <text> so it can be split along the elevation
+// curve in the "cutout" treatment: the portion above the line stays opaque, the
+// portion below fades to the opacity parameter. Both are export-safe (plain
+// inline SVG, no CSS filters / backdrop-filter that html-to-image mishandles).
+//
+// Two coordinate systems share one render tree (see `format-context`): the claim
+// GLYPHS sit inside the platform SAFE box (offset by `insets.left`, sized to the
+// safe content width), while the elevation LINE — and the cutout seam that slices
+// the glyphs — spans the FULL canvas width, bleeding past the safe zone to the
+// edges. The headline is also clamped to a vertical budget so it never overflows
+// a short / landscape canvas.
 
 import type { CSSProperties } from "react";
 import {
@@ -53,6 +59,60 @@ const PAD_X = 84;
 // Characters that drop below the baseline — used to reserve descender room only
 // when the text actually needs it (numbers/caps stay tight).
 const DESCENDERS = /[gjpqy]/;
+
+// --- Anton/Playfair vertical ink metrics (fractions of the font size) --------
+// Measured from the rendered fonts: caps and ascenders rise ~0.92× the font size
+// above the baseline (digits ~0.87×). The box reserves that much above the
+// baseline so the opaque glyphs are fully contained — under-reserving (the old
+// 0.72 cap) let tall Anton glyphs poke out the top of the SVG and get clipped at
+// the canvas edge on short / landscape formats. The baseline itself is
+// footer-anchored, so a taller reservation only grows the box upward into empty
+// space: roomy formats render identically.
+const INK_ASCENT = 0.92;
+const TOP_PAD = 0.04;
+const LINE_STEP = 1.0;
+// Room below the baseline: descenders, or the elevation curve's dip + its stroke.
+// Unchanged from the original calibration so footer placement is preserved.
+const DESCENT_TEXT = 0.2;
+const DESCENT_FLAT = 0.05;
+const DESCENT_CURVE = 0.12;
+// The elevation curve is grounded against this (the design's original cap
+// reference), kept separate from INK_ASCENT so the seam keeps slicing the glyphs
+// exactly where it always has.
+const CURVE_CAP = 0.72;
+
+interface ClaimMetrics {
+  /** First line's baseline, from the top of the box. */
+  baseline0: number;
+  /** Total box height — exactly contains the ink (+ curve dip). */
+  boxH: number;
+  /** Last line's baseline (the curve grounds here). */
+  lastBaseline: number;
+  /** Baseline-to-baseline step for wrapped lines. */
+  lineH: number;
+}
+
+/** The claim box geometry for a given font size. Every term is linear in
+ *  `fontSize`, so `boxH` scales linearly — the height clamp rescales in one step. */
+function claimMetrics(
+  fontSize: number,
+  nLines: number,
+  hasCurve: boolean,
+  hasDescenders: boolean
+): ClaimMetrics {
+  const cap = fontSize * INK_ASCENT;
+  const topPad = fontSize * TOP_PAD;
+  const lineH = fontSize * LINE_STEP;
+  const descent =
+    fontSize *
+    Math.max(
+      hasDescenders ? DESCENT_TEXT : DESCENT_FLAT,
+      hasCurve ? DESCENT_CURVE : 0
+    );
+  const baseline0 = topPad + cap;
+  const lastBaseline = baseline0 + (nLines - 1) * lineH;
+  return { baseline0, lineH, lastBaseline, boxH: lastBaseline + descent };
+}
 
 // --- Fit-to-width by measure-and-scale --------------------------------------
 // Scaling the font size uniformly is the only way to fill the width without
@@ -143,17 +203,18 @@ function scrimBackground(position: AltitudePosition): string {
   return `${pos}, ${FOOTER_SCRIM}, ${FLAT_DARKEN}`;
 }
 
+/** The claim cluster spans the full canvas width (the elevation line bleeds to
+ *  the edges); its text rows pad themselves back into the safe box. Only the
+ *  block-axis anchor changes with `position`. */
 function clusterPosition(
   position: AltitudePosition,
-  padLeft: number,
-  padRight: number,
   topInset: number,
   bottomInset: number
 ): CSSProperties {
   const base: CSSProperties = {
     position: "absolute",
-    left: padLeft,
-    right: padRight,
+    left: 0,
+    right: 0,
     zIndex: 3,
     color: "#fff",
   };
@@ -178,27 +239,39 @@ function hashId(s: string): string {
 }
 
 /**
- * Full-width hero text, sized + wrapped by `layout`. `cut` splits it along the
- * `curves` and draws a white line on each seam; otherwise it's solid with a soft
- * dark drop for legibility.
+ * Full-width hero text, sized by `layout` then clamped to `maxBoxH`. The GLYPHS
+ * are drawn at `offsetX` and fitted to the safe `contentW`, while the curve, its
+ * clip and its seam span the full canvas (`fullW`) — so the type stays inside the
+ * safe zone but the elevation line bleeds to the edges. `cut` splits the type
+ * along the `curves` and draws a white line on each seam; otherwise it's solid
+ * with a soft dark drop for legibility.
  *
  * The type is opaque above each curve and fades to `belowOpacity` below it. A
  * single activity is one curve across the full width; a project lays its legs
- * side by side, each cutting only its own slice of the type (with a vertical
- * step in the seam where two legs meet).
+ * side by side, each cutting only its own slice of the type.
  */
 function ClaimText({
-  layout,
+  belowOpacity,
+  contentW,
+  fullW,
+  offsetX,
+  maxBoxH,
+  curves,
+  cut,
   fontFamily,
   fontWeight,
-  cut,
-  belowOpacity,
-  curves,
+  layout,
   uid,
-  contentW,
 }: {
   belowOpacity: number;
+  /** Safe content width the glyphs are fitted to. */
   contentW: number;
+  /** Full canvas width — the curve / clip / seam coordinate space. */
+  fullW: number;
+  /** Left edge of the safe box, where the glyphs start. */
+  offsetX: number;
+  /** Vertical budget; the font is scaled down so the box fits. */
+  maxBoxH: number;
   curves: NormalizedCurve[];
   cut: boolean;
   fontFamily: string;
@@ -207,26 +280,24 @@ function ClaimText({
   uid: string;
 }) {
   const { lines } = layout;
-  // Uniform scale to fill the width — no glyph distortion (see fitFontSize).
-  const fontSize = fitFontSize(
+  const hasCurve = cut && curves.length > 0;
+  const hasDesc = DESCENDERS.test(lines.join(""));
+
+  // Width-fit, then clamp to the vertical budget. `boxH` is linear in fontSize,
+  // so a single rescale lands exactly on `maxBoxH`.
+  let fontSize = fitFontSize(
     lines,
     fontFamily,
     fontWeight,
     layout.fontSize,
     contentW
   );
-  const hasCurve = cut && curves.length > 0;
-  // Tight vertical metrics: caps sit just below the top edge, and we only
-  // reserve descender room when the text needs it or the curve dips below the
-  // baseline — so numbers don't carry a tall empty box.
-  const capH = fontSize * 0.72;
-  const topPad = fontSize * 0.05;
-  const lineH = fontSize * 0.92;
-  const descent =
-    fontSize *
-    Math.max(DESCENDERS.test(lines.join("")) ? 0.2 : 0.05, hasCurve ? 0.12 : 0);
-  const baseline0 = topPad + capH;
-  const boxH = baseline0 + (lines.length - 1) * lineH + descent;
+  let m = claimMetrics(fontSize, lines.length, hasCurve, hasDesc);
+  if (m.boxH > maxBoxH && maxBoxH > 0) {
+    fontSize *= maxBoxH / m.boxH;
+    m = claimMetrics(fontSize, lines.length, hasCurve, hasDesc);
+  }
+  const { baseline0, lineH, lastBaseline, boxH } = m;
 
   const textLines = (opacity: number, fill = "#fff", dy = 0) =>
     lines.map((ln, i) => (
@@ -237,7 +308,7 @@ function ClaimText({
         fontWeight={fontWeight}
         key={`${i}-${ln}`}
         opacity={opacity}
-        x={0}
+        x={offsetX}
         y={baseline0 + i * lineH + dy}
       >
         {ln}
@@ -246,17 +317,18 @@ function ClaimText({
 
   // Ground every curve on the LAST line: highest points sit at the golden
   // section down the cap height, valleys settle just below the baseline, so most
-  // of the type stays opaque and only the feet are cut.
-  const lastBaseline = baseline0 + (lines.length - 1) * lineH;
-  const bandH = capH * 0.5;
-  const peakY = lastBaseline - capH * 0.382;
+  // of the type stays opaque and only the feet are cut. The curve spans the FULL
+  // canvas width, so it bleeds past the glyphs to the edges.
+  const curveCap = fontSize * CURVE_CAP;
+  const bandH = curveCap * 0.5;
+  const peakY = lastBaseline - curveCap * 0.382;
   // Close the "above" regions well past the top of the glyphs so the opaque
   // copy covers them fully — otherwise tall caps poke above the clip.
   const topY = -fontSize;
   const seams = hasCurve
     ? curves.map((c) => {
         const mapped: Coord[] = c.pts.map((p) => [
-          p[0] * contentW,
+          p[0] * fullW,
           peakY + (1 - p[1]) * bandH,
         ]);
         const lineD = mapped
@@ -267,7 +339,7 @@ function ClaimText({
         // Each leg occupies its own slice of the width; close the clip between
         // its own left and right edges so it only cuts the type it spans.
         const startX = mapped[0]?.[0] ?? 0;
-        const endX = mapped.at(-1)?.[0] ?? contentW;
+        const endX = mapped.at(-1)?.[0] ?? fullW;
         const aboveD = `${lineD} L${endX.toFixed(1)} ${topY.toFixed(1)} L${startX.toFixed(1)} ${topY.toFixed(1)} Z`;
         return { lineD, aboveD };
       })
@@ -277,7 +349,7 @@ function ClaimText({
     <svg
       aria-hidden="true"
       style={{ display: "block", overflow: "visible", width: "100%" }}
-      viewBox={`0 0 ${contentW} ${boxH.toFixed(1)}`}
+      viewBox={`0 0 ${fullW} ${boxH.toFixed(1)}`}
     >
       <title>{lines.join(" ")}</title>
       {hasCurve ? (
@@ -332,7 +404,8 @@ function ClaimText({
 /**
  * Decorative elevation band (stacked treatment + the no-claim hero). Renders one
  * curve for a single activity, or — for a project — every leg laid out side by
- * side on a shared scale (no gaps, a vertical step where two legs meet).
+ * side on a shared scale (no gaps, a vertical step where two legs meet). It
+ * renders at width:100% of a full-bleed container, so it spans the whole canvas.
  */
 function MultiLineBand({
   curves,
@@ -478,9 +551,10 @@ export function ThemeAltitude({
   config = DEFAULT_ALTITUDE_CONFIG,
 }: ThemeAltitudeProps) {
   const { width, height } = useFormat();
-  // The photo + scrim bleed the full canvas; the claim + curve + meta keep to
-  // the safe content width. PAD_X is the natural 4:5 margin, floored by the
-  // platform safe inset on taller / cover-cropped formats.
+  // The photo + scrim bleed the full canvas; the claim GLYPHS + stats + meta keep
+  // to the safe content width, while the elevation LINE bleeds to the edges.
+  // PAD_X is the natural 4:5 margin, floored by the platform safe inset on taller
+  // / cover-cropped formats.
   const insets = useSafeInsets({
     top: 132,
     right: PAD_X,
@@ -533,6 +607,33 @@ export function ThemeAltitude({
     (data.location || "").toUpperCase(),
   ].filter(Boolean);
 
+  // Vertical budget so the headline never overflows a short / landscape canvas.
+  // The cluster floats `META_GAP` above the meta line; the headline gets what's
+  // left after the footer (and, when stacked, the kicker + band). On tall feed /
+  // story formats the budget is far larger than the width-fit size, so the master
+  // stays width-driven and unchanged.
+  const META_GAP = 60;
+  const FOOTER_RESERVE = 104;
+  const KICKER_RESERVE = 56;
+  const BAND_RESERVE = 126;
+  const clusterAvailH = Math.max(
+    200,
+    config.position === "center"
+      ? height - 2 * Math.max(insets.top, insets.bottom + META_GAP)
+      : height - insets.top - insets.bottom - META_GAP
+  );
+  const footerReserve = stats.length > 0 || claim?.unit ? FOOTER_RESERVE : 0;
+  const cutoutMaxBoxH = clusterAvailH - footerReserve;
+  const stackedMaxBoxH =
+    clusterAvailH - footerReserve - KICKER_RESERVE - BAND_RESERVE;
+
+  // Text rows pad back into the safe box; the SVG layers (claim, band) stay
+  // full-bleed so the elevation line reaches the edges.
+  const safePad: CSSProperties = {
+    paddingLeft: insets.left,
+    paddingRight: insets.right,
+  };
+
   return (
     <div
       style={{
@@ -562,10 +663,8 @@ export function ThemeAltitude({
       <div
         style={clusterPosition(
           config.position,
-          insets.left,
-          insets.right,
           insets.top,
-          insets.bottom + 60
+          insets.bottom + META_GAP
         )}
       >
         {claim && cutout && layout ? (
@@ -577,16 +676,21 @@ export function ThemeAltitude({
               cut
               fontFamily={font}
               fontWeight={fontWeight}
+              fullW={width}
               layout={layout}
+              maxBoxH={cutoutMaxBoxH}
+              offsetX={insets.left}
               uid={uid}
             />
-            <FooterRow
-              marginTop={16}
-              stats={stats}
-              unit={claim.unit}
-              unitFontFamily={font}
-              unitFontSize={unitFontSize}
-            />
+            <div style={safePad}>
+              <FooterRow
+                marginTop={16}
+                stats={stats}
+                unit={claim.unit}
+                unitFontFamily={font}
+                unitFontSize={unitFontSize}
+              />
+            </div>
           </div>
         ) : null}
 
@@ -594,6 +698,7 @@ export function ThemeAltitude({
           <div>
             <div
               style={{
+                ...safePad,
                 fontFamily: "var(--font-mono), monospace",
                 fontSize: 24,
                 letterSpacing: "0.28em",
@@ -612,7 +717,10 @@ export function ThemeAltitude({
               cut={false}
               fontFamily={font}
               fontWeight={fontWeight}
+              fullW={width}
               layout={layout}
+              maxBoxH={stackedMaxBoxH}
+              offsetX={insets.left}
               uid={uid}
             />
             {hasLine ? (
@@ -620,12 +728,14 @@ export function ThemeAltitude({
                 <MultiLineBand curves={curves} style={{ height: "100%" }} />
               </div>
             ) : null}
-            <FooterRow
-              marginTop={18}
-              stats={stats}
-              unitFontFamily={font}
-              unitFontSize={unitFontSize}
-            />
+            <div style={safePad}>
+              <FooterRow
+                marginTop={18}
+                stats={stats}
+                unitFontFamily={font}
+                unitFontSize={unitFontSize}
+              />
+            </div>
           </div>
         ) : null}
 
@@ -639,12 +749,14 @@ export function ThemeAltitude({
                 style={{ height: "100%" }}
               />
             </div>
-            <FooterRow
-              marginTop={20}
-              stats={stats}
-              unitFontFamily={font}
-              unitFontSize={unitFontSize}
-            />
+            <div style={safePad}>
+              <FooterRow
+                marginTop={20}
+                stats={stats}
+                unitFontFamily={font}
+                unitFontSize={unitFontSize}
+              />
+            </div>
           </div>
         ) : null}
       </div>

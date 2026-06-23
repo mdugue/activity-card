@@ -53,11 +53,11 @@ describe("registry", () => {
 describe("contentBox", () => {
   test("subtracts the insets from the canvas", () => {
     const box = contentBox(getFormat("strava"));
-    // strava: 1080×1920, insets t300 r88 b230 l88
-    expect(box.x).toBe(88);
-    expect(box.y).toBe(300);
-    expect(box.w).toBe(1080 - 88 - 88);
-    expect(box.h).toBe(1920 - 300 - 230);
+    // strava: 1080×1920, insets t160 r64 b220 l64
+    expect(box.x).toBe(64);
+    expect(box.y).toBe(160);
+    expect(box.w).toBe(1080 - 64 - 64);
+    expect(box.h).toBe(1920 - 160 - 220);
   });
 });
 
@@ -76,15 +76,16 @@ describe("mergeSafe", () => {
   });
 
   test("the platform safe inset floors a smaller theme margin", () => {
-    // Story: tall top/bottom keep-out. A theme's small margin is pushed clear.
-    const story = getFormat("instagram-story"); // t250 r270 b420 l64
+    // Story: tall top/bottom keep-out floors the theme's smaller vertical
+    // margin, while the wider side margin (80 > 64) still wins per-side.
+    const story = getFormat("instagram-story"); // t220 r64 b220 l64
     const i = mergeSafe(story.safe, {
       top: 70,
       right: 80,
       bottom: 70,
       left: 80,
     });
-    expect(i).toEqual({ top: 250, right: 270, bottom: 420, left: 80 });
+    expect(i).toEqual({ top: 220, right: 80, bottom: 220, left: 80 });
   });
 
   test("missing natural sides default to 0 (safe inset wins)", () => {

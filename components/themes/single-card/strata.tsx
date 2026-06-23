@@ -46,6 +46,12 @@ const MONO = "var(--font-mono), monospace";
 const FIELD_W = 920;
 const FIELD_H = 880;
 
+// The stat footer's own base thickness. A platform safe-bottom larger than this
+// (e.g. TikTok's tall caption keep-out) becomes margin below the strip — the
+// photo / mood wash bleeds through it — rather than stretching the coloured band
+// into an empty slab. 48 keeps the 4:5 feed master pixel-identical.
+const STAT_FOOTER_BASE = 48;
+
 const USES = [
   "elevation",
   "elevationViz",
@@ -326,10 +332,6 @@ export function ThemeStrata({
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
-        paddingTop: insets.top,
-        paddingRight: insets.right,
-        paddingBottom: insets.bottom,
-        paddingLeft: insets.left,
         boxSizing: "border-box",
       }}
     >
@@ -384,6 +386,9 @@ export function ThemeStrata({
           fontSize: 24,
           fontWeight: 600,
           letterSpacing: "0.26em",
+          marginTop: insets.top,
+          marginLeft: insets.left,
+          marginRight: insets.right,
         }}
       >
         <span>STRATA · {sportLabel(data.sport)}</span>
@@ -406,7 +411,10 @@ export function ThemeStrata({
           fontSize: 82,
           lineHeight: 0.94,
           letterSpacing: "-0.02em",
-          margin: "34px 0 14px 0",
+          marginTop: "34px",
+          marginBottom: "14px",
+          marginLeft: insets.left,
+          marginRight: insets.right,
           maxWidth: "94%",
           textWrap: "pretty",
           textShadow: overPhoto
@@ -422,6 +430,8 @@ export function ThemeStrata({
           letterSpacing: "0.16em",
           opacity: 0.7,
           fontWeight: 500,
+          marginLeft: insets.left,
+          marginRight: insets.right,
         }}
       >
         {metaParts.join(" · ")}
@@ -442,14 +452,17 @@ export function ThemeStrata({
       {/* Stat strip. */}
       <div
         style={{
-          marginLeft: -insets.left,
-          marginRight: -insets.right,
           background: tokens.statBg,
           borderTop: `1.5px solid ${tokens.statBorder}`,
           paddingTop: 30,
-          paddingBottom: 30,
+          // The coloured footer keeps its own base thickness; the rest of the
+          // platform safe-bottom is margin below it (background bleeds through),
+          // so a tall keep-out lifts the strip clear instead of stretching it.
+          paddingBottom: Math.min(insets.bottom, STAT_FOOTER_BASE),
+          marginBottom: Math.max(0, insets.bottom - STAT_FOOTER_BASE),
           paddingLeft: insets.left,
           paddingRight: insets.right,
+
           display: "flex",
           justifyContent: "space-between",
           gap: 24,

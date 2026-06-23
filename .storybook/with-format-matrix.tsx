@@ -16,8 +16,8 @@ import { SafeZoneOverlay } from "@/components/app/safe-zone-overlay";
 import { FormatProvider } from "@/components/themes/shared/format-context";
 import { FORMAT_ORDER, getFormat } from "@/lib/export-formats";
 
-const TILE_W = 200;
-const TILE_H = 280;
+const TILE_W = 400;
+const TILE_H = 400;
 
 export const DEFAULT_SAFE_ZONES = "off";
 

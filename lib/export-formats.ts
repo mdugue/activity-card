@@ -8,17 +8,20 @@
  * / colour wash) fills the target *full-bleed*, while the content (headline +
  * stats + marks) is kept inside the format's **safe zone** via `mergeSafe`.
  *
- * Safe insets are **asymmetric** (the danger sits top / bottom / at the edges,
- * not uniformly "around") and **conservative percentages** baked to px in each
- * format's own coordinate space — never pixel-tuned to one device. See
- * `docs`/the plan §2 + §2.1 (Strava) for the research behind the numbers.
+ * What `safe` models is **occlusion, not crop**. On these targets the image is
+ * shown full-bleed and *uncropped* — the danger is that the platform paints its
+ * own UI (caption, action rail, profile, reply box) *over* the picture. So the
+ * insets are the per-side keep-out where that chrome sits, and they are
+ * **asymmetric** (heavy bottom / top, the odd side rail — never a uniform ring).
+ * The full-bleed background bleeds *through* the keep-out; only legible content
+ * stays inside it. The lone genuine crop is X doubling as a 2:1 link card, which
+ * its (larger) top/bottom inset absorbs. Values are conservative px in each
+ * format's own coordinate space, baked from current platform UI — never
+ * pixel-tuned to one device. See the `theme-architecture` skill for the model.
  */
 
 /** The canonical aspect buckets every platform maps onto. */
 export type AspectBucket = "feed" | "square" | "story" | "landscape";
-
-/** Where the (aspect-preserved) content block sits inside the safe box. */
-export type ContentPlacement = "center" | "lower" | "upper";
 
 /** Keep-out insets in the format's own px space (top/right/bottom/left). */
 export interface SafeInsets {
@@ -40,8 +43,6 @@ export interface ExportFormat {
   label: string;
   /** short note shown in the picker / docs */
   note?: string;
-  /** how the content block is anchored within the safe box */
-  placement: ContentPlacement;
   /** the platform family, e.g. "Instagram" (groups the picker) */
   platform: string;
   /** keep-out zone for text/stats; background may bleed through it */
@@ -58,7 +59,7 @@ const sym = (n: number): SafeInsets => ({
 
 /**
  * The curated registry. Multiple platforms can share an aspect bucket but keep
- * their own id + safe insets (Strava ≠ generic story — see §2.1).
+ * their own id + safe insets (Strava ≠ generic story).
  */
 export const EXPORT_FORMATS = {
   "instagram-feed": {
@@ -69,21 +70,10 @@ export const EXPORT_FORMATS = {
     aspectLabel: "4:5",
     width: 1080,
     height: 1350,
+    // No chrome over the image (feed UI sits below it) and shown uncropped — so
+    // this keep-out is purely the 4:5 master's own aesthetic margin.
     safe: sym(48),
-    placement: "center",
     note: "Portrait feed — also Facebook & Threads",
-  },
-  square: {
-    id: "square",
-    label: "Square",
-    platform: "Universal",
-    bucket: "square",
-    aspectLabel: "1:1",
-    width: 1080,
-    height: 1080,
-    safe: sym(56),
-    placement: "center",
-    note: "Strava-friendly, avatars, print",
   },
   "instagram-story": {
     id: "instagram-story",
@@ -93,10 +83,11 @@ export const EXPORT_FORMATS = {
     aspectLabel: "9:16",
     width: 1080,
     height: 1920,
-    // Top: profile/close. Bottom: caption + send. Reels action rail on the right.
-    safe: { top: 250, right: 270, bottom: 420, left: 64 },
-    placement: "lower",
-    note: "Stories & Reels",
+    // Occlusion only (played full-bleed): top = progress bar + avatar + name +
+    // close; bottom = reply bar. Tuned for STORIES — a static image can't be a
+    // Reel, so the (video-only) Reels right action rail doesn't apply here.
+    safe: { top: 220, right: 64, bottom: 220, left: 64 },
+    note: "Static → posts to Stories (not Reels)",
   },
   tiktok: {
     id: "tiktok",
@@ -104,10 +95,12 @@ export const EXPORT_FORMATS = {
     platform: "TikTok",
     bucket: "story",
     aspectLabel: "9:16",
-    safe: { top: 130, right: 270, bottom: 500, left: 64 },
     width: 1080,
     height: 1920,
-    placement: "upper",
+    // Occlusion only (photo posts play full-bleed): bottom = @handle + caption
+    // + music ticker (~440); right = action rail (avatar / like / comment /
+    // share / sound disc, ~150); top = tab switcher + search.
+    safe: { top: 130, right: 150, bottom: 440, left: 48 },
     note: "Heavy bottom caption + right action rail",
   },
   "whatsapp-status": {
@@ -116,10 +109,12 @@ export const EXPORT_FORMATS = {
     platform: "WhatsApp",
     bucket: "story",
     aspectLabel: "9:16",
-    safe: { top: 140, right: 48, bottom: 160, left: 48 },
     width: 1080,
     height: 1920,
-    placement: "center",
+    // Occlusion only (fit-to-screen, letterboxed not cropped): top = progress
+    // bar + avatar + sender name (~220); bottom = persistent "Reply…" pill +
+    // home indicator (~280). No side rail.
+    safe: { top: 220, right: 48, bottom: 280, left: 48 },
     note: "Progress bar top, reply box bottom",
   },
   strava: {
@@ -130,12 +125,11 @@ export const EXPORT_FORMATS = {
     aspectLabel: "9:16",
     width: 1080,
     height: 1920,
-    // Cover-crop tolerant: generous TOP (Dynamic Island + nav), reserved bottom
-    // band (map thumbnail + "Save route" pill), side insets so cover-overflow
-    // never decapitates text. Content vertically centred (survives the short
-    // collapsed header *and* the tall expanded crop). See plan §2.1.
-    safe: { top: 300, right: 88, bottom: 230, left: 88 },
-    placement: "center",
+    // Shared full-bleed (no Strava chrome over a posted image) — a moderate,
+    // fairly symmetric margin so the design survives Strava's centre-crop of the
+    // same photo into its many card ratios. (Was top 300 — that over-reserved
+    // for an in-app nav bar this static export never actually sits under.)
+    safe: { top: 160, right: 64, bottom: 220, left: 64 },
     note: "Cover-crop tolerant — same photo, many crops",
   },
   "x-landscape": {
@@ -146,9 +140,23 @@ export const EXPORT_FORMATS = {
     aspectLabel: "16:9",
     width: 1600,
     height: 900,
-    safe: sym(40),
-    placement: "center",
+    // Shown uncropped in-stream with no overlay, so the sides are aesthetic
+    // only; the taller top/bottom survives the ~50px crop when this same asset
+    // doubles as a 2:1 OpenGraph / link-card preview (also Komoot).
+    safe: { top: 64, right: 40, bottom: 64, left: 40 },
     note: "In-stream, shown uncropped — also Komoot / OG",
+  },
+  square: {
+    id: "square",
+    label: "Square",
+    platform: "Universal",
+    bucket: "square",
+    aspectLabel: "1:1",
+    width: 1080,
+    height: 1080,
+    // Uncropped, no overlay — aesthetic margin only.
+    safe: sym(56),
+    note: "Strava-friendly, avatars, print",
   },
 } as const satisfies Record<string, ExportFormat>;
 

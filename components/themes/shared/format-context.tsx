@@ -39,7 +39,7 @@ const FormatContext = createContext<ExportFormat>(
 
 export const FormatProvider = FormatContext.Provider;
 
-/** The active export format — dimensions, safe insets, aspect bucket, placement. */
+/** The active export format — dimensions, safe insets, aspect bucket. */
 export function useFormat(): ExportFormat {
   return useContext(FormatContext);
 }
