@@ -10,6 +10,8 @@
 // hotlink under the Unsplash license); nothing is bundled. `none` renders each
 // theme on its own background so you can compare with/without a photo.
 
+import type { GlobalTypes } from "storybook/internal/types";
+
 export interface BackgroundPreset {
   label: string;
   url: string | null;
@@ -74,7 +76,7 @@ export const backgroundGlobalTypes = {
       })),
     },
   },
-} as const;
+} satisfies GlobalTypes;
 
 /**
  * Per-story control for uploading a local image at runtime. When set it

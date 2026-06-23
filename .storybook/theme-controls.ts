@@ -1,18 +1,18 @@
-// Storybook control helpers shared by the single-card theme stories.
+// Storybook control helpers shared by the single-card theme stories (CSF Next).
 //
-//   • `activityArgType` — a dropdown of the sample fixtures, keyed by name. The
-//     arg is the KEY string (not the object), so it stays type-safe and survives
-//     Storybook's "save from controls" (which persists the option value). The
-//     story's `render` resolves the key through `ACTIVITY_SAMPLES`.
+// Each story sets `component`, so args are the component's real props — that's
+// what gives CSF Next its type inference. Two helpers dress those props up:
+//
+//   • `activityArgType` — a dropdown over the sample fixtures for the `data`
+//     prop (Storybook `mapping` resolves the chosen key to the ActivityData).
 //   • `paramArgTypes` — turns a theme's declarative `ParamDef[]` into proper,
-//     typed Storybook controls (select / inline-radio / range / boolean),
-//     grouped by the same editor category the app toolbar uses. The flattened
-//     param args are recombined into the theme's `config` with `coerceConfig`.
+//     typed controls (select / inline-radio / range / boolean), grouped by the
+//     same editor category the app toolbar uses. They appear as EXTRA args
+//     (widen the meta's args type with the theme's Config); the story's `render`
+//     recombines them into `config` via `coerceConfig`.
 //
 // This keeps the controls panel in lockstep with each theme's real knobs — the
-// same single source of truth (`ParamDef`) the in-app editor renders from. The
-// stories set `render` (not `component`), so there are no auto-inferred object
-// controls to hide; the only injected args worth hiding are the photo ones.
+// same single source of truth (`ParamDef`) the in-app editor renders from.
 
 import {
   SAMPLE_BRICK,
@@ -22,7 +22,6 @@ import {
   SAMPLE_TRI,
 } from "@/components/app/sample-data";
 import { PARAM_GROUP_LABEL, type ParamDef } from "@/lib/params/kinds";
-import type { BackgroundArgs } from "./backgrounds";
 
 /** The sample activities, keyed by the label shown in the dropdown. */
 export const ACTIVITY_SAMPLES = {
@@ -33,27 +32,27 @@ export const ACTIVITY_SAMPLES = {
   Brick: SAMPLE_BRICK,
 } as const;
 
-export type ActivitySampleKey = keyof typeof ACTIVITY_SAMPLES;
-
-/** Args every single-card theme story shares: the activity picker + the photo
- *  injected by the `withBackground` decorator. Intersect with a theme's flattened
- *  config in the story's `Meta<…>` type. */
-export interface ThemeStoryArgs extends BackgroundArgs {
-  activity: ActivitySampleKey;
-  /** resolved by the global `withBackground` decorator, not a user control */
-  photoUrl?: string | null;
-}
-
-/** A select over the sample fixtures (by key). */
+/** A select over the sample fixtures for the `data` prop. `mapping` resolves the
+ *  chosen key to the real `ActivityData`, so `render` / the component get an
+ *  object, not the key. */
 export const activityArgType = {
   name: "Activity",
   control: { type: "select" },
   options: Object.keys(ACTIVITY_SAMPLES),
+  mapping: ACTIVITY_SAMPLES,
   table: { category: "Activity" },
 } as const;
 
-/** Photo args the decorator injects — hidden from the controls panel. */
-export const INJECTED_CONTROLS_EXCLUDE = ["photoUrl", "imageSize"];
+/** Component props that aren't user controls — the photo args the decorator
+ *  injects, plus the raw `config` object (replaced by the per-param controls).
+ *  Pass to `parameters.controls.exclude`. */
+export const THEME_PROP_CONTROLS_EXCLUDE = [
+  "config",
+  "colors",
+  "imageTransform",
+  "photoUrl",
+  "imageSize",
+];
 
 /** The fixed id space a choice param can take (the stored values, even when the
  *  displayed option set is computed from context). */

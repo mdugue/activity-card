@@ -1,10 +1,9 @@
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import type { ComponentProps } from "react";
 import {
   type ExportFormatId,
   FORMAT_ORDER,
   getFormat,
 } from "@/lib/export-formats";
+import preview from "../../.storybook/preview";
 import { SafeZoneOverlay } from "./safe-zone-overlay";
 
 // Shows the keep-out guides for one format over a placeholder card, scaled into
@@ -31,7 +30,7 @@ function OverlayDemo({ formatId }: { formatId: ExportFormatId }) {
   );
 }
 
-const meta = {
+const meta = preview.meta({
   component: OverlayDemo,
   tags: ["ai-generated"],
   parameters: { layout: "centered" },
@@ -39,12 +38,9 @@ const meta = {
     formatId: { control: "select", options: FORMAT_ORDER },
   },
   args: { formatId: "instagram-story" },
-} satisfies Meta<ComponentProps<typeof OverlayDemo>>;
+});
 
-export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const Story9x16: Story = { args: { formatId: "instagram-story" } };
-export const Strava: Story = { args: { formatId: "strava" } };
-export const TikTok: Story = { args: { formatId: "tiktok" } };
-export const Square: Story = { args: { formatId: "square" } };
+export const Story9x16 = meta.story({ args: { formatId: "instagram-story" } });
+export const Strava = meta.story({ args: { formatId: "strava" } });
+export const TikTok = meta.story({ args: { formatId: "tiktok" } });
+export const Square = meta.story({ args: { formatId: "square" } });

@@ -1,7 +1,7 @@
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
 import type { ColorChoice } from "@/lib/colors";
 import type { ExtractedPalette, PaletteTheme } from "@/lib/palette";
+import preview from "../../.storybook/preview";
 import { ColorControl } from "./color-control";
 
 // The unified COLOUR control: static preset schemes (singles + pairs) and —
@@ -52,22 +52,17 @@ function Demo({ palette }: { palette: ExtractedPalette | null }) {
   );
 }
 
-const meta = {
+const meta = preview.meta({
   title: "app/ColorControl",
   tags: ["ai-generated"],
   parameters: { layout: "centered" },
-} satisfies Meta;
-
-export default meta;
-type Story = StoryObj<typeof meta>;
+});
 
 /** No photo loaded: presets only. */
-export const PresetsOnly: Story = {
-  render: () => <Demo palette={null} />,
-};
+export const PresetsOnly = meta.story(() => <Demo palette={null} />);
 
 /** Photo loaded: the five photo-derived schemes lead, badged + with live
  *  swatches; the presets follow. */
-export const WithPhotoPalette: Story = {
-  render: () => <Demo palette={MOCK_PALETTE} />,
-};
+export const WithPhotoPalette = meta.story(() => (
+  <Demo palette={MOCK_PALETTE} />
+));

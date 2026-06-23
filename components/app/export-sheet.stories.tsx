@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import type { ComponentProps } from "react";
+import { THEME_ORDER } from "@/components/themes";
 import { DEFAULT_ALTITUDE_CONFIG } from "@/lib/altitude";
 import type { ColorScheme } from "@/lib/colors";
 import { IDENTITY_TRANSFORM } from "@/lib/image-transform";
@@ -8,6 +8,7 @@ import {
   type BackgroundArgs,
   backgroundArgTypes,
 } from "../../.storybook/backgrounds";
+import preview from "../../.storybook/preview";
 import { ExportSheet } from "./export-sheet";
 import { SAMPLE_RIDE } from "./sample-data";
 
@@ -17,28 +18,33 @@ const noop = () => {
   // story stub
 };
 
-const meta = {
-  component: ExportSheet,
-  tags: ["ai-generated"],
-  parameters: { layout: "fullscreen" },
-  argTypes: { ...backgroundArgTypes },
-  args: {
-    colors: COLORS,
-    config: DEFAULT_ALTITUDE_CONFIG,
-    data: SAMPLE_RIDE,
-    imageTransform: IDENTITY_TRANSFORM,
-    onKeepEditing: noop,
-    onNew: noop,
-    photoBackdropEnabled: true,
-    photoEffects: NO_EFFECTS,
-    photoUrl: null,
-    routeCoordinates: SAMPLE_RIDE.routeCoordinates,
-    theme: "altitude",
-  },
-} satisfies Meta<ComponentProps<typeof ExportSheet> & BackgroundArgs>;
+const meta = preview
+  .type<{ args: ComponentProps<typeof ExportSheet> & BackgroundArgs }>()
+  .meta({
+    component: ExportSheet,
+    tags: ["ai-generated"],
+    parameters: { layout: "fullscreen" },
+    argTypes: {
+      theme: {
+        name: "Theme",
+        control: { type: "select" },
+        options: THEME_ORDER,
+      },
+      ...backgroundArgTypes,
+    },
+    args: {
+      colors: COLORS,
+      config: DEFAULT_ALTITUDE_CONFIG,
+      data: SAMPLE_RIDE,
+      imageTransform: IDENTITY_TRANSFORM,
+      onKeepEditing: noop,
+      onNew: noop,
+      photoBackdropEnabled: true,
+      photoEffects: NO_EFFECTS,
+      photoUrl: null,
+      routeCoordinates: SAMPLE_RIDE.routeCoordinates,
+    },
+  });
 
-export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const Default: Story = {};
-export const PosterTheme: Story = { args: { theme: "data" } };
+export const Default = meta.story({ args: { theme: "altitude" } });
+export const PosterTheme = meta.story({ args: { theme: "data" } });
