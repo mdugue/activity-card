@@ -12,7 +12,7 @@ import {
   DownloadSimpleIcon,
   PlusIcon,
 } from "@phosphor-icons/react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { ActivityData } from "@/lib/activity";
@@ -50,10 +50,44 @@ interface ExportSheetProps {
 }
 
 // Each tile takes the format's TRUE shape (fit into this bounding box), so
-// there's no letterbox whitespace inside the tile. Kept small so a few fit per
-// row on mobile (and the grid stays dense on desktop).
-const TILE_MAX_W = 150;
-const TILE_MAX_H = 210;
+// there's no letterbox whitespace inside the tile. The box is responsive: a
+// compact floor keeps several tiles per row on mobile, and it grows with the
+// viewport so the previews aren't tiny on desktop. Height tracks width at the
+// 1.4 ratio of the floor (150×210) so every aspect stays bounded as it scales.
+const TILE_FLOOR_W = 150;
+const TILE_CAP_W = 280;
+const TILE_ASPECT = 210 / 150;
+
+interface TileMax {
+  h: number;
+  w: number;
+}
+
+function tileMaxForWidth(viewportW: number): TileMax {
+  const w = Math.round(
+    Math.min(TILE_CAP_W, Math.max(TILE_FLOOR_W, viewportW * 0.2))
+  );
+  return { w, h: Math.round(w * TILE_ASPECT) };
+}
+
+// The tile bounding box, recomputed as the window resizes. Read synchronously
+// on first render (this sheet only ever mounts client-side, after upload, so
+// there's no SSR markup to mismatch) so desktop opens at full size — no flash.
+function useTileMax(): TileMax {
+  const [tileMax, setTileMax] = useState<TileMax>(() =>
+    tileMaxForWidth(
+      typeof window === "undefined" ? TILE_FLOOR_W : window.innerWidth
+    )
+  );
+
+  useEffect(() => {
+    const onResize = () => setTileMax(tileMaxForWidth(window.innerWidth));
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  return tileMax;
+}
 
 function fileFor(data: ActivityData, format: ExportFormat): string {
   return `effort_${data.sport}_${effortDateSlug(data.date)}_${format.id}.png`;
@@ -64,6 +98,7 @@ export function ExportSheet(props: ExportSheetProps) {
   const [gps, setGps] = useState(true);
   const [safeZones, setSafeZones] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const tileMax = useTileMax();
   // One native-size mount per format, registered by each tile — the export
   // source. The same node is shown scaled-to-fit in the tile.
   const mounts = useRef<Record<string, HTMLDivElement | null>>({});
@@ -129,7 +164,7 @@ export function ExportSheet(props: ExportSheetProps) {
         coords={props.routeCoordinates ?? data.routeCoordinates}
       />
 
-      <div className="relative w-full max-w-5xl">
+      <div className="relative w-full max-w-5xl lg:max-w-6xl">
         <div className="font-mono font-semibold text-[11px] tracking-[0.32em] opacity-55">
           READY TO SHARE
         </div>
@@ -191,6 +226,7 @@ export function ExportSheet(props: ExportSheetProps) {
                 mounts.current[id] = node;
               }}
               safeZones={safeZones}
+              tileMax={tileMax}
               {...props}
             />
           ))}
@@ -207,6 +243,8 @@ interface FormatTileProps extends ExportSheetProps {
   registerMount: (node: HTMLDivElement | null) => void;
   /** overlay the platform keep-out guides (preview only, never exported) */
   safeZones: boolean;
+  /** responsive bounding box every tile fits into (grows with the viewport) */
+  tileMax: TileMax;
 }
 
 function FormatTile({
@@ -223,8 +261,9 @@ function FormatTile({
   photoBackdropEnabled,
   photoEffects,
   photoUrl,
+  tileMax,
 }: FormatTileProps) {
-  const scale = Math.min(TILE_MAX_W / format.width, TILE_MAX_H / format.height);
+  const scale = Math.min(tileMax.w / format.width, tileMax.h / format.height);
   const tileW = format.width * scale;
   const tileH = format.height * scale;
   const isBusy = busy === format.id;

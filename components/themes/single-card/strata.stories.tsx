@@ -1,29 +1,49 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import type { ComponentProps } from "react";
 import { expect } from "storybook/test";
+import { coerceConfig } from "@/lib/params/resolve";
 import {
-  SAMPLE_RIDE,
-  SAMPLE_RUN,
-  SAMPLE_SWIM,
-  SAMPLE_TRI,
-} from "@/components/app/sample-data";
-import { DEFAULT_STRATA_CONFIG } from "@/lib/strata";
+  DEFAULT_STRATA_CONFIG,
+  STRATA_PARAMS,
+  type StrataConfig,
+} from "@/lib/strata";
+import { backgroundArgTypes } from "../../../.storybook/backgrounds";
 import {
-  type BackgroundArgs,
-  backgroundArgTypes,
-} from "../../../.storybook/backgrounds";
+  ACTIVITY_SAMPLES,
+  activityArgType,
+  INJECTED_CONTROLS_EXCLUDE,
+  paramArgTypes,
+  type ThemeStoryArgs,
+} from "../../../.storybook/theme-controls";
+import { withFormatMatrix } from "../../../.storybook/with-format-matrix";
 import { ThemeStrata } from "./strata";
 
-// STRATA is generative, but a background photo is optional: pick one from the
-// Background toolbar (or upload via the per-story control) to preview the field
-// over a photo with its mood-tinted scrim.
+// STRATA across every export format (the shared matrix decorator), with its
+// ATMOSPHERE / DENSITY / legend knobs as real controls generated from
+// `STRATA_PARAMS`. A background photo is optional — pick one to preview the
+// field over a photo with its mood-tinted scrim.
+type StrataArgs = ThemeStoryArgs & StrataConfig;
+
 const meta = {
-  component: ThemeStrata,
   tags: ["ai-generated"],
-  parameters: { layout: "fullscreen" },
-  argTypes: { ...backgroundArgTypes },
-  args: { data: SAMPLE_RIDE },
-} satisfies Meta<ComponentProps<typeof ThemeStrata> & BackgroundArgs>;
+  parameters: {
+    layout: "fullscreen",
+    controls: { exclude: INJECTED_CONTROLS_EXCLUDE },
+  },
+  decorators: [withFormatMatrix],
+  argTypes: {
+    activity: activityArgType,
+    ...paramArgTypes(STRATA_PARAMS),
+    ...backgroundArgTypes,
+  },
+  args: { activity: "Ride", ...DEFAULT_STRATA_CONFIG },
+  render: (args) => (
+    <ThemeStrata
+      config={coerceConfig(DEFAULT_STRATA_CONFIG, STRATA_PARAMS, args)}
+      data={ACTIVITY_SAMPLES[args.activity]}
+      photoUrl={args.photoUrl ?? null}
+    />
+  ),
+} satisfies Meta<StrataArgs>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -34,54 +54,28 @@ const RIDE_TITLE = /Elbsandstein/;
 // variants below re-render with other moods / densities / fixtures.
 export const Default: Story = {
   play: async ({ canvas }) => {
-    await expect(canvas.getByText(RIDE_TITLE)).toBeVisible();
+    const [title] = canvas.getAllByText(RIDE_TITLE);
+    await expect(title).toBeVisible();
   },
 };
 
 // The five moods — each retunes the gradient and the two highlight colours.
-export const Paper: Story = {
-  args: { config: { ...DEFAULT_STRATA_CONFIG, mood: "paper" } },
-};
-export const Dawn: Story = {
-  args: { config: { ...DEFAULT_STRATA_CONFIG, mood: "dawn" } },
-};
-export const Midnight: Story = {
-  args: { config: { ...DEFAULT_STRATA_CONFIG, mood: "midnight" } },
-};
-export const Alpine: Story = {
-  args: { config: { ...DEFAULT_STRATA_CONFIG, mood: "alpine" } },
-};
+export const Paper: Story = { args: { mood: "paper" } };
+export const Dawn: Story = { args: { mood: "dawn" } };
+export const Midnight: Story = { args: { mood: "midnight" } };
+export const Alpine: Story = { args: { mood: "alpine" } };
 
 // Density — how finely the route is woven down into the profile.
-export const Fine: Story = {
-  args: { config: { ...DEFAULT_STRATA_CONFIG, density: "fine" } },
-};
-export const Bold: Story = {
-  args: { config: { ...DEFAULT_STRATA_CONFIG, density: "bold" } },
-};
+export const Fine: Story = { args: { density: "fine" } };
+export const Bold: Story = { args: { density: "bold" } };
 
 // Pure abstraction — the cartographic captions removed.
-export const NoLegend: Story = {
-  args: { config: { ...DEFAULT_STRATA_CONFIG, legend: false } },
-};
+export const NoLegend: Story = { args: { legend: false } };
 
 // Any sport: a run blends into pace, a swim into lap pace, a project (triathlon)
 // weaves every leg's route and profile into one continuous field.
-export const Run: Story = {
-  args: {
-    data: SAMPLE_RUN,
-    config: { ...DEFAULT_STRATA_CONFIG, mood: "dawn" },
-  },
-};
-export const Swim: Story = {
-  args: {
-    data: SAMPLE_SWIM,
-    config: { ...DEFAULT_STRATA_CONFIG, mood: "midnight" },
-  },
-};
+export const Run: Story = { args: { activity: "Run", mood: "dawn" } };
+export const Swim: Story = { args: { activity: "Swim", mood: "midnight" } };
 export const Triathlon: Story = {
-  args: {
-    data: SAMPLE_TRI,
-    config: { ...DEFAULT_STRATA_CONFIG, mood: "alpine" },
-  },
+  args: { activity: "Triathlon", mood: "alpine" },
 };

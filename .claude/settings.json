@@ -4,7 +4,12 @@
       "Bash(bunx lint)",
       "Bash(bunx ultracite *)",
       "Bash(bunx typecheck)",
-      "Bash(git mv *)"
+      "Bash(git mv *)",
+      "Bash(npx -y modern-web-guidance@latest search \"responsive layout with container query units and CSS custom properties for safe-area insets\" --skill-version 2026_05_16-c5e7870)",
+      "Bash(npx -y modern-web-guidance@latest search \"viewport units svh dvh and safe-area-inset env variables for device notch\" --skill-version 2026_05_16-c5e7870)",
+      "Bash(npx -y modern-web-guidance@latest retrieve \"fluid-scaling,size-aware-styling\")",
+      "Bash(bunx biome *)",
+      "Bash(bun run *)"
     ]
   },
   "hooks": {

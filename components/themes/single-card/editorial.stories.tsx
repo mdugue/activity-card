@@ -1,23 +1,31 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import type { ComponentProps } from "react";
 import { expect } from "storybook/test";
+import { backgroundArgTypes } from "../../../.storybook/backgrounds";
 import {
-  SAMPLE_RIDE,
-  SAMPLE_RUN,
-  SAMPLE_TRI,
-} from "@/components/app/sample-data";
-import {
-  type BackgroundArgs,
-  backgroundArgTypes,
-} from "../../../.storybook/backgrounds";
+  ACTIVITY_SAMPLES,
+  activityArgType,
+  INJECTED_CONTROLS_EXCLUDE,
+  type ThemeStoryArgs,
+} from "../../../.storybook/theme-controls";
+import { withFormatMatrix } from "../../../.storybook/with-format-matrix";
 import { ThemeEditorial } from "./editorial";
 
 const meta = {
-  component: ThemeEditorial,
   tags: ["ai-generated"],
-  parameters: { layout: "fullscreen" },
-  argTypes: { ...backgroundArgTypes },
-} satisfies Meta<ComponentProps<typeof ThemeEditorial> & BackgroundArgs>;
+  parameters: {
+    layout: "fullscreen",
+    controls: { exclude: INJECTED_CONTROLS_EXCLUDE },
+  },
+  decorators: [withFormatMatrix],
+  argTypes: { activity: activityArgType, ...backgroundArgTypes },
+  args: { activity: "Run" },
+  render: (args) => (
+    <ThemeEditorial
+      data={ACTIVITY_SAMPLES[args.activity]}
+      photoUrl={args.photoUrl ?? null}
+    />
+  ),
+} satisfies Meta<ThemeStoryArgs>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -26,11 +34,11 @@ const RUN_TITLE = /Westwind/;
 
 // Typography-led layout — the title is the hero, so assert it landed.
 export const Run: Story = {
-  args: { data: SAMPLE_RUN },
   play: async ({ canvas }) => {
-    await expect(canvas.getByText(RUN_TITLE)).toBeVisible();
+    const [title] = canvas.getAllByText(RUN_TITLE);
+    await expect(title).toBeVisible();
   },
 };
 
-export const Ride: Story = { args: { data: SAMPLE_RIDE } };
-export const Triathlon: Story = { args: { data: SAMPLE_TRI } };
+export const Ride: Story = { args: { activity: "Ride" } };
+export const Triathlon: Story = { args: { activity: "Triathlon" } };

@@ -1,24 +1,31 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import type { ComponentProps } from "react";
 import { expect } from "storybook/test";
+import { backgroundArgTypes } from "../../../.storybook/backgrounds";
 import {
-  SAMPLE_RIDE,
-  SAMPLE_RUN,
-  SAMPLE_SWIM,
-  SAMPLE_TRI,
-} from "@/components/app/sample-data";
-import {
-  type BackgroundArgs,
-  backgroundArgTypes,
-} from "../../../.storybook/backgrounds";
+  ACTIVITY_SAMPLES,
+  activityArgType,
+  INJECTED_CONTROLS_EXCLUDE,
+  type ThemeStoryArgs,
+} from "../../../.storybook/theme-controls";
+import { withFormatMatrix } from "../../../.storybook/with-format-matrix";
 import { ThemePath } from "./path";
 
 const meta = {
-  component: ThemePath,
   tags: ["ai-generated"],
-  parameters: { layout: "fullscreen" },
-  argTypes: { ...backgroundArgTypes },
-} satisfies Meta<ComponentProps<typeof ThemePath> & BackgroundArgs>;
+  parameters: {
+    layout: "fullscreen",
+    controls: { exclude: INJECTED_CONTROLS_EXCLUDE },
+  },
+  decorators: [withFormatMatrix],
+  argTypes: { activity: activityArgType, ...backgroundArgTypes },
+  args: { activity: "Ride" },
+  render: (args) => (
+    <ThemePath
+      data={ACTIVITY_SAMPLES[args.activity]}
+      photoUrl={args.photoUrl ?? null}
+    />
+  ),
+} satisfies Meta<ThemeStoryArgs>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -28,12 +35,12 @@ const RIDE_TITLE = /Elbsandstein/;
 // Smoke check — the activity title (a prop) must reach the DOM. One play is
 // enough for the file; the variants below just re-render with other fixtures.
 export const Ride: Story = {
-  args: { data: SAMPLE_RIDE },
   play: async ({ canvas }) => {
-    await expect(canvas.getByText(RIDE_TITLE)).toBeVisible();
+    const [title] = canvas.getAllByText(RIDE_TITLE);
+    await expect(title).toBeVisible();
   },
 };
 
-export const Run: Story = { args: { data: SAMPLE_RUN } };
-export const Swim: Story = { args: { data: SAMPLE_SWIM } };
-export const Triathlon: Story = { args: { data: SAMPLE_TRI } };
+export const Run: Story = { args: { activity: "Run" } };
+export const Swim: Story = { args: { activity: "Swim" } };
+export const Triathlon: Story = { args: { activity: "Triathlon" } };

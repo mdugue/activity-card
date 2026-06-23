@@ -1,10 +1,13 @@
 import { SINGLE_CARD_THEMES, type ThemeId } from "@/components/themes";
-import { FormatProvider } from "@/components/themes/shared/format-context";
+import {
+  FormatProvider,
+  useFormat,
+} from "@/components/themes/shared/format-context";
 import { PhotoFxProvider } from "@/components/themes/shared/photo-fx";
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
 import type { ActivityData } from "@/lib/activity";
 import type { ColorScheme } from "@/lib/colors";
-import { EXPORT_FORMATS, type ExportFormat } from "@/lib/export-formats";
+import type { ExportFormat } from "@/lib/export-formats";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PhotoEffects } from "@/lib/photo-effects";
 import { pickThemeData } from "@/lib/theme-contract";
@@ -18,8 +21,10 @@ interface RenderThemeProps {
   config?: Record<string, unknown>;
   data: ActivityData;
   /** Target export format. The theme renders itself directly at this size and
-   *  reads its dimensions + safe insets from the FormatContext. Defaults to the
-   *  4:5 feed master (so a bare render matches the legacy canvas). */
+   *  reads its dimensions + safe insets from the FormatContext. Falls back to the
+   *  surrounding FormatContext (the 4:5 feed master when there's none), so a bare
+   *  render matches the legacy canvas and a Storybook matrix decorator can supply
+   *  the format per tile. */
   format?: ExportFormat;
   /** Pan/zoom applied to the background photo, wherever a theme shows one. */
   imageTransform?: ImageTransform | null;
@@ -50,6 +55,7 @@ export function RenderTheme({
   format,
 }: RenderThemeProps) {
   const descriptor = SINGLE_CARD_THEMES[theme];
+  const ctxFormat = useFormat();
   const photo = photoBackdropEnabled ? (photoUrl ?? null) : null;
   // Natural size feeds the rotation-correct cover layer (quarter turns swap
   // the photo's width/height); derived here once so themes need no new props.
@@ -57,7 +63,10 @@ export function RenderTheme({
   const Component = descriptor.Component;
   const resolvedColors = colors ?? descriptor.colors.default;
   const themeData = pickThemeData(descriptor, data);
-  const activeFormat = format ?? EXPORT_FORMATS["instagram-feed"];
+  // An explicit prop wins; otherwise inherit the ambient FormatContext (which
+  // itself defaults to the 4:5 feed master), so this composes inside a matrix
+  // decorator that provides the format per tile.
+  const activeFormat = format ?? ctxFormat;
 
   return (
     <FormatProvider value={activeFormat}>
