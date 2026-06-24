@@ -459,7 +459,6 @@ export function ThemeStrata({
           // platform safe-bottom is margin below it (background bleeds through),
           // so a tall keep-out lifts the strip clear instead of stretching it.
           paddingBottom: Math.min(insets.bottom, STAT_FOOTER_BASE),
-          marginBottom: Math.max(0, insets.bottom - STAT_FOOTER_BASE),
           paddingLeft: insets.left,
           paddingRight: insets.right,
 

@@ -132,13 +132,15 @@ export function ThemePhoto({
       "linear-gradient(180deg, #d8c5a0 0%, #a87d52 40%, #4a2a18 100%)";
   }
 
-  let storyLabel = "A TRIATHLON STORY";
+  let storyLabel = "A SPORTS STORY";
   if (sport === "ride") {
     storyLabel = "A RIDE STORY";
   } else if (sport === "run") {
     storyLabel = "A RUNNING STORY";
   } else if (sport === "swim") {
     storyLabel = "A SWIM STORY";
+  } else if (sport === "triathlon") {
+    storyLabel = "A TRIATHLON STORY";
   }
 
   return (

@@ -597,7 +597,12 @@ export default function Home() {
         // state is a scroll-snap landing that owns its own internal scroller, so
         // it's pinned to the viewport too. Every other screen keeps its natural,
         // scrollable height.
-        state === "edit" && "h-[100dvh] lg:h-auto lg:min-h-screen",
+        // Desktop: drop the app-shell's `overflow-hidden` (a scroll container
+        // that never scrolls — the window does) so descendant `position:sticky`
+        // (the preview and the export dock) resolves against the viewport
+        // instead of being trapped and pinned-to-nothing.
+        state === "edit" &&
+          "h-dvh lg:h-auto lg:min-h-screen lg:overflow-visible",
         state === "empty" && "h-dvh",
         state !== "edit" && state !== "empty" && "min-h-screen"
       )}
