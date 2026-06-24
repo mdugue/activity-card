@@ -1,6 +1,6 @@
 import { toPng } from "html-to-image";
 import type { ActivityData } from "./activity";
-import { isIos, waitForFonts } from "./export-shared";
+import { isDesktopDevice, isIos, waitForFonts } from "./export-shared";
 import {
   applyMetadata,
   type MetadataInput,
@@ -69,7 +69,7 @@ export async function exportCard(
   const file = new File([blob], filename, { type: "image/png" });
 
   const nav = typeof navigator === "undefined" ? undefined : navigator;
-  if (nav?.canShare?.({ files: [file] })) {
+  if (!isDesktopDevice() && nav?.canShare?.({ files: [file] })) {
     try {
       await nav.share({ files: [file], title: "My Effort card" });
       return;
