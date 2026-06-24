@@ -5,21 +5,47 @@ import {
   SAMPLE_RUN,
   SAMPLE_TRI,
 } from "@/components/app/sample-data";
-import { SINGLE_CARD_THEMES, THEME_ORDER } from "@/components/themes";
 import {
-  type BackgroundArgs,
-  backgroundArgTypes,
-} from "../../../.storybook/backgrounds";
+  SINGLE_CARD_THEMES,
+  THEME_ORDER,
+  type ThemeId,
+} from "@/components/themes";
+import { backgroundArgTypes } from "../../../.storybook/backgrounds";
 import preview from "../../../.storybook/preview";
-import { activityArgType } from "../../../.storybook/theme-controls";
+import {
+  activityArgType,
+  activityTuningArgTypes,
+  colorArgTypes,
+  type ThemeStoryExtras,
+  useStoryThemeProps,
+} from "../../../.storybook/theme-controls";
 import { withFormatMatrix } from "../../../.storybook/with-format-matrix";
 
 // One theme across every export format, switchable live. The `Theme` control
-// dispatches `RenderTheme`; the shared matrix decorator fans it out over all
-// formats (each tile supplies its own format via context, which `RenderTheme`
-// inherits). Switch theme to compare safe-zone behaviour platform-by-platform;
-// flip the `Safe zones` toolbar toggle to see each format's keep-out guides.
-type FormatMatrixArgs = ComponentProps<typeof RenderTheme> & BackgroundArgs;
+// dispatches `RenderTheme`; the shared activity + colour controls resolve against
+// the SELECTED theme (its default scheme / params). Flip the `Safe zones` toolbar
+// toggle to see each format's keep-out guides.
+type FormatMatrixArgs = ComponentProps<typeof RenderTheme> & ThemeStoryExtras;
+
+function FormatMatrixView({
+  args,
+}: {
+  args: ThemeStoryExtras & { data: unknown; theme: ThemeId };
+}) {
+  const { colors, config, data, photoUrl } = useStoryThemeProps(
+    args,
+    SINGLE_CARD_THEMES[args.theme]
+  );
+  return (
+    <RenderTheme
+      colors={colors}
+      config={config}
+      data={data}
+      photoUrl={photoUrl}
+      theme={args.theme}
+    />
+  );
+}
 
 const meta = preview.type<{ args: FormatMatrixArgs }>().meta({
   component: RenderTheme,
@@ -51,9 +77,12 @@ const meta = preview.type<{ args: FormatMatrixArgs }>().meta({
       ),
     },
     data: activityArgType,
+    ...colorArgTypes,
+    ...activityTuningArgTypes,
     ...backgroundArgTypes,
   },
-  args: { data: SAMPLE_RIDE, theme: "altitude" },
+  args: { color: "Theme default", data: SAMPLE_RIDE, theme: "altitude" },
+  render: (args) => <FormatMatrixView args={args} />,
 });
 
 // Flip the Theme control to compare any theme across all platforms at once.

@@ -1,19 +1,23 @@
 import type { ComponentProps } from "react";
 import { expect } from "storybook/test";
 import { SAMPLE_BRICK, SAMPLE_TRI } from "@/components/app/sample-data";
-import {
-  type BackgroundArgs,
-  backgroundArgTypes,
-} from "../../../.storybook/backgrounds";
+import { SINGLE_CARD_THEMES } from "@/components/themes";
+import { backgroundArgTypes } from "../../../.storybook/backgrounds";
 import preview from "../../../.storybook/preview";
 import {
   activityArgType,
+  activityTuningArgTypes,
+  colorArgTypes,
   THEME_PROP_CONTROLS_EXCLUDE,
+  type ThemeStoryExtras,
+  ThemeStoryView,
 } from "../../../.storybook/theme-controls";
 import { withFormatMatrix } from "../../../.storybook/with-format-matrix";
 import { ThemeTriathlon } from "./triathlon";
 
-type TriathlonArgs = ComponentProps<typeof ThemeTriathlon> & BackgroundArgs;
+const THEME = SINGLE_CARD_THEMES.triathlon;
+
+type TriathlonArgs = ComponentProps<typeof ThemeTriathlon> & ThemeStoryExtras;
 
 const meta = preview.type<{ args: TriathlonArgs }>().meta({
   component: ThemeTriathlon,
@@ -26,9 +30,12 @@ const meta = preview.type<{ args: TriathlonArgs }>().meta({
   // Only the multi-sport fixtures have segments; the others render nothing.
   argTypes: {
     data: { ...activityArgType, options: ["Triathlon", "Brick"] },
+    ...colorArgTypes,
+    ...activityTuningArgTypes,
     ...backgroundArgTypes,
   },
-  args: { data: SAMPLE_TRI },
+  args: { color: "Theme default", data: SAMPLE_TRI },
+  render: (args) => <ThemeStoryView args={args} theme={THEME} />,
 });
 
 const TRI_TITLE = /Lanzarote/;

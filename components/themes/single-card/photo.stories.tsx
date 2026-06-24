@@ -5,23 +5,28 @@ import {
   SAMPLE_RUN,
   SAMPLE_TRI,
 } from "@/components/app/sample-data";
-import {
-  type BackgroundArgs,
-  backgroundArgTypes,
-} from "../../../.storybook/backgrounds";
+import { SINGLE_CARD_THEMES } from "@/components/themes";
+import { backgroundArgTypes } from "../../../.storybook/backgrounds";
 import preview from "../../../.storybook/preview";
 import {
   activityArgType,
+  activityTuningArgTypes,
+  colorArgTypes,
   THEME_PROP_CONTROLS_EXCLUDE,
+  type ThemeStoryExtras,
+  ThemeStoryView,
 } from "../../../.storybook/theme-controls";
 import { withFormatMatrix } from "../../../.storybook/with-format-matrix";
 import { ThemePhoto } from "./photo";
 
-type PhotoArgs = ComponentProps<typeof ThemePhoto> & BackgroundArgs;
-
 // The photo theme is background-led — pick a Background from the toolbar (or
-// upload one) to see it as the magazine-cover hero. With no photo it falls back
-// to a sport-tinted gradient palette.
+// upload one) to see it as the magazine-cover hero, then drive its colours from
+// the photo via the Colour control. With no photo it falls back to a
+// sport-tinted gradient palette.
+const THEME = SINGLE_CARD_THEMES.photo;
+
+type PhotoArgs = ComponentProps<typeof ThemePhoto> & ThemeStoryExtras;
+
 const meta = preview.type<{ args: PhotoArgs }>().meta({
   component: ThemePhoto,
   tags: ["ai-generated"],
@@ -30,8 +35,14 @@ const meta = preview.type<{ args: PhotoArgs }>().meta({
     controls: { exclude: THEME_PROP_CONTROLS_EXCLUDE },
   },
   decorators: [withFormatMatrix],
-  argTypes: { data: activityArgType, ...backgroundArgTypes },
-  args: { data: SAMPLE_RIDE },
+  argTypes: {
+    data: activityArgType,
+    ...colorArgTypes,
+    ...activityTuningArgTypes,
+    ...backgroundArgTypes,
+  },
+  args: { color: "Theme default", data: SAMPLE_RIDE },
+  render: (args) => <ThemeStoryView args={args} theme={THEME} />,
 });
 
 const RIDE_TITLE = /Elbsandstein/;

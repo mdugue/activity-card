@@ -11,12 +11,16 @@
 //
 // Two coordinate systems share one render tree (see `format-context`): the claim
 // GLYPHS sit inside the platform SAFE box (offset by `insets.left`, sized to the
-// safe content width), while the elevation LINE — and the cutout seam that slices
-// the glyphs — spans the FULL canvas width, bleeding past the safe zone to the
-// edges. The headline is also clamped to a vertical budget so it never overflows
-// a short / landscape canvas.
+// safe content width), while the elevation LINE spans the FULL canvas width,
+// bleeding past the safe zone to the edges. The cutout seam is the elevation
+// profile mapped across the CLAIM's own width (not the canvas) so the glyphs are
+// sliced the same way on every format — the headline takes a different fraction
+// of the full-bleed canvas per format, so mapping the cut to the canvas would
+// feed each format a different sub-window of the profile. The line then runs flat
+// out to both edges. The headline is also clamped to a vertical budget so it
+// never overflows a short / landscape canvas.
 
-import type { CSSProperties } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import {
   ALTITUDE_PARAMS,
   type AltitudeConfig,
@@ -172,6 +176,59 @@ function fitFontSize(
   return Math.min(MAX_FIT, Math.max(MIN_FIT, (contentW / widest) * REF_PX));
 }
 
+interface ClaimFit {
+  /** Width-fit size for the widest line (before the vertical clamp). */
+  fontSize: number;
+  /** Last line's width at REF_PX — the curve maps the profile across this so the
+   *  cut tracks the glyphs, not the canvas. `textW = lastW100 * fontSize / REF_PX`. */
+  lastW100: number;
+}
+
+/**
+ * The claim's fit, re-measured once the web fonts have loaded. A DOM-probe
+ * measure is only accurate with the real font present; before it loads the probe
+ * hits a system face (next/font's metric-matched fallback closes this in the app,
+ * but not e.g. in Storybook), so we measure on mount and again on
+ * `document.fonts.ready`. State-backed — not an inline call — so the measured
+ * value survives the React Compiler's memoisation of pure computations. The
+ * initial values are analytic (deterministic, SSR-safe, and never overflow).
+ */
+function useClaimFit(
+  lines: string[],
+  fontFamily: string,
+  fontWeight: number,
+  fallback: number,
+  contentW: number
+): ClaimFit {
+  const linesKey = lines.join("\n");
+  const [fit, setFit] = useState<ClaimFit>(() => ({
+    fontSize: fallback,
+    lastW100: fallback > 0 ? (contentW * REF_PX) / fallback : 0,
+  }));
+  useEffect(() => {
+    let alive = true;
+    const measure = () => {
+      if (!alive) {
+        return;
+      }
+      const ls = linesKey.split("\n");
+      const last = ls.at(-1) ?? "";
+      setFit({
+        fontSize: fitFontSize(ls, fontFamily, fontWeight, fallback, contentW),
+        lastW100: probeWidth(last, fontFamily, fontWeight),
+      });
+    };
+    measure();
+    if (typeof document !== "undefined" && document.fonts?.ready) {
+      document.fonts.ready.then(measure);
+    }
+    return () => {
+      alive = false;
+    };
+  }, [linesKey, fontFamily, fontWeight, fallback, contentW]);
+  return fit;
+}
+
 const FONT_FAMILY: Record<AltitudeConfig["font"], string> = {
   modern: "var(--font-heading), sans-serif",
   serif: "var(--font-playfair), serif",
@@ -283,21 +340,25 @@ function ClaimText({
   const hasCurve = cut && curves.length > 0;
   const hasDesc = DESCENDERS.test(lines.join(""));
 
-  // Width-fit, then clamp to the vertical budget. `boxH` is linear in fontSize,
-  // so a single rescale lands exactly on `maxBoxH`.
-  let fontSize = fitFontSize(
+  // Width-fit (re-measured once the web font loads), then clamp to the vertical
+  // budget. `boxH` is linear in fontSize, so a single rescale lands exactly on
+  // `maxBoxH`.
+  const fit = useClaimFit(
     lines,
     fontFamily,
     fontWeight,
     layout.fontSize,
     contentW
   );
+  let fontSize = fit.fontSize;
   let m = claimMetrics(fontSize, lines.length, hasCurve, hasDesc);
   if (m.boxH > maxBoxH && maxBoxH > 0) {
     fontSize *= maxBoxH / m.boxH;
     m = claimMetrics(fontSize, lines.length, hasCurve, hasDesc);
   }
   const { baseline0, lineH, lastBaseline, boxH } = m;
+  // The rendered width of the last line (which the curve cuts) at the final size.
+  const textW = (fit.lastW100 * fontSize) / REF_PX;
 
   const textLines = (opacity: number, fill = "#fff", dy = 0) =>
     lines.map((ln, i) => (
@@ -317,33 +378,47 @@ function ClaimText({
 
   // Ground every curve on the LAST line: highest points sit at the golden
   // section down the cap height, valleys settle just below the baseline, so most
-  // of the type stays opaque and only the feet are cut. The curve spans the FULL
-  // canvas width, so it bleeds past the glyphs to the edges.
+  // of the type stays opaque and only the feet are cut.
+  //
+  // The profile is mapped across the CLAIM's own width (`offsetX … offsetX+textW`)
+  // rather than the canvas. The headline occupies a different fraction of the
+  // full-bleed canvas on every format (much less on landscape / heavy side-rail
+  // formats), so mapping to the canvas would feed the glyphs only a sub-window of
+  // the profile and slice them inconsistently. Mapping to the claim makes the cut
+  // identical in character everywhere; the drawn LINE then runs flat out to both
+  // canvas edges (`buildLine`) so it still bleeds full-width.
   const curveCap = fontSize * CURVE_CAP;
   const bandH = curveCap * 0.5;
   const peakY = lastBaseline - curveCap * 0.382;
   // Close the "above" regions well past the top of the glyphs so the opaque
   // copy covers them fully — otherwise tall caps poke above the clip.
   const topY = -fontSize;
+  const toPath = (pts: Coord[]) =>
+    pts
+      .map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`)
+      .join(" ");
   const seams = hasCurve
     ? curves.map((c) => {
         const mapped: Coord[] = c.pts.map((p) => [
-          p[0] * fullW,
+          offsetX + p[0] * textW,
           peakY + (1 - p[1]) * bandH,
         ]);
-        const lineD = mapped
-          .map(
-            (p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`
-          )
-          .join(" ");
-        // Each leg occupies its own slice of the width; close the clip between
-        // its own left and right edges so it only cuts the type it spans.
-        const startX = mapped[0]?.[0] ?? 0;
-        const endX = mapped.at(-1)?.[0] ?? fullW;
-        const aboveD = `${lineD} L${endX.toFixed(1)} ${topY.toFixed(1)} L${startX.toFixed(1)} ${topY.toFixed(1)} Z`;
-        return { lineD, aboveD };
+        // Each leg occupies its own slice of the claim width; close the clip
+        // between its own left and right edges so it only cuts the type it spans.
+        const startX = mapped[0]?.[0] ?? offsetX;
+        const endX = mapped.at(-1)?.[0] ?? offsetX + textW;
+        const aboveD = `${toPath(mapped)} L${endX.toFixed(1)} ${topY.toFixed(1)} L${startX.toFixed(1)} ${topY.toFixed(1)} Z`;
+        return { mapped, aboveD };
       })
     : [];
+  // One full-bleed line: every leg's points, plus flat extensions out to the
+  // canvas edges at the first / last height (a vertical step falls naturally at
+  // each leg seam where two abutting points share an x).
+  const linePts = seams.flatMap((s) => s.mapped);
+  const first = linePts.at(0);
+  const last = linePts.at(-1);
+  const lineD =
+    first && last ? toPath([[0, first[1]], ...linePts, [fullW, last[1]]]) : "";
 
   return (
     <svg
@@ -369,27 +444,25 @@ function ClaimText({
               {textLines(1)}
             </g>
           ))}
-          {/* white line on each seam */}
-          {seams.map((s, k) => (
-            <g key={`seam-${k}`}>
-              <path
-                d={s.lineD}
-                fill="none"
-                stroke="rgba(0,0,0,0.35)"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={5}
-              />
-              <path
-                d={s.lineD}
-                fill="none"
-                stroke="#fff"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={3.25}
-              />
-            </g>
-          ))}
+          {/* one white line: the seam over the claim, flat-extended to the edges */}
+          <g>
+            <path
+              d={lineD}
+              fill="none"
+              stroke="rgba(0,0,0,0.35)"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={5}
+            />
+            <path
+              d={lineD}
+              fill="none"
+              stroke="#fff"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={3.25}
+            />
+          </g>
         </>
       ) : (
         <>

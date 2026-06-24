@@ -5,19 +5,23 @@ import {
   SAMPLE_RUN,
   SAMPLE_TRI,
 } from "@/components/app/sample-data";
-import {
-  type BackgroundArgs,
-  backgroundArgTypes,
-} from "../../../.storybook/backgrounds";
+import { SINGLE_CARD_THEMES } from "@/components/themes";
+import { backgroundArgTypes } from "../../../.storybook/backgrounds";
 import preview from "../../../.storybook/preview";
 import {
   activityArgType,
+  activityTuningArgTypes,
+  colorArgTypes,
   THEME_PROP_CONTROLS_EXCLUDE,
+  type ThemeStoryExtras,
+  ThemeStoryView,
 } from "../../../.storybook/theme-controls";
 import { withFormatMatrix } from "../../../.storybook/with-format-matrix";
 import { ThemeEditorial } from "./editorial";
 
-type EditorialArgs = ComponentProps<typeof ThemeEditorial> & BackgroundArgs;
+const THEME = SINGLE_CARD_THEMES.editorial;
+
+type EditorialArgs = ComponentProps<typeof ThemeEditorial> & ThemeStoryExtras;
 
 const meta = preview.type<{ args: EditorialArgs }>().meta({
   component: ThemeEditorial,
@@ -27,8 +31,14 @@ const meta = preview.type<{ args: EditorialArgs }>().meta({
     controls: { exclude: THEME_PROP_CONTROLS_EXCLUDE },
   },
   decorators: [withFormatMatrix],
-  argTypes: { data: activityArgType, ...backgroundArgTypes },
-  args: { data: SAMPLE_RUN },
+  argTypes: {
+    data: activityArgType,
+    ...colorArgTypes,
+    ...activityTuningArgTypes,
+    ...backgroundArgTypes,
+  },
+  args: { color: "Theme default", data: SAMPLE_RUN },
+  render: (args) => <ThemeStoryView args={args} theme={THEME} />,
 });
 
 const RUN_TITLE = /Westwind/;

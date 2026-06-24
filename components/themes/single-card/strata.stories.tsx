@@ -6,31 +6,30 @@ import {
   SAMPLE_SWIM,
   SAMPLE_TRI,
 } from "@/components/app/sample-data";
-import { coerceConfig } from "@/lib/params/resolve";
-import {
-  DEFAULT_STRATA_CONFIG,
-  STRATA_PARAMS,
-  type StrataConfig,
-} from "@/lib/strata";
-import {
-  type BackgroundArgs,
-  backgroundArgTypes,
-} from "../../../.storybook/backgrounds";
+import { SINGLE_CARD_THEMES } from "@/components/themes";
+import { DEFAULT_STRATA_CONFIG, type StrataConfig } from "@/lib/strata";
+import { backgroundArgTypes } from "../../../.storybook/backgrounds";
 import preview from "../../../.storybook/preview";
 import {
   activityArgType,
+  activityTuningArgTypes,
+  colorArgTypes,
   paramArgTypes,
   THEME_PROP_CONTROLS_EXCLUDE,
+  type ThemeStoryExtras,
+  ThemeStoryView,
 } from "../../../.storybook/theme-controls";
 import { withFormatMatrix } from "../../../.storybook/with-format-matrix";
 import { ThemeStrata } from "./strata";
 
-// STRATA across every export format (the shared matrix decorator), with its
-// ATMOSPHERE / DENSITY / legend knobs as real controls generated from
-// `STRATA_PARAMS`. A background photo is optional — pick one to preview the
-// field over a photo with its mood-tinted scrim.
+// STRATA across every export format, with its ATMOSPHERE / DENSITY / legend
+// knobs plus the shared activity + colour controls. A background photo is
+// optional — pick one to preview the field over a photo (and to enable the
+// photo-derived Colour options).
+const THEME = SINGLE_CARD_THEMES.strata;
+
 type StrataArgs = ComponentProps<typeof ThemeStrata> &
-  BackgroundArgs &
+  ThemeStoryExtras &
   StrataConfig;
 
 const meta = preview.type<{ args: StrataArgs }>().meta({
@@ -43,17 +42,13 @@ const meta = preview.type<{ args: StrataArgs }>().meta({
   decorators: [withFormatMatrix],
   argTypes: {
     data: activityArgType,
-    ...paramArgTypes(STRATA_PARAMS),
+    ...colorArgTypes,
+    ...activityTuningArgTypes,
+    ...paramArgTypes(THEME.params),
     ...backgroundArgTypes,
   },
-  args: { data: SAMPLE_RIDE, ...DEFAULT_STRATA_CONFIG },
-  render: (args) => (
-    <ThemeStrata
-      config={coerceConfig(DEFAULT_STRATA_CONFIG, STRATA_PARAMS, args)}
-      data={args.data}
-      photoUrl={args.photoUrl ?? null}
-    />
-  ),
+  args: { color: "Theme default", data: SAMPLE_RIDE, ...DEFAULT_STRATA_CONFIG },
+  render: (args) => <ThemeStoryView args={args} theme={THEME} />,
 });
 
 const RIDE_TITLE = /Elbsandstein/;

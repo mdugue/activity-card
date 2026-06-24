@@ -1,32 +1,31 @@
 import type { ComponentProps } from "react";
 import { expect } from "storybook/test";
 import { SAMPLE_RIDE, SAMPLE_TRI } from "@/components/app/sample-data";
-import {
-  ALTITUDE_PARAMS,
-  type AltitudeConfig,
-  DEFAULT_ALTITUDE_CONFIG,
-} from "@/lib/altitude";
-import { coerceConfig } from "@/lib/params/resolve";
-import {
-  type BackgroundArgs,
-  backgroundArgTypes,
-} from "../../../.storybook/backgrounds";
+import { SINGLE_CARD_THEMES } from "@/components/themes";
+import { type AltitudeConfig, DEFAULT_ALTITUDE_CONFIG } from "@/lib/altitude";
+import { backgroundArgTypes } from "../../../.storybook/backgrounds";
 import preview from "../../../.storybook/preview";
 import {
   activityArgType,
+  activityTuningArgTypes,
+  colorArgTypes,
   paramArgTypes,
   THEME_PROP_CONTROLS_EXCLUDE,
+  type ThemeStoryExtras,
+  ThemeStoryView,
 } from "../../../.storybook/theme-controls";
 import { withFormatMatrix } from "../../../.storybook/with-format-matrix";
 import { ThemeAltitude } from "./altitude";
 
-// Every variant renders across all export formats (the shared matrix decorator),
-// and each `AltitudeConfig` knob is a real, typed control (HEADLINE / FONT /
-// POSITION dropdowns, a CUTOUT OPACITY slider, a toggle) generated from the
-// theme's own `ALTITUDE_PARAMS`. The flattened knobs widen the component's args;
-// `render` recombines them into `config` via `coerceConfig`.
+// Altitude across every export format (the matrix decorator). Beyond its own
+// HEADLINE / FONT / POSITION / opacity knobs (generated from ALTITUDE_PARAMS),
+// the shared controls let you swap + fine-tune the activity and recolour from
+// the preset accents or the photo (Colour control) — `ThemeStoryView` resolves
+// it all in render.
+const THEME = SINGLE_CARD_THEMES.altitude;
+
 type AltitudeArgs = ComponentProps<typeof ThemeAltitude> &
-  BackgroundArgs &
+  ThemeStoryExtras &
   AltitudeConfig;
 
 const meta = preview.type<{ args: AltitudeArgs }>().meta({
@@ -39,27 +38,28 @@ const meta = preview.type<{ args: AltitudeArgs }>().meta({
   decorators: [withFormatMatrix],
   argTypes: {
     data: activityArgType,
-    ...paramArgTypes(ALTITUDE_PARAMS),
+    ...colorArgTypes,
+    ...activityTuningArgTypes,
+    ...paramArgTypes(THEME.params),
     ...backgroundArgTypes,
   },
-  args: { data: SAMPLE_RIDE, ...DEFAULT_ALTITUDE_CONFIG },
-  render: (args) => (
-    <ThemeAltitude
-      config={coerceConfig(DEFAULT_ALTITUDE_CONFIG, ALTITUDE_PARAMS, args)}
-      data={args.data}
-      photoUrl={args.photoUrl ?? null}
-    />
-  ),
+  args: {
+    color: "Theme default",
+    data: SAMPLE_RIDE,
+    ...DEFAULT_ALTITUDE_CONFIG,
+  },
+  render: (args) => <ThemeStoryView args={args} theme={THEME} />,
 });
 
-const RIDE_TITLE = /Elbsandstein/;
+// Altitude renders the activity's location (its hero is the elevation claim);
+// asserting it covers more than a blank canvas. The decorator renders one tile
+// per format, so assert the first.
+const RIDE_PLACE = /Schweiz/i;
 
-// Default config — verify the title still renders so the smoke covers more than
-// a blank canvas. The decorator renders one tile per format, so assert the first.
 export const Default = meta.story({
   play: async ({ canvas }) => {
-    const [title] = canvas.getAllByText(RIDE_TITLE);
-    await expect(title).toBeVisible();
+    const [place] = canvas.getAllByText(RIDE_PLACE);
+    await expect(place).toBeVisible();
   },
 });
 
