@@ -354,10 +354,13 @@ export function ThemeData({
         color: INK,
         fontFamily: "var(--font-mono), monospace",
         position: "relative",
-        // Query container for the whole card: title + section heights size to
-        // the card's width (cqi) and height (cqb) so the dashboard reflows fluid
-        // across the short/wide landscape and short square formats.
+        // Named query container (`card`) for the whole card: title + section
+        // heights size to the card's width (cqi) and height (cqb), and the grid
+        // `@container card` width breakpoints below key on it to add columns at
+        // x-landscape. `size` keeps the height-driven `cqb`; the name skips the
+        // nested per-cell / per-splits `size` containers cleanly.
         containerType: "size",
+        containerName: "card",
         // Stacking context so the z-index:-1 photo underlay paints above the
         // solid background (not behind it) and below the dense content.
         isolation: "isolate",
@@ -425,12 +428,12 @@ export function ThemeData({
           </div>
         </div>
 
+        {/* Two chart panels (route · profile): always side-by-side — every
+            export format is ≥1080px wide, so `grid-cols-2`'s shrink-safe
+            `minmax(0, 1fr)` tracks just narrow the SVGs rather than overflow. */}
         <div
+          className="grid grid-cols-2"
           style={{
-            display: "grid",
-            // Two chart panels: side-by-side once wide enough, stacking only on
-            // a very narrow canvas. minmax(0,1fr) lets them shrink, not overflow.
-            gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
             gap: 14,
             marginBottom: 14,
             flex: "1 1 0",
@@ -624,15 +627,15 @@ export function ThemeData({
           </div>
         </div>
 
+        {/* Stat grid, ONE markup: 3-up at feed / square / 9:16 and 5-up at
+            x-landscape, an explicit container breakpoint
+            (`@min-[1400px]/card:grid-cols-5`) keyed on the card width — only the
+            1600px landscape canvas crosses 1400px, so the nine ride cells drop
+            from three rows to two when wide. `minmax(0, 1fr)` (via grid-cols-*)
+            lets cells shrink, not overflow. */}
         <div
+          className="grid auto-rows-fr @min-[1400px]/card:grid-cols-5 grid-cols-3"
           style={{
-            display: "grid",
-            // Self-reflowing stat grid: MIN 270 lands 3-up at feed/square/tiktok
-            // content (~870-968px: 3×270+28≈838 fits, 4 would overflow) and 5-up
-            // once the canvas is landscape-wide (~1488px: 5×270+56≈1406 fits) — so
-            // the nine ride cells drop from three rows to two when wide. No branch.
-            gridTemplateColumns: "repeat(auto-fit, minmax(270px, 1fr))",
-            gridAutoRows: "minmax(0, 1fr)",
             gap: 14,
             marginBottom: 14,
             flex: "1.6 1 0",
@@ -642,12 +645,12 @@ export function ThemeData({
           {cells}
         </div>
 
+        {/* Zones | splits: always side-by-side (every format is ≥1080px wide).
+            `grid-cols-2`'s shrink-safe `minmax(0, 1fr)` halves compress rather
+            than overflow. */}
         <div
+          className="grid grid-cols-2"
           style={{
-            display: "grid",
-            // Zones | splits: side-by-side when wide, stacking on a narrow
-            // canvas. Both halves shrink (minmax(0,1fr)).
-            gridTemplateColumns: "repeat(auto-fit, minmax(330px, 1fr))",
             gap: 14,
             flex: "1.2 1 0",
             minHeight: 0,
@@ -656,85 +659,121 @@ export function ThemeData({
           <div
             style={{
               border: `1.5px solid ${INK}`,
-              padding: "clamp(12px, 2.4cqb, 22px)",
               background: PANEL,
-              display: "flex",
-              flexDirection: "column",
               minWidth: 0,
               minHeight: 0,
               overflow: "hidden",
+              // The zones panel is its OWN query container: the chart's labels
+              // and bar band size to THIS panel's height (cqb), not the card's.
+              // The tall feed panel keeps full-size labels; the SHORT x-landscape
+              // panel (the zones/splits band is only ~140px there) shrinks them
+              // to fit instead of overflowing the title or clipping the Z labels.
+              containerType: "size",
+              display: "flex",
+              flexDirection: "column",
             }}
           >
             <div
               style={{
-                fontSize: 24,
-                letterSpacing: "0.18em",
-                opacity: 0.7,
-                fontWeight: 600,
-              }}
-            >
-              {zonesLabel}
-            </div>
-            <div
-              style={{
+                // Padding sits on this inner wrapper so it ALSO resolves cqb
+                // against the panel container above and shrinks on the short
+                // canvas, freeing the vertical budget the chart needs.
+                padding: "clamp(12px, 8cqb, 22px)",
                 flex: 1,
-                display: "flex",
-                alignItems: "flex-end",
-                gap: 10,
-                marginTop: "clamp(10px, 2.4cqb, 22px)",
-                paddingBottom: 6,
                 minHeight: 0,
+                display: "flex",
+                flexDirection: "column",
               }}
             >
-              {(() => {
-                const maxPct = Math.max(...zones.map((z) => z.pct), 1);
-                return zones.map((z, i) => (
-                  <div
-                    key={`zone-${z.zone}-${i}`}
-                    style={{
-                      flex: 1,
-                      height: "100%",
-                      textAlign: "center",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "flex-end",
-                      minHeight: 0,
-                    }}
-                  >
+              <div
+                style={{
+                  fontSize: 24,
+                  letterSpacing: "0.18em",
+                  opacity: 0.7,
+                  fontWeight: 600,
+                  flex: "0 0 auto",
+                }}
+              >
+                {zonesLabel}
+              </div>
+              <div
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "flex-end",
+                  gap: 10,
+                  marginTop: "clamp(8px, 7cqb, 22px)",
+                  paddingBottom: 6,
+                  minHeight: 0,
+                }}
+              >
+                {(() => {
+                  const maxPct = Math.max(...zones.map((z) => z.pct), 1);
+                  return zones.map((z, i) => (
                     <div
+                      key={`zone-${z.zone}-${i}`}
                       style={{
-                        fontSize: "clamp(16px, 7cqb, 26px)",
-                        fontWeight: 700,
-                        marginBottom: 4,
+                        flex: 1,
+                        height: "100%",
+                        textAlign: "center",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        minHeight: 0,
                       }}
                     >
-                      {z.pct}%
+                      <div
+                        style={{
+                          // Panel-relative cqb: 26px on the tall feed panel,
+                          // shrinking to its 15px floor on the short landscape one.
+                          fontSize: "clamp(15px, 11cqb, 26px)",
+                          fontWeight: 700,
+                          marginBottom: 4,
+                          flex: "0 0 auto",
+                        }}
+                      >
+                        {z.pct}%
+                      </div>
+                      {/* The bar lives in its OWN flex track between the fixed
+                          percentage and zone labels — so the tallest bar fills
+                          this middle band (not the whole column) and the labels
+                          always keep their space. Critical on a short
+                          x-landscape panel: a 100%-of-column bar used to push its
+                          % label up into the title. Bar height is a share of THIS
+                          band, so it still scales fluidly to the panel height. */}
+                      <div
+                        style={{
+                          flex: "1 1 0",
+                          width: "100%",
+                          minHeight: 0,
+                          display: "flex",
+                          alignItems: "flex-end",
+                        }}
+                      >
+                        <div
+                          style={{
+                            background: i % 2 === 0 ? INK : accent,
+                            height: `${(z.pct / maxPct) * 100}%`,
+                            width: "100%",
+                            minHeight: 6,
+                          }}
+                        />
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "clamp(13px, 9cqb, 20px)",
+                          marginTop: 6,
+                          letterSpacing: "0.1em",
+                          fontWeight: 700,
+                          flex: "0 0 auto",
+                        }}
+                      >
+                        {z.zone}
+                      </div>
                     </div>
-                    {/* Bar height is a share of the panel's own height (% of the
-                        flex track), so the chart scales to a short card instead
-                        of a fixed pixel column that would overflow. */}
-                    <div
-                      style={{
-                        background: i % 2 === 0 ? INK : accent,
-                        height: `${(z.pct / maxPct) * 100}%`,
-                        width: "100%",
-                        minHeight: 6,
-                      }}
-                    />
-                    <div
-                      style={{
-                        fontSize: "clamp(14px, 5cqb, 20px)",
-                        marginTop: 8,
-                        letterSpacing: "0.1em",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {z.zone}
-                    </div>
-                  </div>
-                ));
-              })()}
+                  ));
+                })()}
+              </div>
             </div>
           </div>
           <div
@@ -760,22 +799,22 @@ export function ThemeData({
             >
               {sport === "swim" ? "LAP LEDGER" : "KEY SPLITS"}
             </div>
+            {/* Splits reflow with the CARD width, ONE markup: ~3-up at feed /
+                square / 9:16 (two rows, the panel is tall there) and 6-up at
+                x-landscape (one row, which fits the short panel). The column
+                count is the explicit `@min-[1400px]/card:grid-cols-6` breakpoint
+                — the named `card` query reaches past this grid's own (unnamed)
+                `size` container to the card root. That `size` container still
+                sizes each split row's type to THIS grid's height (`cqb` below)
+                so the splits stay inside the panel. */}
             <div
+              className="grid auto-rows-fr @min-[1400px]/card:grid-cols-6 grid-cols-3"
               style={{
                 marginTop: "clamp(8px, 2cqb, 18px)",
-                display: "grid",
-                // Splits reflow with width: ~3-up in the feed/square panel (two
-                // rows, the panel is tall there) and 6-up in the wide-but-short
-                // landscape panel (one row, which fits the short height). MIN 92
-                // lands 3-up at ~480px and 6-up at ~720px.
-                gridTemplateColumns: "repeat(auto-fit, minmax(92px, 1fr))",
-                gridAutoRows: "minmax(0, 1fr)",
                 gap: "clamp(6px, 1.6cqb, 14px) 14px",
                 fontFamily: "var(--font-mono), monospace",
                 flex: 1,
                 minHeight: 0,
-                // Query container so each split row's type sizes to THIS grid's
-                // height (cqb below) — splits stay inside the panel.
                 containerType: "size",
               }}
             >

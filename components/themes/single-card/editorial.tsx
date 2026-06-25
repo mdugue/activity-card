@@ -200,11 +200,13 @@ export function ThemeEditorial({
         fontFamily: "var(--font-geist-mono), monospace",
         position: "relative",
         overflow: "hidden",
-        // The card itself is the query container: the giant numeral and the
-        // headings size against its width (cqi, narrow in a 2-up landscape
-        // spread) and height (cqb, short in landscape/square) — no per-aspect
-        // branch, the layout just reflows.
+        // The card itself is the named query container (`card`): the giant
+        // numeral and the headings size against its width (cqi, narrow in a 2-up
+        // landscape spread) and height (cqb, short in landscape/square), and the
+        // A|B grid's `@container card` width breakpoint keys on it to go 2-up at
+        // x-landscape — no per-aspect branch, the layout just reflows.
         containerType: "size",
+        containerName: "card",
       }}
     >
       {photoUrl ? (
@@ -219,21 +221,19 @@ export function ThemeEditorial({
         pad={{ top: 110, right: 110, bottom: 90, left: 110 }}
         style={{ flex: 1, zIndex: 1 }}
       >
-        {/* One self-reflowing grid: region A (numeral block) and region B (the
-            body) sit stacked at 4:5 / 1:1 / 9:16 (content ≈860 → 1 column) and
-            side-by-side at 16:9 (content ≈1380 → 2 columns). MIN is tuned so
-            2×MIN+gap overflows portrait but 2×MIN+gap fits landscape. */}
+        {/* One self-reflowing grid, ONE markup: region A (numeral block) and
+            region B (the body) STACK at 4:5 / 1:1 / 9:16 and sit 2-up side-by-side
+            at x-landscape. The column count is an explicit container breakpoint —
+            `@min-[1400px]/card:grid-cols-2` = "go 2-up once the card is wider than
+            1400px" — which only the 1600px landscape canvas crosses; every other
+            format is 1080px wide and stays stacked. `auto-rows-auto` (not
+            `minmax(0,…)`/`fr`) so stacked rows take their content height and never
+            overlap; the per-element clamps keep that height in budget on short
+            canvases. */}
         <div
+          className="grid flex-1 auto-rows-auto @min-[1400px]/card:grid-cols-2 grid-cols-1 content-start"
           style={{
-            flex: 1,
             minHeight: 0,
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(620px, 1fr))",
-            // `auto` (not minmax(0,…)) so stacked rows take their content height
-            // and never overlap; the per-element clamps keep that height in
-            // budget on short canvases.
-            gridAutoRows: "auto",
-            alignContent: "start",
             gap: "clamp(14px, 3cqi, 64px)",
           }}
         >
