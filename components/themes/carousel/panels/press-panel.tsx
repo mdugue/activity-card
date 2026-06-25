@@ -17,9 +17,10 @@ import {
   segmentProfiles,
   segmentRoutes,
 } from "@/lib/multi-activity";
+import type { PanelProps } from "../define-theme";
 import { ElevationBand } from "../elevation-band";
 import { RouteLine } from "../route-line";
-import { type PanelProps, SLIDE_PAD, slideNumber } from "../templates/shared";
+import { SLIDE_PAD, slideNumber } from "../templates/shared";
 
 const SLAB_SHADOW = "0 10px 34px rgba(0,0,0,0.3)";
 

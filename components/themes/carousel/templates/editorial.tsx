@@ -5,8 +5,9 @@
 
 import { buildStats } from "@/lib/carousel/stats";
 import { CrossViz } from "../cross-viz";
+import type { PanelProps } from "../define-theme";
 import { MetaBand, Signature } from "./parts";
-import { type PanelProps, SLIDE_PAD, slideText } from "./shared";
+import { SLIDE_PAD, slideText } from "./shared";
 
 export function EditorialSlide({
   data,

@@ -5,10 +5,11 @@
 // activity — StatRow and StatGrid just choose the grid shape.
 
 import { detailStats, statOptsFor } from "@/lib/carousel/stats";
+import type { PanelProps } from "../define-theme";
 import { DetailViz } from "../detail-viz";
 import { Stat } from "../stat-block";
 import { MetaBand } from "./parts";
-import { type PanelProps, SLIDE_PAD, slideText } from "./shared";
+import { SLIDE_PAD, slideText } from "./shared";
 
 interface StatLayoutProps extends PanelProps {
   /** gridTemplateColumns — content-sized columns (e.g. "max-content max-content") */

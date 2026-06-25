@@ -1,29 +1,14 @@
-// Shared contract + helpers for carousel slide panels. Panels render
-// *foreground only* (type, stats) at 1080×1350; the deck renderer owns the
-// background photo, the signature spanning layer, and the chrome. Each panel
-// derives the stats it shows directly from `data` (see `lib/carousel/stats.ts`)
+// Shared layout constants + text helpers for carousel slide panels. The panel
+// CONTRACT (`PanelProps`) now lives beside `CanvasProps` in `define-theme.ts`;
+// this file keeps the per-slide padding, the dual text-shadow treatment, and
+// the slide-number formatter. Panels render *foreground only* (type, stats) at
+// 1080×1350; the deck renderer owns the photo, the spanning canvas, and chrome.
+// Each panel derives its stats directly from `data` (see `lib/carousel/stats.ts`)
 // — there is no deck-wide stat planner.
 
-import type { ActivityData } from "@/lib/activity";
 import type { EffectiveStyle } from "@/lib/carousel/resolve";
-import type { Visibility } from "@/lib/visibility";
 
 export const SLIDE_PAD = 90;
-
-export interface PanelProps {
-  data: ActivityData;
-  /** true when a photo backs the slide → text leans on shadows / treatment */
-  hasPhoto: boolean;
-  index: number;
-  /** print the "made with effort" mark (wrap-up slide only) */
-  showEffort: boolean;
-  /** print the "01 / 04" slide index */
-  showPageNumber: boolean;
-  style: EffectiveStyle;
-  total: number;
-  /** deck-wide element visibility (drives each panel's `statOptsFor`) */
-  visibility: Visibility;
-}
 
 export interface SlideTextColors {
   faint: string;

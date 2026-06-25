@@ -177,11 +177,11 @@ lib/carousel/resolve.ts        look + ColorScheme → EffectiveStyle · heroInk
 lib/carousel/stats.ts          buildStats · heroStat · detailStats · frameStats · pressSlideStats · series
 lib/carousel/types.ts          SLIDE_W/H · RouteStyle · FontPairId
 hooks/use-carousel.ts          panel count → clamped slide selection (one index)
-components/themes/carousel/define-theme.ts   defineCarouselTheme · CarouselTheme · CanvasProps
+components/themes/carousel/define-theme.ts   defineCarouselTheme · CarouselTheme · CanvasProps · PanelProps
 components/themes/carousel/registry.ts       CAROUSEL_THEMES + CarouselThemeId (one entry per theme, look inline)
 components/themes/carousel/deck.tsx          CarouselDeck — the shared renderer
 components/themes/carousel/canvas/           RouteCanvas · ElevationCanvas · StrataCanvas
-components/themes/carousel/templates/        standard panels (Hero/StatGrid/Editorial) + PanelProps
+components/themes/carousel/templates/        standard panels (Hero/StatGrid/Editorial) + shared text helpers
 components/themes/carousel/panels/           Frame + Press per-slide panels
 components/themes/carousel/route-line.tsx    route + start-direction arrow
 components/themes/carousel/elevation-band.tsx mountain range / sparkline
@@ -189,8 +189,10 @@ components/themes/carousel/carousel-photo.tsx panorama photo (shared CoverPhoto)
 components/themes/carousel/<theme>.stories.tsx one story file per theme (required)
 ```
 
-Every panel receives the same `PanelProps` bag (`templates/shared.ts`):
-pre-resolved `style`, slide `index`/`total`, `hasPhoto`, the deck-wide
-`visibility`, and the chrome flags. Panels are foreground fragments inside ONE
-renderer — the style is resolved once (which guarantees the seamless deck), and
-each panel derives its own stats from `data`.
+Every panel receives the same `PanelProps` bag (the contract lives beside
+`CanvasProps` in `define-theme.ts`): pre-resolved `style`, slide `index`/`total`,
+`hasPhoto`, the deck-wide `visibility`, and the chrome flags. Its `data` is
+narrowed to the theme's declared capabilities (`ThemeData<K>`), exactly like the
+single card's `ThemeProps`. Panels are foreground fragments inside ONE renderer —
+the style is resolved once (which guarantees the seamless deck), and each panel
+derives its own stats from `data`.

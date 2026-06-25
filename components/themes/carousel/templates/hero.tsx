@@ -4,8 +4,9 @@
 // read-out, no redundant "distance" label under the number.
 
 import { heroStat, statOptsFor } from "@/lib/carousel/stats";
+import type { PanelProps } from "../define-theme";
 import { MetaBand } from "./parts";
-import { type PanelProps, SLIDE_PAD, slideText } from "./shared";
+import { SLIDE_PAD, slideText } from "./shared";
 
 export function HeroSlide({
   data,

@@ -19,10 +19,10 @@ import {
   segmentRoutes,
   segmentSeries,
 } from "@/lib/multi-activity";
+import type { PanelProps } from "../define-theme";
 import { ElevationBand } from "../elevation-band";
 import { RouteLine } from "../route-line";
 import {
-  type PanelProps,
   SLIDE_PAD,
   type SlideTextColors,
   slideNumber,
