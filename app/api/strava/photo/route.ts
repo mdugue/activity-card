@@ -17,7 +17,7 @@ const PHOTO_TARGET_LONG_EDGE = 2048;
  * Streams one of an activity's Strava photos through our origin. The image
  * URL is re-resolved server-side from Strava's photo list (the client only
  * supplies an activity id + index), so no client-controlled URL is ever
- * fetched, and the same-origin response keeps html-to-image's export canvas
+ * fetched, and the same-origin response keeps snapdom's export canvas
  * untainted.
  */
 export async function GET(request: Request) {

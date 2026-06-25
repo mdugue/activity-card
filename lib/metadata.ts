@@ -5,7 +5,7 @@
  * PNG metadata injection — Effort attribution (+ optional GPS) baked into the
  * exported file.
  *
- * Canvas / html-to-image output carries **no** metadata, so we re-inject it
+ * Canvas / snapdom output carries **no** metadata, so we re-inject it
  * after rasterising. PNG has no native EXIF; we write standard textual chunks
  * (`tEXt`/`iTXt`) for attribution and an XMP packet (`iTXt`, keyword
  * `XML:com.adobe.xmp`) for GPS — the same mechanism Lightroom/Photoshop read.

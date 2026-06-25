@@ -113,7 +113,7 @@ signature viz only. Legibility comes from, in order of preference:
 The panorama itself is the shared natural-size-aware `CoverPhoto`
 (`components/themes/shared/cover-photo.tsx`, wrapped by `carousel-photo.tsx`):
 quarter-turn rotations swap the element's width/height so the strip stays
-covered. Optional **film grain** survives html-to-image because it's decoded as
+covered. Optional **film grain** survives snapdom because it's decoded as
 an image, not a live filter. Default-on for the art-print themes via the token
 look's photo fields.
 

@@ -2,7 +2,7 @@
 // Altitude). When the photo's natural size is known (provided via the photo-fx
 // context), it renders the rotation-correct `CoverPhoto`; until then it falls
 // back to a plain CSS cover so the preview never flashes empty. Filter / grain /
-// mirror come from the same context. Inline CSS only — html-to-image safe.
+// mirror come from the same context. Inline CSS only — snapdom safe.
 
 import {
   IDENTITY_TRANSFORM,

@@ -3,7 +3,7 @@
  *
  * Coordinates live in the card's native 1080×1350 space so the same transform
  * renders identically in the scaled live preview and in the full-size
- * html-to-image export mount. `scale` is relative to a `background-size: cover`
+ * snapdom export mount. `scale` is relative to a `background-size: cover`
  * baseline (1 = the photo exactly covers the card), so the image always fills
  * the frame and translation is clamped to never reveal an edge.
  */

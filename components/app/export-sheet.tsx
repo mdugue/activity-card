@@ -274,29 +274,30 @@ function FormatTile({
         className="relative overflow-hidden rounded-md shadow-sm ring-1 ring-foreground/10"
         style={{ width: tileW, height: tileH }}
       >
-        {/* Native-size mount, scaled to fill the tile (the format's true shape);
-            reffed as the export source (html-to-image forces transform:none +
-            native width/height). */}
+        {/* The scaling wrapper shrinks the card to fill the tile (the format's
+            true shape). The native-size child it wraps is reffed as the export
+            source: snapdom keeps a root element's own `scale()` transform, so
+            the captured node must stay untransformed and the visual scale lives
+            on the wrapper instead. */}
         <div
-          ref={registerMount}
-          style={{
-            width: format.width,
-            height: format.height,
-            transform: `scale(${scale})`,
-            transformOrigin: "top left",
-          }}
+          style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}
         >
-          <RenderTheme
-            colors={colors}
-            config={config}
-            data={data}
-            format={format}
-            imageTransform={imageTransform}
-            photoBackdropEnabled={photoBackdropEnabled}
-            photoEffects={photoEffects}
-            photoUrl={photoUrl}
-            theme={theme}
-          />
+          <div
+            ref={registerMount}
+            style={{ width: format.width, height: format.height }}
+          >
+            <RenderTheme
+              colors={colors}
+              config={config}
+              data={data}
+              format={format}
+              imageTransform={imageTransform}
+              photoBackdropEnabled={photoBackdropEnabled}
+              photoEffects={photoEffects}
+              photoUrl={photoUrl}
+              theme={theme}
+            />
+          </div>
         </div>
         {safeZones ? <SafeZoneOverlay format={format} scale={scale} /> : null}
       </div>

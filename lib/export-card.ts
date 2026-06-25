@@ -1,6 +1,6 @@
-import { toPng } from "html-to-image";
+import { snapdom } from "@zumer/snapdom";
 import type { ActivityData } from "./activity";
-import { isDesktopDevice, isIos, waitForFonts } from "./export-shared";
+import { isDesktopDevice, waitForFonts } from "./export-shared";
 import {
   applyMetadata,
   type MetadataInput,
@@ -38,35 +38,29 @@ export async function exportCard(
 
   await waitForFonts();
 
-  // No `cacheBust`: html-to-image appends `?cache-bust=<time>` to every fetched
-  // resource URL, which turns the photo's `blob:` object URL into an
-  // unresolvable one — the fetch fails and the background silently drops from
-  // the PNG. We have no cross-origin images that would need busting.
-  const renderOptions = {
+  // snapdom rasterises the live DOM straight to a PNG blob.
+  // - `embedFonts`: inline the theme's @font-face into the snapshot. Without it
+  //   snapdom only embeds icon fonts, so headlines would fall back to a system
+  //   font in the export even though the preview looks right.
+  // - `scale` + `dpr: 1`: emit a deterministic `pixelRatio`× of the card's
+  //   native size on every device. Left at its default, `dpr` tracks the
+  //   viewer's screen density and a Retina display would double the output
+  //   again. Pinning it keeps 1080×1350 → 2160×2700 everywhere.
+  const blob = await snapdom.toBlob(node, {
     width,
     height,
-    pixelRatio,
-    style: {
-      transform: "none",
-      transformOrigin: "top left",
-    },
-  };
-
-  // iOS Safari: html-to-image's first pass returns a blank/partial canvas
-  // because the WebKit layer cache lags one paint behind. Re-rasterise and
-  // discard the first result. Cheap to do everywhere; required on iOS.
-  if (isIos()) {
-    await toPng(node, renderOptions);
-  }
-
-  const dataUrl = await toPng(node, renderOptions);
+    scale: pixelRatio,
+    dpr: 1,
+    embedFonts: true,
+    type: "png",
+  });
 
   // Inject Effort metadata into the raw PNG bytes (canvas output carries none).
-  const raw = new Uint8Array(await (await fetch(dataUrl)).arrayBuffer());
+  const raw = new Uint8Array(await blob.arrayBuffer());
   const bytes = metadata ? applyMetadata(raw, metadata, metadataOptions) : raw;
   // reason: BlobPart typing predates ArrayBufferView<ArrayBuffer> narrowing.
-  const blob = new Blob([bytes as BlobPart], { type: "image/png" });
-  const file = new File([blob], filename, { type: "image/png" });
+  const out = new Blob([bytes as BlobPart], { type: "image/png" });
+  const file = new File([out], filename, { type: "image/png" });
 
   const nav = typeof navigator === "undefined" ? undefined : navigator;
   if (!isDesktopDevice() && nav?.canShare?.({ files: [file] })) {
@@ -81,7 +75,7 @@ export async function exportCard(
     }
   }
 
-  triggerDownload(blob, filename);
+  triggerDownload(out, filename);
 }
 
 function triggerDownload(blob: Blob, filename: string) {
