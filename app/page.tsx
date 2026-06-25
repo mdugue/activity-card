@@ -1,9 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CarouselEditState } from "@/components/app/carousel-edit-state";
-import { EditState } from "@/components/app/edit-state";
-import type { EditorSession } from "@/components/app/editor-session";
 import { EffortWordmark } from "@/components/app/effort-wordmark";
 import { EmptyState } from "@/components/app/empty-state";
 import { ExportSheet } from "@/components/app/export-sheet";
@@ -16,42 +13,45 @@ import {
   migrateThemeConfigs,
   savePersistedUi,
 } from "@/components/app/persisted-ui";
-import type { ThemeId } from "@/components/app/render-theme";
 import { StravaFooter } from "@/components/app/strava-footer";
 import { StravaPicker } from "@/components/app/strava-picker";
-import { SINGLE_CARD_THEMES } from "@/components/themes";
-import {
-  CAROUSEL_THEMES,
-  type CarouselThemeId,
-  DEFAULT_CAROUSEL_THEME,
-} from "@/components/themes/carousel/registry";
 import { useCardPhoto } from "@/hooks/use-card-photo";
 import { useCarousel } from "@/hooks/use-carousel";
 import { useImagePalette } from "@/hooks/use-image-palette";
 import { useStravaReturnToast } from "@/hooks/use-strava-return-toast";
 import type { ActivityData, ActivitySource, Sport } from "@/lib/activity";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
-import { type ColorChoice, resolveColors } from "@/lib/colors";
+import { formatDateUpper } from "@/lib/format";
+import type { ParsedActivity } from "@/lib/parse-activity";
+import { cn } from "@/lib/utils";
+import {
+  CAROUSEL_THEMES,
+  type CarouselThemeId,
+  DEFAULT_CAROUSEL_THEME,
+} from "@/theme/carousel/registry";
+import { type ColorChoice, resolveColors } from "@/theme/core/colors";
 import {
   DEFAULT_FORMAT_ID,
   type ExportFormatId,
   getFormat,
-} from "@/lib/export-formats";
-import { formatDateUpper } from "@/lib/format";
-import { coerceConfig } from "@/lib/params/resolve";
-import type { ParsedActivity } from "@/lib/parse-activity";
+} from "@/theme/core/export-formats";
+import { coerceConfig } from "@/theme/core/params/resolve";
 import {
   effectiveChoiceFor,
   type ThemeBase,
   type ThemePhotoPolicy,
-} from "@/lib/theme-contract";
-import { cn } from "@/lib/utils";
+} from "@/theme/core/theme-contract";
 import {
   applyVisibility,
   DEFAULT_VISIBILITY,
   themeAvailability,
   type Visibility,
-} from "@/lib/visibility";
+} from "@/theme/core/visibility";
+import { CarouselEditState } from "@/theme/editor/carousel-edit-state";
+import { EditState } from "@/theme/editor/edit-state";
+import type { EditorSession } from "@/theme/editor/editor-session";
+import type { ThemeId } from "@/theme/editor/render-theme";
+import { SINGLE_CARD_THEMES } from "@/theme/single-card";
 
 type AppState = "empty" | "picking-strava" | "edit" | "download";
 

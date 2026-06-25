@@ -1,25 +1,25 @@
 ---
 name: theme-params
-description: Use when adding or editing a single-card theme (the defineTheme descriptor), a theme's adjustable knobs (ParamDef specs), its capability declaration (uses/usesWhen + ThemeData narrowing), its colour or photo policy, the unified ColorScheme/ColorChoice model, or the editor category grouping. Read before touching lib/theme-contract.ts, lib/colors.ts, lib/params/, components/app/param-control.tsx, components/app/color-control.tsx, components/app/theme-params.tsx, or a theme's *_PARAMS spec.
+description: Use when adding or editing a single-card theme (the defineTheme descriptor), a theme's adjustable knobs (ParamDef specs), its capability declaration (uses/usesWhen + ThemeData narrowing), its colour or photo policy, the unified ColorScheme/ColorChoice model, or the editor category grouping. Read before touching theme/core/theme-contract.ts, theme/core/colors.ts, theme/core/params/, theme/editor/param-control.tsx, theme/editor/color-control.tsx, theme/editor/theme-params.tsx, or a theme's *_PARAMS spec.
 ---
 
 # theme-params
 
 How a theme describes itself to the app. EVERY theme — single-card or carousel
 — is expressed through one shared descriptor core, **`ThemeBase`**
-(`lib/theme-contract.ts`: identity, colour policy, photo policy, params). The
+(`theme/core/theme-contract.ts`: identity, colour policy, photo policy, params). The
 families add only their render strategy: a single-card theme is a `defineTheme`
 descriptor with a bespoke `Component` (+ capability declaration), collected in
-`SINGLE_CARD_THEMES` (`components/themes/index.ts`); a carousel theme is a
+`SINGLE_CARD_THEMES` (`theme/single-card/index.ts`); a carousel theme is a
 `defineCarouselTheme` descriptor (a `canvas?` + `panels[]` + an inline `look`),
-collected in `CAROUSEL_THEMES` (`components/themes/carousel/registry.ts`). Everything the editor shows (which toggles
+collected in `CAROUSEL_THEMES` (`theme/carousel/registry.ts`). Everything the editor shows (which toggles
 exist, which knobs render, whether the colour control appears, the photo
 defaults) derives from the descriptor; there are no parallel metadata tables
 and no per-theme control components. `app/page.tsx` treats both modes through
 one `activeTheme: ThemeBase` lookup and hands the editors one shared
-`EditorSession` object (`components/app/editor-session.ts`).
+`EditorSession` object (`theme/editor/editor-session.ts`).
 
-## The descriptor (`lib/theme-contract.ts`)
+## The descriptor (`theme/core/theme-contract.ts`)
 
 ```ts
 export const editorialTheme = defineTheme({
@@ -48,7 +48,7 @@ date / distance / time are a card's core, not capabilities).
   (`SingleCardTheme`), same pattern as the param system.
 - **Runtime**: `pickThemeData(descriptor, data)` strips undeclared fields
   before render, so the data matches the narrowed type.
-- **Editor**: `themeAvailability(data, descriptor)` (`lib/visibility.ts`)
+- **Editor**: `themeAvailability(data, descriptor)` (`theme/core/visibility.ts`)
   derives every toggle's availability:
   `dataHas && uses.includes(k) && (usesWhen[k]?.(data) ?? true)`. `usesWhen`
   refines a declared capability per activity (Editorial's elevation row is
@@ -58,7 +58,7 @@ date / distance / time are a card's core, not capabilities).
 - Shared helpers a theme passes `data` into take `ActivityView` (every
   governed field optional), so any narrowed `ThemeData` is assignable.
 
-### Colour policy (`lib/colors.ts`)
+### Colour policy (`theme/core/colors.ts`)
 
 Themes consume a resolved **`ColorScheme`** (`primary`, optional `secondary`
 pair, `onPrimary`, optional photo `roles`); the user picks a **`ColorChoice`**:
@@ -67,7 +67,7 @@ pair, `onPrimary`, optional photo `roles`); the user picks a **`ColorChoice`**:
 - `{ kind: "photo", variant }` — one of the five photo-derived strategies (the
   old PhotoMood; see the `image-palette` skill).
 
-One control (`components/app/color-control.tsx`) serves both sources: presets
+One control (`theme/editor/color-control.tsx`) serves both sources: presets
 always; with a photo loaded, the five photo schemes lead with their real
 computed swatches badged "FROM YOUR PHOTO". The control is **hidden** when the
 active theme's policy says `userAdjustable: false` (Altitude, Strata,
@@ -90,7 +90,7 @@ the shared `photoBackdrop` visibility toggle in **both** modes; the filter /
 grain / mirror / rotate controls render only while the photo is shown. See the
 `card-rendering` skill for the photo-fx context + `CoverPhoto` geometry.
 
-## Parameters (`lib/params/`)
+## Parameters (`theme/core/params/`)
 
 A `ParamDef` is a discriminated union on `kind`:
 
@@ -116,13 +116,13 @@ component derives it at render.
 unknown>` slot in `app/page.tsx`, keyed by theme id (single-card `strata` and
 carousel `strata` share `"strata"`, so the same knobs drive both). Reads go
 through `coerceConfig(activeTheme.defaults, activeTheme.params, raw)`
-(`lib/params/resolve.ts`): wrong type, out-of-range slider, unknown option id →
+(`theme/core/params/resolve.ts`): wrong type, out-of-range slider, unknown option id →
 default; unknown keys dropped. Param specs live on the theme descriptors —
 there is no separate spec registry. Config interfaces
 `extends Record<string, unknown>`.
 
-**Rendering**: `components/app/param-control.tsx` maps one `ParamDef` to a
-primitive; `components/app/theme-params.tsx` renders a theme's params for one
+**Rendering**: `theme/editor/param-control.tsx` maps one `ParamDef` to a
+primitive; `theme/editor/theme-params.tsx` renders a theme's params for one
 category. The component reads its own typed config off `ThemeProps` (defaulted
 to `DEFAULT_*_CONFIG` so stories can omit it).
 
@@ -130,7 +130,7 @@ Full walkthrough with skeletons and checklists: `docs/creating-a-theme.md`.
 
 ## Adding a theme / a knob
 
-1. **New single-card theme** — one file in `components/themes/single-card/`
+1. **New single-card theme** — one file in `theme/single-card/`
    exporting the component + `defineTheme` descriptor; add it to
    `SINGLE_CARD_THEMES` and `THEME_ORDER`; colocate a story. The compiler
    verifies the `uses` list against what the component reads.
@@ -140,4 +140,4 @@ Full walkthrough with skeletons and checklists: `docs/creating-a-theme.md`.
    `params`/`defaults`). Nothing else to wire.
 3. **Tests** — pure logic in `lib/<theme>.test.ts`; registry/contract
    invariants live in `lib/theme-registry.test.ts`,
-   `lib/theme-contract.test.ts`, `lib/colors.test.ts`.
+   `theme/core/theme-contract.test.ts`, `theme/core/colors.test.ts`.

@@ -17,20 +17,20 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { ActivityData } from "@/lib/activity";
 import { routePath } from "@/lib/chart-helpers";
-import type { ColorScheme } from "@/lib/colors";
-import { activityMetadata, exportCard } from "@/lib/export-card";
+import type { ImageTransform } from "@/lib/image-transform";
+import type { PhotoEffects } from "@/lib/photo-effects";
+import { cn } from "@/lib/utils";
+import type { ColorScheme } from "@/theme/core/colors";
 import {
   type ExportFormat,
   FORMAT_ORDER,
   getFormat,
-} from "@/lib/export-formats";
-import { effortDateSlug } from "@/lib/export-shared";
-import type { ImageTransform } from "@/lib/image-transform";
-import type { PhotoEffects } from "@/lib/photo-effects";
-import { cn } from "@/lib/utils";
+} from "@/theme/core/export-formats";
+import { RenderTheme, type ThemeId } from "@/theme/editor/render-theme";
+import { SafeZoneOverlay } from "@/theme/editor/safe-zone-overlay";
+import { activityMetadata, exportCard } from "@/theme/export/export-card";
+import { effortDateSlug } from "@/theme/export/export-shared";
 import { ToggleRow } from "./control-primitives";
-import { RenderTheme, type ThemeId } from "./render-theme";
-import { SafeZoneOverlay } from "./safe-zone-overlay";
 
 interface ExportSheetProps {
   colors: ColorScheme;

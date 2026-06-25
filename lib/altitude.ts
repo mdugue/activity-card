@@ -17,8 +17,8 @@ import {
   formatPaceMin,
   formatPaceSec,
 } from "@/lib/format";
-import type { ParamDef, ParamOption } from "@/lib/params/kinds";
-import type { ActivityView } from "@/lib/theme-contract";
+import type { ParamDef, ParamOption } from "@/theme/core/params/kinds";
+import type { ActivityView } from "@/theme/core/theme-contract";
 
 /** Display typeface for the claim. */
 export type AltitudeFont = "modern" | "serif";

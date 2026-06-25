@@ -18,8 +18,13 @@
     {
       // Theme cards are faithful ports of design prototypes; loosen the
       // rules that punish their seeded arrays, sport-branch density,
-      // and 1080×1350 inline layout styles.
-      "includes": ["components/themes/**"],
+      // and 1080×1350 inline layout styles. (Editor/core/export under theme/
+      // stay strict — only the card families are relaxed.)
+      "includes": [
+        "theme/single-card/**",
+        "theme/carousel/**",
+        "theme/shared/**"
+      ],
       "linter": {
         "rules": {
           "suspicious": {

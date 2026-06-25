@@ -61,9 +61,9 @@ Concrete instance of the rules for the export-format concern. The theme renders
 directly at the target size and reads it from context:
 
 - `useFormat()` → `{ width, height, safe, bucket, placement }`
-  (`components/themes/shared/format-context.tsx`)
+  (`theme/shared/format-context.tsx`)
 - `useSafeInsets(natural)` → per-side `mergeSafe(format.safe, natural)` =
-  `max(theme's own 4:5 margin, platform safe inset)` (`lib/export-formats.ts`)
+  `max(theme's own 4:5 margin, platform safe inset)` (`theme/core/export-formats.ts`)
 - `FullBleed` — a layer that fills the canvas, ignoring safe zones (backgrounds,
   route / elevation silhouettes)
 - `SafeArea` — a flex column inset by the resolved safe area (headlines, stats)
@@ -143,4 +143,4 @@ curve) is impossible when the two live in separate, externally-composed layers.
 
 The fix was the format-aware contract above: delete the frame, give the theme
 the `format` as an input, let it render itself. See PR "format-aware single-card
-themes" and `components/themes/shared/format-context.tsx`.
+themes" and `theme/shared/format-context.tsx`.

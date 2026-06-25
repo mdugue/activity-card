@@ -38,9 +38,9 @@ Don't ship one fixed mapping — auto-color is delightful when it hits and jarri
 Because all five are pre-built in one pass, the editor's unified COLOUR control
 previews **each strategy's real swatch** for free. The five variants are no
 longer a Photo-theme-only "mood": they are the photo-derived arm of the shared
-`ColorChoice` (`lib/colors.ts`, `{ kind: "photo", variant }`), available to every
+`ColorChoice` (`theme/core/colors.ts`, `{ kind: "photo", variant }`), available to every
 colour-adjustable theme once a photo is loaded and badged "FROM YOUR PHOTO" in
-the picker (`components/app/color-control.tsx`). `schemeFromPalette` maps a
+the picker (`theme/editor/color-control.tsx`). `schemeFromPalette` maps a
 variant to the `ColorScheme` a theme consumes (accents + the role palette the
 Photo theme paints its CSS vars from); a photo-kind choice without a palette
 resolves to the theme's own default.

@@ -5,13 +5,13 @@
 // on change.
 
 import type { CardMode } from "@/components/app/mode-toggle";
-import type { ThemeId } from "@/components/app/render-theme";
 import {
   CAROUSEL_THEMES,
   type CarouselThemeId,
-} from "@/components/themes/carousel/registry";
-import { type ColorChoice, coerceColorChoice } from "@/lib/colors";
-import type { Visibility } from "@/lib/visibility";
+} from "@/theme/carousel/registry";
+import { type ColorChoice, coerceColorChoice } from "@/theme/core/colors";
+import type { Visibility } from "@/theme/core/visibility";
+import type { ThemeId } from "@/theme/editor/render-theme";
 
 const STORAGE_KEY = "effort:ui:v1";
 

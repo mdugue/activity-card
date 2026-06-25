@@ -1,9 +1,9 @@
 import type { ComponentProps } from "react";
-import { THEME_ORDER } from "@/components/themes";
 import { DEFAULT_ALTITUDE_CONFIG } from "@/lib/altitude";
-import type { ColorScheme } from "@/lib/colors";
 import { IDENTITY_TRANSFORM } from "@/lib/image-transform";
 import { NO_EFFECTS } from "@/lib/photo-effects";
+import type { ColorScheme } from "@/theme/core/colors";
+import { THEME_ORDER } from "@/theme/single-card";
 import {
   type BackgroundArgs,
   backgroundArgTypes,
