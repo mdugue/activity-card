@@ -1,25 +1,12 @@
 "use client";
 
-// The carousel's <PhotoBackdrop>: a photo layer ANY panel or canvas can render,
+// The carousel's <PhotoBackdrop>: a photo layer any panel/canvas can render,
 // positioned in STRIP coordinates so a per-slide component still yields a
-// seamless spanning image. It draws the one shared photo (a CoverPhoto sized to
-// the WHOLE strip) inside the slide's overflow-hidden box, translated
-// -index*slideW, so adjacent slides show adjacent windows and the seam aligns.
-//
-// This un-hoards the photo: instead of the deck painting one flat layer under
-// everything (so panels must be pure foreground), a panel composes the photo
-// into its OWN z-stack —
-//
-//   <Panorama layer="back" /> → text → <Panorama layer="subject" mask={…} />
-//
-// — so content can sit BETWEEN the background and a masked subject ("text behind
-// the mountain, in front of the sky"). The fg/bg split is the same source at the
-// same strip position drawn twice with two masks; both are positioned in strip
-// coords, so the seam still aligns. (Subject segmentation is a later feature;
-// Panorama just accepts a mask/layer.)
-//
-// Effects / natural size / source / transform come from the PhotoFx context the
-// deck provides — no prop-threading. Renders null when no photo is shown.
+// seamless spanning image (the same source, shifted -index*slideW inside the
+// slide's overflow-hidden box). Draw it twice with two masks to interweave
+// content between background and a masked subject — both align because both sit
+// in strip coords. Effects / source / size come from the PhotoFx context the
+// deck provides (no prop-threading); null when no photo is shown.
 
 import type { CSSProperties } from "react";
 import type { ImageTransform } from "@/lib/image-transform";
@@ -34,10 +21,8 @@ interface PanoramaProps {
   imageTransform?: ImageTransform | null;
   /** this slide's index in the strip (the panel's own `index`) */
   index: number;
-  /** "back" (default) = full backdrop; "subject" = a masked copy the panel draws
-   *  ON TOP of content so the content tucks behind the masked subject. */
-  layer?: "back" | "subject";
-  /** CSS mask (e.g. `url(...)` or a gradient) — the subject layer's cut-out */
+  /** CSS mask (e.g. a gradient) — cuts the layer to a subject the panel draws
+   *  over content, so the content tucks behind it */
   mask?: string;
   opacity?: number;
   /** total slides in the strip (the panel's `total`) */
@@ -47,7 +32,6 @@ interface PanoramaProps {
 export function Panorama({
   index,
   total,
-  layer = "back",
   mask,
   opacity,
   extraFilter,
@@ -76,7 +60,6 @@ export function Panorama({
   return (
     <div
       aria-hidden
-      data-panorama-layer={layer}
       style={{
         position: "absolute",
         inset: 0,
@@ -85,9 +68,8 @@ export function Panorama({
         ...maskStyle,
       }}
     >
-      {/* The full strip-wide image, shifted so THIS slide's window shows — every
-          slide positions the same image at the same strip coords, so the seam
-          continues unbroken across slide edges. */}
+      {/* the full strip-wide image, shifted so THIS slide's window shows — every
+          slide positions the same source, so the seam continues across edges */}
       <div
         style={{
           position: "absolute",

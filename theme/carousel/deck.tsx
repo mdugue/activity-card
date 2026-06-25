@@ -1,20 +1,12 @@
 // The carousel renderer — the single source of truth, shared by every theme.
-// One continuous wide strip (count × slide, sized to the ACTIVE export format —
-// 4:5 feed by default): the shared background photo, an optional veil, the
-// theme's spanning signature (`canvas`, bled across every slide edge), and the
-// per-slide `panels` on top. The editor windows onto it (one slide at a time)
-// and the export slices it — both mount this exact component, so preview,
-// thumbnails and output always agree.
+// One continuous wide strip (count × slide, sized to the active export format).
+// The editor windows onto it and the export slices it — both mount this exact
+// component, so preview, thumbnails and output always agree.
 //
-// The deck is format-aware exactly like a single-card theme (see
-// `render-theme.tsx`): it renders DIRECTLY at the target size and provides the
-// active format to its subtree via `FormatProvider`. The CANVAS reads the strip
-// frame (full bleed across all slides); each PANEL reads its own slide frame
-// (Step 4d). No external frame scales the strip — geometry flows downward.
-//
-// There is no per-theme branch here: a theme IS its `canvas` + `panels` (see
-// `define-theme.ts` / `registry.ts`). The deck just composes them with the
-// resolved deck style and the shared photo layer.
+// Format-aware like a single-card theme (see `render-theme.tsx`): it renders at
+// the target size and provides the format to its subtree. The canvas reads the
+// strip frame (full bleed); each panel reads its own slide frame. There is no
+// per-theme branch: a theme IS its `canvas` + `panels`.
 
 import type { ImageSize } from "@/hooks/use-image-natural-size";
 import type { ActivityData } from "@/lib/activity";
@@ -30,7 +22,7 @@ import { FormatProvider, useFormat } from "@/theme/shared/format-context";
 import { PhotoFxProvider } from "@/theme/shared/photo-fx";
 import { CarouselPhoto } from "./carousel-photo";
 import type { CarouselTheme } from "./define-theme";
-import { slideFormat, stripFormat, stripGeometry } from "./geometry";
+import { stripFormat, stripGeometry } from "./geometry";
 
 interface CarouselDeckProps {
   colors: ColorScheme;
@@ -68,9 +60,7 @@ export function CarouselDeck({
   format,
 }: CarouselDeckProps) {
   const total = theme.panels.length;
-  // An explicit prop wins; otherwise inherit the ambient FormatContext (which
-  // itself defaults to the 4:5 feed master). The strip then sizes itself to the
-  // active format and bleeds the geometry down — no Hybrid frame.
+  // Explicit prop wins, else inherit the ambient FormatContext (feed by default).
   const ctxFormat = useFormat();
   const activeFormat = format ?? ctxFormat;
   const { slideW, slideH, stripW } = stripGeometry(activeFormat, total);
@@ -92,17 +82,10 @@ export function CarouselDeck({
 
   const Canvas = theme.canvas;
 
-  // Carousel chrome marks (effort / page numbers) live in the theme config as
-  // MARKS params, not in the cross-family Visibility. The only element-
-  // visibility a panel still needs is the distance/time stat toggles —
-  // everything else is already stripped from `data` upstream.
+  // Marks live in the theme config (MARKS params); panels need only the
+  // distance/time toggles (the rest is already stripped from `data`).
   const marks = carouselMarks(config);
   const statOpts = statOptsFor(visibility);
-
-  // Two nested coordinate systems off the one format: the deck provides the
-  // STRIP frame (full width, read by the canvas); each slot re-provides the
-  // SLIDE frame (one slide + its safe insets, read by the panel via SafeArea).
-  const slideFmt = slideFormat(activeFormat);
 
   return (
     <FormatProvider value={stripFormat(activeFormat, total)}>
@@ -182,7 +165,8 @@ export function CarouselDeck({
                 height: slideH,
               }}
             >
-              <FormatProvider value={slideFmt}>
+              {/* per-slide: reset to the SLIDE frame so panels inset via SafeArea */}
+              <FormatProvider value={activeFormat}>
                 <Panel
                   data={data}
                   hasPhoto={showPhoto}

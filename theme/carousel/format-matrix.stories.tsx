@@ -15,15 +15,10 @@ import preview from "../../.storybook/preview";
 import { activityArgType } from "../../.storybook/theme-controls";
 import { carouselArgs } from "./story-support";
 
-// One carousel theme across every format the carousel OFFERS (gated to
-// CAROUSEL_FORMAT_ORDER — one per aspect bucket), each whole strip scaled into a
-// tile. Proof the deck renders AT each target size with no Hybrid frame: the
-// route/elevation canvases stay centred + aspect-true (they only receive a
-// different w/h), and each panel keeps its content clear of that format's safe
-// zone while the photo/canvas bleed underneath. Mirrors the single-card
-// `withFormatMatrix`, but a carousel tile is a whole strip (count × slide), so
-// it can't reuse that single-frame decorator. Toggle the Background toolbar to
-// see it over a photo.
+// One carousel theme across every format it offers (gated `CAROUSEL_FORMAT_ORDER`),
+// each whole strip scaled into a tile — proof the deck renders at each target
+// size, canvases stay aspect-true and panels clear the safe zone. A carousel
+// tile is a whole strip, so it can't reuse the single-card `withFormatMatrix`.
 type MatrixArgs = ComponentProps<typeof CarouselDeck> & BackgroundArgs;
 
 const TILE_W = 540;

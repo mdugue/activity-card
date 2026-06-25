@@ -1,84 +1,48 @@
-// Carousel strip geometry — the single source of truth for the deck's pixel
-// dimensions, DERIVED from the active export format (never hardcoded). The strip
-// is two nested coordinate systems that both read the one `FormatContext`:
-//
-//   • the CANVAS spans the whole strip (count × slide) and bleeds across every
-//     slide edge — it reads the STRIP frame;
-//   • each PANEL occupies one slide frame, kept clear of the platform safe zone
-//     — it reads the SLIDE frame.
-//
-// `stripGeometry` is the pure form for the non-React callers (the slicing export
-// pipeline + the off-screen mount sizing); `useStripGeometry` reads the active
-// format from `FormatContext` for the render tree. At the 4:5 feed master this
-// resolves to the legacy 1080 × 1350 slide, so the strip stays byte-identical.
+// Carousel strip geometry — the deck's pixel dimensions, derived from the active
+// export format (never hardcoded). The canvas reads the strip frame (count ×
+// slide); each panel reads one slide frame. At the 4:5 feed master this is the
+// legacy 1080 × 1350, so the strip stays byte-identical.
 
 import {
-  type AspectBucket,
   EXPORT_FORMATS,
   type ExportFormat,
   type ExportFormatId,
-  type SafeInsets,
 } from "@/theme/core/export-formats";
 import { useFormat } from "@/theme/shared/format-context";
 
-/** The 4:5 feed master — the carousel's default + the byte-identical baseline. */
-export const FEED_MASTER: ExportFormat = EXPORT_FORMATS["instagram-feed"];
-
-/**
- * The export formats the CAROUSEL deliberately offers — one per aspect bucket,
- * NOT the full `FORMAT_ORDER`. A 9:16 or 16:9 slide re-proportions the
- * route/elevation canvases against a box they weren't authored for; these four
- * are validated as safe-correct (the canvases place by % and stay aspect-true),
- * and v1 is safe-correct parity, not per-bucket art direction. (Redundant 9:16
- * variants — tiktok/whatsapp — are intentionally omitted; Strava shares the
- * story bucket.)
- */
+/** The formats the carousel offers — one per aspect bucket, NOT the full
+ *  `FORMAT_ORDER`: a 9:16 / 16:9 slide re-proportions the canvases, so v1 sticks
+ *  to these validated, safe-correct shapes (redundant 9:16 variants omitted). */
 export const CAROUSEL_FORMAT_ORDER: ExportFormatId[] = [
-  "instagram-feed", // 4:5 — the default + byte-identical baseline
+  "instagram-feed", // 4:5 (default + baseline)
   "square", // 1:1
   "instagram-story", // 9:16
   "x-landscape", // 16:9
 ];
 
-/** Whether the carousel offers this format id (gates the picker + clamps a
- *  format inherited from single-card mode). */
-export function isCarouselFormat(id: string): boolean {
-  return (CAROUSEL_FORMAT_ORDER as string[]).includes(id);
-}
-
-/** Clamp an arbitrary format to one the carousel supports — the shared preview
- *  format may carry a single-card-only bucket (e.g. tiktok); fall back to feed. */
+/** Clamp a format to one the carousel offers — the shared preview format may
+ *  carry a single-card-only bucket (e.g. tiktok); fall back to feed. */
 export function carouselFormat(format: ExportFormat): ExportFormat {
-  return isCarouselFormat(format.id) ? format : FEED_MASTER;
+  return (CAROUSEL_FORMAT_ORDER as string[]).includes(format.id)
+    ? format
+    : EXPORT_FORMATS["instagram-feed"];
 }
 
 export interface StripGeometry {
-  /** aspect bucket of the active format (feed / square / story / landscape) */
-  bucket: AspectBucket;
-  /** the active format itself — handed down to the per-slide providers */
-  format: ExportFormat;
-  /** platform safe insets for ONE slide, in slide-space px (per-side keep-out) */
-  safe: SafeInsets;
-  /** one slide's height (= the format height) */
   slideH: number;
-  /** one slide's width (= the format width) */
   slideW: number;
-  /** the whole strip's width: count × slideW */
   stripW: number;
 }
 
-/** Pure strip geometry for a format + slide count — no React, no context. */
+/** Pure strip geometry for a format + slide count (the non-React callers). */
 export function stripGeometry(
   format: ExportFormat,
   count: number
 ): StripGeometry {
   return {
-    format,
     slideW: format.width,
     slideH: format.height,
     stripW: count * format.width,
-    safe: format.safe,
-    bucket: format.bucket,
   };
 }
 
@@ -87,31 +51,12 @@ export function useStripGeometry(count: number): StripGeometry {
   return stripGeometry(useFormat(), count);
 }
 
-/** The panel's own aesthetic margin, per side — the value the flat `SLIDE_PAD`
- *  used to be, named once. Each panel floors its content to the LARGER of this
- *  and the platform safe inset (`mergeSafe` inside `SafeArea`), so the 4:5 feed
- *  master is unchanged (90 > 48) while a tall Story / cover-cropped Strava pushes
- *  content clear of the platform chrome. */
+/** The panel's natural margin, per side (was the flat `SLIDE_PAD`). `SafeArea`
+ *  floors content to max(this, platform safe inset), so feed is unchanged
+ *  (90 > 48) while a tall Story pushes content clear of the chrome. */
 export const CAROUSEL_NATURAL_MARGIN = 90;
 
-/** Per-slide platform safe insets. A slide is one format frame shown on its own
- *  (the platform windows one slide at a time), so it keeps the same occlusion a
- *  single post does. Per-edge refinement — e.g. relaxing the seam side on the
- *  interior slides — is a deliberate future extension, not v1. */
-export function slideSafe(format: ExportFormat): SafeInsets {
-  return format.safe;
-}
-
-/** The full-width STRIP frame the CANVAS reads (count slides across, one slide
- *  tall). Provided at the deck level so a canvas reading `useFormat()` sees the
- *  whole strip. */
+/** The full-width STRIP frame the canvas reads — count slides across, one tall. */
 export function stripFormat(format: ExportFormat, count: number): ExportFormat {
   return { ...format, width: count * format.width };
-}
-
-/** The one-slide frame a PANEL reads — its own size + per-slide safe insets.
- *  Provided per slide slot so `SafeArea`/`useSafeInsets` floor content to the
- *  slide's keep-out. */
-export function slideFormat(format: ExportFormat): ExportFormat {
-  return { ...format, safe: slideSafe(format) };
 }

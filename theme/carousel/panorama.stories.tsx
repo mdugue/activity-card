@@ -7,26 +7,17 @@ import { PhotoFxProvider } from "@/theme/shared/photo-fx";
 import preview from "../../.storybook/preview";
 import { Panorama } from "./panorama";
 
-// Proof that <Panorama> un-hoards the photo. Three adjacent slides, each a
-// SEPARATE component, yet:
-//   1. the photo spans the strip seamlessly — every slide positions the same
-//      image in strip coordinates, so it continues unbroken across the dashed
-//      seams (drag the seam: the ridge line never jumps);
-//   2. content INTERWEAVES — each slide draws `<Panorama layer="back" />`, then
-//      the "RIDGE" headline, then `<Panorama layer="subject" mask=… />` ON TOP,
-//      so the headline tucks BEHIND the masked lower "ground" while staying in
-//      front of the sky. The fg/bg split is the one source drawn twice with two
-//      masks, both in strip coords — impossible when the deck hoards one flat
-//      layer under everything.
-// (The mask here is a placeholder horizon gradient; real subject segmentation is
-// a later feature — Panorama only needs to accept a `mask`/`layer`.)
+// Proof that <Panorama> un-hoards the photo. Three separate per-slide components,
+// yet the photo spans seamlessly across the dashed seams, AND the "RIDGE"
+// headline interweaves: a back panorama, then the headline, then the same
+// panorama masked to the lower ground on top — so the headline tucks behind it.
+// (The mask is a placeholder horizon gradient; real segmentation is a later
+// feature — Panorama just accepts a `mask`.)
 
-// A committed local asset (served from `public/`) so the proof always renders —
-// no network dependency, and its clear horizon suits the subject-mask demo.
+// A committed local asset so the proof always renders, with a clear horizon.
 const PHOTO = "/images/dunes.webp";
 
-// Opaque (visible) below the horizon, transparent (hidden) above it — so the
-// "subject" copy reveals only the lower ground that the headline tucks behind.
+// Visible below the horizon, transparent above — the masked "subject" copy.
 const SUBJECT_MASK =
   "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 44%, rgba(0,0,0,1) 60%, rgba(0,0,0,1) 100%)";
 
@@ -59,7 +50,7 @@ function PanoramaProof({ photoUrl }: { photoUrl: string }) {
               }}
             >
               {/* back: the seamless spanning photo */}
-              <Panorama index={i} layer="back" total={total} />
+              <Panorama index={i} total={total} />
               {/* content, between the two photo layers */}
               <div
                 style={{
@@ -83,14 +74,8 @@ function PanoramaProof({ photoUrl }: { photoUrl: string }) {
                   RIDGE
                 </span>
               </div>
-              {/* subject: the SAME photo, masked to the lower ground, on top —
-                  so the headline tucks behind it */}
-              <Panorama
-                index={i}
-                layer="subject"
-                mask={SUBJECT_MASK}
-                total={total}
-              />
+              {/* subject: the same photo masked to the lower ground, on top */}
+              <Panorama index={i} mask={SUBJECT_MASK} total={total} />
             </div>
           ))}
         </div>

@@ -1,16 +1,11 @@
-// Carousel "marks" — the optional chrome a deck can print: the "made with
-// effort" signature mark and the "01 / 04" page numbers. These are
-// carousel-ONLY (the single card has no such chrome), so they do NOT live in
-// the cross-family `Visibility` interface. Instead they are ordinary theme
-// params under the MARKS category, appended to every carousel theme by
-// `defineCarouselTheme`: the editor renders them generically (no per-mode
-// special case), and they persist in the per-theme config slot like any other
-// knob. The deck reads them back out of the coerced config via `carouselMarks`.
+// Carousel "marks" — the optional chrome a deck prints (the "made with effort"
+// mark, the "01 / 04" page numbers). Carousel-only, so they're ordinary MARKS
+// params appended to every theme by `defineCarouselTheme` (not flags in the
+// cross-family `Visibility`); the deck reads them back from the coerced config.
 
 import type { ParamDef } from "@/theme/core/params/kinds";
 
-/** The two universal carousel marks, as MARKS-group toggle params. Default off
- *  so a fresh deck reads as a clean art piece. */
+/** The two universal carousel marks, as MARKS-group toggles. Default off. */
 export const CAROUSEL_MARK_PARAMS: ParamDef[] = [
   {
     kind: "toggle",
@@ -28,20 +23,13 @@ export const CAROUSEL_MARK_PARAMS: ParamDef[] = [
   },
 ];
 
-/** Default config slice for the marks — merged into every carousel theme's
- *  `defaults` so `coerceConfig` always has a value to fall back to. */
 export const CAROUSEL_MARK_DEFAULTS = {
   showEffort: false,
   showPageNumber: false,
 };
 
-export interface CarouselMarks {
-  showEffort: boolean;
-  showPageNumber: boolean;
-}
-
 /** Read the deck-chrome marks back out of a coerced theme config. */
-export function carouselMarks(config: Record<string, unknown>): CarouselMarks {
+export function carouselMarks(config: Record<string, unknown>) {
   return {
     showEffort: config.showEffort === true,
     showPageNumber: config.showPageNumber === true,
