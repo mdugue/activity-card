@@ -10,7 +10,7 @@ Before starting, skim the focused references — they explain *why* the
 constraints below exist:
 
 - `.claude/skills/theme-params/SKILL.md` — the descriptor + parameter + colour model
-- `.claude/skills/card-rendering/SKILL.md` — html-to-image rules, route/elevation SVG math
+- `.claude/skills/card-rendering/SKILL.md` — snapdom rules, route/elevation SVG math
 - `.claude/skills/carousel-themes/SKILL.md` — the carousel token system
 - `.claude/skills/sport-data/SKILL.md` — which metrics matter per sport, units
 
@@ -146,8 +146,8 @@ These are hard constraints from the PNG pipeline (`card-rendering` skill):
 
 - Canvas is exactly **1080×1350**, inline styles for everything that must
   rasterise (theme shadows stay inline, not Tailwind).
-- **No `backdrop-filter`**, no live SVG `<filter>` on photos — html-to-image
-  mishandles them. Inline `filter`, SVG-as-image (`GRAIN_BG`) are safe.
+- **No `backdrop-filter`**, no live SVG `<filter>` on photos — the foreignObject
+  snapshot mishandles them. Inline `filter`, SVG-as-image (`GRAIN_BG`) are safe.
 - Route/elevation geometry comes from `lib/chart-helpers.ts`
   (`routePath`, `projectRoute`, `sequenceProfiles`) — **uniform scale,
   centred; never stretch a route per-axis.**

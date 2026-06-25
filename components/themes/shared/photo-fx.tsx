@@ -32,7 +32,7 @@ export function usePhotoImageSize(): ImageSize | null {
   return useContext(PhotoFxContext).imageSize;
 }
 
-/** Analogue film grain overlaid on a photo (survives html-to-image as an image).
+/** Analogue film grain overlaid on a photo (survives snapdom as an image).
  *  Lay it over the photo div inside the same clipped container. */
 export function GrainOverlay() {
   return (

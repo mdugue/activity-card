@@ -1,14 +1,23 @@
 import { promises as fs } from "node:fs";
 import { type Download, expect, type Page, test } from "@playwright/test";
 import { SOLID_MAGENTA_PNG_BASE64 } from "./fixtures";
-import { enterEditViaUpload, selectSingleCard, selectTheme } from "./helpers";
+import {
+  enterEditViaUpload,
+  selectCarousel,
+  selectSingleCard,
+  selectTheme,
+} from "./helpers";
 
 /**
- * Regression guard for the `cacheBust` blob-URL bug: html-to-image appended a
- * query to every resource URL, which broke the photo's `blob:` object URL so
- * the uploaded background silently dropped out of BOTH the single-card and the
- * carousel export. These tests upload a solid-magenta photo, rasterise a real
- * export, decode the resulting PNG and assert the magenta actually made it in.
+ * Regression guard: the uploaded background photo must actually land in the
+ * exported PNG — for BOTH the single card and the carousel. These tests upload
+ * a solid-magenta photo, rasterise a real export, decode the resulting PNG and
+ * assert the magenta made it in.
+ *
+ * Originally written for an html-to-image `cacheBust` footgun (it appended a
+ * query to every resource URL, breaking the photo's `blob:` object URL so the
+ * background silently dropped). snapdom doesn't rewrite resource URLs, but the
+ * guard is just as valuable against any future export-pipeline regression.
  */
 
 const MAGENTA_PHOTO = {
@@ -79,8 +88,10 @@ test("single-card Photo export embeds the uploaded background", async ({
   await page.locator(PHOTO_INPUT).setInputFiles(MAGENTA_PHOTO);
   await expect(page.getByText(/Photo loaded/i)).toBeVisible();
 
+  // Open the export sheet and download the 4:5 Instagram Feed (native render).
+  await page.getByTestId("export-action").click();
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: /download png/i }).click();
+  await page.getByRole("button", { name: /download instagram feed/i }).click();
   const fraction = await magentaFraction(page, await downloadPromise);
 
   // The Photo theme is photo-forward, so the magenta should dominate; a broken
@@ -94,7 +105,10 @@ test("photo upload yields FROM YOUR PHOTO colour schemes (worker palette extract
   // The COLOUR control only renders the photo-derived swatch row once
   // node-vibrant's extraction resolves — since extraction now runs in a Web
   // Worker, this asserts the worker round-trip works in the production build.
+  // Carousel's photo-first Exposure surfaces the swatch row; select it
+  // explicitly so the test doesn't depend on the editor's default mode.
   await enterEditViaUpload(page);
+  await selectCarousel(page);
   await page.locator(PHOTO_INPUT).setInputFiles(MAGENTA_PHOTO);
   await expect(page.getByText(/from your photo/i)).toBeVisible({
     timeout: 10_000,
@@ -104,8 +118,9 @@ test("photo upload yields FROM YOUR PHOTO colour schemes (worker palette extract
 test("carousel Exposure export embeds the uploaded background", async ({
   page,
 }) => {
-  // Carousel is the default mode, so uploading lands straight in it.
   await enterEditViaUpload(page);
+  // Switch to carousel explicitly so the test is independent of the default mode.
+  await selectCarousel(page);
   await selectTheme(page, "EXPOSURE");
   await page.locator(PHOTO_INPUT).setInputFiles(MAGENTA_PHOTO);
   // The carousel only draws the photo once its natural size resolves; the

@@ -52,3 +52,4 @@ storybook-static
 
 # playwright-cli scratch (snapshots, console/request logs)
 .playwright-cli
+.playwright-mcp

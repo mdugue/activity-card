@@ -1,6 +1,6 @@
 // Photo effects shared by both card modes: rotate, mirror, and a CSS-`filter`
 // preset. CSS filters (not a canvas/WebGL library) keep the preview === output
-// contract with html-to-image, which inlines computed styles. Preset looks are
+// contract with snapdom, which inlines computed styles. Preset looks are
 // the common Instagram-style combos (grayscale/contrast/saturate/sepia/
 // hue-rotate) — see CSSgram / instagram.css / cssfilters.co.
 
@@ -67,9 +67,9 @@ export function filterCss(id: string): string {
 
 /**
  * Film-grain texture as an inline SVG `feTurbulence`, served as a data-URI
- * `background-image`. A live DOM `<filter>` rasterises unreliably through
- * html-to-image, but an SVG *image* is decoded by the browser like any other
- * bitmap, so the grain survives export. Tiled (`background-repeat`) and laid
+ * `background-image`. A live DOM `<filter>` rasterises unreliably through the
+ * foreignObject snapshot, but an SVG *image* is decoded by the browser like any
+ * other bitmap, so the grain survives export. Tiled (`background-repeat`) and laid
  * over the photo with a blend mode by the consumer.
  */
 function grainDataUri(baseFrequency: number): string {

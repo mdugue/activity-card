@@ -1,1 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" shape-rendering="geometricPrecision"><rect x="0" y="0" width="100" height="100" fill="#1a1714"></rect><path d="M14 82 L36 62 L52 70 L80 28" fill="none" stroke="#f3ede2" stroke-width="11" stroke-linejoin="miter" stroke-linecap="butt"></path><rect x="72" y="20" width="16" height="16" fill="#c45a2c"></rect></svg>
+<svg
+  aria-label="Activity Card logo"
+  role="img"
+  shape-rendering="geometricPrecision"
+  viewBox="0 0 100 100"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <rect fill="#1a1714" height="100" width="100" x="0" y="0"></rect>
+  <path
+    d="M14 82 L36 62 L52 70 L80 28"
+    fill="none"
+    stroke="#f3ede2"
+    stroke-linecap="butt"
+    stroke-linejoin="miter"
+    stroke-width="11"
+  ></path>
+  <rect fill="#c45a2c" height="16" width="16" x="72" y="20"></rect>
+</svg>

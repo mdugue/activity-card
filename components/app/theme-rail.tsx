@@ -46,7 +46,7 @@ export function ThemeRail<T extends string>({
           className={cn(
             "h-auto shrink-0 flex-col items-start gap-1 whitespace-nowrap border-2 border-foreground/20 px-3.5 py-2.5 text-left",
             "hover:border-foreground/45",
-            "data-[pressed]:!border-foreground data-[pressed]:!bg-foreground data-[pressed]:!text-background"
+            "data-pressed:!bg-foreground data-pressed:!text-background data-pressed:border-foreground!"
           )}
           key={id}
           value={id}

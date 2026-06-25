@@ -16,6 +16,7 @@ import {
   segmentRoutes,
 } from "@/lib/multi-activity";
 import { defineTheme, type ThemeProps } from "@/lib/theme-contract";
+import { SafeArea, useFormat } from "../shared/format-context";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoBackdrop } from "../shared/photo-backdrop";
 
@@ -39,6 +40,7 @@ export function ThemePath({
   imageTransform,
   colors,
 }: ThemeProps<(typeof USES)[number]>) {
+  const { width, height } = useFormat();
   const accent = colors?.primary ?? DEFAULT_ACCENT;
   const isPool = data.sport === "swim";
   const sport = data.sport;
@@ -96,17 +98,19 @@ export function ThemePath({
   return (
     <div
       style={{
-        width: 1080,
-        height: 1350,
+        width,
+        height,
         background: "#ffffff",
         color: "#1a1714",
         fontFamily: "var(--font-manrope), sans-serif",
         position: "relative",
-        padding: "90px 90px 80px 90px",
-        boxSizing: "border-box",
-        display: "flex",
-        flexDirection: "column",
         overflow: "hidden",
+        // Named query container (`card`): big/fixed type sizes to the card box —
+        // narrow in a landscape column (cqi), short in a square card (cqb) — and
+        // the region grid's `@container card` width breakpoint keys on it to go
+        // 3-up at x-landscape. The name skips the nested per-stat containers.
+        containerType: "size",
+        containerName: "card",
       }}
     >
       {photoUrl ? (
@@ -116,171 +120,221 @@ export function ThemePath({
           treatment="path"
         />
       ) : null}
-      {/* Content sits above the backdrop layer. */}
-      <div
-        style={{
-          position: "relative",
-          zIndex: 1,
-          display: "flex",
-          flexDirection: "column",
-          flex: 1,
-        }}
+      {/* Content sits above the backdrop layer, inset by the safe area. */}
+      <SafeArea
+        pad={{ top: 90, right: 90, bottom: 80, left: 90 }}
+        style={{ flex: 1, zIndex: 1 }}
       >
-        {/* Top meta band */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "baseline",
-            letterSpacing: "0.28em",
-            fontSize: 24,
-            fontWeight: 600,
-          }}
-        >
-          <span>{sportLabel}</span>
-          <span style={{ opacity: 0.55 }}>{formatDateUpper(data.date)}</span>
-        </div>
-        <div
-          style={{
-            height: 1,
-            background: "#1a1714",
-            opacity: 0.35,
-            margin: "24px 0 0 0",
-          }}
-        />
-
-        {/* Title */}
-        <div style={{ marginTop: 38, marginBottom: 24 }}>
-          <h1
+        {/* One self-reflowing grid, ONE markup, holds the three regions —
+            [meta+title], [route hero], [stats]. They STACK 1-up at feed / square /
+            9:16 (today's master) and sit 3-up side-by-side at x-landscape, with
+            the route staying centred in the MIDDLE region either way. The column
+            count is an explicit container breakpoint —
+            `@min-[1400px]/card:grid-cols-3` = "go 3-up once the card is wider
+            than 1400px" — which only the 1600px landscape canvas crosses; every
+            other format is 1080px wide and stays 1-up (square's `clamp` type
+            shrinks to fit). States the intent directly, no auto-fit MIN to tune. */}
+        <div className="grid min-h-0 flex-1 auto-rows-fr @min-[1400px]/card:grid-cols-3 grid-cols-1 items-stretch gap-10">
+          {/* Region 1 — meta band + title */}
+          <div
             style={{
-              fontFamily: "var(--font-cormorant), serif",
-              fontWeight: 400,
-              fontStyle: "italic",
-              fontSize: 76,
-              lineHeight: 0.95,
-              letterSpacing: "-0.01em",
-              margin: 0,
-              textWrap: "pretty",
-              maxWidth: "90%",
+              minWidth: 0,
+              minHeight: 0,
+              display: "flex",
+              flexDirection: "column",
             }}
           >
-            {data.title}
-          </h1>
-          {data.location ? (
             <div
               style={{
-                marginTop: 18,
-                fontSize: 26,
-                letterSpacing: "0.18em",
-                opacity: 0.62,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "baseline",
+                letterSpacing: "0.28em",
+                fontSize: 24,
+                fontWeight: 600,
+                gap: 16,
               }}
             >
-              {data.location.toUpperCase()}
+              <span>{sportLabel}</span>
+              <span style={{ opacity: 0.55 }}>
+                {formatDateUpper(data.date)}
+              </span>
             </div>
-          ) : null}
-        </div>
-
-        {/* Route — the hero */}
-        <div
-          style={{
-            flex: 1,
-            position: "relative",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <svg
-            aria-hidden="true"
-            style={{ width: "100%", height: "100%" }}
-            viewBox="0 0 900 720"
-          >
-            <title>Route silhouette</title>
-            <defs>
-              <radialGradient cx="50%" cy="50%" id="path-grain" r="60%">
-                <stop offset="0%" stopColor="#c45a2c" stopOpacity="0.05" />
-                <stop offset="100%" stopColor="#c45a2c" stopOpacity="0" />
-              </radialGradient>
-            </defs>
-            <rect
-              fill="url(#path-grain)"
-              height="720"
-              width="900"
-              x="0"
-              y="0"
+            <div
+              style={{
+                height: 1,
+                background: "#1a1714",
+                opacity: 0.35,
+                margin: "24px 0 0 0",
+              }}
             />
-            <RouteHero
-              accent={accent}
-              coords={data.routeCoordinates}
-              isPool={isPool}
-              multi={multi}
-              routes={routes}
-            />
-          </svg>
-        </div>
-
-        {/* Stats — quiet supporting characters */}
-        <div style={{ marginTop: 30 }}>
-          <div
-            style={{
-              height: 1,
-              background: "#1a1714",
-              opacity: 0.35,
-              marginBottom: 22,
-            }}
-          />
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr 1fr",
-              gap: 24,
-            }}
-          >
-            {statTrio.map(([k, v]) => (
-              <div key={k}>
+            <div style={{ marginTop: 38 }}>
+              <h1
+                style={{
+                  fontFamily: "var(--font-cormorant), serif",
+                  fontWeight: 400,
+                  fontStyle: "italic",
+                  // Fluid headline: shrinks with the card width (cqi → narrow
+                  // landscape column) or height (cqb → short square card); caps
+                  // at the original 76px so the feed master is unchanged.
+                  fontSize: "clamp(40px, min(8cqi, 9cqb), 76px)",
+                  lineHeight: 0.95,
+                  letterSpacing: "-0.01em",
+                  margin: 0,
+                  textWrap: "pretty",
+                  maxWidth: "90%",
+                }}
+              >
+                {data.title}
+              </h1>
+              {data.location ? (
                 <div
                   style={{
-                    fontSize: 24,
-                    letterSpacing: "0.22em",
-                    opacity: 0.55,
-                    fontWeight: 600,
+                    marginTop: 18,
+                    fontSize: 26,
+                    letterSpacing: "0.18em",
+                    opacity: 0.62,
                   }}
                 >
-                  {k}
+                  {data.location.toUpperCase()}
                 </div>
-                <div
-                  style={{
-                    fontFamily: "var(--font-cormorant), serif",
-                    fontSize: 60,
-                    fontWeight: 400,
-                    marginTop: 10,
-                    lineHeight: 1,
-                  }}
-                >
-                  {v}
-                </div>
-              </div>
-            ))}
+              ) : null}
+            </div>
           </div>
+
+          {/* Region 2 — route hero, centred in its region. The grid row
+              (gridAutoRows: minmax(0,1fr)) gives it height in both the 1-col
+              stack (a full middle third) and the 3-col landscape row (the full
+              content height). No aspectRatio here on purpose: an aspect ratio
+              would impose a min-width from the stretched row height (730×9/7),
+              blowing the centre column out to ~939px and crushing its
+              neighbours. minHeight keeps it from collapsing in edge cases. */}
           <div
             style={{
-              marginTop: 32,
+              minWidth: 0,
+              minHeight: 220,
+              position: "relative",
               display: "flex",
-              justifyContent: "space-between",
               alignItems: "center",
-              fontSize: 24,
-              letterSpacing: "0.2em",
-              opacity: 0.55,
-              fontWeight: 600,
+              justifyContent: "center",
             }}
           >
-            <span>№ 01 — EFFORT</span>
-            <span>
-              {data.athleteName ? `— ${data.athleteName.toUpperCase()}` : ""}
-            </span>
+            <svg
+              aria-hidden="true"
+              style={{ width: "100%", height: "100%", minHeight: 0 }}
+              viewBox="0 0 900 720"
+            >
+              <title>Route silhouette</title>
+              <defs>
+                <radialGradient cx="50%" cy="50%" id="path-grain" r="60%">
+                  <stop offset="0%" stopColor="#c45a2c" stopOpacity="0.05" />
+                  <stop offset="100%" stopColor="#c45a2c" stopOpacity="0" />
+                </radialGradient>
+              </defs>
+              <rect
+                fill="url(#path-grain)"
+                height="720"
+                width="900"
+                x="0"
+                y="0"
+              />
+              <RouteHero
+                accent={accent}
+                coords={data.routeCoordinates}
+                isPool={isPool}
+                multi={multi}
+                routes={routes}
+              />
+            </svg>
+          </div>
+
+          {/* Region 3 — stats, quiet supporting characters */}
+          <div
+            style={{
+              minWidth: 0,
+              minHeight: 0,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "flex-end",
+            }}
+          >
+            <div
+              style={{
+                height: 1,
+                background: "#1a1714",
+                opacity: 0.35,
+                marginBottom: 22,
+              }}
+            />
+            {/* Always three stat columns (not a reflow). `grid-cols-3` is the
+                shrink-safe `repeat(3, minmax(0, 1fr))`, so a narrow 3-up
+                landscape stats column compresses instead of overflowing. */}
+            <div className="grid grid-cols-3 gap-6">
+              {statTrio.map(([k, v]) => (
+                <div
+                  key={k}
+                  style={{
+                    minWidth: 0,
+                    // Inline-size container so the label sizes to THIS stat
+                    // cell's width (narrow in a 3-up landscape stats column),
+                    // while the value's cqb still resolves to the card height.
+                    containerType: "inline-size",
+                  }}
+                >
+                  <div
+                    style={{
+                      // Fluid label: stays 24px on roomy cards (feed cell ≈300px:
+                      // 11cqi caps at 24) but shrinks enough in a narrow landscape
+                      // cell (≈149px → ~16px) that 9-char labels like "ELEVATION"
+                      // and "AVG SPEED" keep a gap instead of touching.
+                      fontSize: "clamp(13px, 11cqi, 24px)",
+                      letterSpacing: "0.18em",
+                      opacity: 0.55,
+                      fontWeight: 600,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {k}
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: "var(--font-cormorant), serif",
+                      // Fluid stat value: 21cqi reads THIS cell's width (feed cell
+                      // ≈284px → 60px, master unchanged), shrinking in a narrow
+                      // landscape cell; cqb caps it against a short card. Floor 28
+                      // keeps it legible; wrapping handles the tightest cells.
+                      fontSize: "clamp(28px, min(21cqi, 7cqb), 60px)",
+                      fontWeight: 400,
+                      marginTop: 10,
+                      lineHeight: 1.05,
+                    }}
+                  >
+                    {v}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div
+              style={{
+                marginTop: 32,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                fontSize: 24,
+                letterSpacing: "0.2em",
+                opacity: 0.55,
+                fontWeight: 600,
+                gap: 16,
+              }}
+            >
+              <span>№ 01 — EFFORT</span>
+              <span>
+                {data.athleteName ? `— ${data.athleteName.toUpperCase()}` : ""}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+      </SafeArea>
     </div>
   );
 }

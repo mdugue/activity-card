@@ -6,7 +6,7 @@ Strava — choose a theme, optionally drop in a background photo, and download
 a 1080×1350 PNG (or a multi-slide carousel) rendered entirely in your
 browser.
 
-The card is a React component rasterised to PNG via `html-to-image`. There is
+The card is a React component rasterised to PNG via `snapdom`. There is
 no database and no user account; the only backend is a handful of Next.js
 Route Handlers for the Strava OAuth token exchange. Deployed on Vercel
 (Node runtime).

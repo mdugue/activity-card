@@ -17,6 +17,7 @@ import {
 } from "@/lib/format";
 import { isMultiActivity, segmentRoutes } from "@/lib/multi-activity";
 import { defineTheme, type ThemeProps } from "@/lib/theme-contract";
+import { useFormat, useSafeInsets } from "../shared/format-context";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoLayer } from "../shared/photo-layer";
 
@@ -87,6 +88,9 @@ export function ThemePhoto({
   colors,
   imageTransform,
 }: ThemePhotoProps) {
+  const { width, height, safe } = useFormat();
+  // Masthead / title / hero keep to the safe area; the photo + vignette bleed.
+  const insets = useSafeInsets({ top: 70, right: 80, bottom: 70, left: 80 });
   const sport = data.sport;
   const isPool = sport === "swim";
   const multi = isMultiActivity(data);
@@ -128,21 +132,23 @@ export function ThemePhoto({
       "linear-gradient(180deg, #d8c5a0 0%, #a87d52 40%, #4a2a18 100%)";
   }
 
-  let storyLabel = "A TRIATHLON STORY";
+  let storyLabel = "A SPORTS STORY";
   if (sport === "ride") {
     storyLabel = "A RIDE STORY";
   } else if (sport === "run") {
     storyLabel = "A RUNNING STORY";
   } else if (sport === "swim") {
     storyLabel = "A SWIM STORY";
+  } else if (sport === "triathlon") {
+    storyLabel = "A TRIATHLON STORY";
   }
 
   return (
     <div
       style={{
         ...cssVars,
-        width: 1080,
-        height: 1350,
+        width,
+        height,
         background: placeholderBg,
         fontFamily: "var(--font-dm-sans), sans-serif",
         color: "var(--headline)",
@@ -181,7 +187,6 @@ export function ThemePhoto({
           <rect fill="url(#ph-grain)" height="100%" width="100%" />
         </svg>
       )}
-
       {/* Neutral vignette — pure black to read consistently across any photo. */}
       <div
         style={{
@@ -191,14 +196,13 @@ export function ThemePhoto({
             "linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.7) 100%)",
         }}
       />
-
       {/* Top masthead */}
       <div
         style={{
           position: "absolute",
-          top: 70,
-          left: 80,
-          right: 80,
+          top: insets.top,
+          left: insets.left,
+          right: insets.right,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
@@ -251,15 +255,14 @@ export function ThemePhoto({
           ) : null}
         </div>
       </div>
-
       {/* Route trace — always white for legibility across arbitrary photos. */}
       {!isPool && (
         <svg
           aria-hidden="true"
           style={{
             position: "absolute",
-            top: 200,
-            right: 60,
+            top: Math.max(200, safe.top),
+            right: Math.max(60, safe.right),
             width: 320,
             height: 240,
             opacity: 0.9,
@@ -290,8 +293,14 @@ export function ThemePhoto({
           )}
         </svg>
       )}
-
-      <div style={{ position: "absolute", bottom: 220, left: 80, right: 80 }}>
+      <div
+        style={{
+          position: "absolute",
+          bottom: insets.bottom + 150,
+          left: insets.left,
+          right: insets.right,
+        }}
+      >
         <div
           aria-hidden
           style={{
@@ -321,14 +330,13 @@ export function ThemePhoto({
           {data.title}
         </h1>
       </div>
-
       {/* Hero stat block + small stats — bottom strip */}
       <div
         style={{
           position: "absolute",
-          bottom: 70,
-          left: 80,
-          right: 80,
+          bottom: insets.bottom,
+          left: insets.left,
+          right: insets.right,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-end",

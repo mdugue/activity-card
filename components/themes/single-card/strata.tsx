@@ -6,7 +6,7 @@
 // Parameterised by `config` (mood · density · legend) — the model and the morph
 // maths live in `lib/strata.ts`. Type: Syne (display) + JetBrains Mono
 // (cartographic labels / data). Renders to plain inline SVG (no CSS filters) so
-// it rasterises cleanly via html-to-image.
+// it rasterises cleanly via snapdom.
 
 import type { Sport } from "@/lib/activity";
 import { mixHex } from "@/lib/chart-helpers";
@@ -36,6 +36,7 @@ import {
   type ThemeProps,
 } from "@/lib/theme-contract";
 import { CoverPhoto } from "../shared/cover-photo";
+import { useFormat, useSafeInsets } from "../shared/format-context";
 import { usePhotoEffects, usePhotoImageSize } from "../shared/photo-fx";
 
 const DISPLAY = "var(--font-syne), sans-serif";
@@ -44,6 +45,12 @@ const MONO = "var(--font-mono), monospace";
 // The morph field's internal coordinate space; the SVG scales to fill the hero.
 const FIELD_W = 920;
 const FIELD_H = 880;
+
+// The stat footer's own base thickness. A platform safe-bottom larger than this
+// (e.g. TikTok's tall caption keep-out) becomes margin below the strip — the
+// photo / mood wash bleeds through it — rather than stretching the coloured band
+// into an empty slab. 48 keeps the 4:5 feed master pixel-identical.
+const STAT_FOOTER_BASE = 48;
 
 const USES = [
   "elevation",
@@ -301,6 +308,10 @@ export function ThemeStrata({
   const overPhoto = Boolean(photoUrl);
   const fx = usePhotoEffects();
   const imageSize = usePhotoImageSize();
+  const { width, height } = useFormat();
+  // The stat strip bleeds to the canvas edges (negative side margins), so the
+  // resolved insets are reused for both the column padding and the strip.
+  const insets = useSafeInsets({ top: 78, right: 80, bottom: 0, left: 80 });
   const metaParts = [
     (data.location || "").toUpperCase(),
     formatDateUpper(data.date),
@@ -309,8 +320,8 @@ export function ThemeStrata({
   return (
     <div
       style={{
-        width: 1080,
-        height: 1350,
+        width,
+        height,
         background: tokens.bg,
         color: tokens.text,
         fontFamily: MONO,
@@ -321,7 +332,6 @@ export function ThemeStrata({
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
-        padding: "78px 80px 0 80px",
         boxSizing: "border-box",
       }}
     >
@@ -336,8 +346,8 @@ export function ThemeStrata({
           >
             {imageSize ? (
               <CoverPhoto
-                boxH={1350}
-                boxW={1080}
+                boxH={height}
+                boxW={width}
                 effects={fx}
                 imageSize={imageSize}
                 photoUrl={photoUrl}
@@ -376,6 +386,9 @@ export function ThemeStrata({
           fontSize: 24,
           fontWeight: 600,
           letterSpacing: "0.26em",
+          marginTop: insets.top,
+          marginLeft: insets.left,
+          marginRight: insets.right,
         }}
       >
         <span>STRATA · {sportLabel(data.sport)}</span>
@@ -398,7 +411,10 @@ export function ThemeStrata({
           fontSize: 82,
           lineHeight: 0.94,
           letterSpacing: "-0.02em",
-          margin: "34px 0 14px 0",
+          marginTop: "34px",
+          marginBottom: "14px",
+          marginLeft: insets.left,
+          marginRight: insets.right,
           maxWidth: "94%",
           textWrap: "pretty",
           textShadow: overPhoto
@@ -414,6 +430,8 @@ export function ThemeStrata({
           letterSpacing: "0.16em",
           opacity: 0.7,
           fontWeight: 500,
+          marginLeft: insets.left,
+          marginRight: insets.right,
         }}
       >
         {metaParts.join(" · ")}
@@ -434,10 +452,16 @@ export function ThemeStrata({
       {/* Stat strip. */}
       <div
         style={{
-          margin: "0 -80px",
           background: tokens.statBg,
           borderTop: `1.5px solid ${tokens.statBorder}`,
-          padding: "30px 80px",
+          paddingTop: 30,
+          // The coloured footer keeps its own base thickness; the rest of the
+          // platform safe-bottom is margin below it (background bleeds through),
+          // so a tall keep-out lifts the strip clear instead of stretching it.
+          paddingBottom: Math.min(insets.bottom, STAT_FOOTER_BASE),
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+
           display: "flex",
           justifyContent: "space-between",
           gap: 24,
@@ -464,6 +488,12 @@ export function ThemeStrata({
                 fontSize: 56,
                 fontWeight: 700,
                 lineHeight: 1,
+                // A stat value is atomic — never break "3h 42m" at the space.
+                // The strip is a space-between flex row sitting near its content
+                // width; a sub-pixel font-metric shift in the rasterised snapshot
+                // would otherwise tip a cell into flex-shrink + wrap, so the
+                // export wraps where the live preview doesn't.
+                whiteSpace: "nowrap",
               }}
             >
               {v}

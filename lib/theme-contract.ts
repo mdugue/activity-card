@@ -73,7 +73,10 @@ export type ThemeData<K extends CapabilityKey> = Omit<
 export type ActivityView = Omit<ActivityData, GovernedField> &
   Partial<Pick<ActivityData, GovernedField>>;
 
-/** Props every single-card theme component receives. */
+/** Props every single-card theme component receives. The theme reads its target
+ *  dimensions + safe insets from the FormatContext (`useFormat` /
+ *  `useSafeInsets`), so there is no format/surface prop — every theme renders
+ *  itself directly at the active export size. */
 export interface ThemeProps<
   K extends CapabilityKey = CapabilityKey,
   C = Record<string, unknown>,

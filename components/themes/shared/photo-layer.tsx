@@ -2,7 +2,7 @@
 // Altitude). When the photo's natural size is known (provided via the photo-fx
 // context), it renders the rotation-correct `CoverPhoto`; until then it falls
 // back to a plain CSS cover so the preview never flashes empty. Filter / grain /
-// mirror come from the same context. Inline CSS only — html-to-image safe.
+// mirror come from the same context. Inline CSS only — snapdom safe.
 
 import {
   IDENTITY_TRANSFORM,
@@ -15,10 +15,8 @@ import {
   isQuarterTurn,
 } from "@/lib/photo-effects";
 import { CoverPhoto } from "./cover-photo";
+import { useFormat } from "./format-context";
 import { GrainOverlay, usePhotoEffects, usePhotoImageSize } from "./photo-fx";
-
-const CARD_W = 1080;
-const CARD_H = 1350;
 
 interface PhotoLayerProps {
   imageTransform?: ImageTransform | null;
@@ -29,12 +27,13 @@ export function PhotoLayer({ photoUrl, imageTransform }: PhotoLayerProps) {
   const t = imageTransform ?? IDENTITY_TRANSFORM;
   const fx = usePhotoEffects();
   const imageSize = usePhotoImageSize();
+  const { width, height } = useFormat();
 
   if (imageSize) {
     return (
       <CoverPhoto
-        boxH={CARD_H}
-        boxW={CARD_W}
+        boxH={height}
+        boxW={width}
         effects={fx}
         imageSize={imageSize}
         photoUrl={photoUrl}

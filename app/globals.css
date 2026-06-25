@@ -170,3 +170,27 @@
     display: none;
   }
 }
+
+/* Export sheet — the route silhouette draws itself in behind the format grid
+   (length-independent via SVG pathLength="1"). A calm "still working" gesture,
+   not a finished-action celebration. */
+@keyframes effort-route-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes effort-aura {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.08);
+  }
+}

@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { CarouselEditState } from "@/components/app/carousel-edit-state";
-import { DownloadState } from "@/components/app/download-state";
 import { EditState } from "@/components/app/edit-state";
 import type { EditorSession } from "@/components/app/editor-session";
 import { EffortWordmark } from "@/components/app/effort-wordmark";
 import { EmptyState } from "@/components/app/empty-state";
+import { ExportSheet } from "@/components/app/export-sheet";
 import { type CardMode, ModeToggle } from "@/components/app/mode-toggle";
 import type { OnboardingResult } from "@/components/app/onboarding-wizard";
 import {
@@ -33,6 +33,11 @@ import { useStravaReturnToast } from "@/hooks/use-strava-return-toast";
 import type { ActivityData, ActivitySource, Sport } from "@/lib/activity";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
 import { type ColorChoice, resolveColors } from "@/lib/colors";
+import {
+  DEFAULT_FORMAT_ID,
+  type ExportFormatId,
+  getFormat,
+} from "@/lib/export-formats";
 import { formatDateUpper } from "@/lib/format";
 import { coerceConfig } from "@/lib/params/resolve";
 import type { ParsedActivity } from "@/lib/parse-activity";
@@ -73,6 +78,10 @@ export default function Home() {
   const [autoStravaPicker, setAutoStravaPicker] = useState(false);
   const [data, setData] = useState<ActivityData | null>(null);
   const [theme, setTheme] = useState<ThemeId>("altitude");
+  // Which platform format the single-card stage previews (the export sheet
+  // still offers the full set); the 4:5 master is the default.
+  const [previewFormat, setPreviewFormat] =
+    useState<ExportFormatId>(DEFAULT_FORMAT_ID);
   // Carousel themes have their own id space (Trace, Ascent, …), so the
   // carousel keeps its own selection separate from the single-card theme.
   const [carouselTheme, setCarouselTheme] = useState<CarouselThemeId>(
@@ -90,8 +99,8 @@ export default function Home() {
   // "strata", "photo"). One generic slot replaces the per-theme config states;
   // `resolveThemeConfig` coerces each read so stale/garbage values are safe.
   const [themeConfigs, setThemeConfigs] = useState<Record<string, unknown>>({});
-  // Carousel is the headline mode, so it's the default for a fresh session.
-  const [mode, setMode] = useState<CardMode>("carousel");
+
+  const [mode, setMode] = useState<CardMode>("single");
   const carousel = useCarousel(CAROUSEL_THEMES[carouselTheme].panels.length);
   // Held outside `data` so it survives between activities and can seed
   // `adoptParsed` when the parsed file lacks an athlete name.
@@ -380,14 +389,21 @@ export default function Home() {
         // state is a scroll-snap landing that owns its own internal scroller, so
         // it's pinned to the viewport too. Every other screen keeps its natural,
         // scrollable height.
-        state === "edit" && "h-[100dvh] lg:h-auto lg:min-h-screen",
+        // Desktop: drop the app-shell's `overflow-hidden` (a scroll container
+        // that never scrolls — the window does) so descendant `position:sticky`
+        // (the preview and the export dock) resolves against the viewport
+        // instead of being trapped and pinned-to-nothing.
+        state === "edit" &&
+          "h-dvh lg:h-auto lg:min-h-screen lg:overflow-visible",
         state === "empty" && "h-dvh",
         state !== "edit" && state !== "empty" && "min-h-screen"
       )}
     >
-      {/* The empty-state landing renders its own wordmark header per section;
-          every other non-editor screen gets the shared top header. */}
-      {state === "edit" || state === "empty" ? null : (
+      {/* The empty-state landing renders its own wordmark header per section,
+          the editor has its own top bar, and the export sheet carries its own
+          heading — so the shared (absolute) header would overlap there. Show it
+          only on the remaining non-editor screens (e.g. the Strava picker). */}
+      {state === "edit" || state === "empty" || state === "download" ? null : (
         <Header date={data?.date} />
       )}
       {state === "empty" ? (
@@ -415,7 +431,9 @@ export default function Home() {
             />
           ) : (
             <EditState
-              onDownload={handleDownload}
+              format={getFormat(previewFormat)}
+              onExport={handleDownload}
+              onFormatChange={setPreviewFormat}
               onThemeChange={handleSingleThemeChange}
               session={session}
               theme={theme}
@@ -424,7 +442,7 @@ export default function Home() {
         </div>
       ) : null}
       {state === "download" && visibleData ? (
-        <DownloadState
+        <ExportSheet
           colors={colors}
           config={activeConfig}
           data={visibleData}
@@ -434,6 +452,7 @@ export default function Home() {
           photoBackdropEnabled={visibility.photoBackdrop}
           photoEffects={photo.effects}
           photoUrl={photo.url}
+          routeCoordinates={data?.routeCoordinates}
           theme={theme}
         />
       ) : null}

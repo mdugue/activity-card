@@ -1,4 +1,6 @@
-import type { Decorator, Preview } from "@storybook/nextjs-vite";
+import addonA11y from "@storybook/addon-a11y";
+import addonDocs from "@storybook/addon-docs";
+import { definePreview } from "@storybook/nextjs-vite";
 // The app's global stylesheet: Tailwind layer + the OKLCH theme tokens
 // (--primary, --foreground, …) every card and chrome component reads.
 // Importing it here is what makes stories render with the real styles.
@@ -10,28 +12,36 @@ import { IconDefaults } from "../components/app/icon-defaults";
 import { fontVariables } from "../lib/fonts";
 import { backgroundGlobalTypes, DEFAULT_BACKGROUND } from "./backgrounds";
 import { withBackground } from "./with-background";
+import { DEFAULT_SAFE_ZONES, safeZoneGlobalTypes } from "./with-format-matrix";
 
-const withFonts: Decorator = (Story) => (
-  <div className={fontVariables}>
-    <Story />
-  </div>
-);
-
-// The app sets duotone as the Phosphor default in app/layout.tsx, which
-// Storybook never renders — mirror it so editor-chrome stories match the app.
-const withIconDefaults: Decorator = (Story) => (
-  <IconDefaults>
-    <Story />
-  </IconDefaults>
-);
-
-const preview: Preview = {
+// CSF Next: the project annotations are created with `definePreview`, and theme
+// stories build their meta from this default export (`preview.meta(...)`).
+export default definePreview({
+  // Passing the addons here (not just in main.ts) is what gives the CSF Next
+  // factories their types — `definePreview` infers the renderer from them, and
+  // an empty list would collapse it to `never`.
+  addons: [addonA11y(), addonDocs()],
   // `withFonts` defines the `--font-*` variables on a common ancestor; then
   // `withBackground` resolves the toolbar Background preset / per-story upload
   // into a `photoUrl` for every theme story (harmless on non-photo stories).
-  decorators: [withIconDefaults, withFonts, withBackground],
-  globalTypes: backgroundGlobalTypes,
-  initialGlobals: { background: DEFAULT_BACKGROUND },
+  decorators: [
+    (Story) => (
+      <IconDefaults>
+        <Story />
+      </IconDefaults>
+    ),
+    (Story) => (
+      <div className={fontVariables}>
+        <Story />
+      </div>
+    ),
+    withBackground,
+  ],
+  globalTypes: { ...backgroundGlobalTypes, ...safeZoneGlobalTypes },
+  initialGlobals: {
+    background: DEFAULT_BACKGROUND,
+    safeZones: DEFAULT_SAFE_ZONES,
+  },
   parameters: {
     controls: {
       matchers: {
@@ -47,6 +57,4 @@ const preview: Preview = {
       test: "todo",
     },
   },
-};
-
-export default preview;
+});

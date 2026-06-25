@@ -1,8 +1,8 @@
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
 import { SAMPLE_RIDE } from "@/components/app/sample-data";
 import { ALTITUDE_PARAMS } from "@/lib/altitude";
 import type { ParamCtx, ParamDef } from "@/lib/params/kinds";
+import preview from "../../.storybook/preview";
 import { ParamControl } from "./param-control";
 
 // The generic theme-parameter renderer. One `ParamControl` covers every kind a
@@ -22,68 +22,59 @@ function Demo({ def, initial }: { def: ParamDef; initial: unknown }) {
   );
 }
 
-const meta = {
+const meta = preview.meta({
   title: "app/ParamControl",
   tags: ["ai-generated"],
   parameters: { layout: "centered" },
-} satisfies Meta;
+});
 
-export default meta;
-type Story = StoryObj<typeof meta>;
+export const Toggle = meta.story(() => (
+  <Demo
+    def={{
+      id: "legend",
+      group: "marks",
+      label: "Show legend",
+      kind: "toggle",
+      default: true,
+    }}
+    initial={true}
+  />
+));
 
-export const Toggle: Story = {
-  render: () => (
-    <Demo
-      def={{
-        id: "legend",
-        group: "marks",
-        label: "Show legend",
-        kind: "toggle",
-        default: true,
-      }}
-      initial={true}
-    />
-  ),
-};
+export const Segmented = meta.story(() => (
+  <Demo
+    def={{
+      id: "density",
+      group: "layout",
+      label: "DENSITY",
+      kind: "segmented",
+      default: "woven",
+      options: [
+        { id: "fine", label: "Fine", blurb: "many layers" },
+        { id: "woven", label: "Woven", blurb: "balanced" },
+        { id: "bold", label: "Bold", blurb: "few ridges" },
+      ],
+    }}
+    initial="woven"
+  />
+));
 
-export const Segmented: Story = {
-  render: () => (
-    <Demo
-      def={{
-        id: "density",
-        group: "layout",
-        label: "DENSITY",
-        kind: "segmented",
-        default: "woven",
-        options: [
-          { id: "fine", label: "Fine", blurb: "many layers" },
-          { id: "woven", label: "Woven", blurb: "balanced" },
-          { id: "bold", label: "Bold", blurb: "few ridges" },
-        ],
-      }}
-      initial="woven"
-    />
-  ),
-};
-
-export const Slider: Story = {
-  render: () => (
-    <Demo
-      def={{
-        id: "opacity",
-        group: "layout",
-        label: "CUTOUT OPACITY",
-        kind: "slider",
-        default: 20,
-        min: 0,
-        max: 100,
-        step: 1,
-        unit: "%",
-      }}
-      initial={20}
-    />
-  ),
-};
+export const Slider = meta.story(() => (
+  <Demo
+    def={{
+      id: "opacity",
+      group: "layout",
+      label: "CUTOUT OPACITY",
+      kind: "slider",
+      default: 20,
+      min: 0,
+      max: 100,
+      step: 1,
+      unit: "%",
+    }}
+    initial={20}
+  />
+));
 
 // The Altitude HEADLINE select, on the real param spec: every option leads
 // with its duotone metric glyph (`ParamOption.glyph` → the icon map in
@@ -92,28 +83,26 @@ const headlineDef = ALTITUDE_PARAMS.find((p) => p.id === "claim");
 if (!headlineDef) {
   throw new Error("ALTITUDE_PARAMS must declare the `claim` headline select");
 }
-export const SelectWithGlyphs: Story = {
-  render: () => <Demo def={headlineDef} initial="elevation" />,
-};
+export const SelectWithGlyphs = meta.story(() => (
+  <Demo def={headlineDef} initial="elevation" />
+));
 
 // A select with live colour swatches — the pattern the Photo theme uses to show
 // each palette strategy's real accent next to its name.
-export const SelectWithSwatches: Story = {
-  render: () => (
-    <Demo
-      def={{
-        id: "palette",
-        group: "style",
-        label: "COLOUR",
-        kind: "select",
-        default: "amber",
-        options: [
-          { id: "amber", label: "Amber", hint: "warm", swatch: "#e0823a" },
-          { id: "teal", label: "Teal", hint: "cool", swatch: "#2f6f86" },
-          { id: "crimson", label: "Crimson", hint: "bold", swatch: "#b1281a" },
-        ],
-      }}
-      initial="amber"
-    />
-  ),
-};
+export const SelectWithSwatches = meta.story(() => (
+  <Demo
+    def={{
+      id: "palette",
+      group: "style",
+      label: "COLOUR",
+      kind: "select",
+      default: "amber",
+      options: [
+        { id: "amber", label: "Amber", hint: "warm", swatch: "#e0823a" },
+        { id: "teal", label: "Teal", hint: "cool", swatch: "#2f6f86" },
+        { id: "crimson", label: "Crimson", hint: "bold", swatch: "#b1281a" },
+      ],
+    }}
+    initial="amber"
+  />
+));

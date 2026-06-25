@@ -6,22 +6,15 @@
     "ultracite/biome/next",
     "ultracite/biome/vitest"
   ],
+  "files": {
+    // Fully exclude these from Biome — not scanned, not linted, not
+    // formatted, and not touched by assist (organize-imports / source
+    // actions). An `overrides` entry only toggles rule domains for matched
+    // files; it does NOT remove them from the working set, so use a
+    // top-level negated glob here to actually ignore them.
+    "includes": ["!lib/strava-api.generated.ts", "!skills", "!public"]
+  },
   "overrides": [
-    {
-      // Auto-generated from Strava's OpenAPI spec (`bun run strava:types`).
-      // Machine output — don't lint or format it; regenerate instead.
-      "includes": ["lib/strava-api.generated.ts"],
-      "linter": { "enabled": false },
-      "formatter": { "enabled": false }
-    },
-    {
-      // Vendored agent skills installed via `npx skills add` and pinned by
-      // skills-lock.json. Third-party content (some entries are symlinks) —
-      // don't lint or format it; re-add/update instead.
-      "includes": ["skills/**"],
-      "linter": { "enabled": false },
-      "formatter": { "enabled": false }
-    },
     {
       // Theme cards are faithful ports of design prototypes; loosen the
       // rules that punish their seeded arrays, sport-branch density,
