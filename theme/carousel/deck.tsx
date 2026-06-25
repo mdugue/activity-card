@@ -27,6 +27,7 @@ import type { ColorScheme } from "@/theme/core/colors";
 import type { ExportFormat } from "@/theme/core/export-formats";
 import { DEFAULT_VISIBILITY, type Visibility } from "@/theme/core/visibility";
 import { FormatProvider, useFormat } from "@/theme/shared/format-context";
+import { PhotoFxProvider } from "@/theme/shared/photo-fx";
 import { CarouselPhoto } from "./carousel-photo";
 import type { CarouselTheme } from "./define-theme";
 import { slideFormat, stripFormat, stripGeometry } from "./geometry";
@@ -105,89 +106,98 @@ export function CarouselDeck({
 
   return (
     <FormatProvider value={stripFormat(activeFormat, total)}>
-      <div
-        style={{
-          position: "relative",
-          width: stripW,
-          height: slideH,
-          overflow: "hidden",
-          background: style.background,
-          color: style.ink,
+      <PhotoFxProvider
+        value={{
+          effects: photoEffects,
+          imageSize,
+          imageTransform: imageTransform ?? null,
+          photoUrl: showPhoto ? (photoUrl ?? null) : null,
         }}
       >
-        {/* Draw the photo only once its natural size is known — the panorama is
+        <div
+          style={{
+            position: "relative",
+            width: stripW,
+            height: slideH,
+            overflow: "hidden",
+            background: style.background,
+            color: style.ink,
+          }}
+        >
+          {/* Draw the photo only once its natural size is known — the panorama is
             sized/clamped against it. Rendering a cover fallback before then (or on
             decode failure) would drop the rotate/flip/filter effects and use
             different geometry than the export, so preview and output diverge. */}
-        {showPhoto && photoUrl && imageSize ? (
-          <CarouselPhoto
-            desaturate={desaturate}
-            effects={photoEffects}
-            imageSize={imageSize}
-            photoUrl={photoUrl}
-            stripH={slideH}
-            stripW={stripW}
-            transform={imageTransform}
-          />
-        ) : null}
+          {showPhoto && photoUrl && imageSize ? (
+            <CarouselPhoto
+              desaturate={desaturate}
+              effects={photoEffects}
+              imageSize={imageSize}
+              photoUrl={photoUrl}
+              stripH={slideH}
+              stripW={stripW}
+              transform={imageTransform}
+            />
+          ) : null}
 
-        {/* Light veil so text reads over a photo — dark for dark themes, a soft
+          {/* Light veil so text reads over a photo — dark for dark themes, a soft
             paper wash for light ones. */}
-        {veiled ? (
-          <div
-            aria-hidden
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: style.dark
-                ? "rgba(0,0,0,0.34)"
-                : "rgba(255,255,255,0.26)",
-            }}
-          />
-        ) : null}
+          {veiled ? (
+            <div
+              aria-hidden
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: style.dark
+                  ? "rgba(0,0,0,0.34)"
+                  : "rgba(255,255,255,0.26)",
+              }}
+            />
+          ) : null}
 
-        {/* Signature spanning layer — reads the STRIP frame, bleeds across every
+          {/* Signature spanning layer — reads the STRIP frame, bleeds across every
             slide edge. The canvas owns its own placement (route centred, elevation
             along the bottom, strata full-strip) and renders null when its metric
             is absent. */}
-        {Canvas ? (
-          <Canvas
-            config={config}
-            data={data}
-            h={slideH}
-            overPhoto={showPhoto}
-            style={style}
-            w={stripW}
-          />
-        ) : null}
+          {Canvas ? (
+            <Canvas
+              config={config}
+              data={data}
+              h={slideH}
+              overPhoto={showPhoto}
+              style={style}
+              w={stripW}
+            />
+          ) : null}
 
-        {/* Per-panel foreground, one component per slide. */}
-        {theme.panels.map((Panel, i) => (
-          <div
-            key={`slide-${i}`}
-            style={{
-              position: "absolute",
-              left: i * slideW,
-              top: 0,
-              width: slideW,
-              height: slideH,
-            }}
-          >
-            <FormatProvider value={slideFmt}>
-              <Panel
-                data={data}
-                hasPhoto={showPhoto}
-                index={i}
-                showEffort={marks.showEffort}
-                showPageNumber={marks.showPageNumber}
-                statOpts={statOpts}
-                style={style}
-                total={total}
-              />
-            </FormatProvider>
-          </div>
-        ))}
-      </div>
+          {/* Per-panel foreground, one component per slide. */}
+          {theme.panels.map((Panel, i) => (
+            <div
+              key={`slide-${i}`}
+              style={{
+                position: "absolute",
+                left: i * slideW,
+                top: 0,
+                width: slideW,
+                height: slideH,
+              }}
+            >
+              <FormatProvider value={slideFmt}>
+                <Panel
+                  data={data}
+                  hasPhoto={showPhoto}
+                  index={i}
+                  showEffort={marks.showEffort}
+                  showPageNumber={marks.showPageNumber}
+                  statOpts={statOpts}
+                  style={style}
+                  total={total}
+                />
+              </FormatProvider>
+            </div>
+          ))}
+        </div>
+      </PhotoFxProvider>
     </FormatProvider>
   );
 }
