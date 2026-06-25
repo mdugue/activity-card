@@ -54,6 +54,12 @@
       "skillPath": "skills/shadcn/SKILL.md",
       "computedHash": "80a6226e78f6d1fe464214ae0ef449d49d8ffaa3e7704f011e9b418c678ad4d1"
     },
+    "snapdom": {
+      "source": "2025emma/vibe-coding-cn",
+      "sourceType": "github",
+      "skillPath": "i18n/zh/skills/snapdom/SKILL.md",
+      "computedHash": "0739fb5cdbe958b33c326b23300ed85a03531e9d0bad06a4cacbe82df40dea84"
+    },
     "vercel-composition-patterns": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
