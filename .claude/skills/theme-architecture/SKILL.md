@@ -83,8 +83,8 @@ frames off the one `FormatContext` (no separate machinery, no frame): the
 spanning **canvas** reads the *strip* frame (full bleed across `count` slides),
 each **panel** reads its own *slide* frame and insets via `SafeArea`. The
 teachable equivalence is **canvas : panel :: full-bleed : SafeArea**. The deck
-sizes itself from `theme/carousel/geometry.ts` and the carousel **gates** which
-buckets it offers (`CAROUSEL_FORMAT_ORDER`). See the `carousel-themes` skill.
+sizes itself from `theme/carousel/geometry.ts` and offers the same `FORMAT_ORDER`
+as the single card (no gated subset). See the `carousel-themes` skill.
 
 ```tsx
 // A theme is format-aware like this — no external frame, no surface flag:

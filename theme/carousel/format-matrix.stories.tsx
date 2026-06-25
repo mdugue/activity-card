@@ -1,12 +1,11 @@
 import type { ComponentProps } from "react";
 import { SAMPLE_RIDE } from "@/components/app/sample-data";
 import { CarouselDeck } from "@/theme/carousel/deck";
-import { CAROUSEL_FORMAT_ORDER } from "@/theme/carousel/geometry";
 import {
   CAROUSEL_THEMES,
   type CarouselThemeId,
 } from "@/theme/carousel/registry";
-import { getFormat } from "@/theme/core/export-formats";
+import { FORMAT_ORDER, getFormat } from "@/theme/core/export-formats";
 import {
   type BackgroundArgs,
   backgroundArgTypes,
@@ -15,10 +14,11 @@ import preview from "../../.storybook/preview";
 import { activityArgType } from "../../.storybook/theme-controls";
 import { carouselArgs } from "./story-support";
 
-// One carousel theme across every format it offers (gated `CAROUSEL_FORMAT_ORDER`),
-// each whole strip scaled into a tile — proof the deck renders at each target
-// size, canvases stay aspect-true and panels clear the safe zone. A carousel
-// tile is a whole strip, so it can't reuse the single-card `withFormatMatrix`.
+// One carousel theme across every export format (the full `FORMAT_ORDER`, shared
+// with the single card), each whole strip scaled into a tile — proof the deck
+// renders at each target size, canvases stay aspect-true and panels clear the
+// safe zone. A carousel tile is a whole strip, so it can't reuse the single-card
+// `withFormatMatrix`.
 type MatrixArgs = ComponentProps<typeof CarouselDeck> & BackgroundArgs;
 
 const TILE_W = 540;
@@ -35,7 +35,7 @@ function Matrix({
   const count = descriptor.panels.length;
   return (
     <div className="flex flex-1 flex-wrap content-start items-start gap-7 p-7">
-      {CAROUSEL_FORMAT_ORDER.map((id) => {
+      {FORMAT_ORDER.map((id) => {
         const f = getFormat(id);
         const stripW = count * f.width;
         const scale = TILE_W / stripW;

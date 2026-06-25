@@ -152,11 +152,13 @@ All sizing flows from `theme/carousel/geometry.ts` (`stripGeometry` /
 `useStripGeometry`, `stripFormat`, `CAROUSEL_NATURAL_MARGIN`), never a parallel
 size table. The deck, the editor preview/strip and the slicing export all read it.
 
-The carousel **gates** the formats it offers — `CAROUSEL_FORMAT_ORDER` (one per
-aspect bucket: feed 4:5, square 1:1, story 9:16, landscape 16:9), NOT the full
-`FORMAT_ORDER`, since a 9:16 / 16:9 slide re-proportions the canvases against a
-box they weren't authored for. v1 is safe-correct parity, not per-bucket art
-direction. Preview them in `Carousel/Format matrix` (Storybook).
+The carousel offers the **same formats as the single card** — the full
+`FORMAT_ORDER`, no gated subset. Every format is just a different slide box: the
+canvases place by % and bleed, and the only per-format difference a panel sees is
+its `SafeArea` floor (`mergeSafe(format.safe, CAROUSEL_NATURAL_MARGIN)`), so the
+four 9:16 platforms (story / tiktok / whatsapp / strava) render at the same
+geometry but keep clear of each platform's own chrome. Preview them all in
+`Carousel/Format matrix` (Storybook).
 
 ## Stats & visibility — panels self-derive
 
@@ -204,7 +206,7 @@ theme/carousel/theme-tokens.ts   the look vocabulary — CarouselLook · font pa
 theme/carousel/resolve.ts        look + ColorScheme → EffectiveStyle · heroInk
 theme/carousel/stats.ts          buildStats · heroStat · detailStats · frameStats · pressSlideStats · series
 theme/carousel/marks.ts          CAROUSEL_MARK_PARAMS (effort / page numbers) · carouselMarks(config)
-theme/carousel/geometry.ts       stripGeometry/useStripGeometry · stripFormat · CAROUSEL_NATURAL_MARGIN · CAROUSEL_FORMAT_ORDER
+theme/carousel/geometry.ts       stripGeometry/useStripGeometry · stripFormat · CAROUSEL_NATURAL_MARGIN
 theme/carousel/types.ts          RouteStyle · FontPairId
 hooks/use-carousel.ts          panel count → clamped slide selection (one index)
 theme/carousel/define-theme.ts   defineCarouselTheme · CarouselTheme · CanvasProps · PanelProps

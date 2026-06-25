@@ -3,7 +3,6 @@ import { describe, expect, test } from "bun:test";
 import { EXPORT_FORMATS, mergeSafe } from "@/theme/core/export-formats";
 import {
   CAROUSEL_NATURAL_MARGIN,
-  carouselFormat,
   stripFormat,
   stripGeometry,
 } from "./geometry";
@@ -32,13 +31,6 @@ describe("stripGeometry", () => {
   test("stripFormat widens the frame to the whole strip", () => {
     expect(stripFormat(EXPORT_FORMATS["instagram-feed"], 4).width).toBe(4320);
   });
-});
-
-test("carouselFormat passes offered buckets, clamps others to feed", () => {
-  expect(carouselFormat(EXPORT_FORMATS["instagram-story"]).id).toBe(
-    "instagram-story"
-  );
-  expect(carouselFormat(EXPORT_FORMATS.tiktok).id).toBe("instagram-feed");
 });
 
 describe("panel safe-floor (mergeSafe with the natural margin)", () => {

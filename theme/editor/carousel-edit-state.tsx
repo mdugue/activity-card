@@ -25,11 +25,7 @@ import {
 import { isQuarterTurn } from "@/lib/photo-effects";
 import { cn } from "@/lib/utils";
 import { CarouselDeck } from "@/theme/carousel/deck";
-import {
-  CAROUSEL_FORMAT_ORDER,
-  carouselFormat,
-  stripGeometry,
-} from "@/theme/carousel/geometry";
+import { stripGeometry } from "@/theme/carousel/geometry";
 import {
   CAROUSEL_THEME_ORDER,
   CAROUSEL_THEMES,
@@ -44,13 +40,13 @@ import { useActivityTools } from "./activity-tools";
 import type { EditorSession } from "./editor-session";
 import { FormatControl } from "./format-control";
 import { ImageAdjustOverlay } from "./image-adjust-overlay";
+import { SafeZoneOverlay } from "./safe-zone-overlay";
 import { SlideStrip } from "./slide-strip";
 import { ThemeRail } from "./theme-rail";
 
 interface CarouselEditStateProps {
   carousel: CarouselController;
-  /** the active export format (shared with single-card; clamped to a carousel
-   *  bucket here) */
+  /** the active export format (shared with single-card) */
   format: ExportFormat;
   onFormatChange: (id: ExportFormatId) => void;
   onThemeChange: (theme: CarouselThemeId) => void;
@@ -69,11 +65,10 @@ export function CarouselEditState({
   const { data, visibility, color, config, photo } = session;
   const { count, selectedIndex } = carousel;
   const descriptor = CAROUSEL_THEMES[theme];
-  // The shared preview format may carry a single-card-only bucket (e.g. tiktok);
-  // clamp it to one the carousel offers. The strip, every deck mount and the
-  // export all size from this one geometry — no parallel literals.
-  const fmt = carouselFormat(format);
-  const { slideW, slideH, stripW } = stripGeometry(fmt, count);
+  // The strip, every deck mount and the export all size from this one geometry —
+  // no parallel literals. The carousel offers the same formats as the single
+  // card, so the shared preview format flows straight through.
+  const { slideW, slideH, stripW } = stripGeometry(format, count);
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const wideRef = useRef<HTMLDivElement>(null);
@@ -88,6 +83,9 @@ export function CarouselEditState({
   const selectedIndexRef = useRef(selectedIndex);
   const [isExporting, setIsExporting] = useState(false);
   const [adjusting, setAdjusting] = useState(false);
+  // The safe-zone guide is an editor-only preview overlay; the FORMAT control
+  // toggles it and the preview reads it — the same mechanism as the single card.
+  const [showSafe, setShowSafe] = useState(false);
 
   // Natural photo size → true-cover, pannable panorama + a clamp that respects
   // the wide strip's real vertical overflow. A quarter-turn swaps the photo's
@@ -205,7 +203,7 @@ export function CarouselEditState({
         wideRef.current,
         count,
         carouselBaseName(data.sport, data.date),
-        fmt
+        format
       );
     } catch {
       toast.error("Export failed — please try again.");
@@ -218,7 +216,7 @@ export function CarouselEditState({
     colors: color.scheme,
     config: config.value,
     data,
-    format: fmt,
+    format,
     imageSize,
     imageTransform: photo.transform,
     photoEffects: photo.effects,
@@ -271,6 +269,26 @@ export function CarouselEditState({
               }}
             >
               <CarouselDeck {...deckProps} />
+              {/* Per-slide keep-out guide (display-only — never on the export
+                  mount below). Each slide is one format box in strip space. */}
+              {showSafe
+                ? Array.from({ length: count }, (_, i) => (
+                    <div
+                      aria-hidden
+                      // biome-ignore lint/suspicious/noArrayIndexKey: slides are positional — the index IS the identity (fixed count, never reordered)
+                      key={`safe-${i}`}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: i * slideW,
+                        width: slideW,
+                        height: slideH,
+                      }}
+                    >
+                      <SafeZoneOverlay format={format} scale={1} />
+                    </div>
+                  ))
+                : null}
             </div>
             <div className="absolute inset-0 flex">
               {Array.from({ length: count }, (_, i) => (
@@ -330,7 +348,7 @@ export function CarouselEditState({
           colors={color.scheme}
           config={config.value}
           data={data}
-          format={fmt}
+          format={format}
           imageSize={imageSize}
           imageTransform={photo.transform}
           onSelect={carousel.select}
@@ -351,15 +369,16 @@ export function CarouselEditState({
           icon: <ImagesIcon aria-hidden className="size-5" weight="duotone" />,
           isBusy: isExporting,
           label: "Export carousel",
-          meta: `${count} × ${fmt.width}×${fmt.height}`,
+          meta: `${count} × ${format.width}×${format.height}`,
           onAction: handleExport,
         }}
         preview={preview}
         previewControl={
           <FormatControl
-            format={fmt}
+            format={format}
             onFormatChange={onFormatChange}
-            order={CAROUSEL_FORMAT_ORDER}
+            onShowSafeChange={setShowSafe}
+            showSafe={showSafe}
           />
         }
         tools={tools}
