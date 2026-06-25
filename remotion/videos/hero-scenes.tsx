@@ -37,6 +37,7 @@ import {
   BOUNCE_SPRING,
   EASE_ALPHA,
   FONT,
+  INK,
   PAPER,
   PAPER_DIM,
   RUST,
@@ -902,6 +903,13 @@ export function CarouselScene({
   const gap = interpolate(separate, [0, 1], [0, width * 0.022]);
   const radius = interpolate(separate, [0, 1], [0, 8]);
 
+  // Phase one shows ONE image: ink "curtains" cover the neighbouring panels and
+  // retract as the photo uncrops, so the scene opens on a single card and only
+  // then reveals the seamless strip (then the gaps open).
+  const fullRowW = slideCount * panelW + (slideCount - 1) * gap;
+  const revealW = interpolate(reveal, [0, 1], [panelW, fullRowW]);
+  const curtainW = Math.max(0, (width - revealW) / 2);
+
   return (
     <VideoFrame>
       <Backdrop variant="ink" />
@@ -913,42 +921,81 @@ export function CarouselScene({
           paddingBottom: height * 0.14,
         }}
       >
-        {/* the deck, rendered once per slide and clipped to that slide — at
-            gap 0 the panels abut into one continuous photo; opening the gap
-            separates the same image into discrete slides */}
-        <div style={{ alignItems: "center", display: "flex", gap }}>
-          {Array.from({ length: slideCount }, (_, i) => (
-            <div
-              key={SEAM_KEYS[i]}
-              style={{
-                borderRadius: radius,
-                boxShadow: "0 60px 120px -40px rgba(0,0,0,0.65)",
-                height: panelH,
-                overflow: "hidden",
-                position: "relative",
-                width: panelW,
-              }}
-            >
+        <div
+          style={{
+            alignItems: "center",
+            display: "flex",
+            height: panelH,
+            justifyContent: "center",
+            position: "relative",
+            width: "100%",
+          }}
+        >
+          {/* the deck, rendered once per slide and clipped to that slide — at
+              gap 0 the panels abut into one continuous photo; opening the gap
+              separates the same image into discrete slides */}
+          <div style={{ alignItems: "center", display: "flex", gap }}>
+            {Array.from({ length: slideCount }, (_, i) => (
               <div
+                key={SEAM_KEYS[i]}
                 style={{
-                  height: 1350,
-                  left: -i * panelW,
-                  position: "absolute",
-                  top: 0,
-                  transform: `scale(${scale})`,
-                  transformOrigin: "top left",
-                  width: slideCount * 1080,
+                  borderRadius: radius,
+                  boxShadow: "0 60px 120px -40px rgba(0,0,0,0.65)",
+                  height: panelH,
+                  overflow: "hidden",
+                  position: "relative",
+                  width: panelW,
                 }}
               >
-                <CarouselDeck
-                  data={SAMPLE_RIDE}
-                  {...carouselArgs("exposure")}
-                  imageSize={DUNES_SIZE}
-                  photoUrl={staticFile(DUNES_PHOTO)}
-                />
+                <div
+                  style={{
+                    height: 1350,
+                    left: -i * panelW,
+                    position: "absolute",
+                    top: 0,
+                    transform: `scale(${scale})`,
+                    transformOrigin: "top left",
+                    width: slideCount * 1080,
+                  }}
+                >
+                  <CarouselDeck
+                    data={SAMPLE_RIDE}
+                    {...carouselArgs("exposure")}
+                    imageSize={DUNES_SIZE}
+                    photoUrl={staticFile(DUNES_PHOTO)}
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+
+          {/* retracting curtains — hide the neighbours until the uncrop */}
+          {curtainW > 0.5 ? (
+            <>
+              <div
+                style={{
+                  backgroundColor: INK,
+                  bottom: -240,
+                  left: 0,
+                  position: "absolute",
+                  top: -240,
+                  width: curtainW,
+                  zIndex: 5,
+                }}
+              />
+              <div
+                style={{
+                  backgroundColor: INK,
+                  bottom: -240,
+                  position: "absolute",
+                  right: 0,
+                  top: -240,
+                  width: curtainW,
+                  zIndex: 5,
+                }}
+              />
+            </>
+          ) : null}
         </div>
       </AbsoluteFill>
 
