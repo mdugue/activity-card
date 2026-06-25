@@ -225,8 +225,8 @@ export default function Home() {
   // "strata", "photo"). One generic slot replaces the per-theme config states;
   // `resolveThemeConfig` coerces each read so stale/garbage values are safe.
   const [themeConfigs, setThemeConfigs] = useState<Record<string, unknown>>({});
-  // Carousel is the headline mode, so it's the default for a fresh session.
-  const [mode, setMode] = useState<CardMode>("carousel");
+
+  const [mode, setMode] = useState<CardMode>("single");
   const carousel = useCarousel(CAROUSEL_THEMES[carouselTheme].panels.length);
   // Held outside `data` so it survives between activities and can seed
   // `adoptParsed` when the parsed file lacks an athlete name.

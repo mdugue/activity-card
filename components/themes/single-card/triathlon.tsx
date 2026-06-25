@@ -45,7 +45,12 @@ function Stat({ label, v }: StatProps) {
         style={{
           fontFamily: "var(--font-bricolage), sans-serif",
           fontWeight: 700,
-          fontSize: 38,
+          // Fluid against BOTH the stat column's width (cqi → the parent's
+          // container-type:inline-size: shrinks in a narrow 3-up landscape
+          // column so `920 m` stays one line) AND the card's height (cqb → the
+          // card's container-type:size: shrinks in a short square card so the
+          // two-stat swim column doesn't overflow).
+          fontSize: "clamp(20px, min(22cqi, 18cqb), 38px)",
           lineHeight: 1,
           marginTop: 6,
         }}
@@ -242,7 +247,7 @@ export function ThemeTriathlon({
           </div>
         </div>
 
-        <div style={{ marginTop: 22, marginBottom: 22 }}>
+        <div style={{ marginTop: 16, marginBottom: 16 }}>
           <div
             style={{
               fontSize: 24,
@@ -295,13 +300,21 @@ export function ThemeTriathlon({
           </div>
         </div>
 
+        {/* One self-reflowing grid: at 4:5 / 9:16 the segments stack (1 column),
+            at 16:9 they sit side-by-side (3 columns) — driven purely by the
+            available width via auto-fit + minmax, no per-aspect branch. */}
         <div
           style={{
             flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            gap: 18,
             minHeight: 0,
+            display: "grid",
+            // MIN is tuned so the three segments + two 18px gaps land exactly
+            // 3-up only once the canvas is landscape-wide (16:9 content ≈1460px:
+            // 3×468+36 ≈ 1440 fits), and stay 1-up at 4:5/1:1/9:16 (content
+            // ≈940px: 2×468+18 ≈ 954 overflows → single column).
+            gridTemplateColumns: "repeat(auto-fit, minmax(468px, 1fr))",
+            gridAutoRows: "minmax(0, 1fr)",
+            gap: 14,
           }}
         >
           {sports.map((seg, idx) => {
@@ -310,14 +323,19 @@ export function ThemeTriathlon({
               <div
                 key={`seg-${idx}-${seg.sport}`}
                 style={{
-                  flex: 1,
+                  // A query container so the card's own type (numerals, stats)
+                  // scales to the card box — narrow in landscape, short in square.
+                  containerType: "size",
                   position: "relative",
                   border: `1px solid ${INK}`,
                   background: "#ffffff",
-                  padding: "18px 22px",
+                  padding: "12px 22px",
                   display: "grid",
-                  gridTemplateColumns: "0.55fr 1fr 0.5fr",
-                  gap: 18,
+                  // minmax(0, …) lets the columns shrink below their content so a
+                  // tight card compresses instead of overflowing the card border.
+                  gridTemplateColumns:
+                    "minmax(0, 0.55fr) minmax(0, 1fr) minmax(0, 0.55fr)",
+                  gap: 14,
                   alignItems: "stretch",
                 }}
               >
@@ -344,7 +362,9 @@ export function ThemeTriathlon({
 
                 <div
                   style={{
-                    paddingTop: 38,
+                    minWidth: 0,
+                    // Clears the 48px corner badge (card pad 12 + 36 ≈ 48).
+                    paddingTop: 36,
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
@@ -353,7 +373,7 @@ export function ThemeTriathlon({
                   <div>
                     <div
                       style={{
-                        fontSize: 24,
+                        fontSize: "clamp(17px, 10cqb, 24px)",
                         letterSpacing: "0.3em",
                         color: accent,
                         fontWeight: 700,
@@ -365,7 +385,9 @@ export function ThemeTriathlon({
                       style={{
                         fontFamily: "var(--font-bricolage), sans-serif",
                         fontWeight: 700,
-                        fontSize: 80,
+                        // The hero numeral: full size on a roomy card, shrinking
+                        // with the card's width (landscape) or height (square).
+                        fontSize: "clamp(40px, min(15cqi, 26cqb), 80px)",
                         lineHeight: 0.95,
                         letterSpacing: "-0.02em",
                         marginTop: 10,
@@ -374,7 +396,7 @@ export function ThemeTriathlon({
                       {seg.distanceKm}
                       <span
                         style={{
-                          fontSize: 30,
+                          fontSize: "clamp(18px, min(7cqi, 14cqb), 30px)",
                           opacity: 0.55,
                           marginLeft: 6,
                         }}
@@ -384,7 +406,7 @@ export function ThemeTriathlon({
                     </div>
                     <div
                       style={{
-                        fontSize: 24,
+                        fontSize: "clamp(17px, 10cqb, 24px)",
                         opacity: 0.8,
                         marginTop: 10,
                         letterSpacing: "0.06em",
@@ -396,7 +418,7 @@ export function ThemeTriathlon({
                   </div>
                   <div
                     style={{
-                      fontSize: 22,
+                      fontSize: "clamp(15px, 8cqb, 22px)",
                       letterSpacing: "0.24em",
                       opacity: 0.7,
                       fontWeight: 600,
@@ -472,9 +494,16 @@ export function ThemeTriathlon({
 
                 <div
                   style={{
+                    minWidth: 0,
+                    // Its own query container so the Stat values size to this
+                    // column's width (narrow in a 3-up landscape card).
+                    containerType: "inline-size",
                     borderLeft: "1px solid rgba(17,21,26,0.2)",
                     paddingLeft: 18,
-                    paddingTop: 32,
+                    // Aligns with the badge-clearing left column on roomy cards,
+                    // but collapses in a short square card so the swim card's
+                    // two stats don't overflow. cqb → the card's size container.
+                    paddingTop: "clamp(14px, 9cqb, 32px)",
                     display: "flex",
                     flexDirection: "column",
                     gap: 14,
@@ -535,8 +564,8 @@ export function ThemeTriathlon({
 
         <div
           style={{
-            marginTop: 22,
-            paddingTop: 18,
+            marginTop: 16,
+            paddingTop: 14,
             borderTop: "1px solid rgba(17,21,26,0.4)",
             display: "flex",
             justifyContent: "space-between",
