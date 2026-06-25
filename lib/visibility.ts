@@ -30,10 +30,6 @@ export interface Visibility {
   power: boolean;
   /** route silhouette / path graphic */
   route: boolean;
-  /** carousel: print the "made with effort" mark on the wrap-up slide */
-  showEffort: boolean;
-  /** carousel: print the "01 / 04" slide index on every slide */
-  showPageNumber: boolean;
   speed: boolean;
   splits: boolean;
   time: boolean;
@@ -58,9 +54,6 @@ export const DEFAULT_VISIBILITY: Visibility = {
   elevationViz: true,
   splits: true,
   photoBackdrop: true,
-  // Carousel chrome — off by default so a deck reads as a clean art piece.
-  showEffort: false,
-  showPageNumber: false,
 };
 
 const isNum = (n: number | undefined): boolean =>
@@ -93,8 +86,6 @@ export function availableVisibility(
     elevationViz: (data.elevationProfile?.length ?? 0) > 1,
     splits: (data.splits?.length ?? 0) > 0,
     photoBackdrop: true,
-    showEffort: true,
-    showPageNumber: true,
   };
 }
 

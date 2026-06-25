@@ -11,7 +11,9 @@
 
 import type { ImageSize } from "@/hooks/use-image-natural-size";
 import type { ActivityData } from "@/lib/activity";
+import { carouselMarks } from "@/lib/carousel/marks";
 import { resolveDeckStyle } from "@/lib/carousel/resolve";
+import { statOptsFor } from "@/lib/carousel/stats";
 import { SLIDE_H, SLIDE_W } from "@/lib/carousel/types";
 import type { ColorScheme } from "@/lib/colors";
 import type { ImageTransform } from "@/lib/image-transform";
@@ -68,6 +70,13 @@ export function CarouselDeck({
   const desaturate = showPhoto && style.routeStyle === "desaturated";
 
   const Canvas = theme.canvas;
+
+  // Carousel chrome marks (effort / page numbers) live in the theme config as
+  // MARKS params, not in the cross-family Visibility. The only element-
+  // visibility a panel still needs is the distance/time stat toggles —
+  // everything else is already stripped from `data` upstream.
+  const marks = carouselMarks(config);
+  const statOpts = statOptsFor(visibility);
 
   return (
     <div
@@ -141,11 +150,11 @@ export function CarouselDeck({
             data={data}
             hasPhoto={showPhoto}
             index={i}
-            showEffort={visibility.showEffort}
-            showPageNumber={visibility.showPageNumber}
+            showEffort={marks.showEffort}
+            showPageNumber={marks.showPageNumber}
+            statOpts={statOpts}
             style={style}
             total={total}
-            visibility={visibility}
           />
         </div>
       ))}

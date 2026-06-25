@@ -4,7 +4,7 @@
 // the top. The slide derives its own stats (all but the hero metric) from the
 // activity — StatRow and StatGrid just choose the grid shape.
 
-import { detailStats, statOptsFor } from "@/lib/carousel/stats";
+import { detailStats } from "@/lib/carousel/stats";
 import type { PanelProps } from "../define-theme";
 import { DetailViz } from "../detail-viz";
 import { Stat } from "../stat-block";
@@ -24,7 +24,7 @@ export function StatLayout({
   hasPhoto,
   index,
   total,
-  visibility,
+  statOpts,
   showPageNumber,
   columns,
   numeralSize,
@@ -33,7 +33,7 @@ export function StatLayout({
   const colors = slideText(style, hasPhoto);
   const anchor = style.contentAnchor;
   // Every stat except the one the hero slide headlines (no repeated big number).
-  const stats = detailStats(data, style.heroMetric, statOptsFor(visibility));
+  const stats = detailStats(data, style.heroMetric, statOpts);
 
   const group = (
     <div>

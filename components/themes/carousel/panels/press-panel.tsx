@@ -6,11 +6,7 @@
 import type { ActivityData } from "@/lib/activity";
 import { bandModeFor, pickProfile } from "@/lib/carousel/profile";
 import type { EffectiveStyle } from "@/lib/carousel/resolve";
-import {
-  pressSlideStats,
-  type StatItem,
-  statOptsFor,
-} from "@/lib/carousel/stats";
+import { pressSlideStats, type StatItem } from "@/lib/carousel/stats";
 import { formatDateUpper } from "@/lib/format";
 import {
   isMultiActivity,
@@ -472,12 +468,12 @@ function Byline({
 
 /** The shared SpreadProps each Press slide builds from its own data + position. */
 function spreadProps(props: PanelProps): SpreadProps {
-  const { data, style, hasPhoto, index, total, visibility } = props;
+  const { data, style, hasPhoto, index, total, statOpts } = props;
   return {
     data,
     style,
     hasPhoto,
-    stats: pressSlideStats(data, index, total, statOptsFor(visibility)),
+    stats: pressSlideStats(data, index, total, statOpts),
     ink: style.ink,
     muted: style.mutedInk,
     paper: style.background,

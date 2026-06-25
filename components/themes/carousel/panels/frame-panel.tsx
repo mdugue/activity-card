@@ -12,7 +12,6 @@ import {
   routeSeries,
   type StatItem,
   speedSeries,
-  statOptsFor,
 } from "@/lib/carousel/stats";
 import {
   isMultiActivity,
@@ -346,11 +345,9 @@ function FrameChrome({
  *  speed / power), chosen by slide index from Frame's priority order. A sparse
  *  activity with fewer data than slots leaves the slide blank. */
 export function FrameDatumPanel(props: PanelProps) {
-  const { data, style, hasPhoto, index, visibility } = props;
+  const { data, style, hasPhoto, index, statOpts } = props;
   const c = slideText(style, hasPhoto);
-  const stat: StatItem | undefined = frameStats(data, statOptsFor(visibility))[
-    index
-  ];
+  const stat: StatItem | undefined = frameStats(data, statOpts)[index];
   return (
     <FrameChrome {...props}>
       {stat ? (

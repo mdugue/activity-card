@@ -15,14 +15,18 @@
 // (`CarouselTheme`), the same pattern as `defineTheme`.
 
 import type { FC } from "react";
+import {
+  CAROUSEL_MARK_DEFAULTS,
+  CAROUSEL_MARK_PARAMS,
+} from "@/lib/carousel/marks";
 import type { EffectiveStyle } from "@/lib/carousel/resolve";
+import type { StatOpts } from "@/lib/carousel/stats";
 import {
   CAROUSEL_CAPABILITIES,
   type CarouselLook,
 } from "@/lib/carousel/theme-tokens";
 import type { ParamDef } from "@/lib/params/kinds";
 import type { CapabilityKey, ThemeBase, ThemeData } from "@/lib/theme-contract";
-import type { Visibility } from "@/lib/visibility";
 
 /** Props the spanning canvas component receives — sized to the whole strip and
  *  drawn once across every slide. `data` is narrowed to the theme's declared
@@ -55,10 +59,11 @@ export interface PanelProps<K extends CapabilityKey = CapabilityKey> {
   showEffort: boolean;
   /** print the "01 / 04" slide index */
   showPageNumber: boolean;
+  /** distance/time stat toggles — the only element-visibility a panel needs;
+   *  every other toggle is already applied by stripping `data` upstream */
+  statOpts: StatOpts;
   style: EffectiveStyle;
   total: number;
-  /** deck-wide element visibility (drives each panel's `statOptsFor`) */
-  visibility: Visibility;
 }
 
 export type CanvasComponent<K extends CapabilityKey = CapabilityKey> = FC<
@@ -134,8 +139,12 @@ export function defineCarouselTheme<
       defaultFilter: look.defaultFilter,
       defaultGrain: look.defaultGrain,
     },
-    params: d.params ?? [],
-    defaults: d.defaults ?? {},
+    // The two universal carousel marks (effort / page numbers) are appended to
+    // every theme as MARKS params, so the editor renders them generically and
+    // they persist in the per-theme config — no carousel-only flags in the
+    // shared `Visibility`. Theme-specific marks (STRATA's legend) follow them.
+    params: [...CAROUSEL_MARK_PARAMS, ...(d.params ?? [])],
+    defaults: { ...CAROUSEL_MARK_DEFAULTS, ...(d.defaults ?? {}) },
     look,
     // reason: the registry stores every carousel theme under one widened
     // signature; the narrow `Caps` generic is fully checked above, at the

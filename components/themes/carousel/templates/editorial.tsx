@@ -17,13 +17,10 @@ export function EditorialSlide({
   total,
   showEffort,
   showPageNumber,
-  visibility,
+  statOpts,
 }: PanelProps) {
   const colors = slideText(style, hasPhoto);
-  const summary = buildStats(data, {
-    distance: visibility.distance,
-    time: visibility.time,
-  })
+  const summary = buildStats(data, statOpts)
     .slice(0, 3)
     .map((s) => `${s.value}${s.unit ? ` ${s.unit}` : ""}`)
     .join("  ·  ");

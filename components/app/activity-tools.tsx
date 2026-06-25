@@ -111,11 +111,6 @@ const VIZ_TOGGLES: ToggleDef[] = [
   { key: "elevationViz", label: "Elevation profile" },
 ];
 
-const CAROUSEL_TOGGLES: ToggleDef[] = [
-  { key: "showEffort", label: "“Made with Effort” mark" },
-  { key: "showPageNumber", label: "Page numbers" },
-];
-
 interface UseActivityToolsProps {
   mode: CardMode;
   session: EditorSession;
@@ -372,29 +367,20 @@ export function useActivityTools({
     ),
   });
 
-  // MARKS — annotations: carousel chrome (effort mark, page numbers) plus any
-  // MARKS params the theme exposes (e.g. STRATA's peak/direction legend).
-  const hasMarkParams = themeDeclaresGroup(config.params, "marks");
-  if (mode === "carousel" || hasMarkParams) {
+  // MARKS — annotations the theme exposes as MARKS params: the carousel chrome
+  // (effort mark, page numbers — appended to every carousel theme by
+  // `defineCarouselTheme`) plus any theme-specific markers (e.g. STRATA's
+  // peak/direction legend). All render generically through the param system —
+  // no per-mode special case, no carousel-only flag in the shared Visibility.
+  if (themeDeclaresGroup(config.params, "marks")) {
     tools.push({
       id: "marks",
       label: "MARKS",
       icon: <StarIcon {...ICON_PROPS} />,
       content: (
-        <div className="flex flex-col gap-5">
-          {mode === "carousel" ? (
-            <ControlBlock label="CAROUSEL MARKS">
-              <div className="mt-2 flex flex-col gap-2.5">
-                {CAROUSEL_TOGGLES.map(renderToggle)}
-              </div>
-            </ControlBlock>
-          ) : null}
-          {hasMarkParams ? (
-            <ControlBlock label="MARKERS">
-              <div className="mt-2">{paramGroup("marks")}</div>
-            </ControlBlock>
-          ) : null}
-        </div>
+        <ControlBlock label="MARKERS">
+          <div className="mt-2">{paramGroup("marks")}</div>
+        </ControlBlock>
       ),
     });
   }

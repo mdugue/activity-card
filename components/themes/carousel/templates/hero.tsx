@@ -3,7 +3,7 @@
 // the swipe decision, so it has to stop the thumb. No sport word, no tech
 // read-out, no redundant "distance" label under the number.
 
-import { heroStat, statOptsFor } from "@/lib/carousel/stats";
+import { heroStat } from "@/lib/carousel/stats";
 import type { PanelProps } from "../define-theme";
 import { MetaBand } from "./parts";
 import { SLIDE_PAD, slideText } from "./shared";
@@ -14,12 +14,12 @@ export function HeroSlide({
   hasPhoto,
   index,
   total,
-  visibility,
+  statOpts,
   showPageNumber,
 }: PanelProps) {
   const colors = slideText(style, hasPhoto);
   const anchor = style.contentAnchor;
-  const hero = heroStat(data, style.heroMetric, statOptsFor(visibility));
+  const hero = heroStat(data, style.heroMetric, statOpts);
 
   const block = (
     <div style={{ marginTop: anchor === "top" ? 56 : 0 }}>
