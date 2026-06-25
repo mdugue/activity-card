@@ -181,6 +181,12 @@ export function ThemeTriathlon({
         // solid background (not behind it) and below the content.
         isolation: "isolate",
         overflow: "hidden",
+        // Named query container (`card`): the segment band's `@container card`
+        // breakpoint below keys on the card's WIDTH to go 3-up at x-landscape.
+        // `size` (not inline-size) so it also answers any height-driven `cqb`;
+        // the name skips the nested per-segment `size` containers cleanly.
+        containerType: "size",
+        containerName: "card",
       }}
     >
       {photoUrl ? (
@@ -300,23 +306,14 @@ export function ThemeTriathlon({
           </div>
         </div>
 
-        {/* One self-reflowing grid: at 4:5 / 9:16 the segments stack (1 column),
-            at 16:9 they sit side-by-side (3 columns) — driven purely by the
-            available width via auto-fit + minmax, no per-aspect branch. */}
-        <div
-          style={{
-            flex: 1,
-            minHeight: 0,
-            display: "grid",
-            // MIN is tuned so the three segments + two 18px gaps land exactly
-            // 3-up only once the canvas is landscape-wide (16:9 content ≈1460px:
-            // 3×468+36 ≈ 1440 fits), and stay 1-up at 4:5/1:1/9:16 (content
-            // ≈940px: 2×468+18 ≈ 954 overflows → single column).
-            gridTemplateColumns: "repeat(auto-fit, minmax(468px, 1fr))",
-            gridAutoRows: "minmax(0, 1fr)",
-            gap: 14,
-          }}
-        >
+        {/* One self-reflowing grid, ONE markup: the three segments stack 1-up at
+            4:5 / 1:1 / 9:16 and sit 3-up at x-landscape. The column count is an
+            explicit container breakpoint — `@min-[1400px]/card:grid-cols-3` =
+            "go 3-up once the card is wider than 1400px" — which only the 1600px
+            landscape canvas crosses (every other format is 1080px wide). States
+            the intent directly instead of back-solving an auto-fit `minmax` MIN
+            against the gap. Square stays 1-up; its `clamp` type shrinks to fit. */}
+        <div className="grid min-h-0 flex-1 auto-rows-fr @min-[1400px]/card:grid-cols-3 grid-cols-1 gap-3.5">
           {sports.map((seg, idx) => {
             const accent = accentFor(seg.sport);
             return (

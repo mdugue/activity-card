@@ -105,9 +105,12 @@ export function ThemePath({
         fontFamily: "var(--font-manrope), sans-serif",
         position: "relative",
         overflow: "hidden",
-        // Query container so big/fixed type below can size to the card box —
-        // narrow in a landscape column (cqi), short in a square card (cqb).
+        // Named query container (`card`): big/fixed type sizes to the card box —
+        // narrow in a landscape column (cqi), short in a square card (cqb) — and
+        // the region grid's `@container card` width breakpoint keys on it to go
+        // 3-up at x-landscape. The name skips the nested per-stat containers.
         containerType: "size",
+        containerName: "card",
       }}
     >
       {photoUrl ? (
@@ -122,24 +125,16 @@ export function ThemePath({
         pad={{ top: 90, right: 90, bottom: 80, left: 90 }}
         style={{ flex: 1, zIndex: 1 }}
       >
-        {/* One self-reflowing grid holds the three regions — [meta+title],
-            [route hero], [stats]. At feed/square/9:16 (content ≈900px) the
-            regions STACK in order (1 column → today's master); at x-landscape
-            (content ≈1420px) they sit side-by-side (3 columns), keeping the
-            route centred in the MIDDLE either way. Pure auto-fit + minmax, no
-            per-aspect branch: MIN=440 with gap=40 lands 3-up only past ~1400
-            (3×440+2×40=1400 fits 1420) and stays 1-up at 900 (2×440+40=920>900). */}
-        <div
-          style={{
-            flex: 1,
-            minHeight: 0,
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(440px, 1fr))",
-            gridAutoRows: "minmax(0, 1fr)",
-            gap: 40,
-            alignItems: "stretch",
-          }}
-        >
+        {/* One self-reflowing grid, ONE markup, holds the three regions —
+            [meta+title], [route hero], [stats]. They STACK 1-up at feed / square /
+            9:16 (today's master) and sit 3-up side-by-side at x-landscape, with
+            the route staying centred in the MIDDLE region either way. The column
+            count is an explicit container breakpoint —
+            `@min-[1400px]/card:grid-cols-3` = "go 3-up once the card is wider
+            than 1400px" — which only the 1600px landscape canvas crosses; every
+            other format is 1080px wide and stays 1-up (square's `clamp` type
+            shrinks to fit). States the intent directly, no auto-fit MIN to tune. */}
+        <div className="grid min-h-0 flex-1 auto-rows-fr @min-[1400px]/card:grid-cols-3 grid-cols-1 items-stretch gap-10">
           {/* Region 1 — meta band + title */}
           <div
             style={{
@@ -271,16 +266,10 @@ export function ThemePath({
                 marginBottom: 22,
               }}
             />
-            <div
-              style={{
-                display: "grid",
-                // Shrink-safe tracks so a narrow 3-up landscape stats column
-                // compresses instead of overflowing the card.
-                gridTemplateColumns:
-                  "minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)",
-                gap: 24,
-              }}
-            >
+            {/* Always three stat columns (not a reflow). `grid-cols-3` is the
+                shrink-safe `repeat(3, minmax(0, 1fr))`, so a narrow 3-up
+                landscape stats column compresses instead of overflowing. */}
+            <div className="grid grid-cols-3 gap-6">
               {statTrio.map(([k, v]) => (
                 <div
                   key={k}
