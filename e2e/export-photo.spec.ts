@@ -1,7 +1,12 @@
 import { promises as fs } from "node:fs";
 import { type Download, expect, type Page, test } from "@playwright/test";
 import { SOLID_MAGENTA_PNG_BASE64 } from "./fixtures";
-import { enterEditViaUpload, selectSingleCard, selectTheme } from "./helpers";
+import {
+  enterEditViaUpload,
+  selectCarousel,
+  selectSingleCard,
+  selectTheme,
+} from "./helpers";
 
 /**
  * Regression guard for the `cacheBust` blob-URL bug: html-to-image appended a
@@ -96,7 +101,10 @@ test("photo upload yields FROM YOUR PHOTO colour schemes (worker palette extract
   // The COLOUR control only renders the photo-derived swatch row once
   // node-vibrant's extraction resolves — since extraction now runs in a Web
   // Worker, this asserts the worker round-trip works in the production build.
+  // Carousel's photo-first Exposure surfaces the swatch row; select it
+  // explicitly so the test doesn't depend on the editor's default mode.
   await enterEditViaUpload(page);
+  await selectCarousel(page);
   await page.locator(PHOTO_INPUT).setInputFiles(MAGENTA_PHOTO);
   await expect(page.getByText(/from your photo/i)).toBeVisible({
     timeout: 10_000,
@@ -106,8 +114,9 @@ test("photo upload yields FROM YOUR PHOTO colour schemes (worker palette extract
 test("carousel Exposure export embeds the uploaded background", async ({
   page,
 }) => {
-  // Carousel is the default mode, so uploading lands straight in it.
   await enterEditViaUpload(page);
+  // Switch to carousel explicitly so the test is independent of the default mode.
+  await selectCarousel(page);
   await selectTheme(page, "EXPOSURE");
   await page.locator(PHOTO_INPUT).setInputFiles(MAGENTA_PHOTO);
   // The carousel only draws the photo once its natural size resolves; the

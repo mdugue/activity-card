@@ -15,11 +15,24 @@ export async function selectTheme(page: Page, theme: string): Promise<void> {
 }
 
 /**
- * Switch to Single Card mode. The app now defaults to Carousel, so single-card
- * specs flip to it explicitly after entering the edit state.
+ * Switch to Single Card mode. Specs flip to it explicitly rather than leaning on
+ * the editor's default, so they stay green regardless of which mode is default.
+ * The mode toggle is idempotent — clicking the active mode is a safe no-op — so
+ * this works whether the editor opened in single-card or carousel.
  */
 export async function selectSingleCard(page: Page): Promise<void> {
   const button = page.getByRole("button", { name: /Single Card/i });
+  await button.click();
+  await expect(button).toHaveAttribute("aria-pressed", "true");
+}
+
+/**
+ * Switch to Carousel mode. The companion to {@link selectSingleCard} — carousel
+ * specs call it explicitly instead of assuming carousel is the default, so they
+ * survive a change to the default `CardMode`.
+ */
+export async function selectCarousel(page: Page): Promise<void> {
+  const button = page.getByRole("button", { name: /^Carousel$/i });
   await button.click();
   await expect(button).toHaveAttribute("aria-pressed", "true");
 }
