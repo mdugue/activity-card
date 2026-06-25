@@ -1,14 +1,16 @@
 // Carousel export. The deck is one continuous wide strip; we rasterise it once
-// and slice it into n 1080×1350 frames so the photo/route bleed lines up across
-// cuts. Frames are delivered as an ordered set — shared together on mobile
-// (Web Share API) or downloaded sequentially on desktop. Mirrors the
-// single-card pipeline's font-ready wait and snapdom options.
+// and slice it into n format-sized frames so the photo/route bleed lines up
+// across cuts. The frame size is the chosen export format (4:5 feed by default),
+// so the strip is `count × format.width` wide and `format.height` tall. Frames
+// are delivered as an ordered set — shared together on mobile (Web Share API) or
+// downloaded sequentially on desktop. Mirrors the single-card pipeline's
+// font-ready wait and snapdom options.
 
 import { snapdom } from "@zumer/snapdom";
-import { SLIDE_H, SLIDE_W } from "@/theme/carousel/types";
+import type { ExportFormat } from "@/theme/core/export-formats";
 import { effortDateSlug, isDesktopDevice, waitForFonts } from "./export-shared";
 
-const PIXEL_RATIO = 2; // 1080×1350 → 2160×2700, matching the single card
+const PIXEL_RATIO = 2; // each slide → 2× its format size, matching the single card
 const MAX_CANVAS_DIM = 16_384; // conservative cross-browser canvas width cap
 
 function pad2(n: number): string {
@@ -56,35 +58,38 @@ async function deliver(files: File[]): Promise<void> {
   }
 }
 
-/** Rasterise the wide strip node once and slice it into `count` frames. */
+/** Rasterise the wide strip node once and slice it into `count` format-sized
+ *  frames. `format` is the chosen export format (4:5 feed by default). */
 export async function exportCarousel(
   wideNode: HTMLElement,
   count: number,
-  baseName: string
+  baseName: string,
+  format: ExportFormat
 ): Promise<void> {
   await waitForFonts();
 
-  const width = count * SLIDE_W;
-  // Keep the rasterised strip under the canvas dimension cap.
+  const width = count * format.width;
+  // Keep the rasterised strip under the canvas dimension cap — this now guards a
+  // `count × format.width` strip, so a wide landscape strip would clamp sooner.
   const pr = Math.max(
     1,
     Math.min(PIXEL_RATIO, Math.floor(MAX_CANVAS_DIM / width))
   );
   // `embedFonts` inlines the deck's @font-face; `dpr: 1` keeps the strip a
   // deterministic `pr`× of its native size regardless of screen density (see
-  // lib/export-card.ts for the full note).
+  // theme/export/export-card.ts for the full note).
   const canvas = await snapdom.toCanvas(wideNode, {
     width,
-    height: SLIDE_H,
+    height: format.height,
     scale: pr,
     dpr: 1,
     embedFonts: true,
   });
 
-  const sliceW = SLIDE_W * pr;
-  const sliceH = SLIDE_H * pr;
-  const outW = SLIDE_W * PIXEL_RATIO;
-  const outH = SLIDE_H * PIXEL_RATIO;
+  const sliceW = format.width * pr;
+  const sliceH = format.height * pr;
+  const outW = format.width * PIXEL_RATIO;
+  const outH = format.height * PIXEL_RATIO;
 
   // Draw every frame synchronously (which kicks off its PNG encode), then
   // collect them concurrently — toBlob is the slow part of export, so

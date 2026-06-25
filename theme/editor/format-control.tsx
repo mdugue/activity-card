@@ -24,15 +24,21 @@ import {
 interface FormatControlProps {
   format: ExportFormat;
   onFormatChange: (id: ExportFormatId) => void;
-  onShowSafeChange: (show: boolean) => void;
-  showSafe: boolean;
+  /** safe-zone guide toggle — the single-card preview overlay. Omit it (and
+   *  `showSafe`) and the toggle section is hidden, e.g. for the carousel. */
+  onShowSafeChange?: (show: boolean) => void;
+  /** which formats to offer — defaults to the full single-card `FORMAT_ORDER`;
+   *  the carousel passes its gated `CAROUSEL_FORMAT_ORDER`. */
+  order?: ExportFormatId[];
+  showSafe?: boolean;
 }
 
 export function FormatControl({
   format,
   onFormatChange,
-  showSafe,
+  showSafe = false,
   onShowSafeChange,
+  order = FORMAT_ORDER,
 }: FormatControlProps) {
   const [open, setOpen] = useState(false);
 
@@ -59,7 +65,7 @@ export function FormatControl({
           Preview format
         </div>
         <div className="flex flex-col gap-0.5">
-          {FORMAT_ORDER.map((id) => {
+          {order.map((id) => {
             const f = getFormat(id);
             const active = id === format.id;
             return (
@@ -94,16 +100,18 @@ export function FormatControl({
             );
           })}
         </div>
-        <div className="mt-2 border-foreground/10 border-t px-2 pt-3">
-          <ToggleRow
-            checked={showSafe}
-            label="Show safe zones"
-            onCheckedChange={onShowSafeChange}
-          />
-          <p className="caption-micro mt-1.5 opacity-55">
-            Same photo — platform-perfect crops &amp; safe areas.
-          </p>
-        </div>
+        {onShowSafeChange ? (
+          <div className="mt-2 border-foreground/10 border-t px-2 pt-3">
+            <ToggleRow
+              checked={showSafe}
+              label="Show safe zones"
+              onCheckedChange={onShowSafeChange}
+            />
+            <p className="caption-micro mt-1.5 opacity-55">
+              Same photo — platform-perfect crops &amp; safe areas.
+            </p>
+          </div>
+        ) : null}
       </PopoverContent>
     </Popover>
   );

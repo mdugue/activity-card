@@ -77,6 +77,15 @@ independent layers.
 the theme's own margins win (pixel-identical to before); taller / cover-cropped
 formats floor the content clear of platform UI while the background bleeds.
 
+The **carousel strip follows the same contract** — it is two nested format
+frames off the one `FormatContext` (no separate machinery, no frame): the
+spanning **canvas** reads the *strip* frame (full bleed across `count` slides),
+each **panel** reads its own *slide* frame and insets via `SafeArea`. The
+teachable equivalence is **canvas : panel :: FullBleed : SafeArea**. The deck
+sizes itself from `theme/carousel/geometry.ts` (`SLIDE_W/H` demoted to
+feed-master re-exports) and the carousel **gates** which buckets it offers
+(`CAROUSEL_FORMAT_ORDER`). See the `carousel-themes` skill.
+
 ```tsx
 // A theme is format-aware like this — no external frame, no surface flag:
 const { width, height } = useFormat();

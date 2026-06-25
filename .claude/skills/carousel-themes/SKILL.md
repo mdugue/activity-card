@@ -130,6 +130,35 @@ genuinely long routes reach further across. (Strata's woven field is the
 deliberate exception — its identity is the continuous weave, so it spans by
 design.)
 
+## Format-aware strip (size + safe zones)
+
+The strip is **format-aware**, exactly like a single-card theme — it renders
+*at* the chosen export format and feeds the geometry down, with **no external
+frame** scaling it (read the `theme-architecture` skill). The teachable
+equivalence is **canvas : panel :: FullBleed : SafeArea**:
+
+- the **canvas** reads the **strip frame** — its `w`/`h` are the WHOLE strip
+  (`count × slide`, at the active format) and it bleeds across every slide edge.
+  It still places by % and stays aspect-true; it just receives a different
+  `w/h`. Never stretch a route/elevation per-axis to fill a wider strip.
+- each **panel** reads its own **slide frame** — the deck wraps every slot in a
+  per-slide `FormatProvider`, so `useFormat()` returns one slide's box and
+  `SafeArea` / `SlideScaffold` (`templates/scaffold.tsx`) floor content to that
+  slide's safe area: the natural margin `CAROUSEL_NATURAL_MARGIN`, raised to the
+  platform keep-out on taller formats via `mergeSafe`. Never pad a panel by a
+  bare constant — that's a dead safe zone.
+
+All sizing flows from `theme/carousel/geometry.ts` (`stripGeometry` /
+`useStripGeometry`, `stripFormat`, `slideFormat`, `slideSafe`); `SLIDE_W/H` are
+demoted to feed-master re-exports, never a parallel size table. The deck, the
+editor preview/strip and the slicing export all read it.
+
+The carousel **gates** the formats it offers — `CAROUSEL_FORMAT_ORDER` (one per
+aspect bucket: feed 4:5, square 1:1, story 9:16, landscape 16:9), NOT the full
+`FORMAT_ORDER`, since a 9:16 / 16:9 slide re-proportions the canvases against a
+box they weren't authored for. v1 is safe-correct parity, not per-bucket art
+direction. Preview them in `Carousel/Format matrix` (Storybook).
+
 ## Stats & visibility — panels self-derive
 
 There is **no deck-wide stat planner**. Each panel derives the stats it shows
@@ -175,18 +204,20 @@ Athlete name, the "made with effort" mark, and page numbers default OFF.
 theme/carousel/theme-tokens.ts   the look vocabulary — CarouselLook · font pairs · CAROUSEL_CAPABILITIES
 theme/carousel/resolve.ts        look + ColorScheme → EffectiveStyle · heroInk
 theme/carousel/stats.ts          buildStats · heroStat · detailStats · frameStats · pressSlideStats · series
-theme/carousel/types.ts          SLIDE_W/H · RouteStyle · FontPairId
+theme/carousel/marks.ts          CAROUSEL_MARK_PARAMS (effort / page numbers) · carouselMarks(config)
+theme/carousel/geometry.ts       stripGeometry/useStripGeometry · stripFormat · slideFormat · slideSafe · CAROUSEL_NATURAL_MARGIN · CAROUSEL_FORMAT_ORDER
+theme/carousel/types.ts          SLIDE_W/H (feed-master re-exports) · RouteStyle · FontPairId
 hooks/use-carousel.ts          panel count → clamped slide selection (one index)
 theme/carousel/define-theme.ts   defineCarouselTheme · CarouselTheme · CanvasProps · PanelProps
 theme/carousel/registry.ts       CAROUSEL_THEMES + CarouselThemeId (one entry per theme, look inline)
-theme/carousel/deck.tsx          CarouselDeck — the shared renderer
-theme/carousel/canvas/           RouteCanvas · ElevationCanvas · StrataCanvas
-theme/carousel/templates/        standard panels (Hero/StatGrid/Editorial) + shared text helpers
+theme/carousel/deck.tsx          CarouselDeck — the shared, format-aware renderer
+theme/carousel/canvas/           RouteCanvas · ElevationCanvas · StrataCanvas (read the strip frame)
+theme/carousel/templates/        standard panels (Hero/StatGrid/Editorial) + SlideScaffold/SafeArea (scaffold.tsx) + text helpers
 theme/carousel/panels/           Frame + Press per-slide panels
 theme/carousel/route-line.tsx    route + start-direction arrow
 theme/carousel/elevation-band.tsx mountain range / sparkline
 theme/carousel/carousel-photo.tsx panorama photo (shared CoverPhoto)
-theme/carousel/<theme>.stories.tsx one story file per theme (required)
+theme/carousel/<theme>.stories.tsx one story file per theme (required) · format-matrix.stories.tsx (every offered format)
 ```
 
 Every panel receives the same `PanelProps` bag (the contract lives beside

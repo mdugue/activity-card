@@ -424,6 +424,8 @@ export default function Home() {
           {mode === "carousel" ? (
             <CarouselEditState
               carousel={carousel}
+              format={getFormat(previewFormat)}
+              onFormatChange={setPreviewFormat}
               onThemeChange={handleCarouselThemeChange}
               session={session}
               theme={carouselTheme}

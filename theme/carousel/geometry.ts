@@ -16,12 +16,41 @@ import {
   type AspectBucket,
   EXPORT_FORMATS,
   type ExportFormat,
+  type ExportFormatId,
   type SafeInsets,
 } from "@/theme/core/export-formats";
 import { useFormat } from "@/theme/shared/format-context";
 
 /** The 4:5 feed master — the carousel's default + the byte-identical baseline. */
 export const FEED_MASTER: ExportFormat = EXPORT_FORMATS["instagram-feed"];
+
+/**
+ * The export formats the CAROUSEL deliberately offers — one per aspect bucket,
+ * NOT the full `FORMAT_ORDER`. A 9:16 or 16:9 slide re-proportions the
+ * route/elevation canvases against a box they weren't authored for; these four
+ * are validated as safe-correct (the canvases place by % and stay aspect-true),
+ * and v1 is safe-correct parity, not per-bucket art direction. (Redundant 9:16
+ * variants — tiktok/whatsapp — are intentionally omitted; Strava shares the
+ * story bucket.)
+ */
+export const CAROUSEL_FORMAT_ORDER: ExportFormatId[] = [
+  "instagram-feed", // 4:5 — the default + byte-identical baseline
+  "square", // 1:1
+  "instagram-story", // 9:16
+  "x-landscape", // 16:9
+];
+
+/** Whether the carousel offers this format id (gates the picker + clamps a
+ *  format inherited from single-card mode). */
+export function isCarouselFormat(id: string): boolean {
+  return (CAROUSEL_FORMAT_ORDER as string[]).includes(id);
+}
+
+/** Clamp an arbitrary format to one the carousel supports — the shared preview
+ *  format may carry a single-card-only bucket (e.g. tiktok); fall back to feed. */
+export function carouselFormat(format: ExportFormat): ExportFormat {
+  return isCarouselFormat(format.id) ? format : FEED_MASTER;
+}
 
 export interface StripGeometry {
   /** aspect bucket of the active format (feed / square / story / landscape) */

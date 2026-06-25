@@ -13,16 +13,17 @@ import { cn } from "@/lib/utils";
 import { CarouselDeck } from "@/theme/carousel/deck";
 import type { CarouselTheme } from "@/theme/carousel/define-theme";
 import type { ColorScheme } from "@/theme/core/colors";
+import type { ExportFormat } from "@/theme/core/export-formats";
 import type { Visibility } from "@/theme/core/visibility";
 
 const THUMB_W = 92;
-const THUMB_H = Math.round((THUMB_W * 1350) / 1080);
-const SCALE = THUMB_W / 1080;
 
 interface SlideStripProps {
   colors: ColorScheme;
   config?: Record<string, unknown>;
   data: ActivityData;
+  /** the active export format — sizes each thumbnail's aspect + slice */
+  format: ExportFormat;
   imageSize?: ImageSize | null;
   imageTransform?: ImageTransform | null;
   onSelect: (index: number) => void;
@@ -34,8 +35,11 @@ interface SlideStripProps {
 }
 
 export function SlideStrip(props: SlideStripProps) {
-  const { selectedIndex, onSelect, theme } = props;
+  const { selectedIndex, onSelect, theme, format } = props;
   const total = theme.panels.length;
+  // Thumbnail aspect + slice scale follow the active format (1080×1350 at feed).
+  const thumbH = Math.round((THUMB_W * format.height) / format.width);
+  const scale = THUMB_W / format.width;
 
   // Each thumb renders the full strip and windows onto its own slice, so the
   // strip, large preview and export are guaranteed to show the same pixels.
@@ -44,6 +48,7 @@ export function SlideStrip(props: SlideStripProps) {
       colors={props.colors}
       config={props.config}
       data={props.data}
+      format={format}
       imageSize={props.imageSize}
       imageTransform={props.imageTransform}
       photoEffects={props.photoEffects}
@@ -73,15 +78,15 @@ export function SlideStrip(props: SlideStripProps) {
                   : "border-foreground/15 opacity-80 hover:opacity-100"
               )}
               onClick={() => onSelect(i)}
-              style={{ width: THUMB_W, height: THUMB_H }}
+              style={{ width: THUMB_W, height: thumbH }}
               type="button"
             >
               <div
                 className="origin-top-left"
                 style={{
-                  width: 1080 * total,
-                  height: 1350,
-                  transform: `translateX(${-(i * THUMB_W)}px) scale(${SCALE})`,
+                  width: format.width * total,
+                  height: format.height,
+                  transform: `translateX(${-(i * THUMB_W)}px) scale(${scale})`,
                 }}
               >
                 {canvas}

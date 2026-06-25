@@ -26,22 +26,33 @@ import { isQuarterTurn } from "@/lib/photo-effects";
 import { cn } from "@/lib/utils";
 import { CarouselDeck } from "@/theme/carousel/deck";
 import {
+  CAROUSEL_FORMAT_ORDER,
+  carouselFormat,
+  stripGeometry,
+} from "@/theme/carousel/geometry";
+import {
   CAROUSEL_THEME_ORDER,
   CAROUSEL_THEMES,
   type CarouselThemeId,
 } from "@/theme/carousel/registry";
+import type { ExportFormat, ExportFormatId } from "@/theme/core/export-formats";
 import {
   carouselBaseName,
   exportCarousel,
 } from "@/theme/export/export-carousel";
 import { useActivityTools } from "./activity-tools";
 import type { EditorSession } from "./editor-session";
+import { FormatControl } from "./format-control";
 import { ImageAdjustOverlay } from "./image-adjust-overlay";
 import { SlideStrip } from "./slide-strip";
 import { ThemeRail } from "./theme-rail";
 
 interface CarouselEditStateProps {
   carousel: CarouselController;
+  /** the active export format (shared with single-card; clamped to a carousel
+   *  bucket here) */
+  format: ExportFormat;
+  onFormatChange: (id: ExportFormatId) => void;
   onThemeChange: (theme: CarouselThemeId) => void;
   session: EditorSession;
   theme: CarouselThemeId;
@@ -51,11 +62,18 @@ export function CarouselEditState({
   carousel,
   session,
   theme,
+  format,
+  onFormatChange,
   onThemeChange,
 }: CarouselEditStateProps) {
   const { data, visibility, color, config, photo } = session;
   const { count, selectedIndex } = carousel;
   const descriptor = CAROUSEL_THEMES[theme];
+  // The shared preview format may carry a single-card-only bucket (e.g. tiktok);
+  // clamp it to one the carousel offers. The strip, every deck mount and the
+  // export all size from this one geometry — no parallel literals.
+  const fmt = carouselFormat(format);
+  const { slideW, slideH, stripW } = stripGeometry(fmt, count);
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const wideRef = useRef<HTMLDivElement>(null);
@@ -75,14 +93,13 @@ export function CarouselEditState({
   // the wide strip's real vertical overflow. A quarter-turn swaps the photo's
   // width/height, so the clamp must use the rotated dimensions.
   const imageSize = useImageNaturalSize(photo.url);
-  const stripW = count * 1080;
   const quarter = isQuarterTurn(photo.effects.rotate);
   const coverClamp = imageSize
     ? (t: ImageTransform) =>
         clampCoverTransform(
           t,
           stripW,
-          1350,
+          slideH,
           quarter ? imageSize.h : imageSize.w,
           quarter ? imageSize.w : imageSize.h
         )
@@ -187,7 +204,8 @@ export function CarouselEditState({
       await exportCarousel(
         wideRef.current,
         count,
-        carouselBaseName(data.sport, data.date)
+        carouselBaseName(data.sport, data.date),
+        fmt
       );
     } catch {
       toast.error("Export failed — please try again.");
@@ -200,6 +218,7 @@ export function CarouselEditState({
     colors: color.scheme,
     config: config.value,
     data,
+    format: fmt,
     imageSize,
     imageTransform: photo.transform,
     photoEffects: photo.effects,
@@ -229,11 +248,12 @@ export function CarouselEditState({
           stage scales it to fit the toolbar-shrunk space on mobile. */}
       <CardStage maxWidthClassName="max-w-[360px]">
         <div
-          className="@container relative aspect-[1080/1350] w-full overflow-x-auto overflow-y-hidden bg-white shadow-[0_24px_50px_-14px_rgba(26,23,20,0.3)]"
+          className="@container relative w-full overflow-x-auto overflow-y-hidden bg-white shadow-[0_24px_50px_-14px_rgba(26,23,20,0.3)]"
           data-testid="carousel-preview"
           onScroll={handleScroll}
           ref={viewportRef}
           style={{
+            aspectRatio: `${slideW} / ${slideH}`,
             scrollSnapType: adjusting ? "none" : "x mandatory",
             overflowX: adjusting ? "hidden" : "auto",
           }}
@@ -245,9 +265,9 @@ export function CarouselEditState({
             <div
               className="absolute top-0 left-0 origin-top-left"
               style={{
-                width: 1080 * count,
-                height: 1350,
-                transform: "scale(calc(100cqw / 1080px))",
+                width: stripW,
+                height: slideH,
+                transform: `scale(calc(100cqw / ${slideW}px))`,
               }}
             >
               <CarouselDeck {...deckProps} />
@@ -310,6 +330,7 @@ export function CarouselEditState({
           colors={color.scheme}
           config={config.value}
           data={data}
+          format={fmt}
           imageSize={imageSize}
           imageTransform={photo.transform}
           onSelect={carousel.select}
@@ -330,10 +351,17 @@ export function CarouselEditState({
           icon: <ImagesIcon aria-hidden className="size-5" weight="duotone" />,
           isBusy: isExporting,
           label: "Export carousel",
-          meta: `${count} × 1080×1350`,
+          meta: `${count} × ${fmt.width}×${fmt.height}`,
           onAction: handleExport,
         }}
         preview={preview}
+        previewControl={
+          <FormatControl
+            format={fmt}
+            onFormatChange={onFormatChange}
+            order={CAROUSEL_FORMAT_ORDER}
+          />
+        }
         tools={tools}
       >
         {/* Off-screen full-width mount used by the slicing export. */}
@@ -342,7 +370,7 @@ export function CarouselEditState({
           className="pointer-events-none fixed top-0 left-0 -z-10"
           style={{ transform: "translateX(-200%)" }}
         >
-          <div ref={wideRef} style={{ width: count * 1080, height: 1350 }}>
+          <div ref={wideRef} style={{ width: stripW, height: slideH }}>
             <CarouselDeck {...deckProps} />
           </div>
         </div>
