@@ -18,9 +18,9 @@ import { statOptsFor } from "@/theme/carousel/stats";
 import type { ColorScheme } from "@/theme/core/colors";
 import type { ExportFormat } from "@/theme/core/export-formats";
 import { DEFAULT_VISIBILITY, type Visibility } from "@/theme/core/visibility";
+import { CoverPhoto } from "@/theme/shared/cover-photo";
 import { FormatProvider, useFormat } from "@/theme/shared/format-context";
 import { PhotoFxProvider } from "@/theme/shared/photo-fx";
-import { CarouselPhoto } from "./carousel-photo";
 import type { CarouselTheme } from "./define-theme";
 import { stripFormat, stripGeometry } from "./geometry";
 
@@ -112,13 +112,15 @@ export function CarouselDeck({
             decode failure) would drop the rotate/flip/filter effects and use
             different geometry than the export, so preview and output diverge. */}
           {showPhoto && photoUrl && imageSize ? (
-            <CarouselPhoto
-              desaturate={desaturate}
+            <CoverPhoto
+              boxH={slideH}
+              boxW={stripW}
               effects={photoEffects}
+              extraFilter={
+                desaturate ? "saturate(0.6) brightness(1.05)" : undefined
+              }
               imageSize={imageSize}
               photoUrl={photoUrl}
-              stripH={slideH}
-              stripW={stripW}
               transform={imageTransform}
             />
           ) : null}

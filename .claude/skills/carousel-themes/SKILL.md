@@ -111,9 +111,9 @@ signature viz only. Legibility comes from, in order of preference:
    opaque boxes.
 
 The panorama itself is the shared natural-size-aware `CoverPhoto`
-(`theme/shared/cover-photo.tsx`, wrapped by `carousel-photo.tsx`):
-quarter-turn rotations swap the element's width/height so the strip stays
-covered. Optional **film grain** survives snapdom because it's decoded as
+(`theme/shared/cover-photo.tsx`, drawn strip-wide by the deck; a panel that wants
+its own windowed copy reaches for `Panorama`): quarter-turn rotations swap the
+element's width/height so the strip stays covered. Optional **film grain** survives snapdom because it's decoded as
 an image, not a live filter. Default-on for the art-print themes via the token
 look's photo fields.
 
@@ -135,7 +135,7 @@ design.)
 The strip is **format-aware**, exactly like a single-card theme — it renders
 *at* the chosen export format and feeds the geometry down, with **no external
 frame** scaling it (read the `theme-architecture` skill). The teachable
-equivalence is **canvas : panel :: FullBleed : SafeArea**:
+equivalence is **canvas : panel :: full-bleed : SafeArea**:
 
 - the **canvas** reads the **strip frame** — its `w`/`h` are the WHOLE strip
   (`count × slide`, at the active format) and it bleeds across every slide edge.
@@ -149,9 +149,8 @@ equivalence is **canvas : panel :: FullBleed : SafeArea**:
   bare constant — that's a dead safe zone.
 
 All sizing flows from `theme/carousel/geometry.ts` (`stripGeometry` /
-`useStripGeometry`, `stripFormat`, `slideFormat`, `slideSafe`); `SLIDE_W/H` are
-demoted to feed-master re-exports, never a parallel size table. The deck, the
-editor preview/strip and the slicing export all read it.
+`useStripGeometry`, `stripFormat`, `CAROUSEL_NATURAL_MARGIN`), never a parallel
+size table. The deck, the editor preview/strip and the slicing export all read it.
 
 The carousel **gates** the formats it offers — `CAROUSEL_FORMAT_ORDER` (one per
 aspect bucket: feed 4:5, square 1:1, story 9:16, landscape 16:9), NOT the full
@@ -205,8 +204,8 @@ theme/carousel/theme-tokens.ts   the look vocabulary — CarouselLook · font pa
 theme/carousel/resolve.ts        look + ColorScheme → EffectiveStyle · heroInk
 theme/carousel/stats.ts          buildStats · heroStat · detailStats · frameStats · pressSlideStats · series
 theme/carousel/marks.ts          CAROUSEL_MARK_PARAMS (effort / page numbers) · carouselMarks(config)
-theme/carousel/geometry.ts       stripGeometry/useStripGeometry · stripFormat · slideFormat · slideSafe · CAROUSEL_NATURAL_MARGIN · CAROUSEL_FORMAT_ORDER
-theme/carousel/types.ts          SLIDE_W/H (feed-master re-exports) · RouteStyle · FontPairId
+theme/carousel/geometry.ts       stripGeometry/useStripGeometry · stripFormat · CAROUSEL_NATURAL_MARGIN · CAROUSEL_FORMAT_ORDER
+theme/carousel/types.ts          RouteStyle · FontPairId
 hooks/use-carousel.ts          panel count → clamped slide selection (one index)
 theme/carousel/define-theme.ts   defineCarouselTheme · CarouselTheme · CanvasProps · PanelProps
 theme/carousel/registry.ts       CAROUSEL_THEMES + CarouselThemeId (one entry per theme, look inline)
@@ -216,7 +215,7 @@ theme/carousel/templates/        standard panels (Hero/StatGrid/Editorial) + Sli
 theme/carousel/panels/           Frame + Press per-slide panels
 theme/carousel/route-line.tsx    route + start-direction arrow
 theme/carousel/elevation-band.tsx mountain range / sparkline
-theme/carousel/carousel-photo.tsx panorama photo (shared CoverPhoto)
+theme/carousel/panorama.tsx      per-panel strip-windowed photo (shared CoverPhoto) — masking / interweaving
 theme/carousel/<theme>.stories.tsx one story file per theme (required) · format-matrix.stories.tsx (every offered format)
 ```
 

@@ -170,7 +170,7 @@ theme/                THE theme feature module — everything that IS a theme, o
                       (`ParamDef` schema + `coerceConfig`). The single source of truth.
   shared/             Rendering utilities both card kinds build on: photo layers
                       (cover-photo, photo-backdrop/layer/fx/underlay), overlay-route,
-                      and `format-context.tsx` (`FormatProvider` / `FullBleed` / `SafeArea`).
+                      and `format-context.tsx` (`FormatProvider` / `SafeArea`).
   single-card/        SINGLE-CARD themes — one file per theme, each exporting its
                       component plus a `defineTheme` descriptor; collected in
                       `index.ts` (`SINGLE_CARD_THEMES` / `ThemeId`).

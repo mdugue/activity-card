@@ -21,12 +21,13 @@ export const DEFAULT_ATMOSPHERE_CONFIG: AtmosphereConfig = {
   atmosphere: "dawn",
 };
 
-export const ATMOSPHERE_LABELS: Record<CarouselAtmosphere, string> = {
+// Internal to the ATMOSPHERE param below — not part of the public surface.
+const ATMOSPHERE_LABELS: Record<CarouselAtmosphere, string> = {
   dawn: "Dawn",
   dusk: "Dusk",
 };
 
-export const ATMOSPHERE_BLURBS: Record<CarouselAtmosphere, string> = {
+const ATMOSPHERE_BLURBS: Record<CarouselAtmosphere, string> = {
   dawn: "first light, serif on paper",
   dusk: "after dark, condensed bold",
 };

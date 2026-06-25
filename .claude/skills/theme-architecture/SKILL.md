@@ -64,8 +64,9 @@ directly at the target size and reads it from context:
   (`theme/shared/format-context.tsx`)
 - `useSafeInsets(natural)` → per-side `mergeSafe(format.safe, natural)` =
   `max(theme's own 4:5 margin, platform safe inset)` (`theme/core/export-formats.ts`)
-- `FullBleed` — a layer that fills the canvas, ignoring safe zones (backgrounds,
-  route / elevation silhouettes)
+- a **full-bleed layer** — anything that fills the root and ignores safe zones
+  (backgrounds, route / elevation silhouettes); just a plain `inset: 0` layer, no
+  wrapper primitive needed (the photo layers already self-position)
 - `SafeArea` — a flex column inset by the resolved safe area (headlines, stats)
 
 Two coordinate systems (full canvas + safe box) live in the **same render tree**,
@@ -81,10 +82,9 @@ The **carousel strip follows the same contract** — it is two nested format
 frames off the one `FormatContext` (no separate machinery, no frame): the
 spanning **canvas** reads the *strip* frame (full bleed across `count` slides),
 each **panel** reads its own *slide* frame and insets via `SafeArea`. The
-teachable equivalence is **canvas : panel :: FullBleed : SafeArea**. The deck
-sizes itself from `theme/carousel/geometry.ts` (`SLIDE_W/H` demoted to
-feed-master re-exports) and the carousel **gates** which buckets it offers
-(`CAROUSEL_FORMAT_ORDER`). See the `carousel-themes` skill.
+teachable equivalence is **canvas : panel :: full-bleed : SafeArea**. The deck
+sizes itself from `theme/carousel/geometry.ts` and the carousel **gates** which
+buckets it offers (`CAROUSEL_FORMAT_ORDER`). See the `carousel-themes` skill.
 
 ```tsx
 // A theme is format-aware like this — no external frame, no surface flag:
@@ -92,7 +92,7 @@ const { width, height } = useFormat();
 const insets = useSafeInsets({ top: 110, right: 90, bottom: 80, left: 90 }); // its 4:5 margins
 return (
   <div style={{ width, height, position: "relative", overflow: "hidden" }}>
-    {photoUrl ? <FullBleed><PhotoLayer .../></FullBleed> : null}   {/* bleeds */}
+    {photoUrl ? <PhotoLayer .../> : null}   {/* bleeds — self-positioned */}
     <SafeArea pad={/* natural margins */}>{/* headline, stats, meta */}</SafeArea>
   </div>
 );
@@ -122,7 +122,7 @@ return (
 2. Is it a shared input (a new format, a global photo effect, a colour source)?
    → provide it via context/props (like `FormatContext`, `PhotoFxProvider`,
    `ColorScheme`) and let each theme consume it. Add a small opt-in primitive
-   (à la `FullBleed`/`SafeArea`) if it needs ergonomics — NOT a god-wrapper.
+   (à la `SafeArea`) if it needs ergonomics — NOT a god-wrapper.
 3. Does one element need two coordinate systems / to interact with another? →
    keep them in the same render tree; never split into independent stacked layers
    that can't share geometry.

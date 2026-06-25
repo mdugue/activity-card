@@ -54,34 +54,6 @@ export function useSafeInsets(natural?: Partial<SafeInsets>): SafeInsets {
 }
 
 /**
- * A layer that fills the whole canvas, ignoring safe zones — for backgrounds and
- * full-bleed silhouettes. Children manage their own `aria-hidden`.
- */
-export function FullBleed({
-  children,
-  style,
-  zIndex,
-}: {
-  children?: ReactNode;
-  style?: CSSProperties;
-  zIndex?: number;
-}) {
-  return (
-    <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        overflow: "hidden",
-        zIndex,
-        ...style,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-/**
  * A flex column inset by the resolved safe area — the home for legible content.
  * `pad` is the theme's natural 4:5 margin; `anchor` places the column within the
  * safe box on the block axis (upper / center / lower).

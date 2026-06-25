@@ -7,7 +7,6 @@ import {
   stripFormat,
   stripGeometry,
 } from "./geometry";
-import { SLIDE_H, SLIDE_W } from "./types";
 
 const PAD = {
   top: CAROUSEL_NATURAL_MARGIN,
@@ -15,12 +14,6 @@ const PAD = {
   bottom: CAROUSEL_NATURAL_MARGIN,
   left: CAROUSEL_NATURAL_MARGIN,
 };
-
-test("SLIDE_W/SLIDE_H are the 1080×1350 feed master", () => {
-  expect([SLIDE_W, SLIDE_H]).toEqual([1080, 1350]);
-  expect(SLIDE_W).toBe(EXPORT_FORMATS["instagram-feed"].width);
-  expect(SLIDE_H).toBe(EXPORT_FORMATS["instagram-feed"].height);
-});
 
 describe("stripGeometry", () => {
   test("slide dims = the format; strip = count × slideW", () => {
