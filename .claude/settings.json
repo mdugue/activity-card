@@ -9,7 +9,13 @@
       "Bash(npx -y modern-web-guidance@latest search \"viewport units svh dvh and safe-area-inset env variables for device notch\" --skill-version 2026_05_16-c5e7870)",
       "Bash(npx -y modern-web-guidance@latest retrieve \"fluid-scaling,size-aware-styling\")",
       "Bash(bunx biome *)",
-      "Bash(bun run *)"
+      "Bash(bun run *)",
+      "WebSearch",
+      "WebFetch(domain:support.strava.com)",
+      "WebFetch(domain:communityhub.strava.com)",
+      "WebFetch(domain:developer.twitter.com)",
+      "WebFetch(domain:docs.x.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   },
   "hooks": {
