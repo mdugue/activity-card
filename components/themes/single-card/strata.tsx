@@ -488,6 +488,12 @@ export function ThemeStrata({
                 fontSize: 56,
                 fontWeight: 700,
                 lineHeight: 1,
+                // A stat value is atomic — never break "3h 42m" at the space.
+                // The strip is a space-between flex row sitting near its content
+                // width; a sub-pixel font-metric shift in the rasterised snapshot
+                // would otherwise tip a cell into flex-shrink + wrap, so the
+                // export wraps where the live preview doesn't.
+                whiteSpace: "nowrap",
               }}
             >
               {v}
