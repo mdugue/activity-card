@@ -6,7 +6,12 @@
 
 import { toCanvas } from "html-to-image";
 import { SLIDE_H, SLIDE_W } from "@/lib/carousel/types";
-import { effortDateSlug, isIos, waitForFonts } from "./export-shared";
+import {
+  effortDateSlug,
+  isDesktopDevice,
+  isIos,
+  waitForFonts,
+} from "./export-shared";
 
 const PIXEL_RATIO = 2; // 1080×1350 → 2160×2700, matching the single card
 const MAX_CANVAS_DIM = 16_384; // conservative cross-browser canvas width cap
@@ -38,7 +43,7 @@ async function deliver(files: File[]): Promise<void> {
     return;
   }
   const nav = typeof navigator === "undefined" ? undefined : navigator;
-  if (nav?.canShare?.({ files })) {
+  if (!isDesktopDevice() && nav?.canShare?.({ files })) {
     try {
       await nav.share({ files, title: "My Effort carousel" });
       return;

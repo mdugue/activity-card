@@ -1,0 +1,1 @@
+- [Format-aware themes](format-aware-themes.md) — single-card render migrated off FormatFrame; themes render at target size via FormatContext + mergeSafe; open follow-ups (Strata bottom, per-bucket tuning, idealized Altitude full-bleed curve)

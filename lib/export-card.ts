@@ -1,16 +1,27 @@
 import { toPng } from "html-to-image";
-import { effortDateSlug, isIos, waitForFonts } from "./export-shared";
+import type { ActivityData } from "./activity";
+import { isDesktopDevice, isIos, waitForFonts } from "./export-shared";
+import {
+  applyMetadata,
+  type MetadataInput,
+  type MetadataOptions,
+  routeCentroid,
+} from "./metadata";
 
 export interface ExportOptions {
   filename?: string;
   height?: number;
+  /** Effort attribution (+ optional GPS) baked into the PNG when provided. */
+  metadata?: MetadataInput;
+  metadataOptions?: MetadataOptions;
   pixelRatio?: number;
   width?: number;
 }
 
 /**
- * Rasterize a DOM node to PNG at the given intrinsic size, then either
- * share via the Web Share API (mobile) or trigger a download (desktop).
+ * Rasterize a DOM node to PNG at the given intrinsic size, inject metadata,
+ * then either share via the Web Share API (mobile) or trigger a download
+ * (desktop).
  */
 export async function exportCard(
   node: HTMLElement,
@@ -21,6 +32,8 @@ export async function exportCard(
     height = 1350,
     pixelRatio = 2,
     filename = "effort-card.png",
+    metadata,
+    metadataOptions,
   } = opts;
 
   await waitForFonts();
@@ -48,11 +61,15 @@ export async function exportCard(
 
   const dataUrl = await toPng(node, renderOptions);
 
-  const blob = await (await fetch(dataUrl)).blob();
+  // Inject Effort metadata into the raw PNG bytes (canvas output carries none).
+  const raw = new Uint8Array(await (await fetch(dataUrl)).arrayBuffer());
+  const bytes = metadata ? applyMetadata(raw, metadata, metadataOptions) : raw;
+  // reason: BlobPart typing predates ArrayBufferView<ArrayBuffer> narrowing.
+  const blob = new Blob([bytes as BlobPart], { type: "image/png" });
   const file = new File([blob], filename, { type: "image/png" });
 
   const nav = typeof navigator === "undefined" ? undefined : navigator;
-  if (nav?.canShare?.({ files: [file] })) {
+  if (!isDesktopDevice() && nav?.canShare?.({ files: [file] })) {
     try {
       await nav.share({ files: [file], title: "My Effort card" });
       return;
@@ -64,18 +81,31 @@ export async function exportCard(
     }
   }
 
-  triggerDownload(dataUrl, filename);
+  triggerDownload(blob, filename);
 }
 
-function triggerDownload(dataUrl: string, filename: string) {
+function triggerDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = dataUrl;
+  a.href = url;
   a.download = filename;
   document.body.appendChild(a);
   a.click();
   a.remove();
+  URL.revokeObjectURL(url);
 }
 
-export function defaultFilename(sport: string, date: string): string {
-  return `effort_${sport}_${effortDateSlug(date)}.png`;
+/** Map an activity to the metadata baked into its export (GPS gated by opts). */
+export function activityMetadata(
+  data: ActivityData,
+  url?: string
+): MetadataInput {
+  return {
+    athleteName: data.athleteName || undefined,
+    date: data.date,
+    location: data.location || undefined,
+    point: routeCentroid(data.routeCoordinates),
+    title: data.title || undefined,
+    url,
+  };
 }

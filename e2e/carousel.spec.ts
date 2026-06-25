@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { TINY_PNG_BASE64 } from "./fixtures";
-import { enterEditViaUpload } from "./helpers";
+import { enterEditViaUpload, selectCarousel } from "./helpers";
 
 /**
  * Carousel Post mode (seamless, deck-wide). Runs against the production build,
@@ -10,8 +10,10 @@ import { enterEditViaUpload } from "./helpers";
  */
 test.describe("carousel mode", () => {
   test.beforeEach(async ({ page }) => {
-    // Carousel is the default mode, so uploading lands straight in it.
     await enterEditViaUpload(page);
+    // Select carousel explicitly so the suite is independent of the editor's
+    // default mode.
+    await selectCarousel(page);
   });
 
   test("generates a default storyboard and renders without page errors", async ({
@@ -96,6 +98,7 @@ test.describe("carousel mode", () => {
 test.describe("carousel photo backdrop", () => {
   test.beforeEach(async ({ page }) => {
     await enterEditViaUpload(page);
+    await selectCarousel(page);
   });
 
   test("'Use as background' toggles the deck photo and its controls", async ({

@@ -58,6 +58,9 @@ interface ControlDeckProps {
   /** off-screen export mounts and any other siblings */
   children?: React.ReactNode;
   preview: React.ReactNode;
+  /** a preview-level control pinned beside the action (e.g. the format picker) —
+   *  distinct from the scrolling settings tabs and the action itself */
+  previewControl?: React.ReactNode;
   tools: ControlTool[];
 }
 
@@ -72,6 +75,7 @@ export const PANEL_MOTION =
 export function ControlDeck({
   tools,
   preview,
+  previewControl,
   action,
   children,
 }: ControlDeckProps) {
@@ -198,12 +202,21 @@ export function ControlDeck({
 
       {/* DOCK — category tabs (mobile) + the export action (both). Full-bleed,
           pinned at the foot; tabs hide on desktop where the panel shows
-          everything at once. */}
+          everything at once. On desktop it sticks to the bottom of the right
+          column so the format picker + Export stay in reach while the (often
+          taller-than-viewport) controls scroll behind it — the bottom mirror of
+          the preview's `lg:sticky lg:top-6`. `bg-background` masks the scrolled
+          controls; `border-t` separates it from them. */}
       <div
         className={cn(
           "flex items-stretch gap-2 [grid-area:dock]",
           "max-lg:border-foreground/12 max-lg:border-t max-lg:bg-popover max-lg:p-2 max-lg:pb-[max(0.5rem,env(safe-area-inset-bottom))]",
-          "lg:gap-0 lg:border-0 lg:bg-transparent lg:p-0"
+          // Desktop: span the full right column (both grid rows) and sit at its
+          // foot via `self-end`, so the sticky box has the whole column as its
+          // containing block to range over — a one-row cell gives sticky no room.
+          // Then pin to the viewport bottom; `bg-background` masks the controls
+          // scrolling behind it, `border-t` divides it from them.
+          "lg:sticky lg:bottom-0 lg:z-20 lg:gap-2 lg:self-end lg:border-foreground/10 lg:border-t lg:bg-background lg:px-0 lg:pt-4 lg:pb-4 lg:[grid-area:1/2/-1/-1]"
         )}
       >
         <ToggleGroup
@@ -232,8 +245,12 @@ export function ControlDeck({
           ))}
         </ToggleGroup>
 
+        {/* Preview-level control (e.g. the format picker) — pinned beside the
+            action, never part of the scrolling settings tabs. */}
+        {previewControl}
+
         <Button
-          className="h-auto w-14 shrink-0 flex-col gap-1 rounded-md px-1 py-2 lg:w-full lg:flex-row lg:justify-between lg:px-8 lg:py-4"
+          className="h-auto w-14 shrink-0 flex-col gap-1 rounded-md px-1 py-2 lg:w-auto lg:flex-1 lg:flex-row lg:justify-between lg:px-8 lg:py-4"
           data-testid="export-action"
           disabled={action.isBusy}
           onClick={action.onAction}

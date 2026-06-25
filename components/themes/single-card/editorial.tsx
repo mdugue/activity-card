@@ -18,6 +18,7 @@ import {
   segmentRoutes,
 } from "@/lib/multi-activity";
 import { defineTheme, type ThemeProps } from "@/lib/theme-contract";
+import { SafeArea, useFormat } from "../shared/format-context";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoBackdrop } from "../shared/photo-backdrop";
 
@@ -51,14 +52,25 @@ function Row({ k, v }: RowProps) {
   return (
     <div
       style={{
-        display: "flex",
-        justifyContent: "space-between",
+        // Two tracks (key auto · value 1fr, right-aligned) instead of a
+        // space-between flex: in a narrow 2-up landscape column the value wraps
+        // WITHIN its own track instead of colliding with the key.
+        display: "grid",
+        gridTemplateColumns: "auto 1fr",
+        columnGap: 16,
+        alignItems: "baseline",
         borderBottom: "1px solid rgba(26,24,22,0.18)",
-        padding: "7px 0",
+        // Fluid row height: compresses on a short canvas so the full figures
+        // table clears the foot. cqb resolves to the card (container-type:size).
+        padding: "clamp(2px, 0.7cqb, 7px) 0",
       }}
     >
       <span style={{ opacity: 0.6, letterSpacing: "0.1em" }}>{k}</span>
-      <span>{v}</span>
+      <span
+        style={{ textAlign: "right", minWidth: 0, wordBreak: "break-word" }}
+      >
+        {v}
+      </span>
     </div>
   );
 }
@@ -129,6 +141,7 @@ export function ThemeEditorial({
   imageTransform,
   colors,
 }: ThemeProps<(typeof USES)[number]>) {
+  const { width, height } = useFormat();
   const accent = colors?.primary ?? DEFAULT_ACCENT;
   const sport = data.sport;
   const multi = isMultiActivity(data);
@@ -180,17 +193,18 @@ export function ThemeEditorial({
   return (
     <div
       style={{
-        width: 1080,
-        height: 1350,
+        width,
+        height,
         background: PAPER,
         color: INK,
         fontFamily: "var(--font-geist-mono), monospace",
-        padding: "110px 110px 90px 110px",
-        boxSizing: "border-box",
         position: "relative",
-        display: "flex",
-        flexDirection: "column",
         overflow: "hidden",
+        // The card itself is the query container: the giant numeral and the
+        // headings size against its width (cqi, narrow in a 2-up landscape
+        // spread) and height (cqb, short in landscape/square) — no per-aspect
+        // branch, the layout just reflows.
+        containerType: "size",
       }}
     >
       {photoUrl ? (
@@ -200,204 +214,258 @@ export function ThemeEditorial({
           treatment="editorial"
         />
       ) : null}
-      {/* Content sits above the backdrop layer. */}
-      <div
-        style={{
-          position: "relative",
-          zIndex: 1,
-          display: "flex",
-          flexDirection: "column",
-          flex: 1,
-        }}
+      {/* Content sits above the backdrop layer, inset by the safe area. */}
+      <SafeArea
+        pad={{ top: 110, right: 110, bottom: 90, left: 110 }}
+        style={{ flex: 1, zIndex: 1 }}
       >
-        {/* Top eyebrow */}
+        {/* One self-reflowing grid: region A (numeral block) and region B (the
+            body) sit stacked at 4:5 / 1:1 / 9:16 (content ≈860 → 1 column) and
+            side-by-side at 16:9 (content ≈1380 → 2 columns). MIN is tuned so
+            2×MIN+gap overflows portrait but 2×MIN+gap fits landscape. */}
         <div
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            fontSize: 26,
-            letterSpacing: "0.32em",
-            opacity: 0.75,
-            fontWeight: 500,
-          }}
-        >
-          <span>EFFORT · ISSUE №{issueNum}</span>
-          <span>{formatDateUpper(data.date)}</span>
-        </div>
-
-        {/* Massive distance numeral as the visual anchor */}
-        <div style={{ marginTop: 96, position: "relative" }}>
-          <div
-            style={{
-              fontFamily: "var(--font-instrument-serif), serif",
-              fontSize: 320,
-              lineHeight: 0.85,
-              letterSpacing: "-0.04em",
-              fontWeight: 400,
-              fontStyle: "italic",
-              color: INK,
-            }}
-          >
-            {dist}
-          </div>
-          <div
-            style={{
-              fontFamily: "var(--font-instrument-serif), serif",
-              fontSize: 52,
-              fontStyle: "italic",
-              marginTop: 14,
-              color: accent,
-            }}
-          >
-            {distUnit}, and then —
-          </div>
-        </div>
-
-        {/* Body */}
-        <div
-          style={{
-            marginTop: 70,
-            display: "grid",
-            gridTemplateColumns: "1.2fr 0.9fr",
-            gap: 56,
             flex: 1,
             minHeight: 0,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(620px, 1fr))",
+            // `auto` (not minmax(0,…)) so stacked rows take their content height
+            // and never overlap; the per-element clamps keep that height in
+            // budget on short canvases.
+            gridAutoRows: "auto",
+            alignContent: "start",
+            gap: "clamp(14px, 3cqi, 64px)",
           }}
         >
-          <div>
+          {/* Region A — eyebrow + the massive distance numeral + subtitle */}
+          <div style={{ minWidth: 0 }}>
+            {/* Top eyebrow */}
             <div
               style={{
-                fontSize: 24,
-                letterSpacing: "0.28em",
-                opacity: 0.7,
-                marginBottom: 20,
-                fontWeight: 600,
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 16,
+                // Size by the card HEIGHT (cqb), not width: in landscape the card
+                // is short — the signal that region A is also narrow — so the
+                // eyebrow shrinks just enough to sit on one line. Feed/story stay
+                // 26px (cqb hits the cap). nowrap stops mid-token breaks.
+                fontSize: "clamp(18px, 2.4cqb, 26px)",
+                letterSpacing: "0.32em",
+                opacity: 0.75,
+                fontWeight: 500,
+                whiteSpace: "nowrap",
               }}
             >
-              THE EFFORT
+              <span>EFFORT · ISSUE №{issueNum}</span>
+              <span>{formatDateUpper(data.date)}</span>
             </div>
-            <h2
-              style={{
-                fontFamily: "var(--font-instrument-serif), serif",
-                fontSize: 76,
-                lineHeight: 1,
-                letterSpacing: "-0.015em",
-                fontWeight: 400,
-                margin: 0,
-                textWrap: "pretty",
-              }}
-            >
-              {data.title}.
-            </h2>
+
+            {/* Massive distance numeral as the visual anchor */}
             <div
               style={{
-                marginTop: 40,
-                fontSize: 24,
-                lineHeight: 1.55,
-                opacity: 0.8,
-                maxWidth: 460,
+                marginTop: "clamp(16px, 3cqb, 96px)",
+                position: "relative",
               }}
             >
-              {intro}
-              {data.location
-                ? `Recorded in ${data.location.split(",")[0]}, on a ${morningWord} morning.`
-                : `Recorded on a ${morningWord} morning.`}{" "}
-              {paceLabel}.
+              <div
+                style={{
+                  fontFamily: "var(--font-instrument-serif), serif",
+                  // Clamp HARD: full 320 on the roomy feed master, shrinking
+                  // with the card's width (2-up landscape column) or height
+                  // (short square / landscape canvas).
+                  fontSize: "clamp(110px, min(34cqi, 18cqb), 320px)",
+                  lineHeight: 0.85,
+                  letterSpacing: "-0.04em",
+                  fontWeight: 400,
+                  fontStyle: "italic",
+                  color: INK,
+                }}
+              >
+                {dist}
+              </div>
+              <div
+                style={{
+                  fontFamily: "var(--font-instrument-serif), serif",
+                  fontSize: "clamp(28px, min(6cqi, 7cqb), 52px)",
+                  fontStyle: "italic",
+                  marginTop: 14,
+                  color: accent,
+                }}
+              >
+                {distUnit}, and then —
+              </div>
             </div>
           </div>
 
+          {/* Region B — THE EFFORT text · THE LINE route · THE FIGURES table */}
           <div
             style={{
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between",
+              minWidth: 0,
+              minHeight: 0,
+              display: "grid",
+              // The editorial 1.2/0.9 asymmetry kept; minmax(0,…) lets both
+              // columns shrink below their content so a narrow region-B (the
+              // 2-up landscape spread) compresses instead of overflowing.
+              gridTemplateColumns: "minmax(0, 1.2fr) minmax(0, 0.9fr)",
+              gap: "clamp(24px, 3cqi, 56px)",
+              alignContent: "start",
             }}
           >
-            {/* Tiny route */}
-            <div>
+            <div style={{ minWidth: 0 }}>
               <div
                 style={{
-                  fontSize: 24,
-                  letterSpacing: "0.28em",
-                  opacity: 0.7,
-                  fontWeight: 600,
-                }}
-              >
-                THE LINE
-              </div>
-              <svg
-                aria-hidden="true"
-                style={{ width: "100%", height: 180, marginTop: 10 }}
-                viewBox="0 0 280 200"
-              >
-                <title>Route silhouette</title>
-                <EditorialRoute
-                  accent={accent}
-                  coords={data.routeCoordinates}
-                  multi={multi}
-                  routes={routes}
-                  sport={sport}
-                />
-              </svg>
-            </div>
-
-            {/* Metadata table */}
-            <div style={{ fontSize: 24, lineHeight: 1.8 }}>
-              <div
-                style={{
-                  fontSize: 24,
+                  fontSize: "clamp(18px, 2.2cqi, 24px)",
                   letterSpacing: "0.28em",
                   opacity: 0.7,
                   marginBottom: 20,
                   fontWeight: 600,
                 }}
               >
-                THE FIGURES
+                THE EFFORT
               </div>
-              {/* Every row gates on its datum: a field the file lacks (or the
+              <h2
+                style={{
+                  fontFamily: "var(--font-instrument-serif), serif",
+                  fontSize: "clamp(40px, min(8cqi, 12cqb), 76px)",
+                  lineHeight: 1,
+                  letterSpacing: "-0.015em",
+                  fontWeight: 400,
+                  margin: 0,
+                  textWrap: "pretty",
+                }}
+              >
+                {data.title}.
+              </h2>
+              <div
+                style={{
+                  marginTop: "clamp(20px, 4cqb, 40px)",
+                  fontSize: "clamp(18px, 2.2cqi, 24px)",
+                  lineHeight: 1.55,
+                  opacity: 0.8,
+                  maxWidth: 460,
+                }}
+              >
+                {intro}
+                {data.location
+                  ? `Recorded in ${data.location.split(",")[0]}, on a ${morningWord} morning.`
+                  : `Recorded on a ${morningWord} morning.`}{" "}
+                {paceLabel}.
+              </div>
+            </div>
+
+            <div
+              style={{
+                minWidth: 0,
+                minHeight: 0,
+                display: "flex",
+                flexDirection: "column",
+                gap: "clamp(10px, 2.5cqb, 40px)",
+              }}
+            >
+              {/* Tiny route */}
+              <div style={{ minHeight: 0 }}>
+                <div
+                  style={{
+                    fontSize: "clamp(18px, 2.2cqi, 24px)",
+                    letterSpacing: "0.28em",
+                    opacity: 0.7,
+                    fontWeight: 600,
+                  }}
+                >
+                  THE LINE
+                </div>
+                <svg
+                  aria-hidden="true"
+                  // Fluid height: tall on the roomy master, shrinking on a
+                  // short landscape/square canvas so the figures table below it
+                  // still clears the foot.
+                  style={{
+                    width: "100%",
+                    height: "clamp(50px, 7cqb, 180px)",
+                    marginTop: 10,
+                    display: "block",
+                  }}
+                  viewBox="0 0 280 200"
+                >
+                  <title>Route silhouette</title>
+                  <EditorialRoute
+                    accent={accent}
+                    coords={data.routeCoordinates}
+                    multi={multi}
+                    routes={routes}
+                    sport={sport}
+                  />
+                </svg>
+              </div>
+
+              {/* Metadata table */}
+              <div
+                style={{
+                  fontSize: "clamp(16px, min(2cqi, 2.6cqb), 24px)",
+                  // Fluid leading in px: tight on a short canvas, airy on the
+                  // tall feed master (clamp/cqb resolve to px before capture).
+                  lineHeight: "clamp(20px, 2.5cqb, 44px)",
+                  minHeight: 0,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "clamp(18px, 2.2cqi, 24px)",
+                    letterSpacing: "0.28em",
+                    opacity: 0.7,
+                    marginBottom: "clamp(4px, 1.3cqb, 20px)",
+                    fontWeight: 600,
+                  }}
+                >
+                  THE FIGURES
+                </div>
+                {/* Every row gates on its datum: a field the file lacks (or the
                   user toggled off) drops the whole row, never a dashed value. */}
-              {data.date ? <Row k="Date" v={friendlyDate} /> : null}
-              {data.location ? <Row k="Place" v={data.location} /> : null}
-              <Row k="Time" v={formatDuration(data.durationSec)} />
-              {sport === "ride" && has(data.elevationGainM) && (
-                <Row
-                  k="Elevation"
-                  v={`${formatNumber(data.elevationGainM)} m`}
-                />
-              )}
-              {sport === "ride" && has(data.avgSpeedKmh) && (
-                <Row
-                  k="Speed"
-                  v={`${formatNumber(data.avgSpeedKmh, 1)} km/h`}
-                />
-              )}
-              {sport === "run" && has(data.avgPaceMinPerKm) && (
-                <Row
-                  k="Pace"
-                  v={`${formatPaceMin(data.avgPaceMinPerKm)} /km`}
-                />
-              )}
-              {sport === "run" && has(data.avgCadence) && (
-                <Row k="Cadence" v={`${formatNumber(data.avgCadence)} spm`} />
-              )}
-              {sport === "swim" && has(data.avgPacePer100m) && (
-                <Row k="/100 m" v={formatPaceSec(data.avgPacePer100m)} />
-              )}
-              {sport === "swim" && has(data.swolf) && (
-                <Row k="SWOLF" v={formatNumber(data.swolf)} />
-              )}
-              {has(data.avgHeartRate) && (
-                <Row k="Heart" v={`${data.avgHeartRate} bpm`} />
-              )}
-              {data.athleteName && <Row k="By" v={data.athleteName} />}
+                {data.date ? <Row k="Date" v={friendlyDate} /> : null}
+                {data.location ? <Row k="Place" v={data.location} /> : null}
+                <Row k="Time" v={formatDuration(data.durationSec)} />
+                {sport === "ride" && has(data.elevationGainM) && (
+                  <Row
+                    k="Elevation"
+                    v={`${formatNumber(data.elevationGainM)} m`}
+                  />
+                )}
+                {sport === "ride" && has(data.avgSpeedKmh) && (
+                  <Row
+                    k="Speed"
+                    v={`${formatNumber(data.avgSpeedKmh, 1)} km/h`}
+                  />
+                )}
+                {sport === "run" && has(data.avgPaceMinPerKm) && (
+                  <Row
+                    k="Pace"
+                    v={`${formatPaceMin(data.avgPaceMinPerKm)} /km`}
+                  />
+                )}
+                {sport === "run" && has(data.avgCadence) && (
+                  <Row k="Cadence" v={`${formatNumber(data.avgCadence)} spm`} />
+                )}
+                {sport === "swim" && has(data.avgPacePer100m) && (
+                  <Row k="/100 m" v={formatPaceSec(data.avgPacePer100m)} />
+                )}
+                {sport === "swim" && has(data.swolf) && (
+                  <Row k="SWOLF" v={formatNumber(data.swolf)} />
+                )}
+                {has(data.avgHeartRate) && (
+                  <Row k="Heart" v={`${data.avgHeartRate} bpm`} />
+                )}
+                {data.athleteName && <Row k="By" v={data.athleteName} />}
+              </div>
             </div>
           </div>
+          {/* end region B */}
         </div>
+        {/* end reflow grid */}
 
         {/* Foot */}
         <div
           style={{
-            marginTop: 50,
+            marginTop: "clamp(20px, 3cqb, 50px)",
             paddingTop: 26,
             borderTop: `1px solid ${INK}`,
             opacity: 0.85,
@@ -412,7 +480,7 @@ export function ThemeEditorial({
           <span>— FIN —</span>
           <span style={{ color: accent }}>EFFORT · PRINTED MMXXVI</span>
         </div>
-      </div>
+      </SafeArea>
     </div>
   );
 }

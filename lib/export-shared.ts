@@ -27,3 +27,19 @@ export async function waitForFonts(): Promise<void> {
 export function effortDateSlug(date: string): string {
   return date.replace(/[^0-9-]/g, "") || "undated";
 }
+
+export function isDesktopDevice(): boolean {
+  if (typeof window === "undefined" || !navigator) {
+    return false;
+  }
+
+  // 1. Core platform check via userAgent
+  const isDesktopPlatform = DESKTOP_PLATFORM_REGEX.test(navigator.userAgent);
+
+  // 2. The iPad Trap: Modern iPads send "Macintosh" but support multi-touch
+  const isIPad = navigator.maxTouchPoints && navigator.maxTouchPoints > 1;
+
+  return isDesktopPlatform && !isIPad;
+}
+
+const DESKTOP_PLATFORM_REGEX = /Macintosh|Windows|Linux/;

@@ -29,6 +29,7 @@ import {
   segmentRoutes,
 } from "@/lib/multi-activity";
 import { defineTheme, type ThemeProps } from "@/lib/theme-contract";
+import { SafeArea, useFormat } from "../shared/format-context";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoUnderlay } from "../shared/photo-underlay";
 
@@ -66,20 +67,39 @@ function Cell({ children, dense, label, span = 1, unit, value }: CellProps) {
     <div
       style={{
         gridColumn: `span ${span}`,
+        // Each cell is its own query container so its value numeral sizes to the
+        // cell box — narrow cells (landscape, many columns) and short cells
+        // (square) both shrink the numeral instead of overflowing.
+        containerType: "size",
         border: `1.5px solid ${INK}`,
-        padding: dense ? "20px 22px" : "24px 26px",
+        padding: dense
+          ? "clamp(8px, 3cqb, 16px) 18px"
+          : "clamp(8px, 3cqb, 18px) 22px",
         background: PANEL,
-        minHeight: 110,
+        // No fixed minHeight: cells compress to share the body's vertical budget.
+        minHeight: 0,
+        minWidth: 0,
+        display: "flex",
+        flexDirection: "column",
+        // Label pinned at top, value beneath it: the label is always visible;
+        // a too-tall value clips at the bottom (the lesser evil) rather than
+        // pushing the label off the top of the cell.
+        justifyContent: "flex-start",
+        gap: "clamp(4px, 4cqb, 12px)",
         position: "relative",
+        overflow: "hidden",
       }}
     >
       <div
         style={{
-          fontSize: 24,
-          letterSpacing: "0.18em",
+          fontSize: "clamp(16px, min(7cqi, 22cqb), 24px)",
+          lineHeight: 1.1,
+          letterSpacing: "0.16em",
           opacity: 0.7,
           textTransform: "uppercase",
           fontWeight: 600,
+          whiteSpace: "nowrap",
+          flex: "0 0 auto",
         }}
       >
         {label}
@@ -87,18 +107,21 @@ function Cell({ children, dense, label, span = 1, unit, value }: CellProps) {
       {value !== undefined && (
         <div
           style={{
-            marginTop: 10,
             fontFamily: "var(--font-archivo-narrow), sans-serif",
             fontWeight: 700,
-            fontSize: 64,
+            // Big numeral shrinks with the cell's width (cqi → narrow landscape
+            // columns) and height (cqb → short square cells). The cqb term is
+            // kept modest so label + value both clear the cell's padding.
+            fontSize: "clamp(26px, min(26cqi, 30cqb), 64px)",
             lineHeight: 1,
+            whiteSpace: "nowrap",
           }}
         >
           {value}
           {unit && (
             <span
               style={{
-                fontSize: 26,
+                fontSize: "clamp(15px, min(11cqi, 20cqb), 26px)",
                 opacity: 0.6,
                 marginLeft: 8,
                 fontFamily: "var(--font-mono), monospace",
@@ -180,6 +203,7 @@ export function ThemeData({
   imageTransform,
   colors,
 }: ThemeProps<(typeof USES)[number]>) {
+  const { width, height } = useFormat();
   const accent = colors?.primary ?? DEFAULT_ACCENT;
   const sport = data.sport;
   const multi = isMultiActivity(data);
@@ -324,426 +348,509 @@ export function ThemeData({
   return (
     <div
       style={{
-        width: 1080,
-        height: 1350,
+        width,
+        height,
         background: BG,
         color: INK,
         fontFamily: "var(--font-mono), monospace",
-        padding: "60px 56px 52px 56px",
-        boxSizing: "border-box",
         position: "relative",
+        // Query container for the whole card: title + section heights size to
+        // the card's width (cqi) and height (cqb) so the dashboard reflows fluid
+        // across the short/wide landscape and short square formats.
+        containerType: "size",
         // Stacking context so the z-index:-1 photo underlay paints above the
         // solid background (not behind it) and below the dense content.
         isolation: "isolate",
-        display: "flex",
-        flexDirection: "column",
+        overflow: "hidden",
       }}
     >
       {photoUrl ? (
         <PhotoUnderlay imageTransform={imageTransform} photoUrl={photoUrl} />
       ) : null}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-end",
-          borderBottom: `3px solid ${INK}`,
-          paddingBottom: 20,
-          marginBottom: 22,
-        }}
-      >
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{ fontSize: 24, letterSpacing: "0.3em", fontWeight: 600 }}
-          >
-            EFFORT · {sport.toUpperCase()}
-          </div>
-          <h1
-            style={{
-              fontFamily: "var(--font-archivo-narrow), sans-serif",
-              fontWeight: 700,
-              fontSize: 84,
-              lineHeight: 0.95,
-              letterSpacing: "-0.01em",
-              margin: "14px 0 0 0",
-              textTransform: "uppercase",
-              textWrap: "pretty",
-            }}
-          >
-            {data.title}
-          </h1>
-        </div>
+      <SafeArea pad={{ top: 60, right: 56, bottom: 52, left: 56 }}>
         <div
           style={{
-            textAlign: "right",
-            fontSize: 22,
-            letterSpacing: "0.16em",
-            lineHeight: 1.45,
-            fontWeight: 600,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+            borderBottom: `3px solid ${INK}`,
+            paddingBottom: "clamp(10px, 2cqb, 20px)",
+            marginBottom: "clamp(10px, 2cqb, 22px)",
             flex: "0 0 auto",
-            marginLeft: 24,
           }}
         >
-          <div>{formatDateUpper(data.date)}</div>
-          <div style={{ opacity: 0.7 }}>
-            {data.location.split(",")[0].toUpperCase()}
-          </div>
-          {data.athleteName && (
-            <div style={{ marginTop: 8 }}>
-              ATH · {data.athleteName.toUpperCase()}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{ fontSize: 24, letterSpacing: "0.3em", fontWeight: 600 }}
+            >
+              EFFORT · {sport.toUpperCase()}
             </div>
-          )}
-        </div>
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 14,
-          marginBottom: 14,
-        }}
-      >
-        <div
-          style={{
-            border: `1.5px solid ${INK}`,
-            padding: 22,
-            background: PANEL,
-            position: "relative",
-          }}
-        >
-          <div
-            style={{
-              fontSize: 24,
-              letterSpacing: "0.18em",
-              opacity: 0.7,
-              fontWeight: 600,
-            }}
-          >
-            ROUTE
-          </div>
-          <svg
-            aria-hidden="true"
-            style={{ width: "100%", height: 180, marginTop: 8 }}
-            viewBox="0 0 460 200"
-          >
-            <title>Route</title>
-            {Array.from({ length: 10 }, (_, i) => (
-              <line
-                key={`v-${i}`}
-                stroke={GRID}
-                strokeWidth={0.5}
-                x1={i * 46}
-                x2={i * 46}
-                y1={0}
-                y2={200}
-              />
-            ))}
-            {Array.from({ length: 5 }, (_, i) => (
-              <line
-                key={`h-${i}`}
-                stroke={GRID}
-                strokeWidth={0.5}
-                x1={0}
-                x2={460}
-                y1={i * 50}
-                y2={i * 50}
-              />
-            ))}
-            <DataRoute
-              accent={accent}
-              coords={data.routeCoordinates}
-              multi={multi}
-              routes={routes}
-              sport={sport}
-            />
-          </svg>
-        </div>
-        <div
-          style={{
-            border: `1.5px solid ${INK}`,
-            padding: 22,
-            background: PANEL,
-          }}
-        >
-          <div
-            style={{
-              fontSize: 24,
-              letterSpacing: "0.18em",
-              opacity: 0.7,
-              fontWeight: 600,
-            }}
-          >
-            {chartLabel}
-          </div>
-          <svg
-            aria-hidden="true"
-            style={{ width: "100%", height: 180, marginTop: 8 }}
-            viewBox="0 0 460 200"
-          >
-            <title>{chartLabel}</title>
-            {Array.from({ length: 5 }, (_, i) => (
-              <line
-                key={`h-${i}`}
-                stroke={GRID}
-                strokeWidth={0.5}
-                x1={0}
-                x2={460}
-                y1={i * 50}
-                y2={i * 50}
-              />
-            ))}
-            {multi
-              ? sequencePaths(elevCurves, 460, 200).map((op, i) => {
-                  const shade = elevShades[i];
-                  return (
-                    <g key={`elev-${i}-${op.endX.toFixed(0)}`}>
-                      <path d={op.area} fill={shade} fillOpacity={0.18} />
-                      <path
-                        d={op.line}
-                        fill="none"
-                        stroke={shade}
-                        strokeLinejoin="round"
-                        strokeWidth={2.2}
-                      />
-                    </g>
-                  );
-                })
-              : null}
-            {!multi && sport === "run" && data.paceProfile && (
-              <path
-                d={pacePath(data.paceProfile, 460, 200, 8, true)}
-                fill={accent}
-                fillOpacity={0.22}
-                stroke={accent}
-                strokeWidth={2.2}
-              />
-            )}
-            {!multi &&
-              sport === "swim" &&
-              (() => {
-                const bars = data.lapPacesPer100m || [];
-                if (bars.length === 0) {
-                  return null;
-                }
-                const max = Math.max(...bars);
-                const min = Math.min(...bars);
-                const dv = max - min || 1;
-                const w = 440 / bars.length;
-                return bars.map((v, i) => {
-                  const h = 30 + ((v - min) / dv) * 150;
-                  return (
-                    <rect
-                      fill={accent}
-                      height={h}
-                      key={`bar-${i}-${v}`}
-                      opacity={0.6 + ((v - min) / dv) * 0.4}
-                      width={w - 2}
-                      x={10 + i * w}
-                      y={190 - h}
-                    />
-                  );
-                });
-              })()}
-            {!multi &&
-              sport !== "run" &&
-              sport !== "swim" &&
-              data.elevationProfile && (
-                <path
-                  d={elevationPath(data.elevationProfile, 460, 200, 8, true)}
-                  fill={INK}
-                  fillOpacity={0.85}
-                />
-              )}
-            {!multi &&
-              sport === "run" &&
-              !data.paceProfile &&
-              data.elevationProfile && (
-                <path
-                  d={elevationPath(data.elevationProfile, 460, 200, 8, true)}
-                  fill={INK}
-                  fillOpacity={0.85}
-                />
-              )}
-          </svg>
-        </div>
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: 14,
-          marginBottom: 14,
-        }}
-      >
-        {cells}
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1.5fr",
-          gap: 14,
-          flex: 1,
-          minHeight: 0,
-        }}
-      >
-        <div
-          style={{
-            border: `1.5px solid ${INK}`,
-            padding: 22,
-            background: PANEL,
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <div
-            style={{
-              fontSize: 24,
-              letterSpacing: "0.18em",
-              opacity: 0.7,
-              fontWeight: 600,
-            }}
-          >
-            {zonesLabel}
+            <h1
+              style={{
+                fontFamily: "var(--font-archivo-narrow), sans-serif",
+                fontWeight: 700,
+                // Title shrinks on short (cqb) and narrow (cqi) canvases; the
+                // MAX (84) keeps the 4:5 feed master visually unchanged.
+                fontSize: "clamp(46px, min(8cqi, 11cqb), 84px)",
+                lineHeight: 0.95,
+                letterSpacing: "-0.01em",
+                margin: "clamp(6px, 1.5cqb, 14px) 0 0 0",
+                textTransform: "uppercase",
+                textWrap: "pretty",
+              }}
+            >
+              {data.title}
+            </h1>
           </div>
           <div
             style={{
-              flex: 1,
-              display: "flex",
-              alignItems: "flex-end",
-              gap: 10,
-              marginTop: 22,
-              paddingBottom: 6,
+              textAlign: "right",
+              fontSize: 22,
+              letterSpacing: "0.16em",
+              lineHeight: 1.45,
+              fontWeight: 600,
+              flex: "0 0 auto",
+              marginLeft: 24,
             }}
           >
-            {zones.map((z, i) => (
-              <div
-                key={`zone-${z.zone}-${i}`}
-                style={{
-                  flex: 1,
-                  textAlign: "center",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "flex-end",
-                  minHeight: 0,
-                }}
-              >
-                <div style={{ fontSize: 26, fontWeight: 700, marginBottom: 4 }}>
-                  {z.pct}%
-                </div>
-                <div
-                  style={{
-                    background: i % 2 === 0 ? INK : accent,
-                    height: z.pct * 3.2,
-                    width: "100%",
-                    minHeight: 6,
-                  }}
-                />
-                <div
-                  style={{
-                    fontSize: 20,
-                    marginTop: 8,
-                    letterSpacing: "0.1em",
-                    fontWeight: 700,
-                  }}
-                >
-                  {z.zone}
-                </div>
+            <div>{formatDateUpper(data.date)}</div>
+            <div style={{ opacity: 0.7 }}>
+              {data.location.split(",")[0].toUpperCase()}
+            </div>
+            {data.athleteName && (
+              <div style={{ marginTop: 8 }}>
+                ATH · {data.athleteName.toUpperCase()}
               </div>
-            ))}
+            )}
           </div>
         </div>
+
         <div
           style={{
-            border: `1.5px solid ${INK}`,
-            padding: 22,
-            background: PANEL,
-            display: "flex",
-            flexDirection: "column",
+            display: "grid",
+            // Two chart panels: side-by-side once wide enough, stacking only on
+            // a very narrow canvas. minmax(0,1fr) lets them shrink, not overflow.
+            gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+            gap: 14,
+            marginBottom: 14,
+            flex: "1 1 0",
+            minHeight: 0,
           }}
         >
           <div
             style={{
-              fontSize: 24,
-              letterSpacing: "0.18em",
-              opacity: 0.7,
-              fontWeight: 600,
+              border: `1.5px solid ${INK}`,
+              padding: "clamp(12px, 2.4cqb, 22px)",
+              background: PANEL,
+              position: "relative",
+              minWidth: 0,
+              minHeight: 0,
+              display: "flex",
+              flexDirection: "column",
             }}
           >
-            {sport === "swim" ? "LAP LEDGER" : "KEY SPLITS"}
+            <div
+              style={{
+                fontSize: 24,
+                letterSpacing: "0.18em",
+                opacity: 0.7,
+                fontWeight: 600,
+                flex: "0 0 auto",
+              }}
+            >
+              ROUTE
+            </div>
+            <svg
+              aria-hidden="true"
+              preserveAspectRatio="xMidYMid meet"
+              style={{
+                width: "100%",
+                flex: "1 1 0",
+                minHeight: 0,
+                marginTop: 8,
+              }}
+              viewBox="0 0 460 200"
+            >
+              <title>Route</title>
+              {Array.from({ length: 10 }, (_, i) => (
+                <line
+                  key={`v-${i}`}
+                  stroke={GRID}
+                  strokeWidth={0.5}
+                  x1={i * 46}
+                  x2={i * 46}
+                  y1={0}
+                  y2={200}
+                />
+              ))}
+              {Array.from({ length: 5 }, (_, i) => (
+                <line
+                  key={`h-${i}`}
+                  stroke={GRID}
+                  strokeWidth={0.5}
+                  x1={0}
+                  x2={460}
+                  y1={i * 50}
+                  y2={i * 50}
+                />
+              ))}
+              <DataRoute
+                accent={accent}
+                coords={data.routeCoordinates}
+                multi={multi}
+                routes={routes}
+                sport={sport}
+              />
+            </svg>
           </div>
           <div
             style={{
-              marginTop: 18,
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: "14px 18px",
-              fontFamily: "var(--font-mono), monospace",
-              flex: 1,
+              border: `1.5px solid ${INK}`,
+              padding: "clamp(12px, 2.4cqb, 22px)",
+              background: PANEL,
+              minWidth: 0,
+              minHeight: 0,
+              display: "flex",
+              flexDirection: "column",
             }}
           >
-            {splitSample.slice(0, 6).map((s, i) => (
-              <div
-                key={`split-${i}-${s.durationSec}`}
-                style={{ borderTop: `2px solid ${INK}`, paddingTop: 8 }}
-              >
+            <div
+              style={{
+                fontSize: 24,
+                letterSpacing: "0.18em",
+                opacity: 0.7,
+                fontWeight: 600,
+                flex: "0 0 auto",
+              }}
+            >
+              {chartLabel}
+            </div>
+            <svg
+              aria-hidden="true"
+              preserveAspectRatio="xMidYMid meet"
+              style={{
+                width: "100%",
+                flex: "1 1 0",
+                minHeight: 0,
+                marginTop: 8,
+              }}
+              viewBox="0 0 460 200"
+            >
+              <title>{chartLabel}</title>
+              {Array.from({ length: 5 }, (_, i) => (
+                <line
+                  key={`h-${i}`}
+                  stroke={GRID}
+                  strokeWidth={0.5}
+                  x1={0}
+                  x2={460}
+                  y1={i * 50}
+                  y2={i * 50}
+                />
+              ))}
+              {multi
+                ? sequencePaths(elevCurves, 460, 200).map((op, i) => {
+                    const shade = elevShades[i];
+                    return (
+                      <g key={`elev-${i}-${op.endX.toFixed(0)}`}>
+                        <path d={op.area} fill={shade} fillOpacity={0.18} />
+                        <path
+                          d={op.line}
+                          fill="none"
+                          stroke={shade}
+                          strokeLinejoin="round"
+                          strokeWidth={2.2}
+                        />
+                      </g>
+                    );
+                  })
+                : null}
+              {!multi && sport === "run" && data.paceProfile && (
+                <path
+                  d={pacePath(data.paceProfile, 460, 200, 8, true)}
+                  fill={accent}
+                  fillOpacity={0.22}
+                  stroke={accent}
+                  strokeWidth={2.2}
+                />
+              )}
+              {!multi &&
+                sport === "swim" &&
+                (() => {
+                  const bars = data.lapPacesPer100m || [];
+                  if (bars.length === 0) {
+                    return null;
+                  }
+                  const max = Math.max(...bars);
+                  const min = Math.min(...bars);
+                  const dv = max - min || 1;
+                  const w = 440 / bars.length;
+                  return bars.map((v, i) => {
+                    const h = 30 + ((v - min) / dv) * 150;
+                    return (
+                      <rect
+                        fill={accent}
+                        height={h}
+                        key={`bar-${i}-${v}`}
+                        opacity={0.6 + ((v - min) / dv) * 0.4}
+                        width={w - 2}
+                        x={10 + i * w}
+                        y={190 - h}
+                      />
+                    );
+                  });
+                })()}
+              {!multi &&
+                sport !== "run" &&
+                sport !== "swim" &&
+                data.elevationProfile && (
+                  <path
+                    d={elevationPath(data.elevationProfile, 460, 200, 8, true)}
+                    fill={INK}
+                    fillOpacity={0.85}
+                  />
+                )}
+              {!multi &&
+                sport === "run" &&
+                !data.paceProfile &&
+                data.elevationProfile && (
+                  <path
+                    d={elevationPath(data.elevationProfile, 460, 200, 8, true)}
+                    fill={INK}
+                    fillOpacity={0.85}
+                  />
+                )}
+            </svg>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            // Self-reflowing stat grid: MIN 270 lands 3-up at feed/square/tiktok
+            // content (~870-968px: 3×270+28≈838 fits, 4 would overflow) and 5-up
+            // once the canvas is landscape-wide (~1488px: 5×270+56≈1406 fits) — so
+            // the nine ride cells drop from three rows to two when wide. No branch.
+            gridTemplateColumns: "repeat(auto-fit, minmax(270px, 1fr))",
+            gridAutoRows: "minmax(0, 1fr)",
+            gap: 14,
+            marginBottom: 14,
+            flex: "1.6 1 0",
+            minHeight: 0,
+          }}
+        >
+          {cells}
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            // Zones | splits: side-by-side when wide, stacking on a narrow
+            // canvas. Both halves shrink (minmax(0,1fr)).
+            gridTemplateColumns: "repeat(auto-fit, minmax(330px, 1fr))",
+            gap: 14,
+            flex: "1.2 1 0",
+            minHeight: 0,
+          }}
+        >
+          <div
+            style={{
+              border: `1.5px solid ${INK}`,
+              padding: "clamp(12px, 2.4cqb, 22px)",
+              background: PANEL,
+              display: "flex",
+              flexDirection: "column",
+              minWidth: 0,
+              minHeight: 0,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 24,
+                letterSpacing: "0.18em",
+                opacity: 0.7,
+                fontWeight: 600,
+              }}
+            >
+              {zonesLabel}
+            </div>
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                alignItems: "flex-end",
+                gap: 10,
+                marginTop: "clamp(10px, 2.4cqb, 22px)",
+                paddingBottom: 6,
+                minHeight: 0,
+              }}
+            >
+              {(() => {
+                const maxPct = Math.max(...zones.map((z) => z.pct), 1);
+                return zones.map((z, i) => (
+                  <div
+                    key={`zone-${z.zone}-${i}`}
+                    style={{
+                      flex: 1,
+                      height: "100%",
+                      textAlign: "center",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "flex-end",
+                      minHeight: 0,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "clamp(16px, 7cqb, 26px)",
+                        fontWeight: 700,
+                        marginBottom: 4,
+                      }}
+                    >
+                      {z.pct}%
+                    </div>
+                    {/* Bar height is a share of the panel's own height (% of the
+                        flex track), so the chart scales to a short card instead
+                        of a fixed pixel column that would overflow. */}
+                    <div
+                      style={{
+                        background: i % 2 === 0 ? INK : accent,
+                        height: `${(z.pct / maxPct) * 100}%`,
+                        width: "100%",
+                        minHeight: 6,
+                      }}
+                    />
+                    <div
+                      style={{
+                        fontSize: "clamp(14px, 5cqb, 20px)",
+                        marginTop: 8,
+                        letterSpacing: "0.1em",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {z.zone}
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+          </div>
+          <div
+            style={{
+              border: `1.5px solid ${INK}`,
+              padding: "clamp(12px, 2.4cqb, 22px)",
+              background: PANEL,
+              display: "flex",
+              flexDirection: "column",
+              minWidth: 0,
+              minHeight: 0,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 24,
+                letterSpacing: "0.18em",
+                opacity: 0.7,
+                fontWeight: 600,
+                flex: "0 0 auto",
+              }}
+            >
+              {sport === "swim" ? "LAP LEDGER" : "KEY SPLITS"}
+            </div>
+            <div
+              style={{
+                marginTop: "clamp(8px, 2cqb, 18px)",
+                display: "grid",
+                // Splits reflow with width: ~3-up in the feed/square panel (two
+                // rows, the panel is tall there) and 6-up in the wide-but-short
+                // landscape panel (one row, which fits the short height). MIN 92
+                // lands 3-up at ~480px and 6-up at ~720px.
+                gridTemplateColumns: "repeat(auto-fit, minmax(92px, 1fr))",
+                gridAutoRows: "minmax(0, 1fr)",
+                gap: "clamp(6px, 1.6cqb, 14px) 14px",
+                fontFamily: "var(--font-mono), monospace",
+                flex: 1,
+                minHeight: 0,
+                // Query container so each split row's type sizes to THIS grid's
+                // height (cqb below) — splits stay inside the panel.
+                containerType: "size",
+              }}
+            >
+              {splitSample.slice(0, 6).map((s, i) => (
                 <div
+                  key={`split-${i}-${s.durationSec}`}
                   style={{
-                    opacity: 0.65,
-                    fontSize: 22,
-                    fontWeight: 500,
-                    letterSpacing: "0.06em",
+                    borderTop: `2px solid ${INK}`,
+                    paddingTop: "clamp(3px, 1.4cqb, 8px)",
+                    minHeight: 0,
+                    minWidth: 0,
+                    // Clip a split that can't fit its row instead of letting it
+                    // overlap the row beneath it.
+                    overflow: "hidden",
                   }}
                 >
-                  {s.km === undefined ? `LAP ${s.lap}` : `KM ${s.km}`}
-                </div>
-                <div
-                  style={{
-                    fontWeight: 700,
-                    fontSize: 32,
-                    fontFamily: "var(--font-archivo-narrow), sans-serif",
-                    lineHeight: 1,
-                    marginTop: 4,
-                  }}
-                >
-                  {formatClock(s.durationSec)}
-                </div>
-                {s.avgSpeedKmh && (
                   <div
                     style={{
                       opacity: 0.65,
-                      fontSize: 18,
-                      marginTop: 4,
+                      fontSize: "clamp(13px, 9cqb, 22px)",
                       fontWeight: 500,
+                      letterSpacing: "0.06em",
+                      whiteSpace: "nowrap",
                     }}
                   >
-                    {s.avgSpeedKmh.toFixed(1)} km/h
+                    {s.km === undefined ? `LAP ${s.lap}` : `KM ${s.km}`}
                   </div>
-                )}
-              </div>
-            ))}
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: "clamp(20px, 13cqb, 32px)",
+                      fontFamily: "var(--font-archivo-narrow), sans-serif",
+                      lineHeight: 1,
+                      marginTop: "clamp(2px, 1.6cqb, 4px)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {formatClock(s.durationSec)}
+                  </div>
+                  {s.avgSpeedKmh && (
+                    <div
+                      style={{
+                        opacity: 0.65,
+                        fontSize: "clamp(12px, 7cqb, 18px)",
+                        marginTop: "clamp(2px, 1.6cqb, 4px)",
+                        fontWeight: 500,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {s.avgSpeedKmh.toFixed(1)} km/h
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
 
-      <div
-        style={{
-          marginTop: 20,
-          fontSize: 22,
-          letterSpacing: "0.22em",
-          opacity: 0.7,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          fontWeight: 600,
-        }}
-      >
-        <span>EFF/2026/{sport.toUpperCase().slice(0, 3)}-04</span>
-        <span style={{ color: accent }}>● DATA</span>
-      </div>
+        <div
+          style={{
+            marginTop: "clamp(10px, 2cqb, 20px)",
+            fontSize: 22,
+            letterSpacing: "0.22em",
+            opacity: 0.7,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontWeight: 600,
+            flex: "0 0 auto",
+          }}
+        >
+          <span>EFF/2026/{sport.toUpperCase().slice(0, 3)}-04</span>
+          <span style={{ color: accent }}>● DATA</span>
+        </div>
+      </SafeArea>
     </div>
   );
 }

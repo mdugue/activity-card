@@ -15,10 +15,8 @@ import {
   isQuarterTurn,
 } from "@/lib/photo-effects";
 import { CoverPhoto } from "./cover-photo";
+import { useFormat } from "./format-context";
 import { GrainOverlay, usePhotoEffects, usePhotoImageSize } from "./photo-fx";
-
-const CARD_W = 1080;
-const CARD_H = 1350;
 
 interface PhotoLayerProps {
   imageTransform?: ImageTransform | null;
@@ -29,12 +27,13 @@ export function PhotoLayer({ photoUrl, imageTransform }: PhotoLayerProps) {
   const t = imageTransform ?? IDENTITY_TRANSFORM;
   const fx = usePhotoEffects();
   const imageSize = usePhotoImageSize();
+  const { width, height } = useFormat();
 
   if (imageSize) {
     return (
       <CoverPhoto
-        boxH={CARD_H}
-        boxW={CARD_W}
+        boxH={height}
+        boxW={width}
         effects={fx}
         imageSize={imageSize}
         photoUrl={photoUrl}
