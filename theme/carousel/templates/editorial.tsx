@@ -7,7 +7,8 @@ import { buildStats } from "@/theme/carousel/stats";
 import { CrossViz } from "../cross-viz";
 import type { PanelProps } from "../define-theme";
 import { MetaBand, Signature } from "./parts";
-import { SLIDE_PAD, slideText } from "./shared";
+import { SlideScaffold } from "./scaffold";
+import { slideText } from "./shared";
 
 export function EditorialSlide({
   data,
@@ -26,26 +27,19 @@ export function EditorialSlide({
     .join("  ·  ");
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        padding: SLIDE_PAD,
-        display: "flex",
-        flexDirection: "column",
-      }}
+    <SlideScaffold
+      anchor="bottom"
+      top={
+        <MetaBand
+          colors={colors}
+          data={data}
+          fonts={style.fonts}
+          index={index}
+          showPageNumber={showPageNumber}
+          total={total}
+        />
+      }
     >
-      <MetaBand
-        colors={colors}
-        data={data}
-        fonts={style.fonts}
-        index={index}
-        showPageNumber={showPageNumber}
-        total={total}
-      />
-
-      <div style={{ flex: 1 }} />
-
       {/* Round-up: title + summary, with a small companion visualisation to the
           right at the same height. */}
       <div
@@ -119,6 +113,6 @@ export function EditorialSlide({
           showEffort={showEffort}
         />
       </div>
-    </div>
+    </SlideScaffold>
   );
 }

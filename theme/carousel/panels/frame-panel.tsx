@@ -18,11 +18,12 @@ import {
   type StatItem,
   speedSeries,
 } from "@/theme/carousel/stats";
+import { SafeArea } from "@/theme/shared/format-context";
 import type { PanelProps } from "../define-theme";
 import { ElevationBand } from "../elevation-band";
 import { RouteLine } from "../route-line";
+import { CAROUSEL_NATURAL_PAD } from "../templates/scaffold";
 import {
-  SLIDE_PAD,
   type SlideTextColors,
   slideNumber,
   slideText,
@@ -298,15 +299,9 @@ function FrameChrome({
 }: PanelProps & { children: React.ReactNode }) {
   const c = slideText(style, hasPhoto);
   return (
-    <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        padding: SLIDE_PAD,
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-      }}
+    <SafeArea
+      pad={CAROUSEL_NATURAL_PAD}
+      style={{ justifyContent: "space-between" }}
     >
       <div
         style={{
@@ -337,7 +332,7 @@ function FrameChrome({
       >
         {style.label}
       </div>
-    </div>
+    </SafeArea>
   );
 }
 

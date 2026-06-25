@@ -6,7 +6,8 @@
 import { heroStat } from "@/theme/carousel/stats";
 import type { PanelProps } from "../define-theme";
 import { MetaBand } from "./parts";
-import { SLIDE_PAD, slideText } from "./shared";
+import { SlideScaffold } from "./scaffold";
+import { slideText } from "./shared";
 
 export function HeroSlide({
   data,
@@ -96,26 +97,20 @@ export function HeroSlide({
   );
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        padding: SLIDE_PAD,
-        display: "flex",
-        flexDirection: "column",
-      }}
+    <SlideScaffold
+      anchor={anchor}
+      top={
+        <MetaBand
+          colors={colors}
+          data={data}
+          fonts={style.fonts}
+          index={index}
+          showPageNumber={showPageNumber}
+          total={total}
+        />
+      }
     >
-      <MetaBand
-        colors={colors}
-        data={data}
-        fonts={style.fonts}
-        index={index}
-        showPageNumber={showPageNumber}
-        total={total}
-      />
-      {anchor === "bottom" ? <div style={{ flex: 1 }} /> : null}
       {block}
-      {anchor === "top" ? <div style={{ flex: 1 }} /> : null}
-    </div>
+    </SlideScaffold>
   );
 }

@@ -29,7 +29,7 @@ import { DEFAULT_VISIBILITY, type Visibility } from "@/theme/core/visibility";
 import { FormatProvider, useFormat } from "@/theme/shared/format-context";
 import { CarouselPhoto } from "./carousel-photo";
 import type { CarouselTheme } from "./define-theme";
-import { stripGeometry } from "./geometry";
+import { slideFormat, stripFormat, stripGeometry } from "./geometry";
 
 interface CarouselDeckProps {
   colors: ColorScheme;
@@ -98,8 +98,13 @@ export function CarouselDeck({
   const marks = carouselMarks(config);
   const statOpts = statOptsFor(visibility);
 
+  // Two nested coordinate systems off the one format: the deck provides the
+  // STRIP frame (full width, read by the canvas); each slot re-provides the
+  // SLIDE frame (one slide + its safe insets, read by the panel via SafeArea).
+  const slideFmt = slideFormat(activeFormat);
+
   return (
-    <FormatProvider value={activeFormat}>
+    <FormatProvider value={stripFormat(activeFormat, total)}>
       <div
         style={{
           position: "relative",
@@ -168,16 +173,18 @@ export function CarouselDeck({
               height: slideH,
             }}
           >
-            <Panel
-              data={data}
-              hasPhoto={showPhoto}
-              index={i}
-              showEffort={marks.showEffort}
-              showPageNumber={marks.showPageNumber}
-              statOpts={statOpts}
-              style={style}
-              total={total}
-            />
+            <FormatProvider value={slideFmt}>
+              <Panel
+                data={data}
+                hasPhoto={showPhoto}
+                index={i}
+                showEffort={marks.showEffort}
+                showPageNumber={marks.showPageNumber}
+                statOpts={statOpts}
+                style={style}
+                total={total}
+              />
+            </FormatProvider>
           </div>
         ))}
       </div>

@@ -1,14 +1,13 @@
-// Shared layout constants + text helpers for carousel slide panels. The panel
-// CONTRACT (`PanelProps`) now lives beside `CanvasProps` in `define-theme.ts`;
-// this file keeps the per-slide padding, the dual text-shadow treatment, and
-// the slide-number formatter. Panels render *foreground only* (type, stats) at
-// 1080×1350; the deck renderer owns the photo, the spanning canvas, and chrome.
-// Each panel derives its stats directly from `data` (see `lib/carousel/stats.ts`)
-// — there is no deck-wide stat planner.
+// Shared text helpers for carousel slide panels. The panel CONTRACT
+// (`PanelProps`) lives beside `CanvasProps` in `define-theme.ts`; the per-slide
+// padding is now `CAROUSEL_NATURAL_MARGIN` + the `SlideScaffold`/`SafeArea`
+// safe-area machinery (`scaffold.tsx`), so this file keeps only the dual
+// text-shadow treatment and the slide-number formatter. Panels render
+// *foreground only* (type, stats); the deck renderer owns the photo, the
+// spanning canvas, and chrome. Each panel derives its stats directly from
+// `data` (see `theme/carousel/stats.ts`) — there is no deck-wide stat planner.
 
 import type { EffectiveStyle } from "@/theme/carousel/resolve";
-
-export const SLIDE_PAD = 90;
 
 export interface SlideTextColors {
   faint: string;

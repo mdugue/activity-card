@@ -32,28 +32,34 @@ import type {
   ThemeData,
 } from "@/theme/core/theme-contract";
 
-/** Props the spanning canvas component receives — sized to the whole strip and
- *  drawn once across every slide. `data` is narrowed to the theme's declared
- *  capabilities (`ThemeData<K>`); the default (`K = CapabilityKey`) resolves to
- *  the full `ActivityData`, so a theme that declares every capability — every
- *  current carousel theme — reads everything. */
+/** Props the spanning canvas component receives. The canvas reads the STRIP
+ *  frame: `w`/`h` are the WHOLE strip (count slides across, one slide tall, at
+ *  the active export format) and it bleeds across every slide edge. The deck
+ *  also provides this frame via `FormatProvider`, so a canvas may read
+ *  `useFormat()` for the strip dimensions. `data` is narrowed to the theme's
+ *  declared capabilities (`ThemeData<K>`); the default (`K = CapabilityKey`)
+ *  resolves to the full `ActivityData`, so a theme that declares every
+ *  capability — every current carousel theme — reads everything. */
 export interface CanvasProps<K extends CapabilityKey = CapabilityKey> {
   /** the theme's coerced config (e.g. STRATA mood / density / legend) */
   config: Record<string, unknown>;
   data: ThemeData<K>;
-  /** strip height (1350) */
+  /** strip height = one slide's height at the active format (1350 at feed) */
   h: number;
   /** true when a photo backs the deck → firmer halos / outlines */
   overPhoto: boolean;
   style: EffectiveStyle;
-  /** strip width (slideCount × 1080) */
+  /** strip width = slideCount × the active format's slide width (n×1080 at feed) */
   w: number;
 }
 
-/** Props every carousel slide panel receives — one foreground per slide. Like
+/** Props every carousel slide panel receives — one foreground per slide. Unlike
+ *  the canvas, a panel reads its own SLIDE frame: the deck wraps each slot in a
+ *  per-slide `FormatProvider`, so `useFormat()` returns one slide's box and
+ *  `SafeArea`/`SlideScaffold` floor content to that slide's safe area. Like
  *  `CanvasProps`, `data` is narrowed to the theme's declared capabilities. Each
  *  panel derives the stats it shows directly from `data` (see
- *  `lib/carousel/stats.ts`) — there is no deck-wide stat planner. */
+ *  `theme/carousel/stats.ts`) — there is no deck-wide stat planner. */
 export interface PanelProps<K extends CapabilityKey = CapabilityKey> {
   data: ThemeData<K>;
   /** true when a photo backs the slide → text leans on shadows / treatment */

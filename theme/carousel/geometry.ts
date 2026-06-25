@@ -57,3 +57,32 @@ export function stripGeometry(
 export function useStripGeometry(count: number): StripGeometry {
   return stripGeometry(useFormat(), count);
 }
+
+/** The panel's own aesthetic margin, per side — the value the flat `SLIDE_PAD`
+ *  used to be, named once. Each panel floors its content to the LARGER of this
+ *  and the platform safe inset (`mergeSafe` inside `SafeArea`), so the 4:5 feed
+ *  master is unchanged (90 > 48) while a tall Story / cover-cropped Strava pushes
+ *  content clear of the platform chrome. */
+export const CAROUSEL_NATURAL_MARGIN = 90;
+
+/** Per-slide platform safe insets. A slide is one format frame shown on its own
+ *  (the platform windows one slide at a time), so it keeps the same occlusion a
+ *  single post does. Per-edge refinement — e.g. relaxing the seam side on the
+ *  interior slides — is a deliberate future extension, not v1. */
+export function slideSafe(format: ExportFormat): SafeInsets {
+  return format.safe;
+}
+
+/** The full-width STRIP frame the CANVAS reads (count slides across, one slide
+ *  tall). Provided at the deck level so a canvas reading `useFormat()` sees the
+ *  whole strip. */
+export function stripFormat(format: ExportFormat, count: number): ExportFormat {
+  return { ...format, width: count * format.width };
+}
+
+/** The one-slide frame a PANEL reads — its own size + per-slide safe insets.
+ *  Provided per slide slot so `SafeArea`/`useSafeInsets` floor content to the
+ *  slide's keep-out. */
+export function slideFormat(format: ExportFormat): ExportFormat {
+  return { ...format, safe: slideSafe(format) };
+}

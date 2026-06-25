@@ -13,10 +13,12 @@ import {
 import { bandModeFor, pickProfile } from "@/theme/carousel/profile";
 import type { EffectiveStyle } from "@/theme/carousel/resolve";
 import { pressSlideStats, type StatItem } from "@/theme/carousel/stats";
+import { SafeArea } from "@/theme/shared/format-context";
 import type { PanelProps } from "../define-theme";
 import { ElevationBand } from "../elevation-band";
 import { RouteLine } from "../route-line";
-import { SLIDE_PAD, slideNumber } from "../templates/shared";
+import { CAROUSEL_NATURAL_PAD } from "../templates/scaffold";
+import { slideNumber } from "../templates/shared";
 
 const SLAB_SHADOW = "0 10px 34px rgba(0,0,0,0.3)";
 
@@ -490,16 +492,7 @@ function PressChrome({
 }) {
   const { data, style, hasPhoto, index, total, showPageNumber } = props;
   return (
-    <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        padding: SLIDE_PAD,
-        display: "flex",
-        flexDirection: "column",
-        gap: hasPhoto ? 28 : 0,
-      }}
-    >
+    <SafeArea pad={CAROUSEL_NATURAL_PAD} style={{ gap: hasPhoto ? 28 : 0 }}>
       <Masthead
         data={data}
         index={index}
@@ -511,7 +504,7 @@ function PressChrome({
         total={total}
       />
       {children}
-    </div>
+    </SafeArea>
   );
 }
 
