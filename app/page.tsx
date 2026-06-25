@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { CarouselEditState } from "@/components/app/carousel-edit-state";
 import { EditState } from "@/components/app/edit-state";
@@ -480,7 +481,15 @@ function EditTopBar({
   return (
     <div className="mx-auto flex w-full max-w-[1180px] items-center justify-between gap-3 px-6 pt-7 md:px-10">
       <EffortWordmark labelClassName="hidden sm:inline" size="sm" />
-      <ModeToggle mode={mode} onModeChange={onModeChange} />
+      <div className="flex items-center gap-5">
+        <Link
+          className="hidden font-medium font-mono text-[11px] uppercase tracking-[0.16em] opacity-55 transition-opacity hover:opacity-100 md:inline"
+          href="/tutorials"
+        >
+          Tutorials
+        </Link>
+        <ModeToggle mode={mode} onModeChange={onModeChange} />
+      </div>
     </div>
   );
 }

@@ -4,7 +4,10 @@
     "@phosphor-icons/react": "^2.1.10",
     "@remotion/cli": "4.0.482",
     "@remotion/eslint-plugin": "^4.0.482",
+    "@remotion/google-fonts": "4.0.482",
     "@remotion/player": "4.0.482",
+    "@remotion/tailwind-v4": "4.0.482",
+    "@remotion/transitions": "4.0.482",
     "@zumer/snapdom": "^2.12.9",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -75,7 +78,9 @@
     "generate-icons": "bun run scripts/generate-icons.ts",
     "strava:types": "bunx --bun swagger2openapi https://developers.strava.com/swagger/swagger.json --outfile strava-oas3.tmp.json && openapi-typescript strava-oas3.tmp.json -o lib/strava-api.generated.ts && rm -f strava-oas3.tmp.json",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "video:studio": "remotion studio",
+    "video:render": "remotion render"
   },
   "version": "0.1.0",
   "private": true,
