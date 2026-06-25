@@ -17,6 +17,7 @@ import {
   SAMPLE_SWIM,
 } from "@/components/app/sample-data";
 import { StravaConnectButton } from "@/components/app/strava-connect-button";
+import { StravaPhotoStrip } from "@/components/app/strava-photo-strip";
 import { StravaPicker } from "@/components/app/strava-picker";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -40,13 +41,18 @@ import {
   type UseStravaConnection,
   useStravaConnection,
 } from "@/hooks/use-strava-connection";
-import type { ActivityData, ActivitySource } from "@/lib/activity";
+import type {
+  ActivityData,
+  ActivitySource,
+  StravaPhotoRef,
+} from "@/lib/activity";
 import { formatDuration, formatNumber } from "@/lib/format";
 import {
   ACTIVITY_FILE_RE,
   type ParsedActivity,
   parseActivityFiles,
 } from "@/lib/parse-activity";
+import { fetchStravaPhotoFile } from "@/lib/strava-photos";
 import { cn } from "@/lib/utils";
 
 /** What the wizard hands back when the user opens the editor. Exactly one of
@@ -80,10 +86,12 @@ type WizardActivity =
     }
   | { kind: "sample"; data: ActivityData; label: string; meta: string };
 
-// The background photo: an uploaded File (object URL) or a bundled sample (path).
+// The background photo: an uploaded File (object URL), a bundled sample
+// (path), or one of the Strava activity's own photos (downloaded on finish).
 type WizardPhoto =
   | { kind: "upload"; file: File; name: string; url: string }
-  | { kind: "sample"; name: string; url: string };
+  | { kind: "sample"; name: string; url: string }
+  | { kind: "strava"; name: string; ref: StravaPhotoRef; url: string };
 
 const SAMPLES = [
   { data: SAMPLE_RIDE, sport: "ride" },
@@ -430,6 +438,7 @@ function PhotoStepBody({
   dragging,
   onBrowse,
   onChooseSample,
+  onChooseStrava,
   onDragStateChange,
   onFiles,
   onRemove,
@@ -437,10 +446,12 @@ function PhotoStepBody({
   onUnskip,
   photo,
   photoSkipped,
+  stravaPhotos,
 }: {
   dragging: boolean;
   onBrowse: () => void;
   onChooseSample: (url: string, name: string) => void;
+  onChooseStrava: (ref: StravaPhotoRef) => void;
   onDragStateChange: (dragging: boolean) => void;
   onFiles: (files: FileList) => void;
   onRemove: () => void;
@@ -448,6 +459,7 @@ function PhotoStepBody({
   onUnskip: () => void;
   photo: WizardPhoto | null;
   photoSkipped: boolean;
+  stravaPhotos: StravaPhotoRef[];
 }) {
   if (photo) {
     return (
@@ -479,6 +491,15 @@ function PhotoStepBody({
         A real photo makes the card unmistakably{" "}
         <span className="font-semibold text-foreground">yours</span>.
       </p>
+      {stravaPhotos.length > 0 ? (
+        <>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="caption-micro">From your Strava activity</span>
+            <StravaPhotoStrip onPick={onChooseStrava} photos={stravaPhotos} />
+          </div>
+          <OrDivider />
+        </>
+      ) : null}
       <DropZone
         cta="Browse photos"
         dragging={dragging}
@@ -630,8 +651,22 @@ export function OnboardingWizard({
       label: first.title,
       meta: activityMeta(first),
     });
+    // A previously staged Strava photo belongs to the previous activity.
+    setPhoto((prev) => (prev?.kind === "strava" ? null : prev));
     setStravaPickerOpen(false);
   };
+
+  const removeActivity = () => {
+    setActivity(null);
+    // Without its activity, a staged Strava photo can't be resolved on finish.
+    setPhoto((prev) => (prev?.kind === "strava" ? null : prev));
+  };
+
+  // Every photo the picked Strava activity (or its combined parts) carries.
+  const stravaPhotos =
+    activity?.kind === "parts" && activity.source === "strava"
+      ? activity.parts.flatMap((p) => p.stravaPhotos ?? [])
+      : [];
 
   const handleReauth = () => {
     if (typeof window !== "undefined") {
@@ -661,6 +696,15 @@ export function OnboardingWizard({
       try {
         photoFile = await urlToFile(photo.url, photo.name);
       } catch {
+        photoFile = null;
+      }
+    } else if (photo?.kind === "strava") {
+      try {
+        photoFile = await fetchStravaPhotoFile(photo.ref);
+      } catch {
+        toast.error(
+          "Couldn't load the photo from Strava — opening without it."
+        );
         photoFile = null;
       }
     }
@@ -744,7 +788,7 @@ export function OnboardingWizard({
             onFiles={loadFiles}
             onLoadSample={loadSample}
             onPickFromStrava={() => setStravaPickerOpen(true)}
-            onRemove={() => setActivity(null)}
+            onRemove={removeActivity}
             parsing={parsing}
             strava={strava}
           />
@@ -755,6 +799,15 @@ export function OnboardingWizard({
             onBrowse={() => photoInputRef.current?.click()}
             onChooseSample={(url, name) => {
               setPhoto({ kind: "sample", name, url });
+              setPhotoSkipped(false);
+            }}
+            onChooseStrava={(ref) => {
+              setPhoto({
+                kind: "strava",
+                name: `Strava photo ${ref.index + 1}`,
+                ref,
+                url: ref.previewUrl,
+              });
               setPhotoSkipped(false);
             }}
             onDragStateChange={(d) => setDragTarget(d ? "photo" : null)}
@@ -768,6 +821,7 @@ export function OnboardingWizard({
             onUnskip={() => setPhotoSkipped(false)}
             photo={photo}
             photoSkipped={photoSkipped}
+            stravaPhotos={stravaPhotos}
           />
         </div>
 

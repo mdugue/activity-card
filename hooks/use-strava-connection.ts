@@ -72,14 +72,24 @@ export function useStravaConnection(): UseStravaConnection {
   }, []);
 
   const disconnect = useCallback(async () => {
-    await fetch("/api/strava/disconnect", { method: "POST" });
-    setState({
-      connected: false,
-      athlete: null,
-      loading: false,
-      error: null,
-    });
-  }, []);
+    try {
+      const res = await fetch("/api/strava/disconnect", { method: "POST" });
+      if (!res.ok) {
+        // Cookies may still be set — re-sync from the server rather than
+        // pretending we disconnected.
+        await refresh();
+        return;
+      }
+      setState({
+        connected: false,
+        athlete: null,
+        loading: false,
+        error: null,
+      });
+    } catch {
+      await refresh();
+    }
+  }, [refresh]);
 
   // One-shot read of an external system (the cookie store, via the API).
   // The setState-in-effect rule's preferred "fix" would be a custom store +

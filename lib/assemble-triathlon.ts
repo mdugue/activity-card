@@ -66,6 +66,9 @@ export function assembleTriathlon(parts: ParsedActivity[]): ActivityData {
   const stravaActivityIds = sorted.map((p) => p.stravaActivityIds?.[0] ?? null);
   const anyStrava = stravaActivityIds.some((id) => id !== null);
 
+  // Pool every part's Strava photos so a combined card offers all of them.
+  const stravaPhotos = sorted.flatMap((p) => p.stravaPhotos ?? []);
+
   return {
     sport: "triathlon",
     title: deriveTriName(sorted),
@@ -79,6 +82,7 @@ export function assembleTriathlon(parts: ParsedActivity[]): ActivityData {
     segments,
     transitions: transitions.length ? transitions : undefined,
     stravaActivityIds: anyStrava ? stravaActivityIds : undefined,
+    stravaPhotos: stravaPhotos.length ? stravaPhotos : undefined,
   };
 }
 

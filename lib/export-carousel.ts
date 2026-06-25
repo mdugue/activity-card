@@ -105,7 +105,10 @@ export async function exportCarousel(
     out.height = outH;
     const ctx = out.getContext("2d");
     if (!ctx) {
-      continue;
+      // A null context means the browser refused the canvas (memory pressure,
+      // too many live canvases). Delivering a partial set with a numbering gap
+      // would look like success — fail loudly instead.
+      throw new Error(`Carousel frame ${i + 1} could not be drawn`);
     }
     ctx.drawImage(canvas, i * sliceW, 0, sliceW, sliceH, 0, 0, outW, outH);
     encodings.push({
@@ -116,17 +119,20 @@ export async function exportCarousel(
     });
   }
 
-  const maybeFiles = await Promise.all(
+  const files = await Promise.all(
     encodings.map(async ({ index, blob }) => {
       const resolved = await blob;
-      return resolved
-        ? new File([resolved], `${baseName}_${pad2(index + 1)}.png`, {
-            type: "image/png",
-          })
-        : null;
+      if (!resolved) {
+        // toBlob yields null on encode failure; a silently shrunken set would
+        // ship a carousel with missing slides.
+        throw new Error(`Carousel frame ${index + 1} failed to encode`);
+      }
+      return new File([resolved], `${baseName}_${pad2(index + 1)}.png`, {
+        type: "image/png",
+      });
     })
   );
-  await deliver(maybeFiles.filter((f): f is File => f !== null));
+  await deliver(files);
 }
 
 /** "effort_ride_20260518_carousel" — slide index is appended at export. */
