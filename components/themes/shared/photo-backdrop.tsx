@@ -7,8 +7,8 @@
 //   decorative, has no semantic meaning, and avoids next/image complaints
 //   about blob URLs that the server-side optimiser can't process.
 // - Blur is applied via inline `filter`, not `backdrop-filter`. The latter is
-//   unreliable inside html-to-image's clone tree and broken in iOS Safari for
-//   our export path.
+//   unreliable inside snapdom's foreignObject snapshot and broken in iOS Safari
+//   for our export path.
 
 import {
   IDENTITY_TRANSFORM,

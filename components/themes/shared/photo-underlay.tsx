@@ -3,7 +3,7 @@
 // content — so it drops into a `position: relative` root without rewrapping the
 // layout. A strong paper scrim keeps busy data legible; the photo reads as a
 // subtle wash. background-image + inline `filter` (never backdrop-filter) so
-// html-to-image captures it faithfully.
+// snapdom captures it faithfully.
 
 import {
   IDENTITY_TRANSFORM,

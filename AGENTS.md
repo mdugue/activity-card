@@ -6,14 +6,14 @@ This file is the entrypoint for coding agents working on this repo.
 
 **Effort** is a client-side web app where endurance athletes upload a GPX or .fit file from an activity (ride, run, swim, triathlon) and download a beautifully designed shareable image — the "activity card".
 
-Single-page, fully client-side, no backend, no auth (for MVP). The card is a React component rasterised to PNG via `html-to-image`.
+Single-page, fully client-side, no backend, no auth (for MVP). The card is a React component rasterised to PNG via `snapdom`.
 
 ## Read these before any non-trivial work
 
 1. [`SPEC.md`](./SPEC.md) — product vision, architecture decisions, data model, build phases. This is the source of truth for _what_ and _why_.
 2. Skills in `.claude/skills/` — focused technical references:
    - `activity-card-spec/` — quick reference to scope and phases
-   - `card-rendering/` — `html-to-image` gotchas, route SVG math, the single-card theme component contract
+   - `card-rendering/` — `snapdom` gotchas, route SVG math, the single-card theme component contract
    - `theme-architecture/` — invariants for CROSS-CUTTING theme concerns (output formats, safe zones, shared photo/colour): single source of truth, no inversion of control, no dead contracts. Read before wrapping a theme in anything or adding a global rendering knob.
    - `carousel-themes/` — the Carousel ("accordion") theme system: tokens, decks, photo handling
    - `sport-data/` — sport-specific metrics, units, parsing normalisation
@@ -32,7 +32,7 @@ If a decision is in SPEC.md, follow it. If you want to deviate, raise it and ask
 
 - Next.js (App Router) + TypeScript
 - Tailwind v4
-- `html-to-image` for DOM-to-PNG
+- `snapdom` (`@zumer/snapdom`) for DOM-to-PNG
 - `fast-xml-parser` for GPX, `fit-file-parser` for .fit
 - Deployed on Vercel (Node runtime — the Strava OAuth Route Handlers rule out a fully static export)
 - No database, no API routes that hold state (MVP)

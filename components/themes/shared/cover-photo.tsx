@@ -3,7 +3,7 @@
 // box and applies pan/zoom + rotate/mirror + filter as transforms. A quarter
 // turn swaps the element's width/height (so the rotated footprint still covers
 // the box) — a plain CSS rotate on a box-sized div would expose the corners.
-// Pure inline CSS (no backdrop-filter) so html-to-image captures it.
+// Pure inline CSS (no backdrop-filter) so snapdom captures it.
 
 import type { ImageSize } from "@/hooks/use-image-natural-size";
 import {

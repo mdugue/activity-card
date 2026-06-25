@@ -6,7 +6,7 @@
 // Parameterised by `config` (mood · density · legend) — the model and the morph
 // maths live in `lib/strata.ts`. Type: Syne (display) + JetBrains Mono
 // (cartographic labels / data). Renders to plain inline SVG (no CSS filters) so
-// it rasterises cleanly via html-to-image.
+// it rasterises cleanly via snapdom.
 
 import type { Sport } from "@/lib/activity";
 import { mixHex } from "@/lib/chart-helpers";

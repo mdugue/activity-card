@@ -4,7 +4,7 @@
 // them in different categories: `PhotoFilterControl` is the filter-preset row
 // (its own FILTER category) and `PhotoTransformControls` is rotate/mirror/flip/
 // grain (shown inside the PHOTO category). Pure CSS filters keep preview ===
-// output with html-to-image.
+// output with snapdom.
 
 import {
   ArrowClockwiseIcon,

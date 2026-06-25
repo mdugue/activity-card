@@ -18,7 +18,7 @@ A client-side web app that turns one GPX or .fit file into a beautiful, shareabl
 - Six themes, sport-aware (ride / run / swim / triathlon)
 - Optional background photo
 - Live preview + minimal customisation (accent colour, stat toggles)
-- PNG export at 1080×1350 via `html-to-image`
+- PNG export at 1080×1350 via `snapdom`
 - Web Share API on mobile, direct download fallback
 - Static deploy, no backend
 
@@ -49,7 +49,7 @@ If a task seems to require one of these, stop and confirm with the user.
 
 - Next.js App Router + TypeScript strict
 - Tailwind v4 for styling
-- `html-to-image` (not Satori, not Puppeteer) for rasterisation
+- `snapdom` (not Satori, not Puppeteer) for rasterisation
 - `fast-xml-parser` + `fit-file-parser` for parsing
 - Cloudflare Pages (or Vercel) for hosting
 

@@ -9,11 +9,15 @@ import {
 } from "./helpers";
 
 /**
- * Regression guard for the `cacheBust` blob-URL bug: html-to-image appended a
- * query to every resource URL, which broke the photo's `blob:` object URL so
- * the uploaded background silently dropped out of BOTH the single-card and the
- * carousel export. These tests upload a solid-magenta photo, rasterise a real
- * export, decode the resulting PNG and assert the magenta actually made it in.
+ * Regression guard: the uploaded background photo must actually land in the
+ * exported PNG — for BOTH the single card and the carousel. These tests upload
+ * a solid-magenta photo, rasterise a real export, decode the resulting PNG and
+ * assert the magenta made it in.
+ *
+ * Originally written for an html-to-image `cacheBust` footgun (it appended a
+ * query to every resource URL, breaking the photo's `blob:` object URL so the
+ * background silently dropped). snapdom doesn't rewrite resource URLs, but the
+ * guard is just as valuable against any future export-pipeline regression.
  */
 
 const MAGENTA_PHOTO = {

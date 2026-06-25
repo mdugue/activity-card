@@ -7,7 +7,8 @@
 // The claim is rendered as SVG <text> so it can be split along the elevation
 // curve in the "cutout" treatment: the portion above the line stays opaque, the
 // portion below fades to the opacity parameter. Both are export-safe (plain
-// inline SVG, no CSS filters / backdrop-filter that html-to-image mishandles).
+// inline SVG, no CSS filters / backdrop-filter that the foreignObject snapshot
+// mishandles).
 //
 // Two coordinate systems share one render tree (see `format-context`): the claim
 // GLYPHS sit inside the platform SAFE box (offset by `insets.left`, sized to the
@@ -123,7 +124,7 @@ function claimMetrics(
 // distorting glyph shapes (unlike SVG `textLength`). We measure the natural
 // width against a detached probe; next/font ships metric-matched fallbacks, so
 // this is accurate even before the web font loads, and the resulting size is
-// baked into the DOM that html-to-image clones, so the export matches.
+// baked into the DOM that snapdom clones, so the export matches.
 const REF_PX = 100;
 const MIN_FIT = 40;
 const MAX_FIT = 620;

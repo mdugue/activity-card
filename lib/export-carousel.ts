@@ -2,16 +2,11 @@
 // and slice it into n 1080×1350 frames so the photo/route bleed lines up across
 // cuts. Frames are delivered as an ordered set — shared together on mobile
 // (Web Share API) or downloaded sequentially on desktop. Mirrors the
-// single-card pipeline's iOS double-call and font-ready wait.
+// single-card pipeline's font-ready wait and snapdom options.
 
-import { toCanvas } from "html-to-image";
+import { snapdom } from "@zumer/snapdom";
 import { SLIDE_H, SLIDE_W } from "@/lib/carousel/types";
-import {
-  effortDateSlug,
-  isDesktopDevice,
-  isIos,
-  waitForFonts,
-} from "./export-shared";
+import { effortDateSlug, isDesktopDevice, waitForFonts } from "./export-shared";
 
 const PIXEL_RATIO = 2; // 1080×1350 → 2160×2700, matching the single card
 const MAX_CANVAS_DIM = 16_384; // conservative cross-browser canvas width cap
@@ -75,19 +70,16 @@ export async function exportCarousel(
     1,
     Math.min(PIXEL_RATIO, Math.floor(MAX_CANVAS_DIM / width))
   );
-  // No `cacheBust`: it appends a query to every resource URL, which breaks the
-  // photo's `blob:` object URL (the fetch fails and the panorama drops). See
-  // lib/export-card.ts for the full note.
-  const opts = {
+  // `embedFonts` inlines the deck's @font-face; `dpr: 1` keeps the strip a
+  // deterministic `pr`× of its native size regardless of screen density (see
+  // lib/export-card.ts for the full note).
+  const canvas = await snapdom.toCanvas(wideNode, {
     width,
     height: SLIDE_H,
-    pixelRatio: pr,
-    style: { transform: "none", transformOrigin: "top left" },
-  };
-  if (isIos()) {
-    await toCanvas(wideNode, opts);
-  }
-  const canvas = await toCanvas(wideNode, opts);
+    scale: pr,
+    dpr: 1,
+    embedFonts: true,
+  });
 
   const sliceW = SLIDE_W * pr;
   const sliceH = SLIDE_H * pr;

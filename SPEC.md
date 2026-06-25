@@ -51,7 +51,7 @@ Reward someone who did a beautiful workout with something beautiful in return. T
 
 - **Next.js** App Router + TypeScript (strict)
 - **Tailwind v4**
-- **html-to-image** for DOM-to-PNG rasterisation
+- **snapdom** (`@zumer/snapdom`) for DOM-to-PNG rasterisation
 - **fast-xml-parser** for GPX
 - **fit-file-parser** for .fit (Garmin / Wahoo binary)
 - No database, no auth (MVP). Phase 2A adds Route Handlers for the Strava
@@ -61,11 +61,11 @@ Reward someone who did a beautiful workout with something beautiful in return. T
   Strava OAuth backend; CF Pages would also work via Pages Functions but
   needlessly splits the runtime story.
 
-### Why html-to-image and not Satori
+### Why snapdom and not Satori
 
-Satori is flexbox-only, requires fonts as ArrayBuffers, and constrains layout. Themes need CSS Grid, blend modes, real `@font-face` from Google Fonts, and visual variety. `html-to-image` rasterises the actual DOM, so preview === output. The library is ~20KB; total app bundle stays around 100–150KB plus fonts.
+Satori is flexbox-only, requires fonts as ArrayBuffers, and constrains layout. Themes need CSS Grid, blend modes, real `@font-face`, and visual variety. `snapdom` rasterises the actual DOM (cloning it into a serialised `<svg><foreignObject>`), so preview === output. It's dependency-free, embeds fonts/pseudo-elements/shadows on demand, and is markedly faster than the html-to-image library it replaced — which also let us drop two workarounds (the iOS double-rasterise and the `cacheBust` blob-URL footgun).
 
-Known gotchas live in the `card-rendering` skill.
+snapdom usage and gotchas (the required `embedFonts`, `scale`/`dpr`, the untransformed capture node) live in the `card-rendering` skill.
 
 ### Why no map tiles
 
@@ -73,7 +73,7 @@ The route is rendered as a clean SVG polyline derived from lat/lng coordinates, 
 
 ### File structure
 
-See AGENTS.md for the binding layout. The short version: `/components/app/` for app shell states, `/components/themes/single-card/` for one file per theme (component + `defineTheme` descriptor) with shared rendering utilities in `/components/themes/shared/` and the carousel renderer in `/components/themes/carousel/`, `/lib/` for parsers, formatters, chart helpers, simplification, and the html-to-image wrapper. No `app/_components/` private folders. Adding a theme: [`docs/creating-a-theme.md`](./docs/creating-a-theme.md).
+See AGENTS.md for the binding layout. The short version: `/components/app/` for app shell states, `/components/themes/single-card/` for one file per theme (component + `defineTheme` descriptor) with shared rendering utilities in `/components/themes/shared/` and the carousel renderer in `/components/themes/carousel/`, `/lib/` for parsers, formatters, chart helpers, simplification, and the snapdom export wrapper. No `app/_components/` private folders. Adding a theme: [`docs/creating-a-theme.md`](./docs/creating-a-theme.md).
 
 ## Data model
 
@@ -142,10 +142,11 @@ Sport-specific stat rendering rules live in the `sport-data` skill.
 
 ## Export
 
-- Target: **1080×1350** (Instagram portrait, 4:5)
-- PNG via `html-to-image` at `pixelRatio: 2` (so the DOM renders at 540×675 for crispness; adjust the card's internal layout accordingly)
+- Design target: **1080×1350** (Instagram portrait, 4:5) — the format-aware master
+- PNG via `snapdom.toBlob` at `scale: 2` + `dpr: 1`, so the native 1080×1350 card exports as a crisp, device-independent **2160×2700**
+- `embedFonts: true` — required, or theme fonts fall back to a system font in the export (snapdom only auto-embeds icon fonts)
 - Wait for `document.fonts.ready` before rasterising
-- iOS Safari: rasterise twice and discard the first result (known library quirk)
+- No iOS double-call — snapdom primes WebKit's font/decode pipeline itself (`safariWarmupAttempts`)
 - Trigger Web Share API on mobile with the resulting `File`, fall back to direct download
 
 ## Carousel Post mode
@@ -165,7 +166,7 @@ An additive mode alongside the single card (top-level **Carousel ↔ Single Card
 - **Element visibility** — every overlay (title, date, location, athlete, distance, time, pace, speed, power, elevation, HR, cadence, route, elevation profile, splits, the "made with effort" mark, page numbers) has a switch built by `components/app/activity-tools.tsx` (`useActivityTools`), grouped into focused-toolbar categories (STYLE · PHOTO · LAYOUT · TEXT · STATS · MARKS · ACTIVITY). STYLE holds the theme rail and the unified COLOUR control (static preset schemes plus, once a photo is loaded, the five photo-derived schemes with live swatches — hidden for fixed-palette themes); PHOTO holds the upload, the shared "Use as background" toggle, and the filter/grain/mirror/rotate presets (every theme can show a photo, both modes); LAYOUT and MARKS hold the theme's composition/annotation knobs (only present when a theme declares them). A theme's knobs are declared as data (`ParamDef[]`) and rendered generically; a theme's toggles derive from its capability declaration (`themeAvailability`) — see the `theme-params` skill. Most toggles work by stripping the field in `applyVisibility` (`lib/visibility.ts`) so one switch hides the element in **both** modes. Distance/time are locked on for the single card; athlete name, Effort mark and page numbers default off.
 - **Shared controls** — both editors render the shared `ControlDeck` (`components/app/control-deck.tsx`) fed by `useActivityTools`: one `tools` array, two layouts (mobile-first). On mobile it's the "focused toolbar" — preview hero, a floating category pill, a contextual panel for the active group (tap again to collapse), and a detached export button. On desktop the same groups lay out horizontally (sticky preview + every group visible + pinned export); the pill hides. The theme rail (`theme-rail.tsx`, `ThemeRail`) is a horizontally-scrolling row of theme toggles, generic over the id type (both rails are fed theme descriptors — `SINGLE_CARD_THEMES` / `CAROUSEL_THEMES` — in their `*_ORDER`). The COLOUR control highlights the active swatch and has a Reset to the theme's own scheme. Photo crop/zoom/rotate/mirror/filter/grain reuse `image-adjust-overlay.tsx` + `photo-effects-controls.tsx`, applied deck-wide.
 - **Route & spanning layers** — `route-line.tsx` (rounded caps, a small start-direction arrow at the first point — no coloured GPS pins, no finish flag; the route is projected aspect-preserving and centred in the middle of the carousel viewport, never stretched to fill the width), `elevation-band.tsx` (mountain range / sparkline, with subtle dot + altitude markers at the high/low points), `detail-viz.tsx` (small path + altitude graphics), `cross-viz.tsx` (wrap-up secondary). Photos render full-bleed with a per-theme default filter + optional film grain and a light/dark legibility veil rather than a heavy overlay.
-- **Export** — `lib/export-carousel.ts` rasterises the wide strip once (`toCanvas`, dimension-capped pixel ratio) and slices it into ordered frames — shared together on mobile, downloaded sequentially on desktop. Same `pixelRatio: 2`, `fonts.ready`, and iOS double-call contract as the single card.
+- **Export** — `lib/export-carousel.ts` rasterises the wide strip once (`snapdom.toCanvas`, dimension-capped `scale`) and slices it into ordered frames — shared together on mobile, downloaded sequentially on desktop. Same `scale: 2` + `dpr: 1`, `embedFonts`, and `fonts.ready` contract as the single card.
 
 ## Non-goals
 
