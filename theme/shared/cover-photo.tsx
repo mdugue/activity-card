@@ -13,11 +13,11 @@ import {
 } from "@/lib/image-transform";
 import {
   filterCss,
-  GRAIN_BG,
   isQuarterTurn,
   NO_EFFECTS,
   type PhotoEffects,
 } from "@/lib/photo-effects";
+import { GrainOverlay } from "./photo-fx";
 
 interface CoverPhotoProps {
   boxH: number;
@@ -87,20 +87,7 @@ export function CoverPhoto({
           transformOrigin: "center center",
         }}
       />
-      {fx.grain ? (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage: GRAIN_BG,
-            backgroundRepeat: "repeat",
-            backgroundSize: "180px 180px",
-            mixBlendMode: "overlay",
-            opacity: 0.5,
-            pointerEvents: "none",
-          }}
-        />
-      ) : null}
+      {fx.grain ? <GrainOverlay /> : null}
     </div>
   );
 }

@@ -8,7 +8,6 @@
 // (cartographic labels / data). Renders to plain inline SVG (no CSS filters) so
 // it rasterises cleanly via snapdom.
 
-import type { Sport } from "@/lib/activity";
 import { mixHex } from "@/lib/chart-helpers";
 import {
   formatDateUpper,
@@ -16,6 +15,8 @@ import {
   formatNumber,
   formatPaceMin,
   formatPaceSec,
+  isNum,
+  sportArticleLabel,
 } from "@/lib/format";
 
 import {
@@ -251,8 +252,6 @@ function StrataField({
  *  middle metric is omitted when the activity lacks it (or the user toggled it
  *  off — `applyVisibility` strips the field), never shown as a dash. */
 function statRow(data: ActivityView): [string, string, string][] {
-  const has = (n: number | undefined): n is number =>
-    n !== undefined && Number.isFinite(n);
   const time: [string, string, string] = [
     "TIME",
     formatDuration(data.durationSec),
@@ -261,39 +260,23 @@ function statRow(data: ActivityView): [string, string, string][] {
   const row: [string, string, string][] = [];
   if (data.sport === "run") {
     row.push(["DST", data.distanceKm.toFixed(1), "km"]);
-    if (has(data.avgPaceMinPerKm)) {
+    if (isNum(data.avgPaceMinPerKm)) {
       row.push(["PACE", formatPaceMin(data.avgPaceMinPerKm), "/km"]);
     }
   } else if (data.sport === "swim") {
     row.push(["DST", (data.distanceKm * 1000).toFixed(0), "m"]);
-    if (has(data.avgPacePer100m)) {
+    if (isNum(data.avgPacePer100m)) {
       row.push(["/100", formatPaceSec(data.avgPacePer100m), ""]);
     }
   } else {
     // ride, triathlon, and anything else: distance · elevation · time.
     row.push(["DST", data.distanceKm.toFixed(1), "km"]);
-    if (has(data.elevationGainM)) {
+    if (isNum(data.elevationGainM)) {
       row.push(["ELEV", formatNumber(data.elevationGainM), "m"]);
     }
   }
   row.push(time);
   return row;
-}
-
-function sportLabel(sport: Sport): string {
-  if (sport === "ride") {
-    return "A CYCLE";
-  }
-  if (sport === "run") {
-    return "A RUN";
-  }
-  if (sport === "swim") {
-    return "A SWIM";
-  }
-  if (sport === "triathlon") {
-    return "A TRIATHLON";
-  }
-  return "AN EFFORT";
 }
 
 export function ThemeStrata({
@@ -391,7 +374,7 @@ export function ThemeStrata({
           marginRight: insets.right,
         }}
       >
-        <span>STRATA · {sportLabel(data.sport)}</span>
+        <span>STRATA · {sportArticleLabel(data.sport)}</span>
         <span style={{ opacity: 0.6 }}>{tokens.label}</span>
       </div>
       <div

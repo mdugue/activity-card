@@ -10,17 +10,8 @@
 //   unreliable inside snapdom's foreignObject snapshot and broken in iOS Safari
 //   for our export path.
 
-import {
-  IDENTITY_TRANSFORM,
-  type ImageTransform,
-  transformToCss,
-} from "@/lib/image-transform";
-import {
-  effectsTransformSuffix,
-  filterCss,
-  isQuarterTurn,
-} from "@/lib/photo-effects";
-import { usePhotoEffects } from "./photo-fx";
+import type { ImageTransform } from "@/lib/image-transform";
+import { CssCoverImage } from "./photo-fx";
 
 export type BackdropTreatment = "path" | "editorial";
 
@@ -35,13 +26,6 @@ export function PhotoBackdrop({
   treatment,
   imageTransform,
 }: PhotoBackdropProps) {
-  const fx = usePhotoEffects();
-  const userFilter = fx ? filterCss(fx.filter) : "";
-  const suffix = effectsTransformSuffix(fx);
-  const transform = `${transformToCss(imageTransform ?? IDENTITY_TRANSFORM)}${suffix}`;
-  // A quarter-turn shortens the rotated footprint vertically; bleeding the
-  // blurred wash further keeps the corners covered (the blur hides the edge).
-  const bleed = fx && isQuarterTurn(fx.rotate) ? -160 : null;
   if (treatment === "path") {
     // Paper-tone overlay multiplies down the photo so the route ink stays the
     // hero. 14px blur softens any detail the eye might catch.
@@ -56,18 +40,12 @@ export function PhotoBackdrop({
           pointerEvents: "none",
         }}
       >
-        <div
-          style={{
-            position: "absolute",
-            inset: bleed ?? -40,
-            backgroundImage: `url(${photoUrl})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            transform,
-            transformOrigin: "center center",
-            filter: `blur(14px) saturate(0.85) ${userFilter}`.trim(),
-            opacity: 0.55,
-          }}
+        <CssCoverImage
+          filterPrefix="blur(14px) saturate(0.85)"
+          imageTransform={imageTransform}
+          opacity={0.55}
+          photoUrl={photoUrl}
+          restInset={-40}
         />
         <div
           style={{
@@ -104,19 +82,12 @@ export function PhotoBackdrop({
         pointerEvents: "none",
       }}
     >
-      <div
-        style={{
-          position: "absolute",
-          inset: bleed ?? -30,
-          backgroundImage: `url(${photoUrl})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          transform,
-          transformOrigin: "center center",
-          filter:
-            `blur(10px) saturate(0.7) contrast(0.95) ${userFilter}`.trim(),
-          opacity: 0.22,
-        }}
+      <CssCoverImage
+        filterPrefix="blur(10px) saturate(0.7) contrast(0.95)"
+        imageTransform={imageTransform}
+        opacity={0.22}
+        photoUrl={photoUrl}
+        restInset={-30}
       />
       <div
         style={{

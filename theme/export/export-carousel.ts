@@ -8,54 +8,13 @@
 
 import { snapdom } from "@zumer/snapdom";
 import type { ExportFormat } from "@/theme/core/export-formats";
-import { effortDateSlug, isDesktopDevice, waitForFonts } from "./export-shared";
+import { deliverFiles, effortDateSlug, waitForFonts } from "./export-shared";
 
 const PIXEL_RATIO = 2; // each slide → 2× its format size, matching the single card
 const MAX_CANVAS_DIM = 16_384; // conservative cross-browser canvas width cap
 
 function pad2(n: number): string {
   return String(n).padStart(2, "0");
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}
-
-function triggerDownload(file: File): void {
-  const url = URL.createObjectURL(file);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = file.name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-/** Share the whole set on mobile, else download each in order. */
-async function deliver(files: File[]): Promise<void> {
-  if (files.length === 0) {
-    return;
-  }
-  const nav = typeof navigator === "undefined" ? undefined : navigator;
-  if (!isDesktopDevice() && nav?.canShare?.({ files })) {
-    try {
-      await nav.share({ files, title: "My Effort carousel" });
-      return;
-    } catch (err) {
-      if ((err as DOMException)?.name === "AbortError") {
-        return;
-      }
-      // fall through to downloads
-    }
-  }
-  for (const file of files) {
-    triggerDownload(file);
-    // Browsers throttle back-to-back programmatic downloads; space them out.
-    await delay(350);
-  }
 }
 
 /** Rasterise the wide strip node once and slice it into `count` format-sized
@@ -129,7 +88,7 @@ export async function exportCarousel(
       });
     })
   );
-  await deliver(files);
+  await deliverFiles(files, { title: "My Effort carousel", betweenMs: 350 });
 }
 
 /** "effort_ride_20260518_carousel" — slide index is appended at export. */

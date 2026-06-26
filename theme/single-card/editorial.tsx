@@ -11,6 +11,7 @@ import {
   formatNumber,
   formatPaceMin,
   formatPaceSec,
+  isNum,
 } from "@/lib/format";
 import {
   isMultiActivity,
@@ -156,14 +157,12 @@ export function ThemeEditorial({
   // The closing sentence quotes the sport's signature metric, but only when the
   // activity carries it (and it isn't toggled off) — otherwise it falls back to
   // total time rather than printing a dash.
-  const has = (n: number | undefined): n is number =>
-    n !== undefined && Number.isFinite(n);
   let paceLabel = `${formatDuration(data.durationSec)} total time`;
-  if (sport === "ride" && has(data.avgSpeedKmh)) {
+  if (sport === "ride" && isNum(data.avgSpeedKmh)) {
     paceLabel = `${formatNumber(data.avgSpeedKmh, 1)} km/h average`;
-  } else if (sport === "run" && has(data.avgPaceMinPerKm)) {
+  } else if (sport === "run" && isNum(data.avgPaceMinPerKm)) {
     paceLabel = `${formatPaceMin(data.avgPaceMinPerKm)} per kilometre`;
-  } else if (sport === "swim" && has(data.avgPacePer100m)) {
+  } else if (sport === "swim" && isNum(data.avgPacePer100m)) {
     paceLabel = `${formatPaceSec(data.avgPacePer100m)} per 100 metres`;
   }
 
@@ -424,34 +423,34 @@ export function ThemeEditorial({
                 {data.date ? <Row k="Date" v={friendlyDate} /> : null}
                 {data.location ? <Row k="Place" v={data.location} /> : null}
                 <Row k="Time" v={formatDuration(data.durationSec)} />
-                {sport === "ride" && has(data.elevationGainM) && (
+                {sport === "ride" && isNum(data.elevationGainM) && (
                   <Row
                     k="Elevation"
                     v={`${formatNumber(data.elevationGainM)} m`}
                   />
                 )}
-                {sport === "ride" && has(data.avgSpeedKmh) && (
+                {sport === "ride" && isNum(data.avgSpeedKmh) && (
                   <Row
                     k="Speed"
                     v={`${formatNumber(data.avgSpeedKmh, 1)} km/h`}
                   />
                 )}
-                {sport === "run" && has(data.avgPaceMinPerKm) && (
+                {sport === "run" && isNum(data.avgPaceMinPerKm) && (
                   <Row
                     k="Pace"
                     v={`${formatPaceMin(data.avgPaceMinPerKm)} /km`}
                   />
                 )}
-                {sport === "run" && has(data.avgCadence) && (
+                {sport === "run" && isNum(data.avgCadence) && (
                   <Row k="Cadence" v={`${formatNumber(data.avgCadence)} spm`} />
                 )}
-                {sport === "swim" && has(data.avgPacePer100m) && (
+                {sport === "swim" && isNum(data.avgPacePer100m) && (
                   <Row k="/100 m" v={formatPaceSec(data.avgPacePer100m)} />
                 )}
-                {sport === "swim" && has(data.swolf) && (
+                {sport === "swim" && isNum(data.swolf) && (
                   <Row k="SWOLF" v={formatNumber(data.swolf)} />
                 )}
-                {has(data.avgHeartRate) && (
+                {isNum(data.avgHeartRate) && (
                   <Row k="Heart" v={`${data.avgHeartRate} bpm`} />
                 )}
                 {data.athleteName && <Row k="By" v={data.athleteName} />}

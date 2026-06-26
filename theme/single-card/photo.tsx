@@ -13,6 +13,7 @@ import {
   formatNumber,
   formatPaceMin,
   formatPaceSec,
+  isNum,
 } from "@/lib/format";
 import { isMultiActivity, segmentRoutes } from "@/lib/multi-activity";
 import type { ColorScheme } from "@/theme/core/colors";
@@ -101,14 +102,12 @@ export function ThemePhoto({
   // The sub-line only carries metrics the activity actually has — a stripped
   // field (toggled off, or absent from the file) drops out instead of leaving
   // a dashed placeholder in the sentence.
-  const has = (n: number | undefined): n is number =>
-    n !== undefined && Number.isFinite(n);
   const subParts: string[] = [formatDuration(data.durationSec)];
-  if (sport === "ride" && has(data.elevationGainM)) {
+  if (sport === "ride" && isNum(data.elevationGainM)) {
     subParts.push(`${formatNumber(data.elevationGainM)} m elev`);
-  } else if (sport === "run" && has(data.avgPaceMinPerKm)) {
+  } else if (sport === "run" && isNum(data.avgPaceMinPerKm)) {
     subParts.push(`${formatPaceMin(data.avgPaceMinPerKm)} /km`);
-  } else if (sport === "swim" && has(data.avgPacePer100m)) {
+  } else if (sport === "swim" && isNum(data.avgPacePer100m)) {
     subParts.push(`${formatPaceSec(data.avgPacePer100m)} /100m`);
   } else if (sport === "triathlon") {
     subParts.push("triathlon");

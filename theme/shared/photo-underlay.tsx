@@ -5,17 +5,8 @@
 // subtle wash. background-image + inline `filter` (never backdrop-filter) so
 // snapdom captures it faithfully.
 
-import {
-  IDENTITY_TRANSFORM,
-  type ImageTransform,
-  transformToCss,
-} from "@/lib/image-transform";
-import {
-  effectsTransformSuffix,
-  filterCss,
-  isQuarterTurn,
-} from "@/lib/photo-effects";
-import { usePhotoEffects } from "./photo-fx";
+import type { ImageTransform } from "@/lib/image-transform";
+import { CssCoverImage } from "./photo-fx";
 
 interface PhotoUnderlayProps {
   imageTransform?: ImageTransform | null;
@@ -26,10 +17,6 @@ export function PhotoUnderlay({
   photoUrl,
   imageTransform,
 }: PhotoUnderlayProps) {
-  const fx = usePhotoEffects();
-  const userFilter = fx ? filterCss(fx.filter) : "";
-  // Quarter-turn bleed — see PhotoBackdrop.
-  const bleed = fx && isQuarterTurn(fx.rotate) ? -160 : 0;
   return (
     <div
       aria-hidden
@@ -41,17 +28,10 @@ export function PhotoUnderlay({
         pointerEvents: "none",
       }}
     >
-      <div
-        style={{
-          position: "absolute",
-          inset: bleed,
-          backgroundImage: `url(${photoUrl})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          transform: `${transformToCss(imageTransform ?? IDENTITY_TRANSFORM)}${effectsTransformSuffix(fx)}`,
-          transformOrigin: "center center",
-          filter: `saturate(0.92) ${userFilter}`.trim(),
-        }}
+      <CssCoverImage
+        filterPrefix="saturate(0.92)"
+        imageTransform={imageTransform}
+        photoUrl={photoUrl}
       />
       <div
         style={{

@@ -34,3 +34,47 @@ export function isDesktopDevice(): boolean {
 }
 
 const DESKTOP_PLATFORM_REGEX = /Macintosh|Windows|Linux/;
+
+export function triggerDownload(file: File): void {
+  const url = URL.createObjectURL(file);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = file.name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Share the set on mobile (Web Share API), else download each in order. A
+ *  positive `betweenMs` spaces downloads out (browsers throttle back-to-back). */
+export async function deliverFiles(
+  files: File[],
+  opts: { title: string; betweenMs?: number }
+): Promise<void> {
+  if (files.length === 0) {
+    return;
+  }
+  const nav = typeof navigator === "undefined" ? undefined : navigator;
+  if (!isDesktopDevice() && nav?.canShare?.({ files })) {
+    try {
+      await nav.share({ files, title: opts.title });
+      return;
+    } catch (err) {
+      if ((err as DOMException)?.name === "AbortError") {
+        return;
+      }
+      // fall through to downloads
+    }
+  }
+  for (const file of files) {
+    triggerDownload(file);
+    if (opts.betweenMs) {
+      await delay(opts.betweenMs);
+    }
+  }
+}

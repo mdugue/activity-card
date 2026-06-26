@@ -9,6 +9,8 @@ import {
   formatNumber,
   formatPaceMin,
   formatPaceSec,
+  isNum,
+  sportArticleLabel,
 } from "@/lib/format";
 import {
   isMultiActivity,
@@ -47,26 +49,17 @@ export function ThemePath({
   const multi = isMultiActivity(data);
   const routes = multi ? segmentRoutes(data) : [];
 
-  let sportLabel = "A TRIATHLON";
-  if (sport === "ride") {
-    sportLabel = "A CYCLE";
-  } else if (sport === "run") {
-    sportLabel = "A RUN";
-  } else if (sport === "swim") {
-    sportLabel = "A SWIM";
-  }
+  const sportLabel = sportArticleLabel(sport);
 
   // Cells whose datum is missing (or toggled off — `applyVisibility` strips the
   // field) are omitted entirely rather than rendered as a dashed placeholder.
-  const has = (n: number | undefined): n is number =>
-    n !== undefined && Number.isFinite(n);
   const statTrio: [string, string][] = [];
   if (sport === "ride") {
     statTrio.push(["DISTANCE", `${data.distanceKm.toFixed(1)} km`]);
-    if (has(data.elevationGainM)) {
+    if (isNum(data.elevationGainM)) {
       statTrio.push(["ELEVATION", `${formatNumber(data.elevationGainM)} m`]);
     }
-    if (has(data.avgSpeedKmh)) {
+    if (isNum(data.avgSpeedKmh)) {
       statTrio.push(["AVG SPEED", `${formatNumber(data.avgSpeedKmh, 1)} km/h`]);
     }
   } else if (sport === "run") {
@@ -74,7 +67,7 @@ export function ThemePath({
       ["DISTANCE", `${data.distanceKm.toFixed(1)} km`],
       ["DURATION", formatDuration(data.durationSec)]
     );
-    if (has(data.avgPaceMinPerKm)) {
+    if (isNum(data.avgPaceMinPerKm)) {
       statTrio.push(["AVG PACE", `${formatPaceMin(data.avgPaceMinPerKm)} /km`]);
     }
   } else if (sport === "swim") {
@@ -82,7 +75,7 @@ export function ThemePath({
       ["DISTANCE", `${(data.distanceKm * 1000).toFixed(0)} m`],
       ["DURATION", formatDuration(data.durationSec)]
     );
-    if (has(data.avgPacePer100m)) {
+    if (isNum(data.avgPacePer100m)) {
       statTrio.push(["PACE", `${formatPaceSec(data.avgPacePer100m)} /100m`]);
     }
   } else {
@@ -90,7 +83,7 @@ export function ThemePath({
       ["DISTANCE", `${data.distanceKm.toFixed(1)} km`],
       ["DURATION", formatDuration(data.durationSec)]
     );
-    if (has(data.elevationGainM)) {
+    if (isNum(data.elevationGainM)) {
       statTrio.push(["ELEVATION", `${formatNumber(data.elevationGainM)} m`]);
     }
   }

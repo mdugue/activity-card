@@ -6,6 +6,28 @@
 
 const DASH = "—";
 
+/** True for a present, finite number — the guard themes gate optional stats on. */
+export function isNum(n: number | undefined): n is number {
+  return n !== undefined && Number.isFinite(n);
+}
+
+/** Sport → upper-case article label ("A CYCLE" / "A RUN" / …). */
+export function sportArticleLabel(sport: string): string {
+  if (sport === "ride") {
+    return "A CYCLE";
+  }
+  if (sport === "run") {
+    return "A RUN";
+  }
+  if (sport === "swim") {
+    return "A SWIM";
+  }
+  if (sport === "triathlon") {
+    return "A TRIATHLON";
+  }
+  return "AN EFFORT";
+}
+
 export function formatDuration(sec: number | undefined): string {
   if (sec === undefined || !Number.isFinite(sec) || sec <= 0) {
     return DASH;

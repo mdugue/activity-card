@@ -6,7 +6,7 @@ import {
   type MetadataOptions,
   routeCentroid,
 } from "@/lib/metadata";
-import { isDesktopDevice, waitForFonts } from "./export-shared";
+import { deliverFiles, waitForFonts } from "./export-shared";
 
 export interface ExportOptions {
   filename?: string;
@@ -62,31 +62,7 @@ export async function exportCard(
   const out = new Blob([bytes as BlobPart], { type: "image/png" });
   const file = new File([out], filename, { type: "image/png" });
 
-  const nav = typeof navigator === "undefined" ? undefined : navigator;
-  if (!isDesktopDevice() && nav?.canShare?.({ files: [file] })) {
-    try {
-      await nav.share({ files: [file], title: "My Effort card" });
-      return;
-    } catch (err) {
-      if ((err as DOMException)?.name === "AbortError") {
-        return;
-      }
-      // fall through to download
-    }
-  }
-
-  triggerDownload(out, filename);
-}
-
-function triggerDownload(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  await deliverFiles([file], { title: "My Effort card" });
 }
 
 /** Map an activity to the metadata baked into its export (GPS gated by opts). */
