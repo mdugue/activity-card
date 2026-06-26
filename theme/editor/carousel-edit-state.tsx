@@ -265,6 +265,7 @@ export function CarouselEditState({
 
         <AdjustControls
           adjust={adjust}
+          contentWidth={slideW}
           label="Adjust photo"
           onChange={photo.onTransformChange}
           transform={photo.transform}

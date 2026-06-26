@@ -149,6 +149,8 @@ interface ExportShellProps {
   busy: string | null;
   children: ReactNode;
   colors: ColorScheme;
+  /** force-disable the download actions (e.g. while the carousel photo decodes) */
+  disabled?: boolean;
   onDownloadAll: () => void;
   onKeepEditing: () => void;
   onNew: () => void;
@@ -165,6 +167,7 @@ export function ExportShell({
   busy,
   children,
   colors,
+  disabled = false,
   onDownloadAll,
   onKeepEditing,
   onNew,
@@ -187,7 +190,11 @@ export function ExportShell({
         </p>
 
         <div className="mt-4 flex flex-nowrap items-center gap-2 sm:mt-6 sm:gap-3">
-          <Button disabled={busy !== null} onClick={onDownloadAll} size="sm">
+          <Button
+            disabled={busy !== null || disabled}
+            onClick={onDownloadAll}
+            size="sm"
+          >
             <DownloadSimpleIcon
               aria-hidden
               className="size-4"
@@ -217,6 +224,8 @@ interface ExportTileProps {
   busyId: string;
   /** the native-size preview to scale into the tile AND rasterise on export */
   children: ReactNode;
+  /** force-disable the download button (e.g. while the photo decodes) */
+  disabled?: boolean;
   label: string;
   /** native pixel size of `children` — a single card box, or the whole strip */
   nativeH: number;
@@ -238,6 +247,7 @@ export function ExportTile({
   busy,
   busyId,
   children,
+  disabled = false,
   label,
   nativeH,
   nativeW,
@@ -278,7 +288,7 @@ export function ExportTile({
         </div>
         <Button
           aria-label={`Download ${label}`}
-          disabled={busy !== null}
+          disabled={busy !== null || disabled}
           onClick={onDownload}
           size="icon"
           variant="secondary"

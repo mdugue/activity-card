@@ -91,6 +91,7 @@ export function SingleCardPreview({
 
         <AdjustControls
           adjust={adjust}
+          contentWidth={format.width}
           label="Adjust"
           onChange={onImageTransformChange}
           transform={imageTransform}

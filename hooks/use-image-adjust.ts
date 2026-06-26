@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import {
-  CARD_WIDTH,
   clampTransform,
   IDENTITY_TRANSFORM,
   type ImageTransform,
@@ -25,6 +24,10 @@ interface UseImageAdjustArgs {
   /** Override the clamp (e.g. carousel cover-overflow); defaults to the
    *  single-card 1080×1350 cover clamp. */
   clamp?: (t: ImageTransform) => ImageTransform;
+  /** Card-space width of the box the overlay sits over (the active format's
+   *  width / one slide), used to convert a screen-px drag into card-px. Pan
+   *  mis-scales on non-1080-wide formats (x-landscape) if this is wrong. */
+  contentWidth: number;
   enabled: boolean;
   onChange: (next: ImageTransform) => void;
   transform: ImageTransform;
@@ -60,6 +63,7 @@ export function useImageAdjust({
   transform,
   onChange,
   clamp,
+  contentWidth,
 }: UseImageAdjustArgs) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -69,10 +73,12 @@ export function useImageAdjust({
   const onChangeRef = useRef(onChange);
   const clampRef =
     useRef<(t: ImageTransform) => ImageTransform>(clampTransform);
+  const contentWidthRef = useRef(contentWidth);
   useEffect(() => {
     transformRef.current = transform;
     onChangeRef.current = onChange;
     clampRef.current = clamp ?? clampTransform;
+    contentWidthRef.current = contentWidth;
   });
 
   const pointersRef = useRef<Map<number, PointerPos>>(new Map());
@@ -92,7 +98,7 @@ export function useImageAdjust({
     gestureRef.current = {
       centroid,
       distance: avgDistanceFromCentroid(pts, centroid),
-      previewScale: rect.width / CARD_WIDTH || 1,
+      previewScale: rect.width / contentWidthRef.current || 1,
       transform: transformRef.current,
     };
   });

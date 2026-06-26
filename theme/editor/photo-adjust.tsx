@@ -85,8 +85,11 @@ export function AdjustControls({
   label,
   transform,
   onChange,
+  contentWidth,
 }: {
   adjust: PhotoAdjust;
+  /** card-space width of the displayed box (format / slide) — drives pan speed */
+  contentWidth: number;
   label: string;
   onChange: (next: ImageTransform) => void;
   transform: ImageTransform;
@@ -110,6 +113,7 @@ export function AdjustControls({
       {adjusting ? (
         <ImageAdjustOverlay
           clamp={coverClamp}
+          contentWidth={contentWidth}
           onChange={onChange}
           onDone={() => setAdjusting(false)}
           transform={transform}

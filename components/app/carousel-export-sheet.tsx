@@ -84,6 +84,10 @@ export function CarouselExportSheet({
   // export reads it directly.
   const mounts = useRef<Record<string, HTMLDivElement | null>>({});
   const baseName = carouselBaseName(data.sport, data.date);
+  // The deck draws no photo until its natural size resolves, so exporting before
+  // then would rasterise a photo-less strip. Gate downloads on the decode while a
+  // photo is shown (the single card has a CSS-cover fallback and needs no gate).
+  const photoNotReady = photoUrl !== null && imageSize === null;
 
   const exportOne = useCallback(
     async (format: ExportFormat) => {
@@ -106,11 +110,16 @@ export function CarouselExportSheet({
     <ExportShell
       busy={busy}
       colors={colors}
+      disabled={photoNotReady}
       onDownloadAll={handleAll}
       onKeepEditing={onKeepEditing}
       onNew={onNew}
       routeCoordinates={routeCoordinates ?? data.routeCoordinates}
-      subtitle={`Each format slices the strip into its ${count} slides — grab one set, or every format. On mobile a set shares as one batch.`}
+      subtitle={
+        photoNotReady
+          ? "Preparing your photo…"
+          : `Each format slices the strip into its ${count} slides — grab one set, or every format. On mobile a set shares as one batch.`
+      }
     >
       <div className="mt-5 flex flex-wrap justify-center gap-3 sm:mt-7 sm:gap-5">
         {FORMAT_ORDER.map((id) => {
@@ -120,6 +129,7 @@ export function CarouselExportSheet({
             <ExportTile
               busy={busy}
               busyId={id}
+              disabled={photoNotReady}
               key={id}
               label={format.label}
               nativeH={slideH}

@@ -124,8 +124,17 @@ export default function Home() {
     activeTheme.params,
     themeConfigs[activeTheme.id]
   );
+  // Merge over the existing slot rather than replace it: single-card and carousel
+  // "strata" share one config id, but their param sets differ (the carousel adds
+  // MARKS keys the single card doesn't declare). A bare replace with the active
+  // theme's coerced config would drop the sibling family's keys; merging keeps
+  // them (each family's read coerces away what it doesn't use).
   const setActiveConfig = (next: Record<string, unknown>) =>
-    setThemeConfigs((prev) => ({ ...prev, [activeTheme.id]: next }));
+    setThemeConfigs((prev) => {
+      const slot = prev[activeTheme.id];
+      const base = slot && typeof slot === "object" ? slot : {};
+      return { ...prev, [activeTheme.id]: { ...base, ...next } };
+    });
 
   // Colour resolution: the active theme's policy supplies the default scheme
   // and (for photo-first themes like Exposure) a default photo-derived choice;
