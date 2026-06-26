@@ -130,8 +130,15 @@ test("carousel Exposure export embeds the uploaded background", async ({
     page.getByRole("button", { name: /adjust photo/i })
   ).toBeVisible();
 
-  const downloadPromise = page.waitForEvent("download");
+  // Export opens the shared overview; download the Instagram Feed strip set.
   await page.getByRole("button", { name: /export carousel/i }).click();
+  await expect(page.getByRole("heading", { name: /pick a/i })).toBeVisible();
+  // The overview deck redraws the photo once its natural size re-resolves; wait
+  // for the rasterised photo layer so the export can't capture a photo-less frame.
+  await page.locator('[style*="blob:"]').first().waitFor({ state: "attached" });
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: /download instagram feed/i }).click();
   const fraction = await magentaFraction(page, await downloadPromise);
 
   expect(fraction).toBeGreaterThan(0.2);
