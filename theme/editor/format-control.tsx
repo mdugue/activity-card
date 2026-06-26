@@ -24,12 +24,8 @@ import {
 interface FormatControlProps {
   format: ExportFormat;
   onFormatChange: (id: ExportFormatId) => void;
-  /** safe-zone guide toggle — the single-card preview overlay. Omit it (and
-   *  `showSafe`) and the toggle section is hidden, e.g. for the carousel. */
+  /** safe-zone guide toggle; omit (with `showSafe`) to hide the toggle section */
   onShowSafeChange?: (show: boolean) => void;
-  /** which formats to offer — defaults to the full single-card `FORMAT_ORDER`;
-   *  the carousel passes its gated `CAROUSEL_FORMAT_ORDER`. */
-  order?: ExportFormatId[];
   showSafe?: boolean;
 }
 
@@ -38,7 +34,6 @@ export function FormatControl({
   onFormatChange,
   showSafe = false,
   onShowSafeChange,
-  order = FORMAT_ORDER,
 }: FormatControlProps) {
   const [open, setOpen] = useState(false);
 
@@ -65,7 +60,7 @@ export function FormatControl({
           Preview format
         </div>
         <div className="flex flex-col gap-0.5">
-          {order.map((id) => {
+          {FORMAT_ORDER.map((id) => {
             const f = getFormat(id);
             const active = id === format.id;
             return (

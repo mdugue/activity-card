@@ -348,7 +348,6 @@ export function CarouselEditState({
       <ControlDeck
         action={{
           icon: <ImagesIcon aria-hidden className="size-5" weight="duotone" />,
-          isBusy: false,
           label: "Export carousel",
           meta: `${count} × ${format.width}×${format.height}`,
           onAction: onExport,

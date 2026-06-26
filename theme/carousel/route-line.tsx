@@ -1,12 +1,11 @@
 // Carousel route layer. Rounded caps/joins, a subtle drop-shadow, and a small,
 // understated direction arrow at the *start* of the line (no coloured GPS pins,
-// no finish flag — just a hint of which way the effort went). Three styles:
-// poster (silhouette in theme ink), desaturated (accent over a desaturated
-// photo), highlighter (accent→accent2 gradient). The route is always projected
-// aspect-preserving and centred in the box it's given (never stretched to fill
-// it), so its silhouette stays geographically faithful.
+// no finish flag — just a hint of which way the effort went). Two styles: poster
+// (silhouette in theme ink) and desaturated (accent over a desaturated photo).
+// The route is always projected aspect-preserving and centred in the box it's
+// given (never stretched to fill it), so its silhouette stays geographically
+// faithful.
 
-import { useId } from "react";
 import type { Coord } from "@/lib/activity";
 import {
   accentShades,
@@ -85,8 +84,6 @@ export function RouteLine({
   strokeWidth = 7,
   showMarkers = true,
 }: RouteLineProps) {
-  const gradId = useId();
-
   const shadow = overPhoto
     ? "drop-shadow(0 2px 12px rgba(0,0,0,0.55))"
     : "drop-shadow(0 3px 8px rgba(0,0,0,0.18))";
@@ -165,12 +162,7 @@ export function RouteLine({
     return null;
   }
 
-  let stroke = ink;
-  if (style === "highlighter") {
-    stroke = `url(#${gradId})`;
-  } else if (style === "desaturated") {
-    stroke = accent;
-  }
+  const stroke = style === "desaturated" ? accent : ink;
 
   return (
     <svg
@@ -180,15 +172,6 @@ export function RouteLine({
       viewBox={`0 0 ${w} ${h}`}
     >
       <title>Route</title>
-      {style === "highlighter" ? (
-        <defs>
-          <linearGradient id={gradId} x1="0%" x2="100%" y1="0%" y2="100%">
-            <stop offset="0%" stopColor={accent2} />
-            <stop offset="100%" stopColor={accent} />
-          </linearGradient>
-        </defs>
-      ) : null}
-
       {/* Soft underlay for poster mode — gives the line weight on paper. */}
       {style === "poster" && !overPhoto ? (
         <path
@@ -208,7 +191,7 @@ export function RouteLine({
         stroke={stroke}
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeWidth={style === "highlighter" ? strokeWidth * 1.4 : strokeWidth}
+        strokeWidth={strokeWidth}
         style={{ filter: shadow }}
       />
 

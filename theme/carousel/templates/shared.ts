@@ -10,7 +10,6 @@
 import type { EffectiveStyle } from "@/theme/carousel/resolve";
 
 export interface SlideTextColors {
-  faint: string;
   fg: string;
   muted: string;
   /** dual light+dark text-shadow for legibility over a photo; "" when none */
@@ -33,7 +32,6 @@ export function slideText(
     return {
       fg: "#ffffff",
       muted: "rgba(255,255,255,0.84)",
-      faint: "rgba(255,255,255,0.62)",
       shadow: DARK_SHADOW,
     };
   }
@@ -44,14 +42,12 @@ export function slideText(
     return {
       fg: style.ink,
       muted: style.ink,
-      faint: style.mutedInk,
       shadow: LIGHT_SHADOW,
     };
   }
   return {
     fg: style.ink,
     muted: style.mutedInk,
-    faint: style.mutedInk,
     shadow: "",
   };
 }

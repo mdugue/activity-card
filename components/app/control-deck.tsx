@@ -45,7 +45,6 @@ export interface ControlTool {
 
 export interface ControlDeckAction {
   icon: React.ReactNode;
-  isBusy: boolean;
   /** desktop label, e.g. "Download PNG" / "Export carousel" */
   label: string;
   /** desktop sub-label, e.g. "1080 × 1350" */
@@ -55,8 +54,6 @@ export interface ControlDeckAction {
 
 interface ControlDeckProps {
   action: ControlDeckAction;
-  /** off-screen export mounts and any other siblings */
-  children?: React.ReactNode;
   preview: React.ReactNode;
   /** a preview-level control pinned beside the action (e.g. the format picker) —
    *  distinct from the scrolling settings tabs and the action itself */
@@ -77,7 +74,6 @@ export function ControlDeck({
   preview,
   previewControl,
   action,
-  children,
 }: ControlDeckProps) {
   // Lead with the first tool (THEME) open, so the theme rail is on screen the
   // moment the editor mounts. `active` is kept even while closed so its content
@@ -252,7 +248,6 @@ export function ControlDeck({
         <Button
           className="h-auto w-14 shrink-0 flex-col gap-1 rounded-md px-1 py-2 lg:w-auto lg:flex-1 lg:flex-row lg:justify-between lg:px-8 lg:py-4"
           data-testid="export-action"
-          disabled={action.isBusy}
           onClick={action.onAction}
           size="lg"
         >
@@ -262,7 +257,7 @@ export function ControlDeck({
               EXPORT
             </span>
             <span className="hidden font-heading text-lg lg:inline">
-              {action.isBusy ? "Rendering…" : action.label}
+              {action.label}
             </span>
           </span>
           <span className="hidden font-medium font-mono text-[10px] tracking-[0.18em] opacity-75 lg:inline">
@@ -270,8 +265,6 @@ export function ControlDeck({
           </span>
         </Button>
       </div>
-
-      {children}
     </div>
   );
 }

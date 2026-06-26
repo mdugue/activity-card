@@ -57,7 +57,6 @@ export function EditState({
           icon: (
             <ShareNetworkIcon aria-hidden className="size-5" weight="duotone" />
           ),
-          isBusy: false,
           label: "Export",
           meta: "7 formats",
           onAction: onExport,

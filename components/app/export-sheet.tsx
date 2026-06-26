@@ -149,7 +149,6 @@ interface ExportShellProps {
   busy: string | null;
   children: ReactNode;
   colors: ColorScheme;
-  downloadAllLabel?: string;
   onDownloadAll: () => void;
   onKeepEditing: () => void;
   onNew: () => void;
@@ -166,7 +165,6 @@ export function ExportShell({
   busy,
   children,
   colors,
-  downloadAllLabel = "Download all",
   onDownloadAll,
   onKeepEditing,
   onNew,
@@ -195,7 +193,7 @@ export function ExportShell({
               className="size-4"
               weight="duotone"
             />
-            {busy === "all" ? "Exporting…" : downloadAllLabel}
+            {busy === "all" ? "Exporting…" : "Download all"}
           </Button>
           <Button onClick={onKeepEditing} size="sm" variant="outline">
             <ArrowLeftIcon aria-hidden className="size-4" weight="duotone" />
