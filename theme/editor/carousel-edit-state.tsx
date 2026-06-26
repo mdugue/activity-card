@@ -9,19 +9,12 @@
 // deck-wide. Export navigates to the shared overview (CarouselExportSheet) — the
 // same flow as the single card — rather than downloading inline.
 
-import { ArrowsOutCardinalIcon, ImagesIcon } from "@phosphor-icons/react";
+import { ImagesIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { CardStage } from "@/components/app/card-stage";
 import { ControlDeck, PANEL_MOTION } from "@/components/app/control-deck";
-import { Badge } from "@/components/ui/badge";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CarouselController } from "@/hooks/use-carousel";
-import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
-import {
-  clampCoverTransform,
-  type ImageTransform,
-} from "@/lib/image-transform";
-import { isQuarterTurn } from "@/lib/photo-effects";
 import { cn } from "@/lib/utils";
 import { CarouselDeck } from "@/theme/carousel/deck";
 import { stripGeometry } from "@/theme/carousel/geometry";
@@ -34,7 +27,7 @@ import type { ExportFormat, ExportFormatId } from "@/theme/core/export-formats";
 import { useActivityTools } from "./activity-tools";
 import type { EditorSession } from "./editor-session";
 import { FormatControl } from "./format-control";
-import { ImageAdjustOverlay } from "./image-adjust-overlay";
+import { AdjustControls, usePhotoAdjust } from "./photo-adjust";
 import { SafeZoneOverlay } from "./safe-zone-overlay";
 import { SlideStrip } from "./slide-strip";
 import { ThemeRail } from "./theme-rail";
@@ -79,38 +72,20 @@ export function CarouselEditState({
   // Latest selected index, read by the ResizeObserver below without making it a
   // dependency (re-subscribing on every selection change would be wasteful).
   const selectedIndexRef = useRef(selectedIndex);
-  const [adjusting, setAdjusting] = useState(false);
   // The safe-zone guide is an editor-only preview overlay; the FORMAT control
   // toggles it and the preview reads it — the same mechanism as the single card.
   const [showSafe, setShowSafe] = useState(false);
 
-  // Natural photo size → true-cover, pannable panorama + a clamp that respects
-  // the wide strip's real vertical overflow. A quarter-turn swaps the photo's
-  // width/height, so the clamp must use the rotated dimensions.
-  const imageSize = useImageNaturalSize(photo.url);
-  const quarter = isQuarterTurn(photo.effects.rotate);
-  const coverClamp = imageSize
-    ? (t: ImageTransform) =>
-        clampCoverTransform(
-          t,
-          stripW,
-          slideH,
-          quarter ? imageSize.h : imageSize.w,
-          quarter ? imageSize.w : imageSize.h
-        )
-    : undefined;
-
-  // Adjust only makes sense while the photo is shown AND we know its natural
-  // size — the pan/zoom clamp (coverClamp) is derived from imageSize, so
-  // offering Adjust before it resolves would pan against the wrong bounds.
-  const adjustAvailable =
-    photo.url !== null && visibility.photoBackdrop && imageSize !== null;
-  useEffect(() => {
-    if (adjusting && !adjustAvailable) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setAdjusting(false);
-    }
-  }, [adjusting, adjustAvailable]);
+  // Pan/zoom against the whole strip's box (true-cover panorama). `imageSize`
+  // also feeds the deck + slide strip; `adjusting` gates the scroll-snap below.
+  const adjust = usePhotoAdjust({
+    boxW: stripW,
+    boxH: slideH,
+    enabled: visibility.photoBackdrop,
+    photoUrl: photo.url,
+    rotate: photo.effects.rotate,
+  });
+  const { adjusting, imageSize } = adjust;
 
   // Scroll the preview window to the selected slide when selection changes
   // from elsewhere (thumbnail click, add/remove). Flag it as programmatic so
@@ -288,28 +263,12 @@ export function CarouselEditState({
           </div>
         </div>
 
-        {adjustAvailable && !adjusting ? (
-          <Badge
-            className="absolute top-3 right-3 z-10 rounded-full bg-black/55 px-3 py-1.5 font-mono text-[10px] text-white backdrop-blur-sm transition-colors hover:bg-black/75"
-            render={<button onClick={() => setAdjusting(true)} type="button" />}
-          >
-            <ArrowsOutCardinalIcon
-              aria-hidden
-              className="size-3"
-              weight="duotone"
-            />
-            Adjust photo
-          </Badge>
-        ) : null}
-
-        {adjusting ? (
-          <ImageAdjustOverlay
-            clamp={coverClamp}
-            onChange={photo.onTransformChange}
-            onDone={() => setAdjusting(false)}
-            transform={photo.transform}
-          />
-        ) : null}
+        <AdjustControls
+          adjust={adjust}
+          label="Adjust photo"
+          onChange={photo.onTransformChange}
+          transform={photo.transform}
+        />
       </CardStage>
 
       {/* Slide rail — collapses (fades + zips up) while a control panel is open

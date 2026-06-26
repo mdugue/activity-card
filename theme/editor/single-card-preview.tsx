@@ -7,22 +7,15 @@
 // "Adjust" affordance for pan/zoom, available at every format — the pan clamp is
 // derived from the active format's own cover overflow.
 
-import { ArrowsOutCardinalIcon } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
 import { CardStage } from "@/components/app/card-stage";
-import { Badge } from "@/components/ui/badge";
-import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
 import type { ActivityData } from "@/lib/activity";
-import {
-  clampCoverTransform,
-  type ImageTransform,
-} from "@/lib/image-transform";
-import { isQuarterTurn, type PhotoEffects } from "@/lib/photo-effects";
+import type { ImageTransform } from "@/lib/image-transform";
+import type { PhotoEffects } from "@/lib/photo-effects";
 import type { ColorScheme } from "@/theme/core/colors";
 import type { ExportFormat } from "@/theme/core/export-formats";
-import { ImageAdjustOverlay } from "@/theme/editor/image-adjust-overlay";
 import { RenderTheme, type ThemeId } from "@/theme/editor/render-theme";
 import { SafeZoneOverlay } from "@/theme/editor/safe-zone-overlay";
+import { AdjustControls, usePhotoAdjust } from "./photo-adjust";
 
 interface SingleCardPreviewProps {
   colors: ColorScheme;
@@ -53,35 +46,15 @@ export function SingleCardPreview({
   imageTransform,
   onImageTransformChange,
 }: SingleCardPreviewProps) {
-  const [adjusting, setAdjusting] = useState(false);
-
-  // Natural photo size → a pan/zoom clamp that respects the photo's real cover
-  // overflow on the ACTIVE format's box (not a fixed 4:5), so Adjust works at
-  // every target. A quarter-turn swaps the photo's width/height, so the clamp
-  // must use the rotated dimensions.
-  const imageSize = useImageNaturalSize(photoUrl);
-  const quarter = isQuarterTurn(photoEffects.rotate);
-  const coverClamp = imageSize
-    ? (t: ImageTransform) =>
-        clampCoverTransform(
-          t,
-          format.width,
-          format.height,
-          quarter ? imageSize.h : imageSize.w,
-          quarter ? imageSize.w : imageSize.h
-        )
-    : undefined;
-
-  // Adjust makes sense whenever the photo is shown and its natural size is
-  // known (the clamp is derived from it) — at any format.
-  const adjustAvailable =
-    photoUrl !== null && photoBackdropEnabled && imageSize !== null;
-  useEffect(() => {
-    if (adjusting && !adjustAvailable) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setAdjusting(false);
-    }
-  }, [adjusting, adjustAvailable]);
+  // The pan/zoom clamp follows the active format's box, so Adjust works at every
+  // target (not just the 4:5 master).
+  const adjust = usePhotoAdjust({
+    boxW: format.width,
+    boxH: format.height,
+    enabled: photoBackdropEnabled,
+    photoUrl,
+    rotate: photoEffects.rotate,
+  });
 
   return (
     <CardStage
@@ -116,28 +89,12 @@ export function SingleCardPreview({
           {showSafe ? <SafeZoneOverlay format={format} scale={1} /> : null}
         </div>
 
-        {adjustAvailable && !adjusting ? (
-          <Badge
-            className="absolute top-3 right-3 z-10 rounded-full bg-black/55 px-3 py-1.5 font-mono text-[10px] text-white backdrop-blur-sm transition-colors hover:bg-black/75"
-            render={<button onClick={() => setAdjusting(true)} type="button" />}
-          >
-            <ArrowsOutCardinalIcon
-              aria-hidden
-              className="size-3"
-              weight="duotone"
-            />
-            Adjust
-          </Badge>
-        ) : null}
-
-        {adjusting ? (
-          <ImageAdjustOverlay
-            clamp={coverClamp}
-            onChange={onImageTransformChange}
-            onDone={() => setAdjusting(false)}
-            transform={imageTransform}
-          />
-        ) : null}
+        <AdjustControls
+          adjust={adjust}
+          label="Adjust"
+          onChange={onImageTransformChange}
+          transform={imageTransform}
+        />
       </div>
     </CardStage>
   );
