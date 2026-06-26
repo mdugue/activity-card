@@ -4,22 +4,17 @@
 // JetBrains Mono for the supporting line and footer. Parameterised by `config`
 // — see `lib/altitude.ts` for the model and the pure stat resolution.
 //
-// The claim is rendered as SVG <text> so it can be split along the elevation
-// curve in the "cutout" treatment: the portion above the line stays opaque, the
-// portion below fades to the opacity parameter. Both are export-safe (plain
+// The claim is SVG <text> so it can be split along the elevation curve in the
+// "cutout" treatment (opaque above the line, faded below). Export-safe: plain
 // inline SVG, no CSS filters / backdrop-filter that the foreignObject snapshot
-// mishandles).
+// mishandles.
 //
 // Two coordinate systems share one render tree (see `format-context`): the claim
-// GLYPHS sit inside the platform SAFE box (offset by `insets.left`, sized to the
-// safe content width and a vertical budget, so they never overflow a short /
-// landscape canvas), while the elevation LINE — and the cutout seam it draws —
-// spans the FULL canvas width, bleeding past the safe zone to both edges. The
-// cutout is a single clip: the opaque copy is shown above the line, the faded
-// base below it. The clip id MUST be unique per render (`useId`) — multiple cards
-// (formats / editor mounts) coexist in one document, and a duplicate `url(#id)`
-// resolves to the FIRST match, which would clip this text with another card's
-// curve (different width/size → the mask drifts off its own line).
+// GLYPHS sit inside the platform SAFE box (sized to the safe content width + a
+// vertical budget, so they never overflow a short / landscape canvas), while the
+// elevation LINE — and the cutout seam — spans the FULL canvas width, bleeding
+// to both edges. The cutout clip id MUST be unique per render (`useId`) — see the
+// detailed note at the clip site in `ClaimText`.
 
 import { type CSSProperties, useEffect, useId, useState } from "react";
 import {
@@ -66,13 +61,12 @@ const PAD_X = 84;
 const DESCENDERS = /[gjpqy]/;
 
 // --- Anton/Playfair vertical ink metrics (fractions of the font size) --------
-// Measured from the rendered fonts: caps and ascenders rise ~0.92× the font size
-// above the baseline (digits ~0.87×). The box reserves that much above the
-// baseline so the opaque glyphs are fully contained — under-reserving (the old
-// 0.72 cap) let tall Anton glyphs poke out the top of the SVG and get clipped at
-// the canvas edge on short / landscape formats. The baseline itself is
-// footer-anchored, so a taller reservation only grows the box upward into empty
-// space: roomy formats render identically.
+// Measured from the rendered fonts: caps/ascenders rise ~0.92× the font size
+// above the baseline, and the box reserves that much so the opaque glyphs are
+// fully contained — under-reserving (the old 0.72 cap) let tall Anton glyphs poke
+// out the top and clip at the canvas edge on short / landscape formats. The
+// baseline is footer-anchored, so a taller reservation only grows the box upward
+// into empty space: roomy formats render identically.
 const INK_ASCENT = 0.92;
 const TOP_PAD = 0.04;
 const LINE_STEP = 1.0;
@@ -120,11 +114,10 @@ function claimMetrics(
 }
 
 // --- Fit-to-width by measure-and-scale --------------------------------------
-// Scaling the font size uniformly is the only way to fill the width without
-// distorting glyph shapes (unlike SVG `textLength`). We measure the natural
-// width against a detached probe; next/font ships metric-matched fallbacks, so
-// this is accurate even before the web font loads, and the resulting size is
-// baked into the DOM that snapdom clones, so the export matches.
+// Scaling the font size uniformly fills the width without distorting glyphs
+// (unlike SVG `textLength`). We measure the natural width against a detached
+// probe; the resulting size is baked into the DOM that snapdom clones, so the
+// export matches.
 const REF_PX = 100;
 const MIN_FIT = 40;
 const MAX_FIT = 620;
@@ -178,15 +171,12 @@ function fitFontSize(
 }
 
 /**
- * The fitted claim size, re-measured once the web fonts have loaded. A DOM-probe
- * measure is only accurate with the real font present; before it loads the probe
- * hits a system face (next/font's metric-matched fallback closes this in the app,
- * but not e.g. in Storybook), so we measure on mount and again on
- * `document.fonts.ready`. State-backed — not an inline call — so the measured
- * value survives the React Compiler's memoisation of pure computations. The
- * initial value is the analytic `fallback` (deterministic, SSR-safe, never
- * overflows). Keeping the glyphs sized to the SAFE width is what holds the
- * headline inside the safe zone on tight formats (e.g. TikTok's action rail).
+ * The fitted claim size, re-measured once the web fonts have loaded — a DOM-probe
+ * measure is only accurate with the real font present, so we measure on mount and
+ * again on `document.fonts.ready`. State-backed (not an inline call) so the value
+ * survives the React Compiler's memoisation; the initial value is the analytic
+ * `fallback` (deterministic, SSR-safe, never overflows). Sizing the glyphs to the
+ * SAFE width is what holds the headline inside the safe zone on tight formats.
  */
 function useFittedFontSize(
   lines: string[],
@@ -623,10 +613,8 @@ export function ThemeAltitude({
   const layout = claim
     ? layoutClaim(claim.value, config.font, claim.isText, contentW)
     : null;
-  // Unique per render so coexisting cards (formats in the matrix, editor mounts,
-  // the export clone) never share a clip id — a duplicate `url(#id)` resolves to
-  // the first match, which would clip this claim with another card's curve. Strip
-  // the colons `useId` emits so the id is a clean `url(#…)` reference everywhere.
+  // Unique per render so coexisting cards never share a clip id (see ClaimText).
+  // Strip the colons `useId` emits so the id is a clean `url(#…)` reference.
   const uid = `alt-${useId().replace(/:/g, "")}`;
 
   const unitFontSize = layout

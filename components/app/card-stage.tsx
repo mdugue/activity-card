@@ -14,22 +14,16 @@ interface CardStageProps {
 }
 
 /**
- * Shared mobile "stage" for a fixed-aspect preview card, used by both the
- * single-card and carousel editors so their fit-to-box behaviour can't drift.
+ * Shared mobile "stage" for a fixed-aspect preview card, used by both editors so
+ * their fit-to-box behaviour can't drift. On mobile it scales the card to fit
+ * BOTH width and height (`min(100cqw, 100cqh · aspectRatio)`); on desktop it's a
+ * width-capped, centred card. The inner wrapper is `relative` for a theme's
+ * absolute "Adjust" overlay.
  *
- * On the mobile app-shell it fills the area it's given and scales the card to fit
- * BOTH width and height (`min(100cqw, 100cqh · aspectRatio)`), so the focused
- * toolbar never crops it — whatever the card's aspect (the single-card preview
- * retargets to 9:16 / 1:1 / 16:9). On desktop it's a width-capped, centred card.
- * The inner wrapper is `relative` so a theme's absolute "Adjust" badge / overlay
- * can position against it.
- *
- * `aspectRatio` (w/h) feeds both the width cap (via the `--card-aspect` custom
- * property — Tailwind arbitrary values are static, so the dynamic ratio rides a
- * CSS var) and must match the inner card's own `aspect-ratio`. Requires a
- * bounded-height ancestor: the stage is a `container-type:size` container, so
- * `100cqh` resolves to 0 unless an ancestor supplies a definite block-size (the
- * editor shell does, via `h-[100dvh]` → a `min-h-0` flex/grid chain).
+ * `aspectRatio` (w/h) rides the `--card-aspect` CSS var (Tailwind arbitrary
+ * values are static) and must match the inner card's own `aspect-ratio`. Needs a
+ * bounded-height ancestor: it's a `container-type:size` container, so `100cqh`
+ * resolves to 0 unless an ancestor supplies a definite block-size.
  */
 export function CardStage({
   children,

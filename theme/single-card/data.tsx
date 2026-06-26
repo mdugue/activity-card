@@ -109,9 +109,8 @@ function Cell({ children, dense, label, span = 1, unit, value }: CellProps) {
           style={{
             fontFamily: "var(--font-archivo-narrow), sans-serif",
             fontWeight: 700,
-            // Big numeral shrinks with the cell's width (cqi → narrow landscape
-            // columns) and height (cqb → short square cells). The cqb term is
-            // kept modest so label + value both clear the cell's padding.
+            // Big numeral shrinks with cell width (cqi) and height (cqb); the cqb
+            // term stays modest so label + value both clear the cell's padding.
             fontSize: "clamp(26px, min(26cqi, 30cqb), 64px)",
             lineHeight: 1,
             whiteSpace: "nowrap",
@@ -354,11 +353,10 @@ export function ThemeData({
         color: INK,
         fontFamily: "var(--font-mono), monospace",
         position: "relative",
-        // Named query container (`card`) for the whole card: title + section
-        // heights size to the card's width (cqi) and height (cqb), and the grid
-        // `@container card` width breakpoints below key on it to add columns at
-        // x-landscape. `size` keeps the height-driven `cqb`; the name skips the
-        // nested per-cell / per-splits `size` containers cleanly.
+        // Named query container (`card`) for the whole card: type sizes to its
+        // width (cqi) + height (cqb), and the grids' `@container card` width
+        // breakpoints below key on it to add columns at x-landscape — the name
+        // lets those breakpoints reach past the nested per-cell `size` containers.
         containerType: "size",
         containerName: "card",
         // Stacking context so the z-index:-1 photo underlay paints above the
@@ -392,8 +390,8 @@ export function ThemeData({
               style={{
                 fontFamily: "var(--font-archivo-narrow), sans-serif",
                 fontWeight: 700,
-                // Title shrinks on short (cqb) and narrow (cqi) canvases; the
-                // MAX (84) keeps the 4:5 feed master visually unchanged.
+                // Title shrinks on short (cqb) / narrow (cqi) canvases; the MAX
+                // keeps the 4:5 feed master unchanged.
                 fontSize: "clamp(46px, min(8cqi, 11cqb), 84px)",
                 lineHeight: 0.95,
                 letterSpacing: "-0.01em",
@@ -627,11 +625,9 @@ export function ThemeData({
           </div>
         </div>
 
-        {/* Stat grid, ONE markup: 3-up at feed / square / 9:16 and 5-up at
-            x-landscape, an explicit container breakpoint
-            (`@min-[1400px]/card:grid-cols-5`) keyed on the card width — only the
-            1600px landscape canvas crosses 1400px, so the nine ride cells drop
-            from three rows to two when wide. `minmax(0, 1fr)` (via grid-cols-*)
+        {/* Stat grid, ONE markup: 3-up at feed / square / 9:16, 5-up at
+            x-landscape via `@min-[1400px]/card:grid-cols-5` (only the 1600px
+            landscape canvas crosses 1400px). `minmax(0, 1fr)` (via grid-cols-*)
             lets cells shrink, not overflow. */}
         <div
           className="grid auto-rows-fr @min-[1400px]/card:grid-cols-5 grid-cols-3"
@@ -663,11 +659,10 @@ export function ThemeData({
               minWidth: 0,
               minHeight: 0,
               overflow: "hidden",
-              // The zones panel is its OWN query container: the chart's labels
-              // and bar band size to THIS panel's height (cqb), not the card's.
-              // The tall feed panel keeps full-size labels; the SHORT x-landscape
-              // panel (the zones/splits band is only ~140px there) shrinks them
-              // to fit instead of overflowing the title or clipping the Z labels.
+              // The zones panel is its OWN query container: labels + bar band
+              // size to THIS panel's height (cqb), not the card's — so the short
+              // x-landscape panel (~140px band) shrinks them to fit instead of
+              // overflowing the title or clipping the Z labels.
               containerType: "size",
               display: "flex",
               flexDirection: "column",
@@ -724,8 +719,8 @@ export function ThemeData({
                     >
                       <div
                         style={{
-                          // Panel-relative cqb: 26px on the tall feed panel,
-                          // shrinking to its 15px floor on the short landscape one.
+                          // Panel-relative cqb: full size on the tall feed panel,
+                          // shrinking to its floor on the short landscape one.
                           fontSize: "clamp(15px, 11cqb, 26px)",
                           fontWeight: 700,
                           marginBottom: 4,
@@ -799,14 +794,12 @@ export function ThemeData({
             >
               {sport === "swim" ? "LAP LEDGER" : "KEY SPLITS"}
             </div>
-            {/* Splits reflow with the CARD width, ONE markup: ~3-up at feed /
-                square / 9:16 (two rows, the panel is tall there) and 6-up at
-                x-landscape (one row, which fits the short panel). The column
-                count is the explicit `@min-[1400px]/card:grid-cols-6` breakpoint
-                — the named `card` query reaches past this grid's own (unnamed)
-                `size` container to the card root. That `size` container still
-                sizes each split row's type to THIS grid's height (`cqb` below)
-                so the splits stay inside the panel. */}
+            {/* Splits reflow with the CARD width, ONE markup: ~3-up (two rows) at
+                feed / square / 9:16, 6-up (one row) at x-landscape. The column
+                breakpoint `@min-[1400px]/card:grid-cols-6` keys on the named
+                `card` query, reaching past this grid's own (unnamed) `size`
+                container — which still sizes each split row's type to THIS grid's
+                height (`cqb` below) so the splits stay inside the panel. */}
             <div
               className="grid auto-rows-fr @min-[1400px]/card:grid-cols-6 grid-cols-3"
               style={{

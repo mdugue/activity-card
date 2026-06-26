@@ -2,9 +2,8 @@
 
 // The format-aware rendering contract. Every single-card theme renders DIRECTLY
 // at the target export dimensions and reads them — plus the platform safe insets
-// — from this context, instead of being authored at 1080×1350 and scaled as one
-// block by an external frame. Two coordinate systems are available in the same
-// render tree:
+// — from this context, rather than being authored at 1080×1350 and scaled as one
+// block by an external frame. Two coordinate systems share one render tree:
 //
 //   • the FULL canvas (`useFormat().width × height`) — backgrounds, route /
 //     elevation silhouettes, anything that should bleed past the safe zone;
@@ -12,13 +11,12 @@
 //     that must stay clear of the platform's UI.
 //
 // Because both live in one tree, a single element can mask one against the other
-// (e.g. Altitude's claim sliced by the elevation curve) — impossible when the
-// background and the content are split across independent layers.
+// (e.g. Altitude's claim sliced by the elevation curve) — impossible with the
+// background and content split across independent layers.
 //
-// The default is the 4:5 feed master, so a theme rendered without a provider (a
-// bare Storybook story) gets 1080×1350 / 48 px safe — and since every theme's
-// own margins exceed 48 px, `useSafeInsets` returns those margins unchanged and
-// the master stays pixel-identical to the legacy output.
+// Default is the 4:5 feed master, so a theme rendered without a provider (a bare
+// Storybook story) gets 1080×1350 / 48 px safe; every theme's own margins exceed
+// 48 px, so `useSafeInsets` returns them unchanged and the master is unchanged.
 
 import {
   type CSSProperties,

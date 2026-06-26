@@ -181,8 +181,7 @@ export function statOptsFor(vis: {
 }
 
 /** A standard stat detail slide shows every stat EXCEPT the one the hero slide
- *  headlines (so the deck doesn't repeat its big number). Each panel derives
- *  this itself from `data` — there is no central planner. */
+ *  headlines (so the deck doesn't repeat its big number). */
 export function detailStats(
   data: ActivityData,
   metric: HeroMetric,
@@ -194,8 +193,7 @@ export function detailStats(
 
 /** The stats a Press slide shows, by position: the front page leads with the
  *  headline + lede (first 3); the first spread carries one pull-quote, the next
- *  a small row; the byline shows none. Pure + index-addressed (each PressPanel
- *  calls it for its own slide), not a deck-wide plan. */
+ *  a small row; the byline shows none. */
 export function pressSlideStats(
   data: ActivityData,
   index: number,

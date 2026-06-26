@@ -1,23 +1,16 @@
 /**
  * Export formats — the platform-optimised output sizes and their safe zones.
+ * Effort's master is authored at 4:5 (1080×1350); every theme is *format-aware*,
+ * rendering at the target size and reading these dimensions + safe insets from
+ * the FormatContext. The background fills full-bleed; content stays inside the
+ * **safe zone** via `mergeSafe`.
  *
- * Effort's master design is authored at 4:5 (1080×1350). To target other
- * platforms every theme is *format-aware*: it renders directly at the target
- * size and reads these dimensions + safe insets from the FormatContext
- * (`components/themes/shared/format-context.tsx`). The background (photo / route
- * / colour wash) fills the target *full-bleed*, while the content (headline +
- * stats + marks) is kept inside the format's **safe zone** via `mergeSafe`.
- *
- * What `safe` models is **occlusion, not crop**. On these targets the image is
- * shown full-bleed and *uncropped* — the danger is that the platform paints its
- * own UI (caption, action rail, profile, reply box) *over* the picture. So the
- * insets are the per-side keep-out where that chrome sits, and they are
- * **asymmetric** (heavy bottom / top, the odd side rail — never a uniform ring).
- * The full-bleed background bleeds *through* the keep-out; only legible content
- * stays inside it. The lone genuine crop is X doubling as a 2:1 link card, which
- * its (larger) top/bottom inset absorbs. Values are conservative px in each
- * format's own coordinate space, baked from current platform UI — never
- * pixel-tuned to one device. See the `theme-architecture` skill for the model.
+ * `safe` models **occlusion, not crop**. The image is shown full-bleed, and
+ * uncropped — the insets are the per-side keep-out where the platform paints
+ * its own UI (caption, action rail, profile, reply box), so they're asymmetric,
+ * never a uniform ring. The background bleeds *through* the keep-out; only
+ * legible content stays inside it. (X's 2:1 link card is the lone genuine crop,
+ * absorbed by its larger top/bottom inset.) See the `theme-architecture` skill.
  */
 
 /** The canonical aspect buckets every platform maps onto. */

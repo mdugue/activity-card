@@ -34,8 +34,7 @@ import type {
 
 /** Props the spanning canvas receives. The canvas reads the STRIP frame — `w`/`h`
  *  are the WHOLE strip (count slides across, one tall) and it bleeds across slide
- *  edges. `data` is narrowed to the theme's declared capabilities (`ThemeData<K>`;
- *  the default `K = CapabilityKey` is the full `ActivityData`). */
+ *  edges. `data` is capability-narrowed (`ThemeData<K>`; see the file header). */
 export interface CanvasProps<K extends CapabilityKey = CapabilityKey> {
   /** the theme's coerced config (e.g. STRATA mood / density / legend) */
   config: Record<string, unknown>;
@@ -52,8 +51,7 @@ export interface CanvasProps<K extends CapabilityKey = CapabilityKey> {
 /** Props every slide panel receives — one foreground per slide. Unlike the
  *  canvas, a panel reads its own SLIDE frame (the deck wraps each slot in a
  *  per-slide `FormatProvider`), so `SafeArea`/`SlideScaffold` floor content to
- *  that slide's safe area. `data` is capability-narrowed; each panel derives its
- *  own stats from `data` (no deck-wide stat planner). */
+ *  that slide's safe area. `data` is capability-narrowed. */
 export interface PanelProps<K extends CapabilityKey = CapabilityKey> {
   data: ThemeData<K>;
   /** true when a photo backs the slide → text leans on shadows / treatment */
@@ -100,14 +98,8 @@ export interface CarouselTheme extends ThemeBase {
  * (every carousel theme is colour-adjustable; the look is the Reset target),
  * and `uses` defaults to the shared `CAROUSEL_CAPABILITIES` — every current
  * theme renders the same overlay set — so a theme states its identity, look,
- * and components, plus params/`resolveStyle` only when it has knobs.
- *
- * `uses` also narrows the canvas/panel `data` type (via `ThemeData`), so the
- * declaration is compiler-checked against what those components read — the same
- * guarantee `defineTheme` gives the single card. Omitting `uses` (every current
- * theme) leaves `Caps = CapabilityKey`, i.e. the full `ActivityData`; the day a
- * theme narrows `uses`, reading an undeclared field in its canvas/panel becomes
- * a compile error.
+ * and components, plus params/`resolveStyle` only when it has knobs. `uses` also
+ * narrows the canvas/panel `data` type (see the file header).
  */
 export function defineCarouselTheme<
   const Caps extends readonly CapabilityKey[] = readonly CapabilityKey[],

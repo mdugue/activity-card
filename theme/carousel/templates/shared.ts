@@ -1,11 +1,9 @@
-// Shared text helpers for carousel slide panels. The panel CONTRACT
-// (`PanelProps`) lives beside `CanvasProps` in `define-theme.ts`; the per-slide
-// padding is now `CAROUSEL_NATURAL_MARGIN` + the `SlideScaffold`/`SafeArea`
-// safe-area machinery (`scaffold.tsx`), so this file keeps only the dual
-// text-shadow treatment and the slide-number formatter. Panels render
-// *foreground only* (type, stats); the deck renderer owns the photo, the
-// spanning canvas, and chrome. Each panel derives its stats directly from
-// `data` (see `theme/carousel/stats.ts`) — there is no deck-wide stat planner.
+// Shared text helpers for carousel slide panels — the dual text-shadow treatment
+// and the slide-number formatter. (The panel CONTRACT `PanelProps` lives beside
+// `CanvasProps` in `define-theme.ts`; per-slide padding is the
+// `SlideScaffold`/`SafeArea` safe-area machinery in `scaffold.tsx`.) Panels
+// render *foreground only* (type, stats); the deck renderer owns the photo, the
+// spanning canvas, and chrome.
 
 import type { EffectiveStyle } from "@/theme/carousel/resolve";
 
