@@ -5,18 +5,11 @@
 
 import type { ActivityData } from "@/lib/activity";
 import { formatDateUpper } from "@/lib/format";
-import {
-  isMultiActivity,
-  segmentProfiles,
-  segmentRoutes,
-} from "@/lib/multi-activity";
-import { bandModeFor, pickProfile } from "@/theme/carousel/profile";
 import type { EffectiveStyle } from "@/theme/carousel/resolve";
 import { pressSlideStats, type StatItem } from "@/theme/carousel/stats";
 import { SafeArea } from "@/theme/shared/format-context";
 import type { PanelProps } from "../define-theme";
-import { ElevationBand } from "../elevation-band";
-import { RouteLine } from "../route-line";
+import { MiniViz, vizHasKind } from "../mini-viz";
 import { CAROUSEL_NATURAL_PAD } from "../templates/scaffold";
 import { slideNumber } from "../templates/shared";
 
@@ -219,19 +212,6 @@ function FrontPage({
 const VIZ_W = 540;
 const VIZ_H = 140;
 
-/** Whether a viz card has data to show, project-aware. */
-function vizHas(kind: "elevation" | "route", data: ActivityData): boolean {
-  if (isMultiActivity(data)) {
-    return kind === "route"
-      ? segmentRoutes(data).length > 0
-      : segmentProfiles(data).profiles.length > 0;
-  }
-  if (kind === "route") {
-    return (data.routeCoordinates?.length ?? 0) > 1;
-  }
-  return (pickProfile(data).profile?.length ?? 0) > 1;
-}
-
 /** The dark "clipping" that overlaps the stat card's empty lower band — a route
  *  or elevation cut in paper ink, flat and borderless, for a pasted-up magazine
  *  feel. No title; the paired stat names it. */
@@ -246,14 +226,9 @@ function VizCard({
   kind: "elevation" | "route";
   paper: string;
 }) {
-  if (!vizHas(kind, data)) {
+  if (!vizHasKind(data, kind)) {
     return null;
   }
-  const { profile, mode } = pickProfile(data);
-  const multi = isMultiActivity(data);
-  const routes = multi ? segmentRoutes(data).map((r) => r.coords) : [];
-  const seg = multi ? segmentProfiles(data) : null;
-  const bandMode = bandModeFor(seg, mode);
   return (
     <div
       style={{
@@ -269,31 +244,16 @@ function VizCard({
       }}
     >
       <div style={{ width: VIZ_W, height: VIZ_H }}>
-        {kind === "route" ? (
-          <RouteLine
-            accent={paper}
-            accent2={paper}
-            coords={data.routeCoordinates}
-            h={VIZ_H}
-            ink={paper}
-            pad={12}
-            routes={multi ? routes : undefined}
-            showMarkers
-            strokeWidth={4}
-            style="poster"
-            w={VIZ_W}
-          />
-        ) : (
-          <ElevationBand
-            colors={{ line: paper, fillFrom: paper, fillTo: "transparent" }}
-            h={VIZ_H}
-            mode={bandMode}
-            profile={profile}
-            profiles={multi ? seg?.profiles : undefined}
-            w={VIZ_W}
-            weights={multi ? seg?.distances : undefined}
-          />
-        )}
+        <MiniViz
+          accent={paper}
+          color={paper}
+          data={data}
+          h={VIZ_H}
+          kind={kind}
+          pad={12}
+          showMarkers
+          w={VIZ_W}
+        />
       </div>
     </div>
   );

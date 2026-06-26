@@ -3,18 +3,11 @@
 // glyph (Ascent / Exposure). Just enough to nod at the other dimension.
 
 import type { ActivityData } from "@/lib/activity";
-import {
-  isMultiActivity,
-  segmentProfiles,
-  segmentRoutes,
-} from "@/lib/multi-activity";
-import { bandModeFor, pickProfile } from "@/theme/carousel/profile";
 import type {
   CrossViz as CrossVizKind,
   FontPair,
 } from "@/theme/carousel/theme-tokens";
-import { ElevationBand } from "./elevation-band";
-import { RouteLine } from "./route-line";
+import { MiniViz, vizHasKind } from "./mini-viz";
 
 interface CrossVizProps {
   accent: string;
@@ -29,19 +22,6 @@ interface CrossVizProps {
   w?: number;
 }
 
-/** Whether the wrap-up nod has data to show, project-aware. */
-function hasCross(data: ActivityData, kind: CrossVizKind): boolean {
-  if (isMultiActivity(data)) {
-    return kind === "elevation"
-      ? segmentProfiles(data).profiles.length > 0
-      : segmentRoutes(data).length > 0;
-  }
-  if (kind === "elevation") {
-    return (pickProfile(data).profile?.length ?? 0) > 1;
-  }
-  return (data.routeCoordinates?.length ?? 0) > 1;
-}
-
 export function CrossViz({
   kind,
   data,
@@ -52,15 +32,9 @@ export function CrossViz({
   w = 260,
   h = 150,
 }: CrossVizProps) {
-  if (!hasCross(data, kind)) {
+  if (!vizHasKind(data, kind)) {
     return null;
   }
-  const { profile, mode } = pickProfile(data);
-  const multi = isMultiActivity(data);
-  const seg = multi ? segmentProfiles(data) : null;
-  const routes = multi ? segmentRoutes(data) : [];
-  const bandMode = bandModeFor(seg, mode);
-
   return (
     <div style={{ width: w }}>
       <div
@@ -75,32 +49,16 @@ export function CrossViz({
         {kind === "elevation" ? "PROFILE" : "ROUTE"}
       </div>
       <div style={{ width: w, height: h }}>
-        {kind === "elevation" ? (
-          <ElevationBand
-            colors={{ line: color, fillFrom: color, fillTo: "transparent" }}
-            exaggeration={1.2}
-            h={h}
-            mode={bandMode}
-            profile={profile}
-            profiles={multi ? seg?.profiles : undefined}
-            w={w}
-            weights={multi ? seg?.distances : undefined}
-          />
-        ) : (
-          <RouteLine
-            accent={accent}
-            accent2={accent}
-            coords={data.routeCoordinates}
-            h={h}
-            ink={color}
-            pad={14}
-            routes={multi ? routes.map((r) => r.coords) : undefined}
-            showMarkers={false}
-            strokeWidth={4}
-            style="poster"
-            w={w}
-          />
-        )}
+        <MiniViz
+          accent={accent}
+          color={color}
+          data={data}
+          exaggeration={1.2}
+          h={h}
+          kind={kind}
+          pad={14}
+          w={w}
+        />
       </div>
     </div>
   );

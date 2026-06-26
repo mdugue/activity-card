@@ -3,17 +3,8 @@
 // mono labels — borderless, so they sit cleanly over the image.
 
 import type { ActivityData } from "@/lib/activity";
-import {
-  isMultiActivity,
-  segmentProfiles,
-  segmentRoutes,
-} from "@/lib/multi-activity";
-import { bandModeFor, pickProfile } from "@/theme/carousel/profile";
 import type { FontPair } from "@/theme/carousel/theme-tokens";
-import { ElevationBand } from "./elevation-band";
-import { RouteLine } from "./route-line";
-
-export type DetailVizKind = "elevation" | "route";
+import { MiniViz, type VizKind, vizHasKind } from "./mini-viz";
 
 interface DetailVizProps {
   color: string;
@@ -21,69 +12,10 @@ interface DetailVizProps {
   fonts: FontPair;
   /** chart height (px) */
   h?: number;
-  kinds: DetailVizKind[];
+  kinds: VizKind[];
   muted: string;
   /** chart width (px) */
   w?: number;
-}
-
-function hasKind(data: ActivityData, kind: DetailVizKind): boolean {
-  if (isMultiActivity(data)) {
-    return kind === "route"
-      ? segmentRoutes(data).length > 0
-      : segmentProfiles(data).profiles.length > 0;
-  }
-  if (kind === "route") {
-    return (data.routeCoordinates?.length ?? 0) > 1;
-  }
-  return (pickProfile(data).profile?.length ?? 0) > 1;
-}
-
-function Chart({
-  kind,
-  data,
-  color,
-  w,
-  h,
-}: {
-  color: string;
-  data: ActivityData;
-  h: number;
-  kind: DetailVizKind;
-  w: number;
-}) {
-  const multi = isMultiActivity(data);
-  if (kind === "route") {
-    return (
-      <RouteLine
-        accent={color}
-        accent2={color}
-        coords={data.routeCoordinates}
-        h={h}
-        ink={color}
-        pad={10}
-        routes={multi ? segmentRoutes(data).map((r) => r.coords) : undefined}
-        showMarkers={false}
-        strokeWidth={4}
-        style="poster"
-        w={w}
-      />
-    );
-  }
-  const { profile, mode } = pickProfile(data);
-  const seg = multi ? segmentProfiles(data) : null;
-  const bandMode = bandModeFor(seg, mode);
-  return (
-    <ElevationBand
-      colors={{ line: color, fillFrom: color, fillTo: "transparent" }}
-      h={h}
-      mode={bandMode}
-      profile={profile}
-      profiles={multi ? seg?.profiles : undefined}
-      w={w}
-      weights={multi ? seg?.distances : undefined}
-    />
-  );
 }
 
 export function DetailViz({
@@ -95,7 +27,7 @@ export function DetailViz({
   w = 320,
   h = 132,
 }: DetailVizProps) {
-  const present = kinds.filter((k) => hasKind(data, k));
+  const present = kinds.filter((k) => vizHasKind(data, k));
   if (present.length === 0) {
     return null;
   }
@@ -115,7 +47,7 @@ export function DetailViz({
             {kind === "route" ? "ROUTE" : "PROFILE"}
           </div>
           <div style={{ width: w, height: h }}>
-            <Chart color={color} data={data} h={h} kind={kind} w={w} />
+            <MiniViz color={color} data={data} h={h} kind={kind} w={w} />
           </div>
         </div>
       ))}
