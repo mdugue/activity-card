@@ -16,7 +16,12 @@ import type { ColorScheme } from "@/theme/core/colors";
 import type { ExportFormat } from "@/theme/core/export-formats";
 import type { Visibility } from "@/theme/core/visibility";
 
-const THUMB_W = 92;
+// Each thumbnail fits within this box — capping BOTH width and height so a tall
+// format (9:16 Story) shrinks to a narrower mini instead of growing past the
+// strip's height and clipping. Feed / square / landscape stay width-bound, so
+// they're unchanged; only the taller-than-4:5 formats become height-bound.
+const THUMB_MAX_W = 92;
+const THUMB_MAX_H = 116;
 
 interface SlideStripProps {
   colors: ColorScheme;
@@ -37,9 +42,14 @@ interface SlideStripProps {
 export function SlideStrip(props: SlideStripProps) {
   const { selectedIndex, onSelect, theme, format } = props;
   const total = theme.panels.length;
-  // Thumbnail aspect + slice scale follow the active format (1080×1350 at feed).
-  const thumbH = Math.round((THUMB_W * format.height) / format.width);
-  const scale = THUMB_W / format.width;
+  // Thumbnail aspect + slice scale follow the active format, fit-to-box so the
+  // mini never exceeds the strip's height (1080×1350 → 92×115 at feed).
+  const scale = Math.min(
+    THUMB_MAX_W / format.width,
+    THUMB_MAX_H / format.height
+  );
+  const thumbW = Math.round(format.width * scale);
+  const thumbH = Math.round(format.height * scale);
 
   // Each thumb renders the full strip and windows onto its own slice, so the
   // strip, large preview and export are guaranteed to show the same pixels.
@@ -78,7 +88,7 @@ export function SlideStrip(props: SlideStripProps) {
                   : "border-foreground/15 opacity-80 hover:opacity-100"
               )}
               onClick={() => onSelect(i)}
-              style={{ width: THUMB_W, height: thumbH }}
+              style={{ width: thumbW, height: thumbH }}
               type="button"
             >
               <div
@@ -86,7 +96,7 @@ export function SlideStrip(props: SlideStripProps) {
                 style={{
                   width: format.width * total,
                   height: format.height,
-                  transform: `translateX(${-(i * THUMB_W)}px) scale(${scale})`,
+                  transform: `translateX(${-(i * thumbW)}px) scale(${scale})`,
                 }}
               >
                 {canvas}
