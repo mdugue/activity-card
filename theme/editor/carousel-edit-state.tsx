@@ -3,15 +3,14 @@
 // Carousel editor. The large preview is a horizontally scroll-snapped window
 // onto the single CarouselDeck — it shows one slide at a time and swiping
 // reveals the neighbours with the seamless bleed, exactly like an Instagram /
-// Strava carousel. The slide strip below windows onto the same canvas, and the
-// off-screen full-width mount feeds the slicing export — so preview, thumbnails
-// and output are guaranteed to match. The controls reuse the shared ControlDeck
-// (focused toolbar on mobile, horizontal sidebar on desktop); image crop/zoom
-// reuses the single-card adjust overlay, deck-wide.
+// Strava carousel. The slide strip below windows onto the same canvas. The
+// controls reuse the shared ControlDeck (focused toolbar on mobile, horizontal
+// sidebar on desktop); image crop/zoom reuses the single-card adjust overlay,
+// deck-wide. Export navigates to the shared overview (CarouselExportSheet) — the
+// same flow as the single card — rather than downloading inline.
 
 import { ArrowsOutCardinalIcon, ImagesIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 import { CardStage } from "@/components/app/card-stage";
 import { ControlDeck, PANEL_MOTION } from "@/components/app/control-deck";
 import { Badge } from "@/components/ui/badge";
@@ -32,10 +31,6 @@ import {
   type CarouselThemeId,
 } from "@/theme/carousel/registry";
 import type { ExportFormat, ExportFormatId } from "@/theme/core/export-formats";
-import {
-  carouselBaseName,
-  exportCarousel,
-} from "@/theme/export/export-carousel";
 import { useActivityTools } from "./activity-tools";
 import type { EditorSession } from "./editor-session";
 import { FormatControl } from "./format-control";
@@ -48,6 +43,9 @@ interface CarouselEditStateProps {
   carousel: CarouselController;
   /** the active export format (shared with single-card) */
   format: ExportFormat;
+  /** open the export overview (CarouselExportSheet) — the same deliberate step
+   *  as the single card; never an inline download */
+  onExport: () => void;
   onFormatChange: (id: ExportFormatId) => void;
   onThemeChange: (theme: CarouselThemeId) => void;
   session: EditorSession;
@@ -59,6 +57,7 @@ export function CarouselEditState({
   session,
   theme,
   format,
+  onExport,
   onFormatChange,
   onThemeChange,
 }: CarouselEditStateProps) {
@@ -71,7 +70,6 @@ export function CarouselEditState({
   const { slideW, slideH, stripW } = stripGeometry(format, count);
 
   const viewportRef = useRef<HTMLDivElement>(null);
-  const wideRef = useRef<HTMLDivElement>(null);
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // While we programmatically scroll to a selected slide we ignore the scroll
   // handler, so a slow/janky animation can't read an intermediate position and
@@ -81,7 +79,6 @@ export function CarouselEditState({
   // Latest selected index, read by the ResizeObserver below without making it a
   // dependency (re-subscribing on every selection change would be wasteful).
   const selectedIndexRef = useRef(selectedIndex);
-  const [isExporting, setIsExporting] = useState(false);
   const [adjusting, setAdjusting] = useState(false);
   // The safe-zone guide is an editor-only preview overlay; the FORMAT control
   // toggles it and the preview reads it — the same mechanism as the single card.
@@ -193,25 +190,6 @@ export function CarouselEditState({
     }, 120);
   };
 
-  const handleExport = async () => {
-    if (isExporting || !wideRef.current) {
-      return;
-    }
-    setIsExporting(true);
-    try {
-      await exportCarousel(
-        wideRef.current,
-        count,
-        carouselBaseName(data.sport, data.date),
-        format
-      );
-    } catch {
-      toast.error("Export failed — please try again.");
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
   const deckProps = {
     colors: color.scheme,
     config: config.value,
@@ -244,7 +222,10 @@ export function CarouselEditState({
     <div className="flex min-w-0 flex-col gap-3 max-lg:min-h-0 max-lg:flex-1 lg:gap-5">
       {/* The scroll-snap window onto the seamless canvas is the card box; the
           stage scales it to fit the toolbar-shrunk space on mobile. */}
-      <CardStage maxWidthClassName="max-w-[360px]">
+      <CardStage
+        aspectRatio={slideW / slideH}
+        maxWidthClassName="max-w-[360px]"
+      >
         <div
           className="@container relative w-full overflow-x-auto overflow-y-hidden bg-white shadow-[0_24px_50px_-14px_rgba(26,23,20,0.3)]"
           data-testid="carousel-preview"
@@ -367,10 +348,10 @@ export function CarouselEditState({
       <ControlDeck
         action={{
           icon: <ImagesIcon aria-hidden className="size-5" weight="duotone" />,
-          isBusy: isExporting,
+          isBusy: false,
           label: "Export carousel",
           meta: `${count} × ${format.width}×${format.height}`,
-          onAction: handleExport,
+          onAction: onExport,
         }}
         preview={preview}
         previewControl={
@@ -382,18 +363,7 @@ export function CarouselEditState({
           />
         }
         tools={tools}
-      >
-        {/* Off-screen full-width mount used by the slicing export. */}
-        <div
-          aria-hidden
-          className="pointer-events-none fixed top-0 left-0 -z-10"
-          style={{ transform: "translateX(-200%)" }}
-        >
-          <div ref={wideRef} style={{ width: stripW, height: slideH }}>
-            <CarouselDeck {...deckProps} />
-          </div>
-        </div>
-      </ControlDeck>
+      />
     </TooltipProvider>
   );
 }

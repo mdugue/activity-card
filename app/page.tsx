@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { CarouselExportSheet } from "@/components/app/carousel-export-sheet";
 import { EffortWordmark } from "@/components/app/effort-wordmark";
 import { EmptyState } from "@/components/app/empty-state";
 import { ExportSheet } from "@/components/app/export-sheet";
@@ -30,7 +31,11 @@ import {
   type CarouselThemeId,
   DEFAULT_CAROUSEL_THEME,
 } from "@/theme/carousel/registry";
-import { type ColorChoice, resolveColors } from "@/theme/core/colors";
+import {
+  type ColorChoice,
+  type ColorScheme,
+  resolveColors,
+} from "@/theme/core/colors";
 import {
   DEFAULT_FORMAT_ID,
   type ExportFormatId,
@@ -426,6 +431,7 @@ export default function Home() {
             <CarouselEditState
               carousel={carousel}
               format={getFormat(previewFormat)}
+              onExport={handleDownload}
               onFormatChange={setPreviewFormat}
               onThemeChange={handleCarouselThemeChange}
               session={session}
@@ -444,18 +450,19 @@ export default function Home() {
         </div>
       ) : null}
       {state === "download" && visibleData ? (
-        <ExportSheet
+        <ExportView
+          carouselTheme={carouselTheme}
           colors={colors}
           config={activeConfig}
+          count={carousel.count}
           data={visibleData}
-          imageTransform={photo.transform}
+          mode={mode}
           onKeepEditing={handleKeepEditing}
           onNew={handleNew}
-          photoBackdropEnabled={visibility.photoBackdrop}
-          photoEffects={photo.effects}
-          photoUrl={photo.url}
+          photo={photo}
           routeCoordinates={data?.routeCoordinates}
           theme={theme}
+          visibility={visibility}
         />
       ) : null}
       {/* "Compatible with Strava" (§4) on the Strava-facing surfaces. The empty
@@ -464,6 +471,73 @@ export default function Home() {
           Strava mark by brand rule. */}
       {state === "picking-strava" ? <StravaFooter /> : null}
     </div>
+  );
+}
+
+/**
+ * The export overview, picked by mode. Both modes are reached the same way (the
+ * editor's Export action → the `download` state) and share the same sheet chrome;
+ * the carousel slices its strip per format, the single card exports one card.
+ */
+function ExportView({
+  mode,
+  colors,
+  config,
+  count,
+  data,
+  photo,
+  visibility,
+  theme,
+  carouselTheme,
+  routeCoordinates,
+  onKeepEditing,
+  onNew,
+}: {
+  carouselTheme: CarouselThemeId;
+  colors: ColorScheme;
+  config: Record<string, unknown>;
+  count: number;
+  data: ActivityData;
+  mode: CardMode;
+  onKeepEditing: () => void;
+  onNew: () => void;
+  photo: ReturnType<typeof useCardPhoto>;
+  routeCoordinates?: [number, number][];
+  theme: ThemeId;
+  visibility: Visibility;
+}) {
+  if (mode === "carousel") {
+    return (
+      <CarouselExportSheet
+        colors={colors}
+        config={config}
+        count={count}
+        data={data}
+        imageTransform={photo.transform}
+        onKeepEditing={onKeepEditing}
+        onNew={onNew}
+        photoEffects={photo.effects}
+        photoUrl={photo.url}
+        routeCoordinates={routeCoordinates}
+        theme={CAROUSEL_THEMES[carouselTheme]}
+        visibility={visibility}
+      />
+    );
+  }
+  return (
+    <ExportSheet
+      colors={colors}
+      config={config}
+      data={data}
+      imageTransform={photo.transform}
+      onKeepEditing={onKeepEditing}
+      onNew={onNew}
+      photoBackdropEnabled={visibility.photoBackdrop}
+      photoEffects={photo.effects}
+      photoUrl={photo.url}
+      routeCoordinates={routeCoordinates}
+      theme={theme}
+    />
   );
 }
 
