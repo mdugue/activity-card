@@ -18,8 +18,8 @@
 
 import type { Coord } from "@/lib/chart-helpers";
 import { isMultiActivity } from "@/lib/multi-activity";
-import type { ParamDef } from "@/lib/params/kinds";
-import type { ActivityView } from "@/lib/theme-contract";
+import type { ParamDef } from "@/theme/core/params/kinds";
+import type { ActivityView } from "@/theme/core/theme-contract";
 
 /* ----------------------------- configuration ----------------------------- */
 

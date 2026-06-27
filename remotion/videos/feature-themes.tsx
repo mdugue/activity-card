@@ -10,14 +10,14 @@ import {
   useVideoConfig,
 } from "remotion";
 import { SAMPLE_RIDE } from "@/components/app/sample-data";
-import { SINGLE_CARD_THEMES, THEME_ORDER } from "@/components/themes";
-import { CarouselDeck } from "@/components/themes/carousel/deck";
+import type { StrataMood } from "@/lib/strata";
+import { CarouselDeck } from "@/theme/carousel/deck";
 import {
   CAROUSEL_THEMES,
   type CarouselThemeId,
-} from "@/components/themes/carousel/registry";
-import { carouselArgs } from "@/components/themes/carousel/story-support";
-import type { StrataMood } from "@/lib/strata";
+} from "@/theme/carousel/registry";
+import { carouselArgs } from "@/theme/carousel/story-support";
+import { SINGLE_CARD_THEMES, THEME_ORDER } from "@/theme/single-card";
 import { CardScaled, StripPan } from "../components/card-showcase";
 import { PreloadImg } from "../components/preload-img";
 import { Pill } from "../components/stat-chip";

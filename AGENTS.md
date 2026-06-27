@@ -72,7 +72,7 @@ roots to that script (and `bunfig.toml`'s note) if tests grow beyond `lib/`.
 ## Themes — two families
 
 Effort has **two theme families**. Every theme — either family — is expressed
-through the same descriptor core (`ThemeBase` in `lib/theme-contract.ts`:
+through the same descriptor core (`ThemeBase` in `theme/core/theme-contract.ts`:
 identity, colour policy, photo policy, params) and the same editor machinery;
 the families differ only in their **render strategy** and keep separate id
 spaces. Never cross-import a single-card theme into the carousel renderer or
@@ -83,26 +83,26 @@ strip).
 | -------------- | ------------------------------------------------------ | ------------------------------------------------------------------- |
 | Output         | one 1080×1350 poster                                   | an n×1080 × 1350 seamless strip, sliced into slides                 |
 | A theme is…    | **a `defineTheme` descriptor** (component + declaration) | **a `defineCarouselTheme` descriptor** (`canvas?` + `panels[]`)   |
-| Lives in       | `components/themes/single-card/<name>.tsx`             | `components/themes/carousel/registry.ts` (descriptor incl. its `look`)  |
-| Id space       | `ThemeId` (`components/themes/index.ts`)               | `CarouselThemeId` (`components/themes/carousel/registry.ts`)        |
+| Lives in       | `theme/single-card/<name>.tsx`             | `theme/carousel/registry.ts` (descriptor incl. its `look`)  |
+| Id space       | `ThemeId` (`theme/single-card/index.ts`)               | `CarouselThemeId` (`theme/carousel/registry.ts`)        |
 | Registered in  | `SINGLE_CARD_THEMES` (descriptor registry)             | `CAROUSEL_THEMES` (`registry.ts`) · `CAROUSEL_THEME_ORDER`          |
-| Renderer       | the theme component itself                             | one shared `components/themes/carousel/deck.tsx` (`CarouselDeck`)   |
+| Renderer       | the theme component itself                             | one shared `theme/carousel/deck.tsx` (`CarouselDeck`)   |
 | Contract       | `ThemeProps` + capability declaration — see `card-rendering` + `theme-params` skills | `CanvasProps` / `PanelProps` + canvas/panels — see `carousel-themes` skill |
-| Story          | `components/themes/single-card/<name>.stories.tsx`     | `components/themes/carousel/<theme>.stories.tsx` (one per theme)    |
+| Story          | `theme/single-card/<name>.stories.tsx`     | `theme/carousel/<theme>.stories.tsx` (one per theme)    |
 
 Both families share the same **editor machinery**:
 
-- **Parameters** (`lib/params/`): a theme's adjustable knobs are declared as data
+- **Parameters** (`theme/core/params/`): a theme's adjustable knobs are declared as data
   (`ParamDef[]`) and rendered generically — there are no per-theme control
   components. Config lives in one coerced slot keyed by theme id; the editor
   groups controls by category (STYLE · LAYOUT · PHOTO · TEXT · STATS · MARKS · ACTIVITY).
-- **Capabilities** (`lib/theme-contract.ts`): every theme — both families —
+- **Capabilities** (`theme/core/theme-contract.ts`): every theme — both families —
   *declares* which overlay elements it renders (`uses` / sport-aware `usesWhen`)
   on its `ThemeBase` core. On the single card the declaration also narrows the
   component's `data` prop type (reading an undeclared field is a compile error).
   Both families drive editor availability the same way — `themeAvailability(data,
-  theme)` (`lib/visibility.ts`).
-- **Colour** (`lib/colors.ts`): themes consume a resolved `ColorScheme`; the user
+  theme)` (`theme/core/visibility.ts`).
+- **Colour** (`theme/core/colors.ts`): themes consume a resolved `ColorScheme`; the user
   picks a `ColorChoice` — a static preset (single hue or pair) or a photo-derived
   strategy — in one control, hidden for fixed-palette themes.
 - **Photo**: every theme shows a background photo, gated by the shared
@@ -139,7 +139,7 @@ appear.
 - **TypeScript strict mode.** No `any` without a `// reason:` comment.
 - **Tailwind for styling.** No CSS-in-JS, no styled-components. Theme components may use scoped `<style>` for fonts.
 - **Combine class names with `cn()`** from `@/lib/utils` (clsx + tailwind-merge). Never template-literal concatenation for conditional classes — write `cn("base", active && "…")`, not `` `base ${active ? "…" : ""}` ``.
-- **Shadows use Tailwind's scale** (`shadow-xs` … `shadow-2xl`), tinted when needed via `shadow-<token>` (e.g. `shadow-primary/50`). No arbitrary `shadow-[…]` in app chrome. Themes in `components/themes/` are the exception: they rasterise to PNG, so their shadows stay inline as `style={{ boxShadow }}`.
+- **Shadows use Tailwind's scale** (`shadow-xs` … `shadow-2xl`), tinted when needed via `shadow-<token>` (e.g. `shadow-primary/50`). No arbitrary `shadow-[…]` in app chrome. Themes in `theme/` are the exception: they rasterise to PNG, so their shadows stay inline as `style={{ boxShadow }}`.
 - **Route/path silhouettes stay geographically faithful.** Project route coordinates with a single uniform scale and centre them in their container — use `projectRoute` / `routePath` (`lib/chart-helpers.ts`), which do exactly this. Never stretch a path per-axis to fill a box (e.g. to span the full carousel width): a distorted silhouette misrepresents the real route. Keep its true proportions and centre it (for the carousel hero, in the middle of the complete viewport).
 - **No console.log in committed code.** Use proper error UI for user-facing failures.
 - **Every theme ships a colocated story** — single-card *and* carousel. Adding or
@@ -156,31 +156,44 @@ app/                  Next.js App Router routes only (page.tsx, layout.tsx, rout
                       No private `_components/` folders — keep components in `/components/`.
 components/
   ui/                 shadcn primitives. VENDOR — do NOT edit; re-add via `bunx shadcn add`.
-  app/                App-level composite components (states, shell, wordmark, sample data).
-  themes/
-    single-card/      SINGLE-CARD themes — one file per theme, each exporting its
-                      component plus a `defineTheme` descriptor; collected in
-                      `themes/index.ts` (`SINGLE_CARD_THEMES` / `ThemeId`).
-    carousel/         CAROUSEL ("accordion") themes — descriptors (`registry.ts`,
-                      built via `define-theme.ts`) composed by one shared renderer
-                      (`deck.tsx`, `CarouselDeck`). A theme is a `canvas?` (spanning
-                      signature, under `canvas/`) + `panels[]` (slide components,
-                      under `templates/` + `panels/`) + an inline `look`; the look
-                      vocabulary (types, font pairs) is `lib/carousel/theme-tokens.ts`.
-    shared/           Rendering utilities both card kinds build on (photo layers,
-                      cover-photo geometry, photo-fx context, overlay-route).
+  app/                App-level composite components NOT specific to theme editing —
+                      states, shell, wordmark, sample data, control primitives /
+                      control-deck, card-stage, mode-toggle, export-sheet, onboarding,
+                      Strava pickers/footer.
+theme/                THE theme feature module — everything that IS a theme, or edits /
+                      exports one. Organized by role, with a `core` both families import.
                       (Stories colocate next to components as `<name>.stories.tsx`.)
+  core/               Shared vocabulary BOTH families import: `theme-contract.ts`
+                      (`ThemeBase`, capabilities, `ThemeData`, `defineTheme`),
+                      `colors.ts` (`ColorScheme`/`ColorChoice`), `visibility.ts`,
+                      `export-formats.ts` (output sizes + safe zones), and `params/`
+                      (`ParamDef` schema + `coerceConfig`). The single source of truth.
+  shared/             Rendering utilities both card kinds build on: photo layers
+                      (cover-photo, photo-backdrop/layer/fx/underlay), overlay-route,
+                      and `format-context.tsx` (`FormatProvider` / `SafeArea`).
+  single-card/        SINGLE-CARD themes — one file per theme, each exporting its
+                      component plus a `defineTheme` descriptor; collected in
+                      `index.ts` (`SINGLE_CARD_THEMES` / `ThemeId`).
+  carousel/           CAROUSEL ("accordion") themes — descriptors (`registry.ts`, built
+                      via `define-theme.ts`) composed by one shared renderer (`deck.tsx`,
+                      `CarouselDeck`). A theme is a `canvas?` (spanning signature, under
+                      `canvas/`) + `panels[]` (slide components, under `templates/` +
+                      `panels/`) + an inline `look`. Also holds the carousel logic —
+                      look vocabulary (`theme-tokens.ts`), `resolve`/`stats`/`profile`/
+                      `types`/`atmosphere`/`marks`.
+  editor/             The theme-editing UI both modes share: `render-theme`, the
+                      single-card + carousel `edit-state`s, `editor-session`,
+                      `activity-tools`, the controls (`param`/`color`/`format`/`photo`),
+                      `theme-rail`, `slide-strip`, `single-card-preview`, and the
+                      safe-zone / image-adjust overlays.
+  export/             The DOM-to-PNG export pipeline: `export-card`, `export-carousel`,
+                      `export-shared` (snapdom helpers).
 hooks/                Shared client hooks. (`use-mobile.ts` is shadcn-vendor.)
-lib/                  Utilities (`cn`, parsers, formatters). `lib/activity.ts` is the
-                      canonical ActivityData model. `lib/theme-contract.ts` holds the
-                      single-card descriptor contract (capabilities, ThemeData,
-                      defineTheme); `lib/colors.ts` the ColorScheme/ColorChoice model.
-                      `lib/carousel/` holds the carousel look vocabulary, the
-                      per-slide stat helpers, and the deck-style resolve logic (the
-                      `CAROUSEL_THEMES` descriptor registry lives in the component
-                      layer). `lib/params/` holds the editor parameter schema
-                      (`ParamDef`) and `coerceConfig` coercion; param specs live on the
-                      theme descriptors themselves.
+lib/                  THEME-AGNOSTIC utilities only: the canonical `activity.ts`
+                      ActivityData model, parsers (`parse-activity`/`gpx`/`fit`),
+                      formatters (`format.ts`), geometry (`chart-helpers`, `simplify`),
+                      `image-transform`, `multi-activity`, `strata` geometry, `palette`,
+                      `photo-effects`, the Strava client, and `cn` (`utils.ts`).
 public/               Static assets.
 .storybook/           Storybook config + the shared preview, background presets,
                       and the background-photo decorator.
@@ -202,15 +215,15 @@ public/               Static assets.
 ### Where new code goes
 
 - **A new screen or state of the app** → `components/app/<name>.tsx`, wired from `app/page.tsx`.
-- **A new single-card theme** → one `components/themes/single-card/<name>.tsx`
+- **A new single-card theme** → one `theme/single-card/<name>.tsx`
   exporting the component and a `defineTheme` descriptor (capabilities, colour +
   photo policy, params); add it to `SINGLE_CARD_THEMES` + `THEME_ORDER`
-  (`components/themes/index.ts`), **plus a colocated
-  `components/themes/single-card/<name>.stories.tsx`**.
+  (`theme/single-card/index.ts`), **plus a colocated
+  `theme/single-card/<name>.stories.tsx`**.
 - **A new carousel theme** → one `defineCarouselTheme` entry in
-  `components/themes/carousel/registry.ts` (id in `CarouselThemeId` +
+  `theme/carousel/registry.ts` (id in `CarouselThemeId` +
   `CAROUSEL_THEME_ORDER`; `canvas?` + `panels` + inline `look`), **plus a
-  colocated `components/themes/carousel/<theme>.stories.tsx`**. See the
+  colocated `theme/carousel/<theme>.stories.tsx`**. See the
   `carousel-themes` skill.
 - **A new adjustable knob on a theme** → add a `ParamDef` to the theme's
   `*_PARAMS` spec (pure data in `lib/<theme>.ts`) and reference it from the

@@ -18,11 +18,11 @@ import {
   SAMPLE_RUN,
   SAMPLE_SWIM,
 } from "@/components/app/sample-data";
-import type { ThemeId } from "@/components/themes";
-import { CarouselDeck } from "@/components/themes/carousel/deck";
-import { CAROUSEL_THEMES } from "@/components/themes/carousel/registry";
-import { carouselArgs } from "@/components/themes/carousel/story-support";
 import { mixHex } from "@/lib/chart-helpers";
+import { CarouselDeck } from "@/theme/carousel/deck";
+import { CAROUSEL_THEMES } from "@/theme/carousel/registry";
+import { carouselArgs } from "@/theme/carousel/story-support";
+import type { ThemeId } from "@/theme/single-card";
 import { Backdrop } from "../components/backdrop";
 import { CardScaled } from "../components/card-showcase";
 import { FileIcon, StravaChip } from "../components/file-icon";

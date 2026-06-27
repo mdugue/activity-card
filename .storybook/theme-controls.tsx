@@ -32,10 +32,13 @@ import {
   PRESET_SCHEMES,
   resolveColors,
   VARIANT_LABELS,
-} from "@/lib/colors";
-import { PARAM_GROUP_LABEL, type ParamDef } from "@/lib/params/kinds";
-import { coerceConfig } from "@/lib/params/resolve";
-import { pickThemeData, type SingleCardTheme } from "@/lib/theme-contract";
+} from "@/theme/core/colors";
+import { PARAM_GROUP_LABEL, type ParamDef } from "@/theme/core/params/kinds";
+import { coerceConfig } from "@/theme/core/params/resolve";
+import {
+  pickThemeData,
+  type SingleCardTheme,
+} from "@/theme/core/theme-contract";
 import type { BackgroundArgs } from "./backgrounds";
 
 /* ----------------------------- activity ----------------------------- */

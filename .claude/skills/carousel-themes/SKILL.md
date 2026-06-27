@@ -1,34 +1,34 @@
 ---
 name: carousel-themes
-description: Use when designing, editing, or adding a Carousel Post theme — the look/ideas of Trace, Ascent, Exposure, Frame, Press, Strata, the Dawn/Dusk light·dark pairing, the canvas + panels descriptor model, per-theme slide count, photo handling (filter + grain + veil + text-shadow), and the element-visibility model. Read before touching anything under components/themes/carousel/ or lib/carousel/.
+description: Use when designing, editing, or adding a Carousel Post theme — the look/ideas of Trace, Ascent, Exposure, Frame, Press, Strata, the Dawn/Dusk light·dark pairing, the canvas + panels descriptor model, per-theme slide count, photo handling (filter + grain + veil + text-shadow), and the element-visibility model. Read before touching anything under theme/carousel/.
 ---
 
 # carousel-themes
 
 How the Carousel Post themes are designed. The carousel is its own medium — its
 themes are **not** the single-card themes. They live in their own id space
-(`CarouselThemeId` in `components/themes/carousel/registry.ts`), independent of
+(`CarouselThemeId` in `theme/carousel/registry.ts`), independent of
 the single-card `ThemeId`, so the set can grow freely.
 
 ## A carousel theme is a descriptor (canvas + panels)
 
 Like a single-card theme, a carousel theme is a `ThemeBase` descriptor (identity,
 colour/photo policy, params, **`uses`** capabilities) — one self-contained
-`defineCarouselTheme` entry in `components/themes/carousel/registry.ts`
+`defineCarouselTheme` entry in `theme/carousel/registry.ts`
 (`CAROUSEL_THEMES`, the carousel peer of `SINGLE_CARD_THEMES`). It adds a render
 strategy — two component fields plus the inline `look` they render with:
 
 - **`canvas?`** — the spanning signature component, drawn **once** across the
   whole n×1080 × 1350 strip and bled across every slide edge. Optional: photo-led
   themes (Exposure / Frame / Press) omit it. The three canvases live in
-  `components/themes/carousel/canvas/`: `RouteCanvas` (Trace), `ElevationCanvas`
+  `theme/carousel/canvas/`: `RouteCanvas` (Trace), `ElevationCanvas`
   (Ascent), `StrataCanvas` (Strata).
 - **`panels`** — an array of foreground components, **one per slide**; its length
   IS the slide count (most themes 3, Frame/Press 4). Standard themes share
   `[HeroSlide, StatGridSlide, EditorialSlide]`; Frame and Press bring their own
   per-slide panels.
 
-One shared renderer composes them — `components/themes/carousel/deck.tsx`
+One shared renderer composes them — `theme/carousel/deck.tsx`
 (`CarouselDeck`): the shared background photo + veil, then `theme.canvas`, then
 `theme.panels.map((Panel, i) => …)`. There is **no per-theme branch** in the
 renderer; a theme *is* its canvas + panels. The editor windows onto the deck, the
@@ -37,7 +37,7 @@ thumbnails slice it, and the export slices it — preview === output.
 ## The look
 
 Each theme's `look` (a `CarouselLook`, vocabulary in
-`lib/carousel/theme-tokens.ts`) lives inline on its descriptor;
+`theme/carousel/theme-tokens.ts`) lives inline on its descriptor;
 `defineCarouselTheme` derives the colour/photo policy from it, and
 `resolveDeckStyle` spreads it (plus the resolved colours + fonts) into the one
 `EffectiveStyle` every canvas/panel receives. The levers:
@@ -62,7 +62,7 @@ Each theme's `look` (a `CarouselLook`, vocabulary in
   `defaultColorChoice` (Exposure starts photo-derived). Knobs (Strata's
   mood/density/legend) are `params`/`defaults` on the descriptor entry itself.
 
-Colour flows through the shared model (`lib/colors.ts`): the deck renders with a
+Colour flows through the shared model (`theme/core/colors.ts`): the deck renders with a
 resolved `ColorScheme` — `resolveDeckStyle(theme.look, theme.label, scheme)` →
 `EffectiveStyle` — where the user's `ColorChoice` (preset or photo-derived)
 overrides the look's accents. A theme may post-process that style via an
@@ -91,7 +91,7 @@ optional `resolveStyle(base, config)` (Strata's mood swaps the whole palette).
 **Dawn/Dusk is a knob, not a theme split:** same signature idea, opposite tone —
 light = bright photo filter + dark serif text; dark = moody photo filter + light
 bold text. Trace and Ascent expose it as the shared ATMOSPHERE param
-(`lib/carousel/atmosphere.ts` + `atmosphereResolveStyle` in `registry.ts`, the
+(`theme/carousel/atmosphere.ts` + `atmosphereResolveStyle` in `registry.ts`, the
 same `resolveStyle` mechanism as Strata's mood). Keep new families consistent
 with this contrast.
 
@@ -111,9 +111,9 @@ signature viz only. Legibility comes from, in order of preference:
    opaque boxes.
 
 The panorama itself is the shared natural-size-aware `CoverPhoto`
-(`components/themes/shared/cover-photo.tsx`, wrapped by `carousel-photo.tsx`):
-quarter-turn rotations swap the element's width/height so the strip stays
-covered. Optional **film grain** survives snapdom because it's decoded as
+(`theme/shared/cover-photo.tsx`, drawn strip-wide by the deck; a panel that wants
+its own windowed copy reaches for `Panorama`): quarter-turn rotations swap the
+element's width/height so the strip stays covered. Optional **film grain** survives snapdom because it's decoded as
 an image, not a live filter. Default-on for the art-print themes via the token
 look's photo fields.
 
@@ -130,10 +130,40 @@ genuinely long routes reach further across. (Strata's woven field is the
 deliberate exception — its identity is the continuous weave, so it spans by
 design.)
 
+## Format-aware strip (size + safe zones)
+
+The strip is **format-aware**, exactly like a single-card theme — it renders
+*at* the chosen export format and feeds the geometry down, with **no external
+frame** scaling it (read the `theme-architecture` skill). The teachable
+equivalence is **canvas : panel :: full-bleed : SafeArea**:
+
+- the **canvas** reads the **strip frame** — its `w`/`h` are the WHOLE strip
+  (`count × slide`, at the active format) and it bleeds across every slide edge.
+  It still places by % and stays aspect-true; it just receives a different
+  `w/h`. Never stretch a route/elevation per-axis to fill a wider strip.
+- each **panel** reads its own **slide frame** — the deck wraps every slot in a
+  per-slide `FormatProvider`, so `useFormat()` returns one slide's box and
+  `SafeArea` / `SlideScaffold` (`templates/scaffold.tsx`) floor content to that
+  slide's safe area: the natural margin `CAROUSEL_NATURAL_MARGIN`, raised to the
+  platform keep-out on taller formats via `mergeSafe`. Never pad a panel by a
+  bare constant — that's a dead safe zone.
+
+All sizing flows from `theme/carousel/geometry.ts` (`stripGeometry` /
+`useStripGeometry`, `stripFormat`, `CAROUSEL_NATURAL_MARGIN`), never a parallel
+size table. The deck, the editor preview/strip and the slicing export all read it.
+
+The carousel offers the **same formats as the single card** — the full
+`FORMAT_ORDER`, no gated subset. Every format is just a different slide box: the
+canvases place by % and bleed, and the only per-format difference a panel sees is
+its `SafeArea` floor (`mergeSafe(format.safe, CAROUSEL_NATURAL_MARGIN)`), so the
+four 9:16 platforms (story / tiktok / whatsapp / strava) render at the same
+geometry but keep clear of each platform's own chrome. Preview them all in
+`Carousel/Format matrix` (Storybook).
+
 ## Stats & visibility — panels self-derive
 
 There is **no deck-wide stat planner**. Each panel derives the stats it shows
-directly from `data`, by its own slide index, via `lib/carousel/stats.ts`:
+directly from `data`, by its own slide index, via `theme/carousel/stats.ts`:
 
 - `heroStat(data, style.heroMetric, statOptsFor(visibility))` — the one big
   intro number.
@@ -143,7 +173,7 @@ directly from `data`, by its own slide index, via `lib/carousel/stats.ts`:
 - `pressSlideStats(data, index, total, opts)` — Press's lede / pull-quote slices.
 
 `statOptsFor(visibility)` carries the distance/time toggles (a card's core, never
-stripped). Every **other** overlay element is toggleable (`lib/visibility.ts`):
+stripped). Every **other** overlay element is toggleable (`theme/core/visibility.ts`):
 most toggles work by **stripping the field** in `applyVisibility` before render,
 so one switch hides the element in both modes with no per-theme code. Which
 switches a theme offers comes from its capability declaration —
@@ -155,7 +185,7 @@ Athlete name, the "made with effort" mark, and page numbers default OFF.
 
 1. Add the id to `CarouselThemeId` + `CAROUSEL_THEME_ORDER` and one
    self-contained `defineCarouselTheme` entry in
-   `components/themes/carousel/registry.ts`: identity, the `canvas?` (reuse
+   `theme/carousel/registry.ts`: identity, the `canvas?` (reuse
    `RouteCanvas` / `ElevationCanvas` / `StrataCanvas`, or add one under
    `canvas/`), the `panels` (reuse `STANDARD_PANELS`, or compose new per-slide
    panel components), and the inline `look`. Add `params`/`defaults` for knobs
@@ -172,25 +202,29 @@ Athlete name, the "made with effort" mark, and page numbers default OFF.
 ## File map
 
 ```
-lib/carousel/theme-tokens.ts   the look vocabulary — CarouselLook · font pairs · CAROUSEL_CAPABILITIES
-lib/carousel/resolve.ts        look + ColorScheme → EffectiveStyle · heroInk
-lib/carousel/stats.ts          buildStats · heroStat · detailStats · frameStats · pressSlideStats · series
-lib/carousel/types.ts          SLIDE_W/H · RouteStyle · FontPairId
+theme/carousel/theme-tokens.ts   the look vocabulary — CarouselLook · font pairs · CAROUSEL_CAPABILITIES
+theme/carousel/resolve.ts        look + ColorScheme → EffectiveStyle · heroInk
+theme/carousel/stats.ts          buildStats · heroStat · detailStats · frameStats · pressSlideStats · series
+theme/carousel/marks.ts          CAROUSEL_MARK_PARAMS (effort / page numbers) · carouselMarks(config)
+theme/carousel/geometry.ts       stripGeometry/useStripGeometry · stripFormat · CAROUSEL_NATURAL_MARGIN
+theme/carousel/types.ts          RouteStyle · FontPairId
 hooks/use-carousel.ts          panel count → clamped slide selection (one index)
-components/themes/carousel/define-theme.ts   defineCarouselTheme · CarouselTheme · CanvasProps
-components/themes/carousel/registry.ts       CAROUSEL_THEMES + CarouselThemeId (one entry per theme, look inline)
-components/themes/carousel/deck.tsx          CarouselDeck — the shared renderer
-components/themes/carousel/canvas/           RouteCanvas · ElevationCanvas · StrataCanvas
-components/themes/carousel/templates/        standard panels (Hero/StatGrid/Editorial) + PanelProps
-components/themes/carousel/panels/           Frame + Press per-slide panels
-components/themes/carousel/route-line.tsx    route + start-direction arrow
-components/themes/carousel/elevation-band.tsx mountain range / sparkline
-components/themes/carousel/carousel-photo.tsx panorama photo (shared CoverPhoto)
-components/themes/carousel/<theme>.stories.tsx one story file per theme (required)
+theme/carousel/define-theme.ts   defineCarouselTheme · CarouselTheme · CanvasProps · PanelProps
+theme/carousel/registry.ts       CAROUSEL_THEMES + CarouselThemeId (one entry per theme, look inline)
+theme/carousel/deck.tsx          CarouselDeck — the shared, format-aware renderer
+theme/carousel/canvas/           RouteCanvas · ElevationCanvas · StrataCanvas (read the strip frame)
+theme/carousel/templates/        standard panels (Hero/StatGrid/Editorial) + SlideScaffold/SafeArea (scaffold.tsx) + text helpers
+theme/carousel/panels/           Frame + Press per-slide panels
+theme/carousel/route-line.tsx    route + start-direction arrow
+theme/carousel/elevation-band.tsx mountain range / sparkline
+theme/carousel/panorama.tsx      per-panel strip-windowed photo (shared CoverPhoto) — masking / interweaving
+theme/carousel/<theme>.stories.tsx one story file per theme (required) · format-matrix.stories.tsx (every offered format)
 ```
 
-Every panel receives the same `PanelProps` bag (`templates/shared.ts`):
-pre-resolved `style`, slide `index`/`total`, `hasPhoto`, the deck-wide
-`visibility`, and the chrome flags. Panels are foreground fragments inside ONE
-renderer — the style is resolved once (which guarantees the seamless deck), and
-each panel derives its own stats from `data`.
+Every panel receives the same `PanelProps` bag (the contract lives beside
+`CanvasProps` in `define-theme.ts`): pre-resolved `style`, slide `index`/`total`,
+`hasPhoto`, the deck-wide `visibility`, and the chrome flags. Its `data` is
+narrowed to the theme's declared capabilities (`ThemeData<K>`), exactly like the
+single card's `ThemeProps`. Panels are foreground fragments inside ONE renderer —
+the style is resolved once (which guarantees the seamless deck), and each panel
+derives its own stats from `data`.

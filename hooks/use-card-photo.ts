@@ -10,7 +10,7 @@
 import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
 import { IDENTITY_TRANSFORM, type ImageTransform } from "@/lib/image-transform";
 import { NO_EFFECTS, type PhotoEffects } from "@/lib/photo-effects";
-import type { ThemePhotoPolicy } from "@/lib/theme-contract";
+import type { ThemePhotoPolicy } from "@/theme/core/theme-contract";
 
 /** A theme's photo effects (its signature filter + grain) over a base. */
 function policyEffects(

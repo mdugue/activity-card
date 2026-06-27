@@ -2,31 +2,17 @@
 
 // Focused-toolbar editor chrome, shared by the Single Card and Carousel editors.
 //
-// One DOM, three layouts — driven purely by CSS so each control group renders
-// exactly once (no duplicated inputs/state). The shell is a CSS grid whose three
-// children — the preview, the controls panel, and the dock (category tabs +
-// export) — are re-placed via `grid-template-areas` per breakpoint/orientation:
+// One DOM, three layouts (mobile portrait / mobile landscape / desktop), driven
+// purely by CSS via `grid-template-areas` so each control group renders exactly
+// once (no duplicated inputs/state). Opening a group SHRINKS the preview instead
+// of covering it; on portrait the carousel rail steps aside (its `data-open`
+// collapse) to give the card room.
 //
-//   • Mobile portrait — a non-scrolling app-shell that fills the dynamic
-//     viewport (no page scroll, which felt flickery). Preview on top (it fills
-//     the space and the card scales to fit it), the active group's panel beneath
-//     (bounded height, scrolls internally) and the dock pinned at the foot.
-//     Opening a group SHRINKS the preview instead of covering it; the carousel
-//     rail steps aside to give the card room.
-//   • Mobile landscape — the same three regions, but preview and panel sit side
-//     by side with the dock spanning the foot, so a short viewport keeps both
-//     the card and a tall group usable.
-//   • Desktop (lg+) — a sticky preview on the left; every group plus the export
-//     button stacked in the right column. There's room for everything, so the
-//     tabs hide and the page scrolls normally.
-//
-// Open/close is a real `open` state (separate from the active group, which is
-// kept so its content can animate while collapsing). The panel itself carries a
-// pure-CSS transition: portrait animates `max-height`, landscape `max-width`,
-// both plus opacity. The preview is grid `1fr`, so it reflows — growing/
-// shrinking in lockstep — as the panel animates, no JS per frame. Honoured under
-// `prefers-reduced-motion`. The preview can never disappear: the panel is height-
-// capped (portrait) or fixed-width (landscape) and scrolls inside its own bounds.
+// The panel animates with a pure-CSS transition (portrait `max-height`,
+// landscape `max-width`, both plus opacity); the preview is grid `1fr` so it
+// reflows in lockstep with no JS per frame. Honoured under
+// `prefers-reduced-motion`. The preview can never disappear: the panel is
+// height-capped / fixed-width and scrolls inside its own bounds.
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -45,7 +31,6 @@ export interface ControlTool {
 
 export interface ControlDeckAction {
   icon: React.ReactNode;
-  isBusy: boolean;
   /** desktop label, e.g. "Download PNG" / "Export carousel" */
   label: string;
   /** desktop sub-label, e.g. "1080 × 1350" */
@@ -55,8 +40,6 @@ export interface ControlDeckAction {
 
 interface ControlDeckProps {
   action: ControlDeckAction;
-  /** off-screen export mounts and any other siblings */
-  children?: React.ReactNode;
   preview: React.ReactNode;
   /** a preview-level control pinned beside the action (e.g. the format picker) —
    *  distinct from the scrolling settings tabs and the action itself */
@@ -77,7 +60,6 @@ export function ControlDeck({
   preview,
   previewControl,
   action,
-  children,
 }: ControlDeckProps) {
   // Lead with the first tool (THEME) open, so the theme rail is on screen the
   // moment the editor mounts. `active` is kept even while closed so its content
@@ -252,7 +234,6 @@ export function ControlDeck({
         <Button
           className="h-auto w-14 shrink-0 flex-col gap-1 rounded-md px-1 py-2 lg:w-auto lg:flex-1 lg:flex-row lg:justify-between lg:px-8 lg:py-4"
           data-testid="export-action"
-          disabled={action.isBusy}
           onClick={action.onAction}
           size="lg"
         >
@@ -262,7 +243,7 @@ export function ControlDeck({
               EXPORT
             </span>
             <span className="hidden font-heading text-lg lg:inline">
-              {action.isBusy ? "Rendering…" : action.label}
+              {action.label}
             </span>
           </span>
           <span className="hidden font-medium font-mono text-[10px] tracking-[0.18em] opacity-75 lg:inline">
@@ -270,8 +251,6 @@ export function ControlDeck({
           </span>
         </Button>
       </div>
-
-      {children}
     </div>
   );
 }

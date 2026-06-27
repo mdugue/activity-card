@@ -6,128 +6,114 @@
 // happen: a grid of platform-optimised formats, each rendered live by the
 // format-aware theme and downloadable on its own. Behind it the activity's route
 // draws itself in — a calm "still working" gesture rather than confetti.
+//
+// The chrome (`ExportShell`), the busy/one/all orchestration (`useFormatExports`),
+// the responsive tile box (`useTileMax`) and the tile itself (`ExportTile`, a
+// children slot for whatever the format renders) are shared with the carousel
+// export sheet — see `carousel-export-sheet.tsx`. The single card just supplies a
+// `RenderTheme` per tile and exports it with `exportCard`.
 
 import {
   ArrowLeftIcon,
   DownloadSimpleIcon,
   PlusIcon,
 } from "@phosphor-icons/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { ActivityData } from "@/lib/activity";
 import { routePath } from "@/lib/chart-helpers";
-import type { ColorScheme } from "@/lib/colors";
-import { activityMetadata, exportCard } from "@/lib/export-card";
+import type { ImageTransform } from "@/lib/image-transform";
+import type { PhotoEffects } from "@/lib/photo-effects";
+import { cn } from "@/lib/utils";
+import type { ColorScheme } from "@/theme/core/colors";
 import {
   type ExportFormat,
   FORMAT_ORDER,
   getFormat,
-} from "@/lib/export-formats";
-import { effortDateSlug } from "@/lib/export-shared";
-import type { ImageTransform } from "@/lib/image-transform";
-import type { PhotoEffects } from "@/lib/photo-effects";
-import { cn } from "@/lib/utils";
+} from "@/theme/core/export-formats";
+import { RenderTheme, type ThemeId } from "@/theme/editor/render-theme";
+import { SafeZoneOverlay } from "@/theme/editor/safe-zone-overlay";
+import { activityMetadata, exportCard } from "@/theme/export/export-card";
+import { effortDateSlug } from "@/theme/export/export-shared";
 import { ToggleRow } from "./control-primitives";
-import { RenderTheme, type ThemeId } from "./render-theme";
-import { SafeZoneOverlay } from "./safe-zone-overlay";
-
-interface ExportSheetProps {
-  colors: ColorScheme;
-  config: Record<string, unknown>;
-  /** visibility-applied data, for rendering the previews */
-  data: ActivityData;
-  imageTransform: ImageTransform;
-  onKeepEditing: () => void;
-  onNew: () => void;
-  photoBackdropEnabled: boolean;
-  photoEffects: PhotoEffects;
-  photoUrl: string | null;
-  /** the activity's route for the background draw-on — from the FULL data, so
-   *  it shows even on themes (e.g. Altitude) that don't render the route. */
-  routeCoordinates?: [number, number][];
-  theme: ThemeId;
-}
 
 // Each tile takes the format's TRUE shape (fit into this bounding box), so
 // there's no letterbox whitespace inside the tile. The box is responsive: a
 // compact floor keeps several tiles per row on mobile, and it grows with the
-// viewport so the previews aren't tiny on desktop. Height tracks width at the
-// 1.4 ratio of the floor (150×210) so every aspect stays bounded as it scales.
-const TILE_FLOOR_W = 150;
-const TILE_CAP_W = 280;
-const TILE_ASPECT = 210 / 150;
-
-interface TileMax {
+// viewport so the previews aren't tiny on desktop.
+export interface TileMax {
   h: number;
   w: number;
 }
 
-function tileMaxForWidth(viewportW: number): TileMax {
+/** A responsive tile bounding box — its floor / cap width, the fraction of the
+ *  viewport it tracks, and the height/width ratio. The single card uses a tall
+ *  portrait box; the carousel a wide-strip one. */
+export interface TileBox {
+  aspect: number;
+  capW: number;
+  factor: number;
+  floorW: number;
+}
+
+// Portrait card box: 150→280 wide, height tracks at the 1.4 ratio of the floor
+// (150×210) so every aspect stays bounded as it scales.
+const SINGLE_TILE: TileBox = {
+  floorW: 150,
+  capW: 280,
+  aspect: 210 / 150,
+  factor: 0.2,
+};
+
+function tileMaxForWidth(viewportW: number, box: TileBox): TileMax {
   const w = Math.round(
-    Math.min(TILE_CAP_W, Math.max(TILE_FLOOR_W, viewportW * 0.2))
+    Math.min(box.capW, Math.max(box.floorW, viewportW * box.factor))
   );
-  return { w, h: Math.round(w * TILE_ASPECT) };
+  return { w, h: Math.round(w * box.aspect) };
 }
 
 // The tile bounding box, recomputed as the window resizes. Read synchronously
-// on first render (this sheet only ever mounts client-side, after upload, so
+// on first render (these sheets only ever mount client-side, after upload, so
 // there's no SSR markup to mismatch) so desktop opens at full size — no flash.
-function useTileMax(): TileMax {
+// `box` must be a stable reference (a module constant) — it keys the effect.
+export function useTileMax(box: TileBox = SINGLE_TILE): TileMax {
   const [tileMax, setTileMax] = useState<TileMax>(() =>
     tileMaxForWidth(
-      typeof window === "undefined" ? TILE_FLOOR_W : window.innerWidth
+      typeof window === "undefined" ? box.floorW : window.innerWidth,
+      box
     )
   );
 
   useEffect(() => {
-    const onResize = () => setTileMax(tileMaxForWidth(window.innerWidth));
+    const onResize = () => setTileMax(tileMaxForWidth(window.innerWidth, box));
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, []);
+  }, [box]);
 
   return tileMax;
 }
 
-function fileFor(data: ActivityData, format: ExportFormat): string {
-  return `effort_${data.sport}_${effortDateSlug(data.date)}_${format.id}.png`;
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
-export function ExportSheet(props: ExportSheetProps) {
-  const { data, onKeepEditing, onNew, colors } = props;
-  const [gps, setGps] = useState(true);
-  const [safeZones, setSafeZones] = useState(false);
+/** Shared download orchestration: a single `busy` id (a format id, or "all"),
+ *  `handleOne` (one format) and `handleAll` (every format, throttled — browsers
+ *  rate-limit back-to-back programmatic downloads). The per-mode `exportOne`
+ *  body is the only thing that differs (a card vs a sliced strip). */
+export function useFormatExports(
+  exportOne: (format: ExportFormat) => Promise<void>
+) {
   const [busy, setBusy] = useState<string | null>(null);
-  const tileMax = useTileMax();
-  // One native-size mount per format, registered by each tile — the export
-  // source. The same node is shown scaled-to-fit in the tile.
-  const mounts = useRef<Record<string, HTMLDivElement | null>>({});
-
-  const metadata = activityMetadata(data);
-
-  const exportOne = useCallback(
-    async (format: ExportFormat) => {
-      const node = mounts.current[format.id];
-      if (!node) {
-        return;
-      }
-      // Errors are surfaced here (not bubbled) so a failed format in
-      // `handleAll` never aborts the rest of the set — matching the toast the
-      // single-card editor showed before the export sheet.
-      try {
-        await exportCard(node, {
-          filename: fileFor(data, format),
-          width: format.width,
-          height: format.height,
-          metadata,
-          metadataOptions: { gps },
-        });
-      } catch {
-        toast.error("Export failed — please try again.");
-      }
-    },
-    [data, metadata, gps]
-  );
 
   const handleOne = async (format: ExportFormat) => {
     if (busy) {
@@ -149,20 +135,48 @@ export function ExportSheet(props: ExportSheetProps) {
     try {
       for (const id of FORMAT_ORDER) {
         await exportOne(getFormat(id));
-        // Browsers throttle back-to-back programmatic downloads; space them out.
-        await new Promise((r) => setTimeout(r, 350));
+        await delay(350);
       }
     } finally {
       setBusy(null);
     }
   };
 
+  return { busy, handleOne, handleAll };
+}
+
+interface ExportShellProps {
+  busy: string | null;
+  children: ReactNode;
+  colors: ColorScheme;
+  /** force-disable the download actions (e.g. while the carousel photo decodes) */
+  disabled?: boolean;
+  onDownloadAll: () => void;
+  onKeepEditing: () => void;
+  onNew: () => void;
+  /** the activity's route for the background draw-on — from the FULL data, so
+   *  it shows even on themes (e.g. Altitude) that don't render the route. */
+  routeCoordinates?: [number, number][];
+  subtitle: string;
+}
+
+/** The shared export-sheet chrome: the drawing-in route aura, the heading, the
+ *  Download all / Edit / New toolbar, and a slot for the mode's tiles (plus any
+ *  toggles). Both the single-card and carousel sheets render through it. */
+export function ExportShell({
+  busy,
+  children,
+  colors,
+  disabled = false,
+  onDownloadAll,
+  onKeepEditing,
+  onNew,
+  routeCoordinates,
+  subtitle,
+}: ExportShellProps) {
   return (
     <div className="relative flex flex-1 flex-col items-center px-4 py-6 sm:px-6 sm:py-10">
-      <RouteAura
-        colors={colors}
-        coords={props.routeCoordinates ?? data.routeCoordinates}
-      />
+      <RouteAura colors={colors} coords={routeCoordinates} />
 
       <div className="relative w-full max-w-5xl lg:max-w-6xl">
         <div className="font-mono font-semibold text-[11px] tracking-[0.32em] opacity-55">
@@ -172,12 +186,15 @@ export function ExportSheet(props: ExportSheetProps) {
           Pick a <span className="text-primary">format.</span>
         </h2>
         <p className="mt-2 max-w-xl text-xs leading-relaxed opacity-70 sm:mt-4 sm:text-sm">
-          Each card is optimised for its platform — aspect ratio and safe zones
-          baked in. Download one, or grab the whole set.
+          {subtitle}
         </p>
 
         <div className="mt-4 flex flex-nowrap items-center gap-2 sm:mt-6 sm:gap-3">
-          <Button disabled={busy !== null} onClick={handleAll} size="sm">
+          <Button
+            disabled={busy !== null || disabled}
+            onClick={onDownloadAll}
+            size="sm"
+          >
             <DownloadSimpleIcon
               aria-hidden
               className="size-4"
@@ -195,78 +212,55 @@ export function ExportSheet(props: ExportSheetProps) {
           </Button>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-md border border-foreground/12 px-3 py-2">
-          <div className="min-w-[150px] flex-1 sm:flex-none">
-            <ToggleRow
-              checked={safeZones}
-              label="Safe zones"
-              onCheckedChange={setSafeZones}
-            />
-          </div>
-          <div className="min-w-[150px] flex-1 sm:flex-none">
-            <ToggleRow
-              checked={gps}
-              label="Location (GPS)"
-              onCheckedChange={setGps}
-            />
-          </div>
-          <p className="caption-micro w-full opacity-55 lg:max-w-xs">
-            Attribution is always written; most apps strip metadata on upload.
-          </p>
-        </div>
-
-        <div className="mt-5 flex flex-wrap justify-center gap-3 sm:mt-7 sm:gap-5">
-          {FORMAT_ORDER.map((id) => (
-            <FormatTile
-              busy={busy}
-              format={getFormat(id)}
-              key={id}
-              onDownload={handleOne}
-              registerMount={(node) => {
-                mounts.current[id] = node;
-              }}
-              safeZones={safeZones}
-              tileMax={tileMax}
-              {...props}
-            />
-          ))}
-        </div>
+        {children}
       </div>
     </div>
   );
 }
 
-interface FormatTileProps extends ExportSheetProps {
+interface ExportTileProps {
   busy: string | null;
-  format: ExportFormat;
-  onDownload: (format: ExportFormat) => void;
+  /** this tile's id within the busy state (the format id) */
+  busyId: string;
+  /** the native-size preview to scale into the tile AND rasterise on export */
+  children: ReactNode;
+  /** force-disable the download button (e.g. while the photo decodes) */
+  disabled?: boolean;
+  label: string;
+  /** native pixel size of `children` — a single card box, or the whole strip */
+  nativeH: number;
+  nativeW: number;
+  onDownload: () => void;
   registerMount: (node: HTMLDivElement | null) => void;
-  /** overlay the platform keep-out guides (preview only, never exported) */
-  safeZones: boolean;
+  /** optional platform keep-out guide (single card only; preview, never exported) */
+  safe?: { format: ExportFormat; show: boolean };
+  sublabel: string;
   /** responsive bounding box every tile fits into (grows with the viewport) */
   tileMax: TileMax;
 }
 
-function FormatTile({
-  format,
+/** One format tile: the native-size preview (`children`) scaled to fit the tile,
+ *  reffed as the export source, plus its label + download button. snapdom keeps a
+ *  root element's own `scale()`, so the captured node stays untransformed and the
+ *  visual scale lives on the wrapper. */
+export function ExportTile({
   busy,
+  busyId,
+  children,
+  disabled = false,
+  label,
+  nativeH,
+  nativeW,
   onDownload,
   registerMount,
-  safeZones,
-  data,
-  theme,
-  colors,
-  config,
-  imageTransform,
-  photoBackdropEnabled,
-  photoEffects,
-  photoUrl,
+  safe,
+  sublabel,
   tileMax,
-}: FormatTileProps) {
-  const scale = Math.min(tileMax.w / format.width, tileMax.h / format.height);
-  const tileW = format.width * scale;
-  const tileH = format.height * scale;
-  const isBusy = busy === format.id;
+}: ExportTileProps) {
+  const scale = Math.min(tileMax.w / nativeW, tileMax.h / nativeH);
+  const tileW = nativeW * scale;
+  const tileH = nativeH * scale;
+  const isBusy = busy === busyId;
 
   return (
     <div className="flex flex-col gap-2" style={{ width: tileW }}>
@@ -274,46 +268,28 @@ function FormatTile({
         className="relative overflow-hidden rounded-md shadow-sm ring-1 ring-foreground/10"
         style={{ width: tileW, height: tileH }}
       >
-        {/* The scaling wrapper shrinks the card to fill the tile (the format's
-            true shape). The native-size child it wraps is reffed as the export
-            source: snapdom keeps a root element's own `scale()` transform, so
-            the captured node must stay untransformed and the visual scale lives
-            on the wrapper instead. */}
         <div
           style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}
         >
-          <div
-            ref={registerMount}
-            style={{ width: format.width, height: format.height }}
-          >
-            <RenderTheme
-              colors={colors}
-              config={config}
-              data={data}
-              format={format}
-              imageTransform={imageTransform}
-              photoBackdropEnabled={photoBackdropEnabled}
-              photoEffects={photoEffects}
-              photoUrl={photoUrl}
-              theme={theme}
-            />
+          <div ref={registerMount} style={{ width: nativeW, height: nativeH }}>
+            {children}
           </div>
         </div>
-        {safeZones ? <SafeZoneOverlay format={format} scale={scale} /> : null}
+        {safe?.show ? (
+          <SafeZoneOverlay format={safe.format} scale={scale} />
+        ) : null}
       </div>
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
           <div className="truncate font-heading text-sm uppercase tracking-tight">
-            {format.label}
+            {label}
           </div>
-          <div className="caption-micro opacity-60">
-            {format.aspectLabel} · {format.width}×{format.height}
-          </div>
+          <div className="caption-micro opacity-60">{sublabel}</div>
         </div>
         <Button
-          aria-label={`Download ${format.label}`}
-          disabled={busy !== null}
-          onClick={() => onDownload(format)}
+          aria-label={`Download ${label}`}
+          disabled={busy !== null || disabled}
+          onClick={onDownload}
           size="icon"
           variant="secondary"
         >
@@ -325,6 +301,140 @@ function FormatTile({
         </Button>
       </div>
     </div>
+  );
+}
+
+interface ExportSheetProps {
+  colors: ColorScheme;
+  config: Record<string, unknown>;
+  /** visibility-applied data, for rendering the previews */
+  data: ActivityData;
+  imageTransform: ImageTransform;
+  onKeepEditing: () => void;
+  onNew: () => void;
+  photoBackdropEnabled: boolean;
+  photoEffects: PhotoEffects;
+  photoUrl: string | null;
+  routeCoordinates?: [number, number][];
+  theme: ThemeId;
+}
+
+function fileFor(data: ActivityData, format: ExportFormat): string {
+  return `effort_${data.sport}_${effortDateSlug(data.date)}_${format.id}.png`;
+}
+
+export function ExportSheet(props: ExportSheetProps) {
+  const {
+    data,
+    onKeepEditing,
+    onNew,
+    colors,
+    theme,
+    config,
+    imageTransform,
+    photoBackdropEnabled,
+    photoEffects,
+    photoUrl,
+  } = props;
+  const [gps, setGps] = useState(true);
+  const [safeZones, setSafeZones] = useState(false);
+  const tileMax = useTileMax();
+  // One native-size mount per format, registered by each tile — the export
+  // source. The same node is shown scaled-to-fit in the tile.
+  const mounts = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const metadata = activityMetadata(data);
+
+  const exportOne = useCallback(
+    async (format: ExportFormat) => {
+      const node = mounts.current[format.id];
+      if (!node) {
+        return;
+      }
+      // Errors are surfaced here (not bubbled) so a failed format in the
+      // download-all loop never aborts the rest of the set.
+      try {
+        await exportCard(node, {
+          filename: fileFor(data, format),
+          width: format.width,
+          height: format.height,
+          metadata,
+          metadataOptions: { gps },
+        });
+      } catch {
+        toast.error("Export failed — please try again.");
+      }
+    },
+    [data, metadata, gps]
+  );
+
+  const { busy, handleOne, handleAll } = useFormatExports(exportOne);
+
+  return (
+    <ExportShell
+      busy={busy}
+      colors={colors}
+      onDownloadAll={handleAll}
+      onKeepEditing={onKeepEditing}
+      onNew={onNew}
+      routeCoordinates={props.routeCoordinates ?? data.routeCoordinates}
+      subtitle="Each card is optimised for its platform — aspect ratio and safe zones baked in. Download one, or grab the whole set."
+    >
+      <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-md border border-foreground/12 px-3 py-2">
+        <div className="min-w-[150px] flex-1 sm:flex-none">
+          <ToggleRow
+            checked={safeZones}
+            label="Safe zones"
+            onCheckedChange={setSafeZones}
+          />
+        </div>
+        <div className="min-w-[150px] flex-1 sm:flex-none">
+          <ToggleRow
+            checked={gps}
+            label="Location (GPS)"
+            onCheckedChange={setGps}
+          />
+        </div>
+        <p className="caption-micro w-full opacity-55 lg:max-w-xs">
+          Attribution is always written; most apps strip metadata on upload.
+        </p>
+      </div>
+
+      <div className="mt-5 flex flex-wrap justify-center gap-3 sm:mt-7 sm:gap-5">
+        {FORMAT_ORDER.map((id) => {
+          const format = getFormat(id);
+          return (
+            <ExportTile
+              busy={busy}
+              busyId={id}
+              key={id}
+              label={format.label}
+              nativeH={format.height}
+              nativeW={format.width}
+              onDownload={() => handleOne(format)}
+              registerMount={(node) => {
+                mounts.current[id] = node;
+              }}
+              safe={{ format, show: safeZones }}
+              sublabel={`${format.aspectLabel} · ${format.width}×${format.height}`}
+              tileMax={tileMax}
+            >
+              <RenderTheme
+                colors={colors}
+                config={config}
+                data={data}
+                format={format}
+                imageTransform={imageTransform}
+                photoBackdropEnabled={photoBackdropEnabled}
+                photoEffects={photoEffects}
+                photoUrl={photoUrl}
+                theme={theme}
+              />
+            </ExportTile>
+          );
+        })}
+      </div>
+    </ExportShell>
   );
 }
 

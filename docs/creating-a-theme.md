@@ -31,7 +31,7 @@ exist in both (like STRATA) is two registrations sharing pure logic from
 
 ## A new single-card theme
 
-A single-card theme is **one file** in `components/themes/single-card/`
+A single-card theme is **one file** in `theme/single-card/`
 exporting two things: the component and a `defineTheme` descriptor. The
 descriptor is the entire interface to the app — registry, editor, dispatch all
 derive from it. There is nothing else to wire: no metadata table, no control
@@ -39,13 +39,13 @@ component, no app-state field, no dispatcher branch.
 
 ### Step 1 — create the file
 
-`components/themes/single-card/<name>.tsx` (kebab-case file, PascalCase
+`theme/single-card/<name>.tsx` (kebab-case file, PascalCase
 component). Start from this skeleton:
 
 ```tsx
 // <NAME> — one line on the design idea. Typeface choices. Palette idea.
 
-import { defineTheme, type ThemeProps } from "@/lib/theme-contract";
+import { defineTheme, type ThemeProps } from "@/theme/core/theme-contract";
 import { PhotoLayer } from "../shared/photo-layer";
 
 // The overlay elements this theme renders. This list is COMPILER-CHECKED:
@@ -136,7 +136,7 @@ photo: { defaultOn: true, defaultFilter: "fade", defaultGrain: true }
 
 ### Step 5 — register
 
-In `components/themes/index.ts`: add the descriptor to `SINGLE_CARD_THEMES`
+In `theme/single-card/index.ts`: add the descriptor to `SINGLE_CARD_THEMES`
 and the id to `THEME_ORDER`. Done — picker label, visibility toggles, colour
 control, photo defaults, dispatch and persistence all follow.
 
@@ -165,7 +165,7 @@ declare them as data — see
 
 ### Step 8 — story (required)
 
-`components/themes/single-card/<name>.stories.tsx`. A theme is not done until
+`theme/single-card/<name>.stories.tsx`. A theme is not done until
 it renders in Storybook:
 
 ```tsx
@@ -212,7 +212,7 @@ PLAYWRIGHT_BROWSERS_PATH=… bun run test:e2e e2e/themes.spec.ts
 
 ### Checklist
 
-- [ ] One file in `components/themes/single-card/` with component + `defineTheme`
+- [ ] One file in `theme/single-card/` with component + `defineTheme`
 - [ ] `uses` complete & honest (compiler-negotiated); `usesWhen` mirrors the JSX
 - [ ] Colour policy chosen; adjustable themes consume `colors.primary`
 - [ ] Photo policy chosen; photo rendered via a shared layer
@@ -229,17 +229,17 @@ A carousel theme is a **descriptor**, like a single-card theme — a `ThemeBase`
 core (`defineCarouselTheme`) plus a render strategy: an optional **`canvas`**
 (the spanning signature drawn once across the strip) and a **`panels`** array
 (one foreground component per slide, any count). One shared renderer
-(`components/themes/carousel/deck.tsx`, `CarouselDeck`) composes them. Deep
+(`theme/carousel/deck.tsx`, `CarouselDeck`) composes them. Deep
 dive: the `carousel-themes` skill.
 
 1. **Add one `defineCarouselTheme` entry** to
-   `components/themes/carousel/registry.ts` (add the id to `CarouselThemeId` +
+   `theme/carousel/registry.ts` (add the id to `CarouselThemeId` +
    `CAROUSEL_THEME_ORDER`). The entry is self-contained: identity (`id`,
    `label`, `tagline`), the render strategy (`canvas?` — reuse `RouteCanvas` /
    `ElevationCanvas` / `StrataCanvas` or add one under `canvas/`; `panels` —
    reuse `STANDARD_PANELS` or compose new per-slide panels under `panels/`),
    and the inline **`look`** (`CarouselLook`,
-   `lib/carousel/theme-tokens.ts`): `heroMetric`, `crossViz`, `detailViz`,
+   `theme/carousel/theme-tokens.ts`): `heroMetric`, `crossViz`, `detailViz`,
    `fontPair`, the colours (`background/ink/mutedInk/accent/accent2/onAccent`,
    `dark`), `routeStyle` / `elevation`, `contentAnchor` ("top" above an
    elevation-range canvas), `veil` (false for type-led themes that protect
@@ -291,19 +291,19 @@ Knobs are **data, not components** (`theme-params` skill has the full model):
 ## Where things live (quick map)
 
 ```
-lib/theme-contract.ts                     defineTheme · capabilities · ThemeData · ThemeProps
-lib/colors.ts                             ColorScheme · ColorChoice · resolveColors
-lib/params/                               ParamDef model · coerceConfig coercion
+theme/core/theme-contract.ts                     defineTheme · capabilities · ThemeData · ThemeProps
+theme/core/colors.ts                             ColorScheme · ColorChoice · resolveColors
+theme/core/params/                               ParamDef model · coerceConfig coercion
 lib/activity.ts                           the ActivityData model
 lib/chart-helpers.ts                      route/elevation projection (uniform scale!)
 lib/<theme>.ts                            a theme's pure logic + *_PARAMS (bun-tested)
-components/themes/index.ts                SINGLE_CARD_THEMES registry + THEME_ORDER
-components/themes/single-card/<name>.tsx  a single-card theme (component + descriptor)
-components/themes/shared/                 PhotoLayer · PhotoBackdrop · PhotoUnderlay ·
+theme/single-card/index.ts                SINGLE_CARD_THEMES registry + THEME_ORDER
+theme/single-card/<name>.tsx  a single-card theme (component + descriptor)
+theme/shared/                 PhotoLayer · PhotoBackdrop · PhotoUnderlay ·
                                           CoverPhoto · photo-fx context · OverlayRoute
-components/themes/carousel/define-theme.ts defineCarouselTheme · CarouselTheme · canvas/panels
-components/themes/carousel/registry.ts     CAROUSEL_THEMES (carousel descriptor registry)
-components/themes/carousel/deck.tsx        CarouselDeck — the shared renderer
-lib/carousel/theme-tokens.ts              carousel look vocabulary (CarouselLook · font pairs)
-components/app/editor-session.ts          the one object the editors share
+theme/carousel/define-theme.ts defineCarouselTheme · CarouselTheme · canvas/panels
+theme/carousel/registry.ts     CAROUSEL_THEMES (carousel descriptor registry)
+theme/carousel/deck.tsx        CarouselDeck — the shared renderer
+theme/carousel/theme-tokens.ts              carousel look vocabulary (CarouselLook · font pairs)
+theme/editor/editor-session.ts          the one object the editors share
 ```

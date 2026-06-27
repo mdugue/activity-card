@@ -9,7 +9,7 @@ The non-obvious technical bits of rendering an activity card and converting it t
 
 ## The export pipeline
 
-The card is a normal React component rendered in the DOM. The user sees the actual card as a live preview. On download, we rasterise that exact DOM node to a PNG with [snapdom](https://github.com/zumerlab/snapdom) (`@zumer/snapdom`). The real code lives in `lib/export-card.ts` (single card) and `lib/export-carousel.ts` (sliced strip); this is the shape:
+The card is a normal React component rendered in the DOM. The user sees the actual card as a live preview. On download, we rasterise that exact DOM node to a PNG with [snapdom](https://github.com/zumerlab/snapdom) (`@zumer/snapdom`). The real code lives in `theme/export/export-card.ts` (single card) and `theme/export/export-carousel.ts` (sliced strip); this is the shape:
 
 ```ts
 import { snapdom } from '@zumer/snapdom'
@@ -157,7 +157,7 @@ Render the area as a filled `<path>` and the line as a stroked `<path>` on top.
 
 ## Theme component contract
 
-Every single-card theme implements `ThemeProps` (`lib/theme-contract.ts`):
+Every single-card theme implements `ThemeProps` (`theme/core/theme-contract.ts`):
 
 ```ts
 interface ThemeProps<K extends CapabilityKey, C> {
@@ -173,8 +173,8 @@ A theme file exports its component plus a **`defineTheme` descriptor** declaring
 `uses` (the overlay capabilities it renders — this narrows `data`'s type, so
 reading an undeclared field is a compile error), sport-aware `usesWhen`
 refinements, a colour policy, a photo policy, and its params. Descriptors are
-collected in `components/themes/index.ts` (`SINGLE_CARD_THEMES` / `ThemeId`).
-The dispatcher `components/app/render-theme.tsx` is fully generic: it strips the
+collected in `theme/single-card/index.ts` (`SINGLE_CARD_THEMES` / `ThemeId`).
+The dispatcher `theme/editor/render-theme.tsx` is fully generic: it strips the
 data to the declaration (`pickThemeData`), resolves `colors`, and provides the
 photo-fx context — no per-theme branches. See the `theme-params` skill for the
 descriptor + parameter model.
@@ -183,11 +183,11 @@ descriptor + parameter model.
 
 `PhotoEffects` (filter preset, grain, mirror, rotate) plus the photo's natural
 size are provided once by `RenderTheme` via a React context
-(`components/themes/shared/photo-fx.tsx`) and read by the shared photo layers
+(`theme/shared/photo-fx.tsx`) and read by the shared photo layers
 (`PhotoLayer` / `PhotoBackdrop` / `PhotoUnderlay`) and Strata's inline photo —
 every theme's background is adjustable without threading props. Full-bleed
 layers render through the shared `CoverPhoto`
-(`components/themes/shared/cover-photo.tsx`), which sizes the element from the
+(`theme/shared/cover-photo.tsx`), which sizes the element from the
 photo's natural dimensions and swaps width/height on quarter turns so rotation
 never exposes the corners (the same geometry as the carousel panorama). Apply
 effects as inline CSS (`filterCss`, `effectsTransformSuffix`, `GRAIN_BG`) —
@@ -199,7 +199,7 @@ unfiltered.
 
 Themes are **format-aware**: each renders at the target format's native size and
 reads its dimensions + safe insets from the `FormatContext`
-(`components/themes/shared/format-context.tsx`). The 4:5 master is **1080×1350**;
+(`theme/shared/format-context.tsx`). The 4:5 master is **1080×1350**;
 snapdom's `scale: 2` at export time produces the crisp 2160×2700 PNG. Don't
 hardcode a fixed-size root — size from the format (see the `theme-architecture`
 skill for the format-aware contract).
@@ -214,7 +214,7 @@ When `activity.backgroundImage` is set, themes that support it (Photo theme alwa
 
 ### Every theme needs a story
 
-Each single-card theme has a colocated `components/themes/single-card/<name>.stories.tsx`
+Each single-card theme has a colocated `theme/single-card/<name>.stories.tsx`
 (Storybook). A theme is not done until it renders there — enforced in
 `AGENTS.md`. Photo-capable themes spread `backgroundArgTypes`
 (`.storybook/backgrounds.ts`) into the story `meta` (typed

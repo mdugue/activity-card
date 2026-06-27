@@ -11,7 +11,7 @@
  */
 
 import type { Coord, TriSegment } from "@/lib/activity";
-import type { ActivityView } from "@/lib/theme-contract";
+import type { ActivityView } from "@/theme/core/theme-contract";
 
 /** A project carries two or more segments to combine. */
 export function isMultiActivity(data: ActivityView): boolean {

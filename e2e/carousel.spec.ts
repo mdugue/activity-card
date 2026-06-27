@@ -85,9 +85,18 @@ test.describe("carousel mode", () => {
     await expect(page.getByText(/Photo loaded/i)).toBeVisible();
   });
 
-  test("export downloads an ordered PNG set", async ({ page }) => {
-    const downloadPromise = page.waitForEvent("download");
+  test("export opens the overview, then downloads an ordered PNG set", async ({
+    page,
+  }) => {
+    // Export now opens the shared overview (like the single card) instead of
+    // downloading inline; the per-format tile triggers the slice download.
     await page.getByRole("button", { name: /export carousel/i }).click();
+    await expect(page.getByRole("heading", { name: /pick a/i })).toBeVisible();
+
+    const downloadPromise = page.waitForEvent("download");
+    await page
+      .getByRole("button", { name: /download instagram feed/i })
+      .click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(
       /^effort_.+_carousel_01\.png$/

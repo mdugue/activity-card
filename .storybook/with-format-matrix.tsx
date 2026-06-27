@@ -12,9 +12,9 @@
 
 import type { Decorator } from "@storybook/nextjs-vite";
 import type { GlobalTypes } from "storybook/internal/types";
-import { SafeZoneOverlay } from "@/components/app/safe-zone-overlay";
-import { FormatProvider } from "@/components/themes/shared/format-context";
-import { FORMAT_ORDER, getFormat } from "@/lib/export-formats";
+import { FORMAT_ORDER, getFormat } from "@/theme/core/export-formats";
+import { SafeZoneOverlay } from "@/theme/editor/safe-zone-overlay";
+import { FormatProvider } from "@/theme/shared/format-context";
 
 const TILE_W = 400;
 const TILE_H = 400;
