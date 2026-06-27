@@ -8,8 +8,24 @@
 // per-slide image set (`exportCarousel`) instead of one card. Everything else —
 // the chrome, the busy/one/all orchestration, the responsive tiles — is the
 // shared machinery from `export-sheet.tsx`.
+//
+// iOS Safari memory: a carousel strip is several slides wide (up to ~4320 px),
+// and a CSS-`filter`ed photo layer is buffered at its element size regardless of
+// how small the tile is shown — so mounting all 7 native-size strips at once
+// blows the per-tab budget. Two guards keep it bounded: (1) each tile's deck is
+// only mounted while near the viewport (`LazyTilePreview`), so the live set is
+// just what's on screen; (2) previews paint the lighter `photoDisplayUrl` proxy,
+// and only the tile being exported is force-mounted at full resolution for the
+// snapdom capture — one heavy strip at a time. The proxy preserves the photo's
+// aspect, so the cover geometry (and thus the exported framing) is identical.
 
-import { useCallback, useRef } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "sonner";
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
 import type { ActivityData } from "@/lib/activity";
@@ -29,6 +45,7 @@ import {
   carouselBaseName,
   exportCarousel,
 } from "@/theme/export/export-carousel";
+import { waitForFonts } from "@/theme/export/export-shared";
 import {
   ExportShell,
   ExportTile,
@@ -46,6 +63,69 @@ const CAROUSEL_TILE: TileBox = {
   factor: 0.34,
 };
 
+function nextFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => resolve());
+  });
+}
+
+/** Decode an image URL so the about-to-capture deck paints it (the export deck
+ *  mounts full-res on demand, so its photo may not be decoded yet). Best-effort
+ *  — snapdom still waits for resources if this fails. */
+async function decodePhoto(url: string | null): Promise<void> {
+  if (!url || typeof Image === "undefined") {
+    return;
+  }
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+  } catch {
+    // ignore — capture proceeds; snapdom has its own load wait
+  }
+}
+
+/** Mounts its children only while near the viewport (or when `forced` for an
+ *  in-flight export). Keeps the live deck set bounded to what's on screen so a
+ *  long export grid never holds 7 wide strips at once. */
+function LazyTilePreview({
+  forced,
+  children,
+}: {
+  children: ReactNode;
+  forced: boolean;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [near, setNear] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        // reason: latch on once visible; unmount only when fully clear again
+        setNear(entries.some((e) => e.isIntersecting));
+      },
+      { rootMargin: "200px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} style={{ width: "100%", height: "100%" }}>
+      {near || forced ? (
+        children
+      ) : (
+        // Neutral fill so an off-screen tile reads as "loading", not broken.
+        <div style={{ width: "100%", height: "100%", background: "#eceae6" }} />
+      )}
+    </div>
+  );
+}
+
 interface CarouselExportSheetProps {
   colors: ColorScheme;
   config: Record<string, unknown>;
@@ -55,7 +135,10 @@ interface CarouselExportSheetProps {
   imageTransform: ImageTransform;
   onKeepEditing: () => void;
   onNew: () => void;
+  /** lighter proxy used for the on-screen previews; falls back to `photoUrl` */
+  photoDisplayUrl: string | null;
   photoEffects: PhotoEffects;
+  /** full-resolution source — only the tile being exported renders this */
   photoUrl: string | null;
   routeCoordinates?: [number, number][];
   theme: CarouselTheme;
@@ -71,37 +154,51 @@ export function CarouselExportSheet({
   onKeepEditing,
   onNew,
   photoEffects,
+  photoDisplayUrl,
   photoUrl,
   routeCoordinates,
   theme,
   visibility,
 }: CarouselExportSheetProps) {
   const tileMax = useTileMax(CAROUSEL_TILE);
-  // The deck needs the photo's natural size for the pannable panorama — the same
-  // dependency the editor's deck has.
-  const imageSize = useImageNaturalSize(photoUrl);
-  // One native-size strip mount per format, registered by each tile — the slicing
-  // export reads it directly.
+  // The deck needs the photo's natural size for the pannable panorama. Measure
+  // the (cheap) proxy — cover geometry depends only on the aspect ratio, which
+  // the proxy preserves, so the export framing is unchanged.
+  const previewUrl = photoDisplayUrl ?? photoUrl;
+  const imageSize = useImageNaturalSize(previewUrl);
+  // One native-size strip mount per format, registered by each tile — the
+  // slicing export reads the one being exported directly.
   const mounts = useRef<Record<string, HTMLDivElement | null>>({});
+  // The format whose tile is force-mounted at full resolution for capture.
+  const [exportTarget, setExportTarget] = useState<string | null>(null);
   const baseName = carouselBaseName(data.sport, data.date);
   // The deck draws no photo until its natural size resolves, so exporting before
   // then would rasterise a photo-less strip. Gate downloads on the decode while a
   // photo is shown (the single card has a CSS-cover fallback and needs no gate).
-  const photoNotReady = photoUrl !== null && imageSize === null;
+  const photoNotReady = previewUrl !== null && imageSize === null;
 
   const exportOne = useCallback(
     async (format: ExportFormat) => {
-      const node = mounts.current[format.id];
-      if (!node) {
-        return;
-      }
+      // Force-mount this format's tile at full resolution, then wait for it to
+      // commit, lay out and decode before snapdom reads it.
+      setExportTarget(format.id);
       try {
+        await decodePhoto(photoUrl);
+        await waitForFonts();
+        await nextFrame();
+        await nextFrame();
+        const node = mounts.current[format.id];
+        if (!node) {
+          throw new Error(`Carousel export node for ${format.id} not ready`);
+        }
         await exportCarousel(node, count, baseName, format);
       } catch {
         toast.error("Export failed — please try again.");
+      } finally {
+        setExportTarget(null);
       }
     },
-    [count, baseName]
+    [count, baseName, photoUrl]
   );
 
   const { busy, handleOne, handleAll } = useFormatExports(exportOne);
@@ -125,6 +222,10 @@ export function CarouselExportSheet({
         {FORMAT_ORDER.map((id) => {
           const format = getFormat(id);
           const { slideH, stripW } = stripGeometry(format, count);
+          // The tile being exported renders the full-res original; the rest the
+          // lighter proxy. Same aspect → identical cover geometry either way.
+          const forced = exportTarget === id;
+          const tilePhotoUrl = forced ? photoUrl : photoDisplayUrl;
           return (
             <ExportTile
               busy={busy}
@@ -141,18 +242,20 @@ export function CarouselExportSheet({
               sublabel={`${format.aspectLabel} · ${count} × ${format.width}×${format.height}`}
               tileMax={tileMax}
             >
-              <CarouselDeck
-                colors={colors}
-                config={config}
-                data={data}
-                format={format}
-                imageSize={imageSize}
-                imageTransform={imageTransform}
-                photoEffects={photoEffects}
-                photoUrl={photoUrl}
-                theme={theme}
-                visibility={visibility}
-              />
+              <LazyTilePreview forced={forced}>
+                <CarouselDeck
+                  colors={colors}
+                  config={config}
+                  data={data}
+                  format={format}
+                  imageSize={imageSize}
+                  imageTransform={imageTransform}
+                  photoEffects={photoEffects}
+                  photoUrl={tilePhotoUrl}
+                  theme={theme}
+                  visibility={visibility}
+                />
+              </LazyTilePreview>
             </ExportTile>
           );
         })}

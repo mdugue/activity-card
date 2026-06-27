@@ -84,6 +84,13 @@ export function useImageAdjust({
   const pointersRef = useRef<Map<number, PointerPos>>(new Map());
   const gestureRef = useRef<GestureSnapshot | null>(null);
 
+  // Pointer/wheel events fire far faster than the display refreshes (60–120+/s
+  // on iOS touch). Coalesce them: stash the latest transform and flush at most
+  // once per frame via rAF. Without this, every raw move re-rendered the whole
+  // carousel strip (and its N slide-strip decks), which exhausts iOS Safari.
+  const pendingRef = useRef<ImageTransform | null>(null);
+  const rafRef = useRef<number | null>(null);
+
   // Rebase the gesture snapshot to the current pointer set + transform. Called
   // whenever a pointer is added or lifted so pan/zoom stay continuous.
   const rebase = useRef(() => {
@@ -109,6 +116,22 @@ export function useImageAdjust({
       return;
     }
 
+    // Flush the latest pending transform once per animation frame.
+    const flush = () => {
+      rafRef.current = null;
+      const next = pendingRef.current;
+      if (next) {
+        pendingRef.current = null;
+        onChangeRef.current(next);
+      }
+    };
+    const commit = (next: ImageTransform) => {
+      pendingRef.current = next;
+      if (rafRef.current === null) {
+        rafRef.current = requestAnimationFrame(flush);
+      }
+    };
+
     const onPointerDown = (e: PointerEvent) => {
       e.preventDefault();
       e.stopPropagation();
@@ -133,7 +156,7 @@ export function useImageAdjust({
       const distance = avgDistanceFromCentroid(pts, centroid);
       const scaleFactor =
         pts.length >= 2 && g.distance > 0 ? distance / g.distance : 1;
-      onChangeRef.current(
+      commit(
         clampRef.current({
           scale: g.transform.scale * scaleFactor,
           x: g.transform.x + (centroid.x - g.centroid.x) / g.previewScale,
@@ -158,8 +181,10 @@ export function useImageAdjust({
       e.preventDefault();
       e.stopPropagation();
       const factor = Math.exp(-e.deltaY * 0.0015);
-      const current = transformRef.current;
-      onChangeRef.current(
+      // Accumulate off the not-yet-flushed value so several wheel ticks in one
+      // frame compound, rather than each reading the same stale committed prop.
+      const current = pendingRef.current ?? transformRef.current;
+      commit(
         clampRef.current({
           scale: current.scale * factor,
           x: current.x,
@@ -171,6 +196,12 @@ export function useImageAdjust({
     const onDoubleClick = (e: MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      // Drop any queued move so it can't clobber the reset on the next frame.
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      pendingRef.current = null;
       onChangeRef.current(IDENTITY_TRANSFORM);
     };
 
@@ -192,6 +223,11 @@ export function useImageAdjust({
       el.removeEventListener("pointercancel", endPointer);
       el.removeEventListener("wheel", onWheel);
       el.removeEventListener("dblclick", onDoubleClick);
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      pendingRef.current = null;
       pointers.clear();
       gestureRef.current = null;
     };

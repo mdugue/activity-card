@@ -52,12 +52,16 @@ export interface EditorSession {
   onTitleChange: (title: string) => void;
   onVisibilityChange: (visibility: Visibility) => void;
   photo: {
+    /** lighter downscaled proxy for on-screen previews; falls back to `url`.
+     *  Never an export source — exports rasterise the full-res `url`. */
+    displayUrl: string | null;
     effects: PhotoEffects;
     onChange: (file: File | null) => void;
     onEffectsChange: (next: PhotoEffects) => void;
     onTransformChange: (next: ImageTransform) => void;
     /** pan/zoom, applied wherever a theme shows the photo */
     transform: ImageTransform;
+    /** full-resolution object URL — the export source */
     url: string | null;
   };
   title: string;

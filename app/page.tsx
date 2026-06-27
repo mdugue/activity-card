@@ -384,6 +384,7 @@ export default function Home() {
             value: activeConfig,
           },
           photo: {
+            displayUrl: photo.displayUrl,
             effects: photo.effects,
             onChange: handlePhotoChange,
             onEffectsChange: photo.setEffects,
@@ -525,6 +526,7 @@ function ExportView({
         imageTransform={photo.transform}
         onKeepEditing={onKeepEditing}
         onNew={onNew}
+        photoDisplayUrl={photo.displayUrl}
         photoEffects={photo.effects}
         photoUrl={photo.url}
         routeCoordinates={routeCoordinates}

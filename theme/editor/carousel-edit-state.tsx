@@ -10,7 +10,7 @@
 // same flow as the single card — rather than downloading inline.
 
 import { ImagesIcon } from "@phosphor-icons/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CardStage } from "@/components/app/card-stage";
 import { ControlDeck, PANEL_MOTION } from "@/components/app/control-deck";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -173,10 +173,62 @@ export function CarouselEditState({
     imageSize,
     imageTransform: photo.transform,
     photoEffects: photo.effects,
-    photoUrl: photo.url,
+    // Live preview renders the lighter proxy; the export sheet rasterises full-res.
+    photoUrl: photo.displayUrl,
     theme: descriptor,
     visibility,
   };
+
+  // The slide strip mounts one full deck per thumbnail (N live decks). During a
+  // pan/zoom gesture the transform changes every frame; re-rendering all N
+  // thumbnail decks each tick is what tips iOS Safari over. Freeze the strip's
+  // transform while adjusting — it re-renders once on "Done" — and memoise the
+  // element so the gesture's per-frame parent re-renders skip the strip entirely.
+  const latestTransformRef = useRef(photo.transform);
+  useEffect(() => {
+    latestTransformRef.current = photo.transform;
+  });
+  const [frozenTransform, setFrozenTransform] = useState(photo.transform);
+  useEffect(() => {
+    if (adjusting) {
+      // Capture once when the gesture starts; the strip stays put until "Done".
+      setFrozenTransform(latestTransformRef.current);
+    }
+  }, [adjusting]);
+  const stripTransform = adjusting ? frozenTransform : photo.transform;
+
+  const slideStrip = useMemo(
+    () => (
+      <SlideStrip
+        colors={color.scheme}
+        config={config.value}
+        data={data}
+        format={format}
+        imageSize={imageSize}
+        imageTransform={stripTransform}
+        onSelect={carousel.select}
+        photoEffects={photo.effects}
+        photoUrl={photo.displayUrl}
+        selectedIndex={selectedIndex}
+        theme={descriptor}
+        visibility={visibility}
+      />
+    ),
+    [
+      color.scheme,
+      config.value,
+      data,
+      format,
+      imageSize,
+      stripTransform,
+      carousel.select,
+      photo.effects,
+      photo.displayUrl,
+      selectedIndex,
+      descriptor,
+      visibility,
+    ]
+  );
 
   const tools = useActivityTools({
     mode: "carousel",
@@ -285,20 +337,7 @@ export function CarouselEditState({
           "group-data-[open]/deck:max-lg:invisible group-data-[open]/deck:max-lg:max-h-0 group-data-[open]/deck:max-lg:opacity-0"
         )}
       >
-        <SlideStrip
-          colors={color.scheme}
-          config={config.value}
-          data={data}
-          format={format}
-          imageSize={imageSize}
-          imageTransform={photo.transform}
-          onSelect={carousel.select}
-          photoEffects={photo.effects}
-          photoUrl={photo.url}
-          selectedIndex={selectedIndex}
-          theme={descriptor}
-          visibility={visibility}
-        />
+        {slideStrip}
       </div>
     </div>
   );

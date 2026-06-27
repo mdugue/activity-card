@@ -82,7 +82,7 @@ export function ImageAdjustOverlay({
       </div>
 
       {/* Hint chip */}
-      <Badge className="pointer-events-none absolute top-5 left-1/2 z-[3] -translate-x-1/2 rounded-full bg-black/55 px-3 py-1.5 font-mono text-[10px] text-white backdrop-blur-sm">
+      <Badge className="pointer-events-none absolute top-5 left-1/2 z-[3] -translate-x-1/2 rounded-full bg-black/65 px-3 py-1.5 font-mono text-[10px] text-white">
         Drag · pinch or scroll to zoom
       </Badge>
 
