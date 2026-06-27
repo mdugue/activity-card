@@ -266,13 +266,16 @@ export function CarouselExportSheet({
               {/* A rasterised thumbnail of the deck, painted as a background
                   image (the repo's convention over <img>); no filter, so iOS
                   composites it at display size — cheap. Aspect matches the strip
-                  exactly, so `100% 100%` shows it undistorted. */}
+                  exactly, so `100% 100%` shows it undistorted. Use the
+                  `backgroundColor` longhand (not the `background` shorthand) for
+                  the skeleton — the shorthand would reset backgroundSize/Repeat to
+                  auto/repeat and tile the strip. */}
               <div
                 style={{
                   width: "100%",
                   height: "100%",
-                  background: src ? undefined : "#eceae6",
-                  backgroundImage: src ? `url(${src})` : undefined,
+                  backgroundColor: src ? undefined : "#eceae6",
+                  backgroundImage: src ? `url("${src}")` : undefined,
                   backgroundSize: "100% 100%",
                   backgroundRepeat: "no-repeat",
                 }}
@@ -282,16 +285,23 @@ export function CarouselExportSheet({
         })}
       </div>
 
-      {/* The lone off-screen staging deck — one at a time, never display:none so
-          snapdom can lay it out and capture it. */}
+      {/* The lone staging deck — one at a time. Rendered IN the viewport (top-left)
+          but fully transparent, NOT far off-screen: iOS Safari culls painting of
+          far-off-screen content, and snapdom's embedFonts then captures system
+          fallbacks instead of the theme's @font-face. Keeping it on-screen (just
+          invisible) matches the single-card export path, whose fonts embed
+          correctly. snapdom captures the inner node in isolation, so the wrapper's
+          opacity:0 doesn't affect the output. */}
       {stage && stageGeom ? (
         <div
           aria-hidden
           style={{
             position: "fixed",
-            left: -100_000,
+            left: 0,
             top: 0,
+            opacity: 0,
             pointerEvents: "none",
+            zIndex: -1,
           }}
         >
           <div
