@@ -12,8 +12,8 @@
 // per-tab budget. So the grid never holds more than ONE live deck: each tile is
 // rendered live (in its own visible tile) one at a time, rasterised by `snapdom`
 // into a small thumbnail, then frozen to that image; downloads re-render the one
-// tile at full resolution and slice it. Previews use the lighter
-// `photoDisplayUrl` proxy; downloads rasterise the full-res original.
+// tile at full resolution. Previews use the lighter `photoDisplayUrl` proxy;
+// downloads rasterise the full-res original.
 //
 // Why render LIVE *in the visible tile* rather than an off-screen staging slot:
 // iOS Safari only decodes/applies a downloaded @font-face (and paints a cover
@@ -22,8 +22,17 @@
 // font. The single-card export captures a visible on-screen tile and embeds
 // fonts correctly — so the carousel does the same: capture the deck while it is
 // genuinely on screen, one at a time to stay within the memory budget.
+//
+// Why capture per SLIDE, not the whole strip at once: iOS Safari will not apply
+// an embedded @font-face when it rasterises an `<img>`-rendered SVG wider than
+// its internal limit, and a full strip (~3–6k px) is past it — so strip-wide
+// captures fall back to a system font (the single card, 1080 px wide, does not).
+// `captureCarouselFrames` slides a slide-width clipping window across the deck
+// and captures each slide alone, so every snapdom SVG is 1080 px wide like the
+// single card; the seamless bleed survives because each window is a portion of
+// the SAME full-width deck. The deck is wrapped in `shiftNode` (translated per
+// slide) inside the tile's `windowNode` (clipped to one slide during capture).
 
-import { preCache, snapdom } from "@zumer/snapdom";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
@@ -41,6 +50,7 @@ import {
 } from "@/theme/core/export-formats";
 import type { Visibility } from "@/theme/core/visibility";
 import {
+  captureCarouselFrames,
   carouselBaseName,
   exportCarousel,
 } from "@/theme/export/export-carousel";
@@ -64,9 +74,10 @@ const CAROUSEL_TILE: TileBox = {
 
 // Target rasterised width for a preview thumbnail (the whole strip). Small
 // enough that the snapdom canvas + data URL stay cheap, large enough to read
-// crisply scaled into a tile on a retina display. This only sizes the captured
-// image — the live staging deck is always native, so it doesn't affect the
-// one-deck-at-a-time memory ceiling.
+// crisply scaled into a tile on a retina display. Each slide is captured at
+// `TARGET_PREVIEW_STRIP_W / count` and the slides are composited side by side,
+// so this sizes the composited strip — not the live deck, which stays native, so
+// it doesn't affect the one-deck-at-a-time memory ceiling.
 const TARGET_PREVIEW_STRIP_W = 1024;
 
 function nextFrame(): Promise<void> {
@@ -138,7 +149,10 @@ export function CarouselExportSheet({
   // The tile rendered LIVE right now (so iOS paints it → fonts + photo embed).
   // Exactly one format is live at a time — the memory ceiling. `mode` picks the
   // proxy (preview) vs full-res (export) photo.
+  // `mounts` = the tile's outer box (clipped to one slide during capture);
+  // `shifts` = the inner wrapper translated per slide (see `captureCarouselFrames`).
   const mounts = useRef<Record<string, HTMLDivElement | null>>({});
+  const shifts = useRef<Record<string, HTMLDivElement | null>>({});
   const [active, setActive] = useState<{ id: string; mode: StageMode } | null>(
     null
   );
@@ -149,8 +163,9 @@ export function CarouselExportSheet({
   const chainRef = useRef<Promise<unknown>>(Promise.resolve());
 
   // Render `format`'s deck live in its on-screen tile, wait until it has
-  // committed + decoded + fonts are ready, then snapdom it (preview → data URL)
-  // or slice it (export → files). Strictly serial via `chainRef`.
+  // committed + decoded + fonts are ready, then capture it per slide (preview →
+  // a composited strip data URL; export → the ordered PNG set). Strictly serial
+  // via `chainRef` so only one deck is ever live.
   const runOnTile = useCallback(
     (format: ExportFormat, mode: StageMode): Promise<string | null> => {
       const job = async (): Promise<string | null> => {
@@ -159,31 +174,37 @@ export function CarouselExportSheet({
         await waitForFonts();
         await nextFrame();
         await nextFrame();
-        const node = mounts.current[format.id];
-        if (!node) {
+        const windowNode = mounts.current[format.id];
+        const shiftNode = shifts.current[format.id];
+        if (!(windowNode && shiftNode)) {
           throw new Error(`Carousel tile not ready for ${format.id}`);
         }
-        // WebKit/iOS Safari is unreliable on the FIRST snapdom pass of a node —
-        // it can drop the freshly-loaded background photo and fall back from the
-        // @font-face to a system font; a second pass works (snapdom #129 / #253).
-        // `preCache` fetches the blob photo + warms the fonts, and every capture
-        // is a "discard the first pass, keep the second" double render.
-        // (`exportCarousel` double-renders internally.)
-        await preCache(node, { embedFonts: true });
-        const { slideH, stripW } = stripGeometry(format, count);
         if (mode === "preview") {
-          const opts = {
-            width: stripW,
-            height: slideH,
-            scale: TARGET_PREVIEW_STRIP_W / stripW,
-            dpr: 1,
-            embedFonts: true,
-          } as const;
-          await snapdom.toCanvas(node, opts); // warm-up pass (discarded)
-          const canvas = await snapdom.toCanvas(node, opts);
-          return canvas.toDataURL("image/jpeg", 0.82);
+          // Capture each slide narrow (so iOS embeds the real font), then
+          // composite them side by side into the full-strip thumbnail.
+          const { slideW, stripW } = stripGeometry(format, count);
+          const scale = TARGET_PREVIEW_STRIP_W / stripW;
+          const frames = await captureCarouselFrames(
+            windowNode,
+            shiftNode,
+            format,
+            count,
+            scale
+          );
+          const strip = document.createElement("canvas");
+          strip.width = Math.round(slideW * scale) * count;
+          strip.height = frames[0]?.height ?? 0;
+          const ctx = strip.getContext("2d");
+          if (!ctx) {
+            throw new Error("Preview strip canvas unavailable");
+          }
+          const frameW = Math.round(slideW * scale);
+          frames.forEach((frame, i) => {
+            ctx.drawImage(frame, i * frameW, 0);
+          });
+          return strip.toDataURL("image/jpeg", 0.82);
         }
-        await exportCarousel(node, count, baseName, format);
+        await exportCarousel(windowNode, shiftNode, count, baseName, format);
         return null;
       };
       const p = chainRef.current.then(job, job);
@@ -280,23 +301,32 @@ export function CarouselExportSheet({
             >
               {isActive ? (
                 // Rendered live + on-screen (just scaled into the tile) so iOS
-                // paints it and snapdom embeds the real fonts + photo. The full
-                // strip; the export path slices it. Export uses the full-res
-                // photo, previews the lighter proxy.
-                <CarouselDeck
-                  colors={colors}
-                  config={config}
-                  data={data}
-                  format={format}
-                  imageSize={imageSize}
-                  imageTransform={imageTransform}
-                  photoEffects={photoEffects}
-                  photoUrl={
-                    active.mode === "export" ? photoUrl : photoDisplayUrl
-                  }
-                  theme={theme}
-                  visibility={visibility}
-                />
+                // paints it and snapdom embeds the real fonts + photo. The
+                // shifter wrapper is translated per slide and the tile box is
+                // clipped to one slide during capture (`captureCarouselFrames`),
+                // so each snapdom SVG is single-card width. Export uses the
+                // full-res photo, previews the lighter proxy.
+                <div
+                  ref={(node) => {
+                    shifts.current[id] = node;
+                  }}
+                  style={{ width: stripW, height: slideH }}
+                >
+                  <CarouselDeck
+                    colors={colors}
+                    config={config}
+                    data={data}
+                    format={format}
+                    imageSize={imageSize}
+                    imageTransform={imageTransform}
+                    photoEffects={photoEffects}
+                    photoUrl={
+                      active.mode === "export" ? photoUrl : photoDisplayUrl
+                    }
+                    theme={theme}
+                    visibility={visibility}
+                  />
+                </div>
               ) : (
                 // Frozen tile: the rasterised thumbnail painted as a background
                 // image (the repo's convention over <img>); aspect matches the
