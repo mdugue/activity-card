@@ -37,13 +37,21 @@ export async function exportCarousel(
   // `embedFonts` inlines the deck's @font-face; `dpr: 1` keeps the strip a
   // deterministic `pr`× of its native size regardless of screen density (see
   // theme/export/export-card.ts for the full note).
-  const canvas = await snapdom.toCanvas(wideNode, {
+  const snapOpts = {
     width,
     height: format.height,
     scale: pr,
     dpr: 1,
     embedFonts: true,
-  });
+  } as const;
+  // WebKit/iOS Safari drops the freshly-loaded background photo (and sometimes
+  // the @font-face) on the FIRST snapdom pass of a node; the second pass works
+  // (snapdom #129 / #253). Discard a warm-up render at the real export scale (so
+  // WebKit decodes the inlined photo at the resolution the real capture needs),
+  // then keep the second. The first canvas is dropped before the slice loop, so
+  // peak memory stays one strip + its slices.
+  await snapdom.toCanvas(wideNode, snapOpts);
+  const canvas = await snapdom.toCanvas(wideNode, snapOpts);
 
   const sliceW = format.width * pr;
   const sliceH = format.height * pr;

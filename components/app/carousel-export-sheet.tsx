@@ -16,7 +16,7 @@
 // editor's tolerated footprint. Previews use the lighter `photoDisplayUrl`
 // proxy; downloads rasterise the full-res original, so output quality is intact.
 
-import { snapdom } from "@zumer/snapdom";
+import { preCache, snapdom } from "@zumer/snapdom";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
@@ -156,15 +156,25 @@ export function CarouselExportSheet({
         if (!node) {
           throw new Error(`Carousel stage not ready for ${format.id}`);
         }
+        // WebKit/iOS Safari is unreliable on the FIRST snapdom pass of a
+        // freshly-mounted node — it drops the freshly-loaded background photo and
+        // sometimes falls back from the @font-face to a system font; a second
+        // pass works (snapdom #129 / #253). `preCache` fetches the blob photo +
+        // warms the fonts, and every capture below is a "discard the first pass,
+        // keep the second" double render so the photo + embedded fonts land
+        // reliably. (`exportCarousel` does the same double render internally.)
+        await preCache(node, { embedFonts: true });
         const { slideH, stripW } = stripGeometry(format, count);
         if (mode === "preview") {
-          const canvas = await snapdom.toCanvas(node, {
+          const opts = {
             width: stripW,
             height: slideH,
             scale: TARGET_PREVIEW_STRIP_W / stripW,
             dpr: 1,
             embedFonts: true,
-          });
+          } as const;
+          await snapdom.toCanvas(node, opts); // warm-up pass (discarded)
+          const canvas = await snapdom.toCanvas(node, opts);
           return canvas.toDataURL("image/jpeg", 0.82);
         }
         await exportCarousel(node, count, baseName, format);
