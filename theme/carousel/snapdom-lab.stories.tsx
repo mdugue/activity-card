@@ -37,27 +37,31 @@ const DISPLAY_W = 900; // px width each panel (live + every snapshot) is shown a
 const CAPTURE_SCALE = 0.5; // snapdom output scale (native × this); legible, light
 const FALLBACK_FACE_RE = /fallback/i; // next/font's metric-adjusted fallback face
 
-// TTF copies of the theme fonts (next/font ships WOFF2). Safari is known to be
-// unreliable decoding WOFF2 inside an SVG rendered as an image — the exact path
-// snapdom rasterises through — so we feed snapdom these via `localFonts` to test
-// whether the embed FORMAT is the culprit. Family names must match what the
-// elements reference ("Cormorant Garamond" / "IBM Plex Mono") so the embedded
-// @font-face replaces the discovered WOFF2.
-const TTF = "https://cdn.jsdelivr.net/fontsource/fonts";
-const TTF_LOCAL_FONTS = [
-  ...["400", "500", "600", "700"].map((w) => ({
-    family: "Cormorant Garamond",
-    weight: w,
-    style: "normal",
-    src: `${TTF}/cormorant-garamond@latest/latin-${w}-normal.ttf`,
-  })),
-  ...["400", "500"].map((w) => ({
-    family: "IBM Plex Mono",
-    weight: w,
-    style: "normal",
-    src: `${TTF}/ibm-plex-mono@latest/latin-${w}-normal.ttf`,
-  })),
+// `localFonts` overrides. snapdom auto-discovery embeds EVERY used face — 12 for
+// this deck (8 Cormorant inc. italics, then 4 IBM Plex Mono). Safari applies the
+// first-listed family (Cormorant) but drops the mono labels to serif, which fits
+// a cap on how many @font-face Safari processes inside an SVG image. So we feed
+// snapdom a SMALL, explicit set (6 faces) via `localFonts` in two formats:
+//   - WOFF2: same format as today, far fewer faces → isolates FACE COUNT.
+//   - TTF:   different format → isolates the WOFF2-in-SVG decode hypothesis.
+// Family names must match what the elements reference so the embed replaces the
+// discovered faces. Fonts come from fontsource (CORS-enabled).
+const FONT_CDN = "https://cdn.jsdelivr.net/fontsource/fonts";
+const FACE_SET = [
+  { family: "Cormorant Garamond", id: "cormorant-garamond", weights: ["600"] },
+  { family: "IBM Plex Mono", id: "ibm-plex-mono", weights: ["400", "500"] },
 ];
+const localFontsOf = (ext: string) =>
+  FACE_SET.flatMap((f) =>
+    f.weights.map((w) => ({
+      family: f.family,
+      weight: w,
+      style: "normal",
+      src: `${FONT_CDN}/${f.id}@latest/latin-${w}-normal.${ext}`,
+    }))
+  );
+const WOFF2_LOCAL_FONTS = localFontsOf("woff2");
+const TTF_LOCAL_FONTS = localFontsOf("ttf");
 
 interface Treatment {
   id: string;
@@ -133,9 +137,15 @@ const TREATMENTS: Treatment[] = [
       el.style.setProperty("font-variant-numeric", "normal", "important"),
   },
   {
+    id: "woff2min",
+    label: "minimal WOFF2 localFonts",
+    note: "same WOFF2 format, only 3 faces (not 12) → isolates face count",
+    localFonts: WOFF2_LOCAL_FONTS,
+  },
+  {
     id: "ttf",
     label: "TTF via localFonts",
-    note: "re-embed Cormorant + IBM Plex Mono as TTF instead of WOFF2",
+    note: "3 faces as TTF instead of WOFF2 → isolates the format",
     localFonts: TTF_LOCAL_FONTS,
   },
 ];
