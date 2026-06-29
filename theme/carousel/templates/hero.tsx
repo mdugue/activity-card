@@ -34,7 +34,6 @@ export function HeroSlide({
             letterSpacing: "-0.01em",
             margin: 0,
             color: colors.fg,
-            textWrap: "pretty",
             maxWidth: "92%",
             textShadow: colors.shadow || undefined,
           }}
@@ -75,6 +74,12 @@ export function HeroSlide({
               letterSpacing: "-0.02em",
               color: style.accent,
               fontVariantNumeric: "tabular-nums",
+              // Safari drops the embedded face for spans that request tabular
+              // figures via the high-level `font-variant-numeric` ALONE when
+              // snapdom rasterises the SVG (the stat grid, which also sets the
+              // low-level `font-feature-settings`, renders fine). Set both so the
+              // export keeps the real numerals (see theme/carousel/stat-block).
+              fontFeatureSettings: '"tnum" 1',
               textShadow: colors.shadow || undefined,
             }}
           >

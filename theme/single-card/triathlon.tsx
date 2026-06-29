@@ -222,7 +222,6 @@ export function ThemeTriathlon({
                 letterSpacing: "-0.02em",
                 margin: "10px 0 0 0",
                 maxWidth: 700,
-                textWrap: "pretty",
               }}
             >
               {data.title}

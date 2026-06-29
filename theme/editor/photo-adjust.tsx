@@ -99,7 +99,7 @@ export function AdjustControls({
     <>
       {adjustAvailable && !adjusting ? (
         <Badge
-          className="absolute top-3 right-3 z-10 rounded-full bg-black/55 px-3 py-1.5 font-mono text-[10px] text-white backdrop-blur-sm transition-colors hover:bg-black/75"
+          className="absolute top-3 right-3 z-10 rounded-full bg-black/65 px-3 py-1.5 font-mono text-[10px] text-white transition-colors hover:bg-black/80"
           render={<button onClick={() => setAdjusting(true)} type="button" />}
         >
           <ArrowsOutCardinalIcon

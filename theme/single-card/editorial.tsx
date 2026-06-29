@@ -330,7 +330,6 @@ export function ThemeEditorial({
                   letterSpacing: "-0.015em",
                   fontWeight: 400,
                   margin: 0,
-                  textWrap: "pretty",
                 }}
               >
                 {data.title}.

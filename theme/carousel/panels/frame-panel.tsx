@@ -206,6 +206,9 @@ function FrameDatum({
               letterSpacing: "-0.03em",
               color: c.fg,
               fontVariantNumeric: "tabular-nums",
+              // Pair with the low-level feature so Safari keeps the embedded
+              // face in the export (see hero.tsx / stat-block).
+              fontFeatureSettings: '"tnum" 1',
               textShadow: c.shadow || undefined,
             }}
           >
@@ -256,7 +259,6 @@ function FrameSignature({
           letterSpacing: "-0.02em",
           margin: "44px 0",
           color: c.fg,
-          textWrap: "balance",
           textShadow: c.shadow || undefined,
         }}
       >

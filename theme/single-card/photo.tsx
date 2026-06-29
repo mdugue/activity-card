@@ -322,7 +322,6 @@ export function ThemePhoto({
             margin: 0,
             color: "var(--headline)",
             textShadow: "0 4px 24px rgba(0,0,0,0.4)",
-            textWrap: "pretty",
             maxWidth: 800,
           }}
         >

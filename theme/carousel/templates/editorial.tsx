@@ -70,7 +70,6 @@ export function EditorialSlide({
               letterSpacing: "-0.015em",
               margin: 0,
               color: colors.fg,
-              textWrap: "balance",
               textShadow: colors.shadow || undefined,
             }}
           >

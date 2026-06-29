@@ -157,7 +157,6 @@ function FrontPage({
             letterSpacing: "-0.02em",
             margin: 0,
             color: ink,
-            textWrap: "balance",
           }}
         >
           {data.title}
@@ -317,6 +316,9 @@ function Spread({
             lineHeight: 0.8,
             color: ink,
             fontVariantNumeric: "tabular-nums",
+            // Pair with the low-level feature so Safari keeps the embedded face
+            // in the export (see hero.tsx / stat-block).
+            fontFeatureSettings: '"tnum" 1',
             marginTop: 12,
           }}
         >
@@ -362,6 +364,9 @@ function Spread({
                     lineHeight: 0.85,
                     color: ink,
                     fontVariantNumeric: "tabular-nums",
+                    // Pair with the low-level feature so Safari keeps the
+                    // embedded face in the export (see hero.tsx / stat-block).
+                    fontFeatureSettings: '"tnum" 1',
                   }}
                 >
                   {s.value}

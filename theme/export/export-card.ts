@@ -1,4 +1,4 @@
-import { snapdom } from "@zumer/snapdom";
+import { preCache, snapdom } from "@zumer/snapdom";
 import type { ActivityData } from "@/lib/activity";
 import {
   applyMetadata,
@@ -46,14 +46,20 @@ export async function exportCard(
   //   native size on every device. Left at its default, `dpr` tracks the
   //   viewer's screen density and a Retina display would double the output
   //   again. Pinning it keeps 1080×1350 → 2160×2700 everywhere.
-  const blob = await snapdom.toBlob(node, {
+  // WebKit/iOS Safari intermittently falls back from the @font-face to a system
+  // font on the FIRST snapdom pass (snapdom #253); `preCache` warms the fonts +
+  // images and a discarded warm-up render primes the pipeline so the real
+  // capture below embeds the real typefaces reliably.
+  await preCache(node, { embedFonts: true });
+  const snapOpts = {
     width,
     height,
     scale: pixelRatio,
     dpr: 1,
     embedFonts: true,
-    type: "png",
-  });
+  } as const;
+  await snapdom.toCanvas(node, snapOpts);
+  const blob = await snapdom.toBlob(node, { ...snapOpts, type: "png" });
 
   // Inject Effort metadata into the raw PNG bytes (canvas output carries none).
   const raw = new Uint8Array(await blob.arrayBuffer());
