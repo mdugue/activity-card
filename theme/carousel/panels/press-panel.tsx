@@ -157,7 +157,6 @@ function FrontPage({
             letterSpacing: "-0.02em",
             margin: 0,
             color: ink,
-            textWrap: "balance",
           }}
         >
           {data.title}

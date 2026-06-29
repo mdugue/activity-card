@@ -174,7 +174,6 @@ export function ThemePath({
                   lineHeight: 0.95,
                   letterSpacing: "-0.01em",
                   margin: 0,
-                  textWrap: "pretty",
                   maxWidth: "90%",
                 }}
               >

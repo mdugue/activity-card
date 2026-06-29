@@ -34,7 +34,6 @@ export function HeroSlide({
             letterSpacing: "-0.01em",
             margin: 0,
             color: colors.fg,
-            textWrap: "pretty",
             maxWidth: "92%",
             textShadow: colors.shadow || undefined,
           }}

@@ -397,7 +397,6 @@ export function ThemeData({
                 letterSpacing: "-0.01em",
                 margin: "clamp(6px, 1.5cqb, 14px) 0 0 0",
                 textTransform: "uppercase",
-                textWrap: "pretty",
               }}
             >
               {data.title}

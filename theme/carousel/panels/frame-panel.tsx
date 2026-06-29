@@ -256,7 +256,6 @@ function FrameSignature({
           letterSpacing: "-0.02em",
           margin: "44px 0",
           color: c.fg,
-          textWrap: "balance",
           textShadow: c.shadow || undefined,
         }}
       >

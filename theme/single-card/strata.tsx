@@ -399,7 +399,6 @@ export function ThemeStrata({
           marginLeft: insets.left,
           marginRight: insets.right,
           maxWidth: "94%",
-          textWrap: "pretty",
           textShadow: overPhoto
             ? `0 2px 30px rgba(${tokens.scrim},0.6)`
             : undefined,

@@ -71,7 +71,6 @@ export function StatLayout({
             margin: "0 0 44px 0",
             color: colors.fg,
             maxWidth: "88%",
-            textWrap: "pretty",
             textShadow: colors.shadow || undefined,
           }}
         >
