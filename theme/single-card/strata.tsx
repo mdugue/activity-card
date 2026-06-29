@@ -257,11 +257,6 @@ function StrataField({
  *  middle metric is omitted when the activity lacks it (or the user toggled it
  *  off — `applyVisibility` strips the field), never shown as a dash. */
 function statRow(data: ActivityView): [string, string, string][] {
-  const time: [string, string, string] = [
-    "TIME",
-    formatDuration(data.durationSec),
-    "",
-  ];
   const row: [string, string, string][] = [];
   if (data.sport === "run") {
     if (isNum(data.distanceKm)) {
@@ -286,7 +281,9 @@ function statRow(data: ActivityView): [string, string, string][] {
       row.push(["ELEV", formatNumber(data.elevationGainM), "m"]);
     }
   }
-  row.push(time);
+  if (isNum(data.durationSec)) {
+    row.push(["TIME", formatDuration(data.durationSec), ""]);
+  }
   return row;
 }
 
