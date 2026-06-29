@@ -5,7 +5,7 @@
 // them together (a new photo resets the transform and adopts the active
 // theme's signature effects; the object URL is revoked exactly once, via the
 // effect cleanup). `app/page.tsx` composes this with the visibility flag —
-// the `photoBackdrop` switch is deliberately NOT owned here.
+// the `photo` switch is deliberately NOT owned here.
 
 import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
 import { IDENTITY_TRANSFORM, type ImageTransform } from "@/lib/image-transform";

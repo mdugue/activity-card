@@ -54,11 +54,16 @@ const FIELD_H = 880;
 const STAT_FOOTER_BASE = 48;
 
 const USES = [
+  "date",
+  "distance",
   "elevation",
   "elevationViz",
   "location",
   "pace",
+  "photo",
   "route",
+  "time",
+  "title",
 ] as const;
 
 type ThemeStrataProps = ThemeProps<(typeof USES)[number], StrataConfig>;
@@ -252,30 +257,33 @@ function StrataField({
  *  middle metric is omitted when the activity lacks it (or the user toggled it
  *  off — `applyVisibility` strips the field), never shown as a dash. */
 function statRow(data: ActivityView): [string, string, string][] {
-  const time: [string, string, string] = [
-    "TIME",
-    formatDuration(data.durationSec),
-    "",
-  ];
   const row: [string, string, string][] = [];
   if (data.sport === "run") {
-    row.push(["DST", data.distanceKm.toFixed(1), "km"]);
+    if (isNum(data.distanceKm)) {
+      row.push(["DST", data.distanceKm.toFixed(1), "km"]);
+    }
     if (isNum(data.avgPaceMinPerKm)) {
       row.push(["PACE", formatPaceMin(data.avgPaceMinPerKm), "/km"]);
     }
   } else if (data.sport === "swim") {
-    row.push(["DST", (data.distanceKm * 1000).toFixed(0), "m"]);
+    if (isNum(data.distanceKm)) {
+      row.push(["DST", (data.distanceKm * 1000).toFixed(0), "m"]);
+    }
     if (isNum(data.avgPacePer100m)) {
       row.push(["/100", formatPaceSec(data.avgPacePer100m), ""]);
     }
   } else {
     // ride, triathlon, and anything else: distance · elevation · time.
-    row.push(["DST", data.distanceKm.toFixed(1), "km"]);
+    if (isNum(data.distanceKm)) {
+      row.push(["DST", data.distanceKm.toFixed(1), "km"]);
+    }
     if (isNum(data.elevationGainM)) {
       row.push(["ELEV", formatNumber(data.elevationGainM), "m"]);
     }
   }
-  row.push(time);
+  if (isNum(data.durationSec)) {
+    row.push(["TIME", formatDuration(data.durationSec), ""]);
+  }
   return row;
 }
 

@@ -39,7 +39,7 @@ const meta = preview
       imageTransform: IDENTITY_TRANSFORM,
       onKeepEditing: noop,
       onNew: noop,
-      photoBackdropEnabled: true,
+      photo: true,
       photoEffects: NO_EFFECTS,
       photoUrl: null,
       routeCoordinates: SAMPLE_RIDE.routeCoordinates,

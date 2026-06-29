@@ -33,17 +33,16 @@ describe("buildStats", () => {
     );
   });
 
-  test("swim distance shows a dash, not 'NaN', for a non-finite distance", () => {
-    // Regression: the swim branch bypassed formatNumber and printed literal
-    // "NaN" for a non-finite distance (heroStat then headlines "NaN"/"N").
+  test("a non-finite distance is omitted, never rendered as 'NaN'", () => {
+    // Regression: the swim branch once printed a literal "NaN" (heroStat then
+    // headlined "NaN"/"N"). A missing / non-finite distance now drops out
+    // entirely — like every other stat — so it can never surface as a number.
     const stats = buildStats({
       ...SAMPLE_RUN,
       sport: "swim",
       distanceKm: Number.NaN,
     });
-    const distance = stats.find((s) => s.key === "distance");
-    expect(distance?.value).toBe("—");
-    expect(distance?.unit).toBe("m");
+    expect(stats.find((s) => s.key === "distance")).toBeUndefined();
   });
 
   test("heroStat is the leading (distance) stat", () => {

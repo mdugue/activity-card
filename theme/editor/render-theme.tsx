@@ -25,8 +25,8 @@ interface RenderThemeProps {
   format?: ExportFormat;
   /** Pan/zoom applied to the background photo, wherever a theme shows one. */
   imageTransform?: ImageTransform | null;
-  /** Whether the background photo shows (the `photoBackdrop` visibility flag). */
-  photoBackdropEnabled?: boolean;
+  /** Whether the background photo shows (the `photo` visibility flag). */
+  photo?: boolean;
   /** Filter / grain / mirror, provided to every theme's photo layer via context. */
   photoEffects?: PhotoEffects | null;
   photoUrl?: string | null;
@@ -44,7 +44,7 @@ export function RenderTheme({
   theme,
   data,
   photoUrl,
-  photoBackdropEnabled = true,
+  photo = true,
   colors,
   config,
   photoEffects = null,
@@ -53,10 +53,14 @@ export function RenderTheme({
 }: RenderThemeProps) {
   const descriptor = SINGLE_CARD_THEMES[theme];
   const ctxFormat = useFormat();
-  const photo = photoBackdropEnabled ? (photoUrl ?? null) : null;
+  // The photo shows only when the theme declares the `photo` capability — a
+  // photo-less theme keeps `photoUrl` out entirely (the editor hides its PHOTO
+  // control the same way).
+  const photoSrc =
+    photo && descriptor.uses.includes("photo") ? (photoUrl ?? null) : null;
   // Natural size feeds the rotation-correct cover layer (quarter turns swap
   // the photo's width/height); derived here once so themes need no new props.
-  const imageSize = useImageNaturalSize(photo);
+  const imageSize = useImageNaturalSize(photoSrc);
   const Component = descriptor.Component;
   const resolvedColors = colors ?? descriptor.colors.default;
   const themeData = pickThemeData(descriptor, data);
@@ -73,7 +77,7 @@ export function RenderTheme({
           config={config}
           data={themeData}
           imageTransform={imageTransform}
-          photoUrl={photo}
+          photoUrl={photoSrc}
         />
       </PhotoFxProvider>
     </FormatProvider>

@@ -15,12 +15,11 @@ export function HeroSlide({
   hasPhoto,
   index,
   total,
-  statOpts,
   showPageNumber,
 }: PanelProps) {
   const colors = slideText(style, hasPhoto);
   const anchor = style.contentAnchor;
-  const hero = heroStat(data, style.heroMetric, statOpts);
+  const hero = heroStat(data, style.heroMetric);
 
   const block = (
     <div style={{ marginTop: anchor === "top" ? 56 : 0 }}>

@@ -25,7 +25,6 @@ export function StatLayout({
   hasPhoto,
   index,
   total,
-  statOpts,
   showPageNumber,
   columns,
   numeralSize,
@@ -34,7 +33,7 @@ export function StatLayout({
   const colors = slideText(style, hasPhoto);
   const anchor = style.contentAnchor;
   // Every stat except the one the hero slide headlines (no repeated big number).
-  const stats = detailStats(data, style.heroMetric, statOpts);
+  const stats = detailStats(data, style.heroMetric);
 
   const group = (
     <div>

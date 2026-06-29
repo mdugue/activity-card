@@ -29,11 +29,16 @@ const ROUTE_H = 720;
 
 const USES = [
   "athleteName",
+  "date",
+  "distance",
   "elevation",
   "location",
   "pace",
+  "photo",
   "route",
   "speed",
+  "time",
+  "title",
 ] as const;
 
 export function ThemePath({
@@ -55,7 +60,9 @@ export function ThemePath({
   // field) are omitted entirely rather than rendered as a dashed placeholder.
   const statTrio: [string, string][] = [];
   if (sport === "ride") {
-    statTrio.push(["DISTANCE", `${data.distanceKm.toFixed(1)} km`]);
+    if (isNum(data.distanceKm)) {
+      statTrio.push(["DISTANCE", `${data.distanceKm.toFixed(1)} km`]);
+    }
     if (isNum(data.elevationGainM)) {
       statTrio.push(["ELEVATION", `${formatNumber(data.elevationGainM)} m`]);
     }
@@ -63,26 +70,32 @@ export function ThemePath({
       statTrio.push(["AVG SPEED", `${formatNumber(data.avgSpeedKmh, 1)} km/h`]);
     }
   } else if (sport === "run") {
-    statTrio.push(
-      ["DISTANCE", `${data.distanceKm.toFixed(1)} km`],
-      ["DURATION", formatDuration(data.durationSec)]
-    );
+    if (isNum(data.distanceKm)) {
+      statTrio.push(["DISTANCE", `${data.distanceKm.toFixed(1)} km`]);
+    }
+    if (isNum(data.durationSec)) {
+      statTrio.push(["DURATION", formatDuration(data.durationSec)]);
+    }
     if (isNum(data.avgPaceMinPerKm)) {
       statTrio.push(["AVG PACE", `${formatPaceMin(data.avgPaceMinPerKm)} /km`]);
     }
   } else if (sport === "swim") {
-    statTrio.push(
-      ["DISTANCE", `${(data.distanceKm * 1000).toFixed(0)} m`],
-      ["DURATION", formatDuration(data.durationSec)]
-    );
+    if (isNum(data.distanceKm)) {
+      statTrio.push(["DISTANCE", `${(data.distanceKm * 1000).toFixed(0)} m`]);
+    }
+    if (isNum(data.durationSec)) {
+      statTrio.push(["DURATION", formatDuration(data.durationSec)]);
+    }
     if (isNum(data.avgPacePer100m)) {
       statTrio.push(["PACE", `${formatPaceSec(data.avgPacePer100m)} /100m`]);
     }
   } else {
-    statTrio.push(
-      ["DISTANCE", `${data.distanceKm.toFixed(1)} km`],
-      ["DURATION", formatDuration(data.durationSec)]
-    );
+    if (isNum(data.distanceKm)) {
+      statTrio.push(["DISTANCE", `${data.distanceKm.toFixed(1)} km`]);
+    }
+    if (isNum(data.durationSec)) {
+      statTrio.push(["DURATION", formatDuration(data.durationSec)]);
+    }
     if (isNum(data.elevationGainM)) {
       statTrio.push(["ELEVATION", `${formatNumber(data.elevationGainM)} m`]);
     }

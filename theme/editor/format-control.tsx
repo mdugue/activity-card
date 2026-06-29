@@ -13,6 +13,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
 import {
   type ExportFormat,
@@ -64,25 +65,17 @@ export function FormatControl({
             const f = getFormat(id);
             const active = id === format.id;
             return (
-              <button
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors",
-                  active
-                    ? "bg-primary/10 text-primary"
-                    : "hover:bg-foreground/5"
-                )}
+              <Toggle
+                className="justify-stretch text-left"
                 key={id}
                 onClick={() => {
                   onFormatChange(id);
                   setOpen(false);
                 }}
-                type="button"
+                pressed={active}
               >
-                <FrameCornersIcon
-                  aria-hidden
-                  className="size-4 shrink-0"
-                  weight="duotone"
-                />
+                <FrameCornersIcon aria-hidden weight="duotone" />
+
                 <span className="flex min-w-0 flex-col">
                   <span className="truncate font-heading text-sm leading-tight tracking-tight">
                     {f.label}
@@ -91,7 +84,7 @@ export function FormatControl({
                     {f.platform} · {f.aspectLabel}
                   </span>
                 </span>
-              </button>
+              </Toggle>
             );
           })}
         </div>

@@ -50,7 +50,7 @@ import {
 import {
   applyVisibility,
   DEFAULT_VISIBILITY,
-  themeAvailability,
+  themeControls,
   type Visibility,
 } from "@/theme/core/visibility";
 import { CarouselEditState } from "@/theme/editor/carousel-edit-state";
@@ -282,7 +282,7 @@ export default function Home() {
   // themes default ON) and — when there's a photo to affect — its signature
   // filter + grain. The user can still change both afterwards.
   const applyThemePhotoPolicy = (policy: ThemePhotoPolicy) => {
-    setVisibility((v) => ({ ...v, photoBackdrop: policy.defaultOn }));
+    setVisibility((v) => ({ ...v, photo: policy.defaultOn }));
     if (photo.url) {
       photo.applyPolicyEffects(policy);
     }
@@ -296,7 +296,7 @@ export default function Home() {
     if (file) {
       setVisibility((v) => ({
         ...v,
-        photoBackdrop: activePhotoPolicy.defaultOn,
+        photo: activePhotoPolicy.defaultOn,
       }));
     }
   };
@@ -358,10 +358,10 @@ export default function Home() {
           title: data.title,
           location: data.location,
           athleteName: data.athleteName,
-          available:
+          controls:
             mode === "carousel"
-              ? themeAvailability(data, CAROUSEL_THEMES[carouselTheme])
-              : themeAvailability(data, SINGLE_CARD_THEMES[theme]),
+              ? themeControls(data, CAROUSEL_THEMES[carouselTheme])
+              : themeControls(data, SINGLE_CARD_THEMES[theme]),
           visibility,
           onVisibilityChange: setVisibility,
           onTitleChange: handleTitleChange,
@@ -541,7 +541,7 @@ function ExportView({
       imageTransform={photo.transform}
       onKeepEditing={onKeepEditing}
       onNew={onNew}
-      photoBackdropEnabled={visibility.photoBackdrop}
+      photo={visibility.photo}
       photoEffects={photo.effects}
       photoUrl={photo.url}
       routeCoordinates={routeCoordinates}

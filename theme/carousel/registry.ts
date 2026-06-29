@@ -358,7 +358,7 @@ export const CAROUSEL_THEMES: Record<CarouselThemeId, CarouselTheme> = {
 };
 
 /** Picker order — the canvas signatures first, then the type-led themes. */
-export const CAROUSEL_THEME_ORDER: CarouselThemeId[] = [
+export const THEME_ORDER: CarouselThemeId[] = [
   "trace",
   "ascent",
   "exposure",

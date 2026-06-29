@@ -14,7 +14,6 @@ import type { ImageTransform } from "@/lib/image-transform";
 import { NO_EFFECTS, type PhotoEffects } from "@/lib/photo-effects";
 import { carouselMarks } from "@/theme/carousel/marks";
 import { resolveDeckStyle } from "@/theme/carousel/resolve";
-import { statOptsFor } from "@/theme/carousel/stats";
 import type { ColorScheme } from "@/theme/core/colors";
 import type { ExportFormat } from "@/theme/core/export-formats";
 import { DEFAULT_VISIBILITY, type Visibility } from "@/theme/core/visibility";
@@ -76,16 +75,16 @@ export function CarouselDeck({
   // default filter + text shadows, with only a light veil on the standard photo
   // themes. The deck-wide "Use as background" switch gates it — the same flag as
   // the single card. (Data is already visibility-stripped upstream.)
-  const showPhoto = Boolean(photoUrl) && visibility.photoBackdrop;
+  const showPhoto =
+    Boolean(photoUrl) && visibility.photo && theme.uses.includes("photo");
   const veiled = showPhoto && style.veil;
   const desaturate = showPhoto && style.routeStyle === "desaturated";
 
   const Canvas = theme.canvas;
 
-  // Marks live in the theme config (MARKS params); panels need only the
-  // distance/time toggles (the rest is already stripped from `data`).
+  // Marks live in the theme config (MARKS params); every element a panel renders
+  // is already gated by stripping `data` upstream.
   const marks = carouselMarks(config);
-  const statOpts = statOptsFor(visibility);
 
   return (
     <FormatProvider value={stripFormat(activeFormat, total)}>
@@ -175,7 +174,6 @@ export function CarouselDeck({
                   index={i}
                   showEffort={marks.showEffort}
                   showPageNumber={marks.showPageNumber}
-                  statOpts={statOpts}
                   style={style}
                   total={total}
                 />

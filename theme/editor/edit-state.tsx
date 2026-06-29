@@ -5,13 +5,11 @@ import { useState } from "react";
 import { ControlDeck } from "@/components/app/control-deck";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { ExportFormat, ExportFormatId } from "@/theme/core/export-formats";
-import { SINGLE_CARD_THEMES, THEME_ORDER } from "@/theme/single-card";
 import { useActivityTools } from "./activity-tools";
 import type { EditorSession } from "./editor-session";
 import { FormatControl } from "./format-control";
 import type { ThemeId } from "./render-theme";
 import { SingleCardPreview } from "./single-card-preview";
-import { ThemeRail } from "./theme-rail";
 
 interface EditStateProps {
   /** the format previewed in the stage (the export sheet still offers all) */
@@ -40,14 +38,8 @@ export function EditState({
   const tools = useActivityTools({
     mode: "single",
     session,
-    themeControl: (
-      <ThemeRail
-        labels={SINGLE_CARD_THEMES}
-        onThemeChange={onThemeChange}
-        order={THEME_ORDER}
-        theme={theme}
-      />
-    ),
+    themeId: theme,
+    onThemeChange,
   });
 
   return (
@@ -69,7 +61,7 @@ export function EditState({
             format={format}
             imageTransform={photo.transform}
             onImageTransformChange={photo.onTransformChange}
-            photoBackdropEnabled={visibility.photoBackdrop}
+            photo={visibility.photo}
             photoEffects={photo.effects}
             photoUrl={photo.url}
             showSafe={showSafe}

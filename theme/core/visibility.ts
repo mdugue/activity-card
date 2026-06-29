@@ -1,17 +1,13 @@
 import type { ActivityData } from "@/lib/activity";
-import {
-  type CapabilityKey,
-  GOVERNED_FIELDS,
-  type ThemeBase,
-} from "@/theme/core/theme-contract";
+import type { CapabilityKey, ThemeBase } from "@/theme/core/theme-contract";
 
 /**
- * Per-element visibility. Every overlay the card can show has a switch here.
- * Most flags work by *stripping the underlying field* before a theme renders
- * (themes already render conditionally on a field being present), so a single
- * toggle hides the element in both Single Card and Carousel with no per-theme
- * code. Distance and time are the irreducible core of a single card, so those
- * two are honoured by the carousel stat builder rather than by stripping.
+ * Per-element visibility. Every overlay the card can show has a switch here, and
+ * the key set is exactly `CapabilityKey` — every overlay element is both a
+ * theme capability and a user switch. Most flags work by *stripping the
+ * underlying field* before a theme renders (themes already render conditionally
+ * on a field being present), so a single toggle hides the element in both Single
+ * Card and Carousel with no per-theme code.
  */
 export interface Visibility {
   athleteName: boolean;
@@ -25,8 +21,8 @@ export interface Visibility {
   heartRate: boolean;
   location: boolean;
   pace: boolean;
-  /** single card: use the uploaded photo as a backdrop where supported */
-  photoBackdrop: boolean;
+  /** use the uploaded photo as a backdrop where the theme supports it */
+  photo: boolean;
   power: boolean;
   /** route silhouette / path graphic */
   route: boolean;
@@ -53,7 +49,7 @@ export const DEFAULT_VISIBILITY: Visibility = {
   route: true,
   elevationViz: true,
   splits: true,
-  photoBackdrop: true,
+  photo: true,
 };
 
 const isNum = (n: number | undefined): boolean =>
@@ -85,15 +81,15 @@ export function availableVisibility(
     route: (data.routeCoordinates?.length ?? 0) > 1,
     elevationViz: (data.elevationProfile?.length ?? 0) > 1,
     splits: (data.splits?.length ?? 0) > 0,
-    photoBackdrop: true,
+    photo: true,
   };
 }
 
 /**
  * Strip fields the user has toggled off before handing data to a theme. Themes
- * render conditionally on these fields being truthy, so blanking them is enough.
- * Distance and time are never stripped here (they stay valid for the single
- * card's core layout); the carousel honours those two in its stat builder.
+ * render conditionally on these fields being truthy, so blanking them is enough
+ * — distance and time included, now ordinary toggles like every other metric
+ * (so `distanceKm` / `durationSec` are optional on `ActivityData`).
  */
 export function applyVisibility(
   data: ActivityData,
@@ -105,6 +101,8 @@ export function applyVisibility(
     date: vis.date ? data.date : "",
     location: vis.location ? data.location : "",
     athleteName: vis.athleteName ? data.athleteName : "",
+    distanceKm: vis.distance ? data.distanceKm : undefined,
+    durationSec: vis.time ? data.durationSec : undefined,
     avgHeartRate: vis.heartRate ? data.avgHeartRate : undefined,
     avgCadence: vis.cadence ? data.avgCadence : undefined,
     normalizedPowerW: vis.power ? data.normalizedPowerW : undefined,
@@ -122,30 +120,39 @@ export function applyVisibility(
   };
 }
 
+/** Editor control state for a switch under the active theme + activity. */
+export type ControlState = "hidden" | "disabled" | "enabled";
+
 /**
- * Which visibility switches apply for a theme + activity (BOTH families),
- * derived entirely from the theme's capability declaration: the activity has
- * the data AND the theme declared the capability AND any sport-aware `usesWhen`
- * refinement holds. Replaces both `THEME_META.usesX` (single card) and
- * `carouselVisibilityAvailable` (which derived the same answer by inspecting
- * the now-deleted stat planner).
+ * The editor control state for every switch, for a theme + activity (BOTH
+ * families), derived from the theme's capability declaration:
+ *  - "hidden"   — the theme doesn't declare the capability (it never renders it,
+ *                 so the editor offers no control: this removes the noise);
+ *  - "disabled" — declared, but the activity has no data (or a sport-aware
+ *                 `usesWhen` refinement excludes it) — shown greyed with a reason;
+ *  - "enabled"  — declared and present.
+ * The single source the editor gates every control by. The render pipeline
+ * strips independently via `pickThemeData` (undeclared capabilities) and
+ * `applyVisibility` (user toggles).
  */
-export function themeAvailability(
+export function themeControls(
   data: ActivityData,
   theme: Pick<ThemeBase, "uses" | "usesWhen">
-): Record<keyof Visibility, boolean> {
+): Record<keyof Visibility, ControlState> {
   const base = availableVisibility(data);
   const declared = new Set<CapabilityKey>(theme.uses);
-  const out = { ...base };
-  // Non-capability switches (title/date/distance/time/photoBackdrop/marks) are
-  // never theme-gated; capability switches gate on declaration + refinement.
-  for (const key of Object.keys(GOVERNED_FIELDS) as CapabilityKey[]) {
+  const out = {} as Record<keyof Visibility, ControlState>;
+  // key is typed `keyof Visibility`; using it against the `CapabilityKey`-typed
+  // `declared` / `usesWhen` makes the compiler enforce that the two vocabularies
+  // stay identical.
+  for (const key of Object.keys(base) as (keyof Visibility)[]) {
     if (!declared.has(key)) {
-      out[key] = false;
+      out[key] = "hidden";
       continue;
     }
     const refine = theme.usesWhen?.[key];
-    out[key] = out[key] && (refine ? refine(data) : true);
+    const available = base[key] && (refine ? refine(data) : true);
+    out[key] = available ? "enabled" : "disabled";
   }
   return out;
 }

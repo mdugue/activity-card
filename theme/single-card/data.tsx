@@ -36,15 +36,20 @@ import { PhotoUnderlay } from "../shared/photo-underlay";
 const USES = [
   "athleteName",
   "cadence",
+  "date",
+  "distance",
   "elevation",
   "elevationViz",
   "heartRate",
   "location",
   "pace",
+  "photo",
   "power",
   "route",
   "speed",
   "splits",
+  "time",
+  "title",
 ] as const;
 
 const INK = "#0e0e0e";
@@ -222,7 +227,11 @@ export function ThemeData({
   if (sport === "ride") {
     cells = (
       <>
-        <Cell label="Distance" unit="km" value={data.distanceKm.toFixed(1)} />
+        <Cell
+          label="Distance"
+          unit="km"
+          value={formatNumber(data.distanceKm, 1)}
+        />
         <Cell label="Time" value={formatDuration(data.durationSec)} />
         <Cell
           label="Elevation"
@@ -260,7 +269,11 @@ export function ThemeData({
   } else if (sport === "run") {
     cells = (
       <>
-        <Cell label="Distance" unit="km" value={data.distanceKm.toFixed(1)} />
+        <Cell
+          label="Distance"
+          unit="km"
+          value={formatNumber(data.distanceKm, 1)}
+        />
         <Cell label="Time" value={formatDuration(data.durationSec)} />
         <Cell
           label="Pace"
@@ -290,7 +303,9 @@ export function ThemeData({
         <Cell
           label="Distance"
           unit="m"
-          value={(data.distanceKm * 1000).toFixed(0)}
+          value={formatNumber(
+            data.distanceKm === undefined ? undefined : data.distanceKm * 1000
+          )}
         />
         <Cell label="Time" value={formatDuration(data.durationSec)} />
         <Cell label="/100 m" value={formatPaceSec(data.avgPacePer100m)} />

@@ -25,7 +25,7 @@ interface SingleCardPreviewProps {
   format: ExportFormat;
   imageTransform: ImageTransform;
   onImageTransformChange: (next: ImageTransform) => void;
-  photoBackdropEnabled: boolean;
+  photo: boolean;
   photoEffects: PhotoEffects;
   photoUrl: string | null;
   /** overlay the platform keep-out guides (toggled in the FORMAT tool) */
@@ -39,7 +39,7 @@ export function SingleCardPreview({
   format,
   showSafe,
   photoUrl,
-  photoBackdropEnabled,
+  photo,
   colors,
   config,
   photoEffects,
@@ -51,7 +51,7 @@ export function SingleCardPreview({
   const adjust = usePhotoAdjust({
     boxW: format.width,
     boxH: format.height,
-    enabled: photoBackdropEnabled,
+    enabled: photo,
     photoUrl,
     rotate: photoEffects.rotate,
   });
@@ -79,7 +79,7 @@ export function SingleCardPreview({
             data={data}
             format={format}
             imageTransform={imageTransform}
-            photoBackdropEnabled={photoBackdropEnabled}
+            photo={photo}
             photoEffects={photoEffects}
             photoUrl={photoUrl}
             theme={theme}

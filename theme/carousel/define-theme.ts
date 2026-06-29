@@ -20,7 +20,6 @@ import {
   CAROUSEL_MARK_PARAMS,
 } from "@/theme/carousel/marks";
 import type { EffectiveStyle } from "@/theme/carousel/resolve";
-import type { StatOpts } from "@/theme/carousel/stats";
 import {
   CAROUSEL_CAPABILITIES,
   type CarouselLook,
@@ -61,9 +60,6 @@ export interface PanelProps<K extends CapabilityKey = CapabilityKey> {
   showEffort: boolean;
   /** print the "01 / 04" slide index */
   showPageNumber: boolean;
-  /** distance/time stat toggles — the only element-visibility a panel needs;
-   *  every other toggle is already applied by stripping `data` upstream */
-  statOpts: StatOpts;
   style: EffectiveStyle;
   total: number;
 }

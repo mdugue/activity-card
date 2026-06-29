@@ -19,7 +19,6 @@ import { cn } from "@/lib/utils";
 import { CarouselDeck } from "@/theme/carousel/deck";
 import { stripGeometry } from "@/theme/carousel/geometry";
 import {
-  CAROUSEL_THEME_ORDER,
   CAROUSEL_THEMES,
   type CarouselThemeId,
 } from "@/theme/carousel/registry";
@@ -30,7 +29,6 @@ import { FormatControl } from "./format-control";
 import { AdjustControls, usePhotoAdjust } from "./photo-adjust";
 import { SafeZoneOverlay } from "./safe-zone-overlay";
 import { SlideStrip } from "./slide-strip";
-import { ThemeRail } from "./theme-rail";
 
 interface CarouselEditStateProps {
   carousel: CarouselController;
@@ -81,7 +79,7 @@ export function CarouselEditState({
   const adjust = usePhotoAdjust({
     boxW: stripW,
     boxH: slideH,
-    enabled: visibility.photoBackdrop,
+    enabled: visibility.photo,
     photoUrl: photo.url,
     rotate: photo.effects.rotate,
   });
@@ -181,14 +179,8 @@ export function CarouselEditState({
   const tools = useActivityTools({
     mode: "carousel",
     session,
-    themeControl: (
-      <ThemeRail
-        labels={CAROUSEL_THEMES}
-        onThemeChange={onThemeChange}
-        order={CAROUSEL_THEME_ORDER}
-        theme={theme}
-      />
-    ),
+    themeId: theme,
+    onThemeChange,
   });
 
   const preview = (
