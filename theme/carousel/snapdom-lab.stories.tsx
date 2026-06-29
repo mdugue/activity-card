@@ -37,9 +37,38 @@ const DISPLAY_W = 900; // px width each panel (live + every snapshot) is shown a
 const CAPTURE_SCALE = 0.5; // snapdom output scale (native × this); legible, light
 const FALLBACK_FACE_RE = /fallback/i; // next/font's metric-adjusted fallback face
 
+// TTF copies of the theme fonts (next/font ships WOFF2). Safari is known to be
+// unreliable decoding WOFF2 inside an SVG rendered as an image — the exact path
+// snapdom rasterises through — so we feed snapdom these via `localFonts` to test
+// whether the embed FORMAT is the culprit. Family names must match what the
+// elements reference ("Cormorant Garamond" / "IBM Plex Mono") so the embedded
+// @font-face replaces the discovered WOFF2.
+const TTF = "https://cdn.jsdelivr.net/fontsource/fonts";
+const TTF_LOCAL_FONTS = [
+  ...["400", "500", "600", "700"].map((w) => ({
+    family: "Cormorant Garamond",
+    weight: w,
+    style: "normal",
+    src: `${TTF}/cormorant-garamond@latest/latin-${w}-normal.ttf`,
+  })),
+  ...["400", "500"].map((w) => ({
+    family: "IBM Plex Mono",
+    weight: w,
+    style: "normal",
+    src: `${TTF}/ibm-plex-mono@latest/latin-${w}-normal.ttf`,
+  })),
+];
+
 interface Treatment {
   id: string;
   label: string;
+  /** snapdom `localFonts` override — re-embed the fonts in another format. */
+  localFonts?: {
+    family: string;
+    src: string;
+    weight?: string;
+    style?: string;
+  }[];
   note: string;
   /** Mutate one element in place before capture; undefined = capture as-is. */
   patch?: (el: HTMLElement) => void;
@@ -103,6 +132,12 @@ const TREATMENTS: Treatment[] = [
     patch: (el) =>
       el.style.setProperty("font-variant-numeric", "normal", "important"),
   },
+  {
+    id: "ttf",
+    label: "TTF via localFonts",
+    note: "re-embed Cormorant + IBM Plex Mono as TTF instead of WOFF2",
+    localFonts: TTF_LOCAL_FONTS,
+  },
 ];
 
 /** Apply `patch` to every element under `root`, returning a restore fn that puts
@@ -163,16 +198,19 @@ function SnapdomLab({ themeId }: { themeId: CarouselThemeId }) {
     // discarded warm-up pass (WebKit/iOS drop the photo + @font-face on a cold
     // first capture; snapdom #129 / #253).
     await preCache(node, { embedFonts: true });
-    const opts = {
+    const baseOpts = {
       width: stripW,
       height: slideH,
       scale: CAPTURE_SCALE,
       dpr: 1,
       embedFonts: true,
-    } as const;
+    };
     const out: Shot[] = [];
     for (const t of TREATMENTS) {
       const restore = t.patch ? applyPatch(node, t.patch) : () => undefined;
+      const opts = t.localFonts
+        ? { ...baseOpts, localFonts: t.localFonts }
+        : baseOpts;
       try {
         await twoFrames();
         await snapdom.toCanvas(node, opts); // discard warm-up pass
