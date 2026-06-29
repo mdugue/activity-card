@@ -3,15 +3,39 @@
 // delivery (single File vs a sliced File[] + canvases), but the font-gate and
 // filename date-slug are identical and live here.
 //
-// snapdom primes the WebKit font/decode pipeline itself (`safariWarmupAttempts`,
-// default 3), so neither pipeline needs the old "rasterise twice on iOS and
-// discard the first pass" dance that html-to-image required.
+// iOS Safari needs both halves of the font gate: `waitForFonts` force-decodes
+// every registered face (snapdom's own `safariWarmupAttempts` only force-loads
+// icon fonts, not the theme's web fonts), and the export modules still discard a
+// warm-up snapdom pass — empirically that warm-up is what makes the freshly
+// loaded background photo paint into the capture (snapdom #129).
 
-/** Fonts must be ready before rasterisation or fallbacks leak into the export. */
+/**
+ * Fonts must be fully decoded before rasterisation or fallbacks leak into the
+ * export. `document.fonts.ready` alone is not enough: `next/font` registers each
+ * weight as a separate `@font-face` and only fetches it the first time a glyph
+ * needs it, so a freshly-mounted export deck may still have its display weight
+ * (e.g. Cormorant 600) in flight when `ready` resolves. On iOS Safari the SVG
+ * rasteriser then paints the first glyphs before that face has decoded and they
+ * fall back to a system serif (snapdom #253) — which is why a headline's first
+ * letter can differ from the rest, intermittently. Force-loading every
+ * registered face up front removes that race deterministically.
+ */
 export async function waitForFonts(): Promise<void> {
-  if (typeof document !== "undefined" && document.fonts?.ready) {
-    await document.fonts.ready;
+  if (typeof document === "undefined" || !document.fonts) {
+    return;
   }
+  try {
+    await Promise.all(
+      Array.from(document.fonts).map((face) =>
+        face.status === "loaded"
+          ? Promise.resolve(face)
+          : face.load().catch(() => face)
+      )
+    );
+  } catch {
+    // best-effort — fall through to the ready gate below
+  }
+  await document.fonts.ready;
 }
 
 /** Numeric date slug for export filenames (`date` is an ISO yyyy-mm-dd). */
