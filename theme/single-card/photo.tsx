@@ -113,7 +113,10 @@ export function ThemePhoto({
   // The sub-line only carries metrics the activity actually has — a stripped
   // field (toggled off, or absent from the file) drops out instead of leaving
   // a dashed placeholder in the sentence.
-  const subParts: string[] = [formatDuration(data.durationSec)];
+  const subParts: string[] = [];
+  if (isNum(data.durationSec)) {
+    subParts.push(formatDuration(data.durationSec));
+  }
   if (sport === "ride" && isNum(data.elevationGainM)) {
     subParts.push(`${formatNumber(data.elevationGainM)} m elev`);
   } else if (sport === "run" && isNum(data.avgPaceMinPerKm)) {

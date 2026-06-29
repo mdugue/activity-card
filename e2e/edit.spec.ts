@@ -59,6 +59,10 @@ test.describe("edit controls", () => {
   });
 
   test("athlete name input persists across reload", async ({ page }) => {
+    // The athlete-name control is gated on the theme declaring `athleteName`;
+    // the default (Altitude) doesn't render it, so pick a theme that does.
+    // The selected theme persists across the reload below, keeping the field.
+    await selectTheme(page, "PATH");
     const nameInput = page.getByRole("textbox", { name: /athlete name/i });
     await nameInput.fill("RIVER STONE");
     // Reload without clearing localStorage; re-upload to re-enter edit.
