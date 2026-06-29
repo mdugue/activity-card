@@ -20,36 +20,50 @@ import type {
 } from "@/theme/core/colors";
 import type { ParamDef } from "@/theme/core/params/kinds";
 
-/** Overlay elements a theme can opt into. Title/date/distance/time are a
- *  card's core — always present, not capabilities. Each key matches its
- *  visibility toggle. */
+/** Overlay elements a theme can opt into — one per `Visibility` switch
+ *  (`CapabilityKey === keyof Visibility`). A theme declares the ones it
+ *  renders; the editor offers exactly those, nothing else. `photo` governs the
+ *  background image (a `photoUrl` prop, not an `ActivityData` field), so it maps
+ *  to no governed field below and never narrows `ThemeData`. */
 export type CapabilityKey =
   | "athleteName"
   | "cadence"
+  | "date"
+  | "distance"
   | "elevation"
   | "elevationViz"
   | "heartRate"
   | "location"
   | "pace"
+  | "photo"
   | "power"
   | "route"
   | "speed"
-  | "splits";
+  | "splits"
+  | "time"
+  | "title";
 
 /** Which ActivityData fields each capability governs — the runtime source for
  *  `pickThemeData` and the type-level source for `ThemeData`. */
 export const GOVERNED_FIELDS = {
   athleteName: ["athleteName"],
   cadence: ["avgCadence"],
+  date: ["date"],
+  distance: ["distanceKm"],
   elevation: ["elevationGainM"],
   elevationViz: ["elevationProfile"],
   heartRate: ["avgHeartRate"],
   location: ["location"],
   pace: ["avgPaceMinPerKm", "avgPacePer100m", "paceProfile", "lapPacesPer100m"],
+  // `photo` gates the background image (the `photoUrl` prop), not an
+  // ActivityData field — so it governs nothing and never narrows `ThemeData`.
+  photo: [],
   power: ["normalizedPowerW", "powerProfile", "powerZones"],
   route: ["routeCoordinates"],
   speed: ["avgSpeedKmh", "maxSpeedKmh", "speedProfile"],
   splits: ["splits"],
+  time: ["durationSec"],
+  title: ["title"],
 } as const satisfies Record<CapabilityKey, readonly (keyof ActivityData)[]>;
 
 type GovernedFieldOf<K extends CapabilityKey> =
@@ -189,8 +203,9 @@ export function defineTheme<
 
 /**
  * Strip the governed fields a theme did NOT declare, so the runtime data
- * matches the narrowed `ThemeData` type. Required text fields blank to ""
- * (mirroring `applyVisibility`); optional fields drop to undefined.
+ * matches the narrowed `ThemeData` type. Required text fields (title / date /
+ * location / athleteName) blank to "" (mirroring `applyVisibility`); the rest
+ * drop to undefined.
  */
 export function pickThemeData(
   theme: Pick<ThemeBase, "uses">,
@@ -203,7 +218,12 @@ export function pickThemeData(
       continue;
     }
     for (const field of GOVERNED_FIELDS[cap]) {
-      if (field === "athleteName" || field === "location") {
+      if (
+        field === "athleteName" ||
+        field === "location" ||
+        field === "title" ||
+        field === "date"
+      ) {
         out[field] = "";
       } else {
         out[field] = undefined;

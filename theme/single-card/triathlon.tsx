@@ -18,7 +18,14 @@ import { PhotoUnderlay } from "../shared/photo-underlay";
 
 // The bands render per-segment data (`segments`/`transitions` — core fields,
 // not capabilities), so only the identity overlays are declared here.
-const USES = ["athleteName", "location"] as const;
+const USES = [
+  "athleteName",
+  "date",
+  "location",
+  "photo",
+  "time",
+  "title",
+] as const;
 
 const INK = "#11151a";
 const PAPER = "#ffffff";

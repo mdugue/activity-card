@@ -29,12 +29,17 @@ import { PhotoBackdrop } from "../shared/photo-backdrop";
 const USES = [
   "athleteName",
   "cadence",
+  "date",
+  "distance",
   "elevation",
   "heartRate",
   "location",
   "pace",
+  "photo",
   "route",
   "speed",
+  "time",
+  "title",
 ] as const;
 
 const DEFAULT_ACCENT = "#1d3a2e";
@@ -148,10 +153,13 @@ export function ThemeEditorial({
   const multi = isMultiActivity(data);
   const routes = multi ? segmentRoutes(data) : [];
 
-  const dist =
-    sport === "swim"
-      ? (data.distanceKm * 1000).toFixed(0)
-      : data.distanceKm.toFixed(1);
+  let dist = "";
+  if (isNum(data.distanceKm)) {
+    dist =
+      sport === "swim"
+        ? (data.distanceKm * 1000).toFixed(0)
+        : data.distanceKm.toFixed(1);
+  }
   const distUnit = sport === "swim" ? "meters" : "kilometres";
 
   // The closing sentence quotes the sport's signature metric, but only when the
@@ -280,19 +288,21 @@ export function ThemeEditorial({
                   color: INK,
                 }}
               >
-                {dist}
+                {isNum(data.distanceKm) ? dist : "—"}
               </div>
-              <div
-                style={{
-                  fontFamily: "var(--font-instrument-serif), serif",
-                  fontSize: "clamp(28px, min(6cqi, 7cqb), 52px)",
-                  fontStyle: "italic",
-                  marginTop: 14,
-                  color: accent,
-                }}
-              >
-                {distUnit}, and then —
-              </div>
+              {isNum(data.distanceKm) ? (
+                <div
+                  style={{
+                    fontFamily: "var(--font-instrument-serif), serif",
+                    fontSize: "clamp(28px, min(6cqi, 7cqb), 52px)",
+                    fontStyle: "italic",
+                    marginTop: 14,
+                    color: accent,
+                  }}
+                >
+                  {distUnit}, and then —
+                </div>
+              ) : null}
             </div>
           </div>
 

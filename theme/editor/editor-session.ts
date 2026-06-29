@@ -12,14 +12,11 @@ import type { ParsedActivity } from "@/lib/parse-activity";
 import type { PhotoEffects } from "@/lib/photo-effects";
 import type { ColorChoice, ColorScheme } from "@/theme/core/colors";
 import type { ParamDef } from "@/theme/core/params/kinds";
-import type { Visibility } from "@/theme/core/visibility";
+import type { ControlState, Visibility } from "@/theme/core/visibility";
 
 export interface EditorSession {
   /** raw editable overlay text (unstripped, for the inputs) */
   athleteName: string;
-  /** which switches address data the current activity actually has,
-   *  theme-gated for the active mode */
-  available: Record<keyof Visibility, boolean>;
   color: {
     /** show the COLOUR control (hidden for fixed-palette themes) */
     adjustable: boolean;
@@ -41,6 +38,10 @@ export interface EditorSession {
     /** the active theme's coerced config */
     value: Record<string, unknown>;
   };
+  /** per-switch editor control state for the active theme + activity (the
+   *  mode-appropriate descriptor): hidden (theme doesn't declare it) ·
+   *  disabled (activity has no data) · enabled */
+  controls: Record<keyof Visibility, ControlState>;
   /** visibility-stripped activity the cards render */
   data: ActivityData;
   location: string;

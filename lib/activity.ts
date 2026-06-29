@@ -69,8 +69,10 @@ export interface ActivityData {
   avgSpeedKmh?: number; // ride
   date: string; // ISO date string; format at render
 
-  distanceKm: number;
-  durationSec: number;
+  // Optional like every other metric: a theme may not declare distance/time,
+  // and the user may toggle them off — both strip the field to `undefined`.
+  distanceKm?: number;
+  durationSec?: number;
   elevationGainM?: number;
   elevationProfile?: number[];
   hrZones?: Zone[];

@@ -40,12 +40,16 @@ import { useFormat, useSafeInsets } from "../shared/format-context";
 import { PhotoLayer } from "../shared/photo-layer";
 
 const USES = [
+  "date",
+  "distance",
   "elevation",
   "elevationViz",
   "heartRate",
   "location",
   "pace",
+  "photo",
   "speed",
+  "time",
 ] as const;
 
 type ThemeAltitudeProps = ThemeProps<(typeof USES)[number], AltitudeConfig>;

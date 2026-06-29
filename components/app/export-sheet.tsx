@@ -312,7 +312,7 @@ interface ExportSheetProps {
   imageTransform: ImageTransform;
   onKeepEditing: () => void;
   onNew: () => void;
-  photoBackdropEnabled: boolean;
+  photo: boolean;
   photoEffects: PhotoEffects;
   photoUrl: string | null;
   routeCoordinates?: [number, number][];
@@ -332,7 +332,7 @@ export function ExportSheet(props: ExportSheetProps) {
     theme,
     config,
     imageTransform,
-    photoBackdropEnabled,
+    photo,
     photoEffects,
     photoUrl,
   } = props;
@@ -425,7 +425,7 @@ export function ExportSheet(props: ExportSheetProps) {
                 data={data}
                 format={format}
                 imageTransform={imageTransform}
-                photoBackdropEnabled={photoBackdropEnabled}
+                photo={photo}
                 photoEffects={photoEffects}
                 photoUrl={photoUrl}
                 theme={theme}

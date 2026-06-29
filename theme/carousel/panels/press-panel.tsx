@@ -430,12 +430,12 @@ function Byline({
 
 /** The shared SpreadProps each Press slide builds from its own data + position. */
 function spreadProps(props: PanelProps): SpreadProps {
-  const { data, style, hasPhoto, index, total, statOpts } = props;
+  const { data, style, hasPhoto, index, total } = props;
   return {
     data,
     style,
     hasPhoto,
-    stats: pressSlideStats(data, index, total, statOpts),
+    stats: pressSlideStats(data, index, total),
     ink: style.ink,
     muted: style.mutedInk,
     paper: style.background,

@@ -5,9 +5,12 @@
 // schema. The per-theme knobs are not special-cased: each theme declares
 // `ParamDef`s (see `lib/params/`) and they render generically via
 // `ThemeParamGroup`, filed into the category each param names
-// (STYLE · LAYOUT · MARKS). Shared controls — the theme rail, colour, photo,
-// text, stats, marks, activity — round out the groups. Both editors consume
-// this hook; they differ only in `mode` and the theme rail they pass.
+// (STYLE · LAYOUT · MARKS). Every overlay control — title, location, date, the
+// stats/viz, the photo — is gated the same way, by `session.controls` (the
+// theme's capability declaration): a control is hidden when the theme doesn't
+// declare it, disabled when the activity has no data, else enabled. Both editors
+// consume this hook; they differ only in `mode` (which picks the theme rail's
+// id space) — the props discriminate on it.
 
 import {
   ChartBarIcon,
@@ -33,12 +36,22 @@ import {
   type RichSelectOption,
   ToggleRow,
 } from "@/components/app/control-primitives";
-import type { CardMode } from "@/components/app/mode-toggle";
 import { StravaPhotoStrip } from "@/components/app/strava-photo-strip";
 import type { Sport, StravaPhotoRef } from "@/lib/activity";
 import { fetchStravaPhotoFile, stravaPhotoKey } from "@/lib/strava-photos";
+import {
+  THEME_ORDER as CAROUSEL_THEME_ORDER,
+  CAROUSEL_THEMES,
+  type CarouselThemeId,
+} from "@/theme/carousel/registry";
 import type { ParamCtx } from "@/theme/core/params/kinds";
 import type { Visibility } from "@/theme/core/visibility";
+import { ThemeRail } from "@/theme/editor/theme-rail";
+import {
+  THEME_ORDER as SINGLE_CARD_THEME_ORDER,
+  SINGLE_CARD_THEMES,
+  type ThemeId,
+} from "@/theme/single-card";
 import { ColorControl } from "./color-control";
 import type { EditorSession } from "./editor-session";
 import {
@@ -87,13 +100,6 @@ interface ToggleDef {
   label: string;
 }
 
-// Distance and time are the card's irreducible core — never hideable on a
-// single card (the carousel can drop them).
-const CORE_METRICS: ReadonlySet<keyof Visibility> = new Set([
-  "distance",
-  "time",
-]);
-
 const STAT_TOGGLES: ToggleDef[] = [
   { key: "distance", label: "Distance" },
   { key: "time", label: "Time" },
@@ -111,24 +117,108 @@ const VIZ_TOGGLES: ToggleDef[] = [
   { key: "elevationViz", label: "Elevation profile" },
 ];
 
-interface UseActivityToolsProps {
-  mode: CardMode;
+// The PHOTO control: upload / pick a Strava photo, the shared "Use as
+// background" switch (`photo` visibility flag), and the filter / transform
+// presets while it's displayed. Self-contained so the Strava-pick state stays
+// local; only mounted for themes that declare the `photo` capability.
+function PhotoTool({
+  session,
+  onToggleBackdrop,
+}: {
+  onToggleBackdrop: (checked: boolean) => void;
   session: EditorSession;
-  /** the theme rail for this mode (rendered at the top of the STYLE section) */
-  themeControl: React.ReactNode;
+}) {
+  const { data, photo, visibility } = session;
+  const [pickingStravaPhoto, setPickingStravaPhoto] = useState<string | null>(
+    null
+  );
+  // One-click "use this Strava photo": download the full size through the proxy
+  // and hand it to the same File pipeline an upload uses.
+  const pickStravaPhoto = async (ref: StravaPhotoRef) => {
+    if (pickingStravaPhoto) {
+      return;
+    }
+    setPickingStravaPhoto(stravaPhotoKey(ref));
+    try {
+      const file = await fetchStravaPhotoFile(ref);
+      photo.onChange(file);
+    } catch {
+      toast.error("Couldn't load the photo from Strava.");
+    } finally {
+      setPickingStravaPhoto(null);
+    }
+  };
+  const photoActive = Boolean(photo.url) && visibility.photo;
+  const stravaPhotos = data.stravaPhotos ?? [];
+  return (
+    <ControlBlock label="BACKGROUND PHOTO">
+      <PhotoControl onChange={photo.onChange} photoUrl={photo.url} prominent />
+      {stravaPhotos.length > 0 ? (
+        <div className="mt-3">
+          <div className="caption-micro mb-1.5">FROM STRAVA</div>
+          <StravaPhotoStrip
+            onPick={pickStravaPhoto}
+            photos={stravaPhotos}
+            pickingKey={pickingStravaPhoto}
+          />
+        </div>
+      ) : null}
+      {photo.url ? (
+        <div className="mt-3">
+          <ToggleRow
+            checked={visibility.photo}
+            label="Use as background"
+            onCheckedChange={onToggleBackdrop}
+          />
+        </div>
+      ) : null}
+      {photoActive ? (
+        <>
+          <p className="caption-micro mt-2">
+            Tap “Adjust” on the preview to move &amp; zoom
+          </p>
+          <div className="mt-3">
+            <div className="caption-micro mb-1.5">FILTER</div>
+            <PhotoFilterControl
+              effects={photo.effects}
+              onChange={photo.onEffectsChange}
+            />
+          </div>
+          <PhotoTransformControls
+            effects={photo.effects}
+            onChange={photo.onEffectsChange}
+          />
+        </>
+      ) : null}
+    </ControlBlock>
+  );
 }
+
+type UseActivityToolsProps = { session: EditorSession } & (
+  | {
+      mode: "single";
+      themeId: ThemeId;
+      onThemeChange: (themeId: ThemeId) => void;
+    }
+  | {
+      mode: "carousel";
+      themeId: CarouselThemeId;
+      onThemeChange: (themeId: CarouselThemeId) => void;
+    }
+);
 
 export function useActivityTools({
   mode,
   session,
-  themeControl,
+  themeId,
+  onThemeChange,
 }: UseActivityToolsProps): ControlTool[] {
   const {
     data,
     title,
     location,
     athleteName,
-    available,
+    controls,
     visibility,
     onTitleChange,
     onLocationChange,
@@ -149,44 +239,22 @@ export function useActivityTools({
   const set = (key: keyof Visibility, checked: boolean) =>
     onVisibilityChange({ ...visibility, [key]: checked });
 
-  // One-click "use this Strava photo": download the full size through the
-  // proxy and hand it to the same File pipeline an upload uses.
-  const [pickingStravaPhoto, setPickingStravaPhoto] = useState<string | null>(
-    null
-  );
-  const pickStravaPhoto = async (ref: StravaPhotoRef) => {
-    if (pickingStravaPhoto) {
-      return;
-    }
-    setPickingStravaPhoto(stravaPhotoKey(ref));
-    try {
-      const file = await fetchStravaPhotoFile(ref);
-      photo.onChange(file);
-    } catch {
-      toast.error("Couldn't load the photo from Strava.");
-    } finally {
-      setPickingStravaPhoto(null);
-    }
-  };
+  // A control shows whenever the theme declares its capability (state is not
+  // "hidden"); whether it's interactive depends on the activity having data.
+  const shown = (key: keyof Visibility) => controls[key] !== "hidden";
+  const anyShown = (defs: ToggleDef[]) => defs.some((d) => shown(d.key));
 
   const renderToggle = ({ key, label }: ToggleDef) => {
-    const avail = available[key];
-    const lockedCore = CORE_METRICS.has(key) && mode === "single";
-    const disabled = !avail || lockedCore;
-    let reason: string | undefined;
-    let checked = visibility[key];
-    if (!avail) {
-      reason = "Not recorded in this activity";
-      checked = false;
-    } else if (lockedCore) {
-      reason = "Always shown on the single card";
-      checked = true;
+    const state = controls[key];
+    if (state === "hidden") {
+      return null;
     }
+    const disabled = state === "disabled";
     return (
       <ToggleRow
-        checked={checked}
+        checked={!disabled && visibility[key]}
         disabled={disabled}
-        disabledReason={reason}
+        disabledReason={disabled ? "Not recorded in this activity" : undefined}
         key={key}
         label={label}
         onCheckedChange={(c) => set(key, c)}
@@ -219,7 +287,21 @@ export function useActivityTools({
     content: (
       <div className="flex flex-col gap-5">
         <ControlBlock label="THEME">
-          {themeControl}
+          {mode === "single" ? (
+            <ThemeRail
+              labels={SINGLE_CARD_THEMES}
+              onThemeChange={onThemeChange}
+              order={SINGLE_CARD_THEME_ORDER}
+              theme={themeId}
+            />
+          ) : (
+            <ThemeRail
+              labels={CAROUSEL_THEMES}
+              onThemeChange={onThemeChange}
+              order={CAROUSEL_THEME_ORDER}
+              theme={themeId}
+            />
+          )}
           {color.adjustable ? (
             <ColorControl
               choice={color.choice}
@@ -234,63 +316,24 @@ export function useActivityTools({
     ),
   });
 
-  // The photo is a prominent control — every theme can show one, adjustable via
-  // the same filter / grain / transform presets in both modes. The "Use as
-  // background" switch is the shared `photoBackdrop` visibility flag; the
-  // adjustment controls only show while the photo is actually displayed.
-  const photoActive = Boolean(photo.url) && visibility.photoBackdrop;
-  const stravaPhotos = data.stravaPhotos ?? [];
-  tools.push({
-    id: "photo",
-    label: "PHOTO",
-    icon: <ImageIcon {...ICON_PROPS} />,
-    content: (
-      <ControlBlock label="BACKGROUND PHOTO">
-        <PhotoControl
-          onChange={photo.onChange}
-          photoUrl={photo.url}
-          prominent
+  // The photo is a prominent control — shown only for themes that declare the
+  // `photo` capability, adjustable via the same filter / grain / transform
+  // presets in both modes. The "Use as background" switch is the shared `photo`
+  // visibility flag; the adjustment controls only show while the photo is
+  // actually displayed.
+  if (shown("photo")) {
+    tools.push({
+      id: "photo",
+      label: "PHOTO",
+      icon: <ImageIcon {...ICON_PROPS} />,
+      content: (
+        <PhotoTool
+          onToggleBackdrop={(c) => set("photo", c)}
+          session={session}
         />
-        {stravaPhotos.length > 0 ? (
-          <div className="mt-3">
-            <div className="caption-micro mb-1.5">FROM STRAVA</div>
-            <StravaPhotoStrip
-              onPick={pickStravaPhoto}
-              photos={stravaPhotos}
-              pickingKey={pickingStravaPhoto}
-            />
-          </div>
-        ) : null}
-        {photo.url ? (
-          <div className="mt-3">
-            <ToggleRow
-              checked={visibility.photoBackdrop}
-              label="Use as background"
-              onCheckedChange={(c) => set("photoBackdrop", c)}
-            />
-          </div>
-        ) : null}
-        {photoActive ? (
-          <>
-            <p className="caption-micro mt-2">
-              Tap “Adjust” on the preview to move &amp; zoom
-            </p>
-            <div className="mt-3">
-              <div className="caption-micro mb-1.5">FILTER</div>
-              <PhotoFilterControl
-                effects={photo.effects}
-                onChange={photo.onEffectsChange}
-              />
-            </div>
-            <PhotoTransformControls
-              effects={photo.effects}
-              onChange={photo.onEffectsChange}
-            />
-          </>
-        ) : null}
-      </ControlBlock>
-    ),
-  });
+      ),
+    });
+  }
 
   // LAYOUT — composition & type knobs the theme exposes (headline / font /
   // position / treatment / density). Only present when the theme has any.
@@ -305,67 +348,76 @@ export function useActivityTools({
     });
   }
 
-  // Text overlays — all styled the same, none more prominent than another.
-  tools.push({
-    id: "text",
-    label: "TEXT",
-    icon: <TextAaIcon {...ICON_PROPS} />,
-    content: (
-      <ControlBlock label="TEXT">
-        <div className="mt-2 flex flex-col gap-4">
-          <DetailField
-            id={titleId}
-            label="Title"
-            onChange={onTitleChange}
-            placeholder="Name this effort"
-            toggle={{
-              checked: visibility.title,
-              onChange: (c) => set("title", c),
-            }}
-            value={title}
-          />
-          <DetailField
-            id={locationId}
-            label="Location"
-            onChange={onLocationChange}
-            placeholder="Where was this?"
-            toggle={{
-              checked: visibility.location,
-              onChange: (c) => set("location", c),
-            }}
-            value={location}
-          />
-          <ToggleRow
-            checked={available.date && visibility.date}
-            disabled={!available.date}
-            disabledReason="No date on this activity"
-            label="Date"
-            onCheckedChange={(c) => set("date", c)}
-          />
-        </div>
-      </ControlBlock>
-    ),
-  });
+  // Text overlays — title / location / date, each shown only when the theme
+  // renders it. All styled the same, none more prominent than another.
+  if (shown("title") || shown("location") || shown("date")) {
+    tools.push({
+      id: "text",
+      label: "TEXT",
+      icon: <TextAaIcon {...ICON_PROPS} />,
+      content: (
+        <ControlBlock label="TEXT">
+          <div className="mt-2 flex flex-col gap-4">
+            {shown("title") ? (
+              <DetailField
+                id={titleId}
+                label="Title"
+                onChange={onTitleChange}
+                placeholder="Name this effort"
+                toggle={{
+                  checked: visibility.title,
+                  onChange: (c) => set("title", c),
+                }}
+                value={title}
+              />
+            ) : null}
+            {shown("location") ? (
+              <DetailField
+                id={locationId}
+                label="Location"
+                onChange={onLocationChange}
+                placeholder="Where was this?"
+                toggle={{
+                  checked: visibility.location,
+                  onChange: (c) => set("location", c),
+                }}
+                value={location}
+              />
+            ) : null}
+            {renderToggle({ key: "date", label: "Date" })}
+          </div>
+        </ControlBlock>
+      ),
+    });
+  }
 
-  tools.push({
-    id: "stats",
-    label: "STATS",
-    icon: <ChartBarIcon {...ICON_PROPS} />,
-    content: (
-      <div className="flex flex-col gap-5">
-        <ControlBlock label="STATS">
-          <div className="mt-2 flex flex-col gap-2.5">
-            {STAT_TOGGLES.map(renderToggle)}
-          </div>
-        </ControlBlock>
-        <ControlBlock label="VISUALISATIONS">
-          <div className="mt-2 flex flex-col gap-2.5">
-            {VIZ_TOGGLES.map(renderToggle)}
-          </div>
-        </ControlBlock>
-      </div>
-    ),
-  });
+  // STATS + visualisations — only the metrics this theme renders, each disabled
+  // when the activity didn't record it.
+  if (anyShown(STAT_TOGGLES) || anyShown(VIZ_TOGGLES)) {
+    tools.push({
+      id: "stats",
+      label: "STATS",
+      icon: <ChartBarIcon {...ICON_PROPS} />,
+      content: (
+        <div className="flex flex-col gap-5">
+          {anyShown(STAT_TOGGLES) ? (
+            <ControlBlock label="STATS">
+              <div className="mt-2 flex flex-col gap-2.5">
+                {STAT_TOGGLES.map(renderToggle)}
+              </div>
+            </ControlBlock>
+          ) : null}
+          {anyShown(VIZ_TOGGLES) ? (
+            <ControlBlock label="VISUALISATIONS">
+              <div className="mt-2 flex flex-col gap-2.5">
+                {VIZ_TOGGLES.map(renderToggle)}
+              </div>
+            </ControlBlock>
+          ) : null}
+        </div>
+      ),
+    });
+  }
 
   // MARKS — annotations the theme exposes as MARKS params: the carousel chrome
   // (effort mark, page numbers — appended to every carousel theme by
@@ -405,18 +457,20 @@ export function useActivityTools({
             options={SPORT_OPTIONS}
             value={data.sport}
           />
-          <DetailField
-            hint="Saved on this device"
-            id={athleteId}
-            label="Athlete name"
-            onChange={onAthleteNameChange}
-            placeholder="Add your name"
-            toggle={{
-              checked: visibility.athleteName,
-              onChange: (c) => set("athleteName", c),
-            }}
-            value={athleteName}
-          />
+          {shown("athleteName") ? (
+            <DetailField
+              hint="Saved on this device"
+              id={athleteId}
+              label="Athlete name"
+              onChange={onAthleteNameChange}
+              placeholder="Add your name"
+              toggle={{
+                checked: visibility.athleteName,
+                onChange: (c) => set("athleteName", c),
+              }}
+              value={athleteName}
+            />
+          ) : null}
         </div>
       </ControlBlock>
     ),

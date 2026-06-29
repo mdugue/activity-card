@@ -1,10 +1,11 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
 import type { ActivityData } from "@/lib/activity";
+import type { ActivityView } from "@/theme/core/theme-contract";
 import {
   applyVisibility,
   DEFAULT_VISIBILITY,
-  themeAvailability,
+  themeControls,
   type Visibility,
 } from "@/theme/core/visibility";
 
@@ -90,48 +91,49 @@ describe("applyVisibility", () => {
     expect(out.splits).toBeUndefined();
   });
 
-  test("distance and time are never stripped", () => {
+  test("distance and time strip like any other metric", () => {
     const out = applyVisibility(FULL, {
       ...ALL_ON,
       distance: false,
       time: false,
     });
-    expect(out.distanceKm).toBe(42.5);
-    expect(out.durationSec).toBe(5400);
+    expect(out.distanceKm).toBeUndefined();
+    expect(out.durationSec).toBeUndefined();
   });
 });
 
-describe("themeAvailability", () => {
-  test("a theme that declares nothing gets every governed switch off", () => {
-    const avail = themeAvailability(FULL, { uses: [] });
-    expect(avail.heartRate).toBe(false);
-    expect(avail.route).toBe(false);
-    expect(avail.speed).toBe(false);
-    expect(avail.splits).toBe(false);
-    // Non-capability switches are never theme-gated.
-    expect(avail.title).toBe(true);
-    expect(avail.distance).toBe(true);
-    expect(avail.photoBackdrop).toBe(true);
+describe("themeControls", () => {
+  test("a capability the theme doesn't declare is hidden", () => {
+    const ctl = themeControls(FULL, { uses: [] });
+    expect(ctl.heartRate).toBe("hidden");
+    expect(ctl.route).toBe("hidden");
+    expect(ctl.speed).toBe("hidden");
+    expect(ctl.splits).toBe("hidden");
+    // Every overlay element is a capability now — title / distance / photo
+    // included, so an empty `uses` hides them too.
+    expect(ctl.title).toBe("hidden");
+    expect(ctl.distance).toBe("hidden");
+    expect(ctl.photo).toBe("hidden");
   });
 
-  test("declared capability + present data = available", () => {
-    const avail = themeAvailability(FULL, { uses: ["heartRate", "route"] });
-    expect(avail.heartRate).toBe(true);
-    expect(avail.route).toBe(true);
-    expect(avail.cadence).toBe(false); // present in data, not declared
+  test("declared capability + present data = enabled", () => {
+    const ctl = themeControls(FULL, { uses: ["heartRate", "route"] });
+    expect(ctl.heartRate).toBe("enabled");
+    expect(ctl.route).toBe("enabled");
+    expect(ctl.cadence).toBe("hidden"); // present in data, not declared
   });
 
-  test("declared capability without data stays unavailable", () => {
+  test("declared capability without data is disabled", () => {
     const noHr: ActivityData = { ...FULL, avgHeartRate: undefined };
-    const avail = themeAvailability(noHr, { uses: ["heartRate"] });
-    expect(avail.heartRate).toBe(false);
+    const ctl = themeControls(noHr, { uses: ["heartRate"] });
+    expect(ctl.heartRate).toBe("disabled");
   });
 
-  test("usesWhen refinement can veto a declared capability", () => {
-    const avail = themeAvailability(FULL, {
+  test("usesWhen refinement can disable a declared capability", () => {
+    const ctl = themeControls(FULL, {
       uses: ["route"],
-      usesWhen: { route: (d) => d.sport === "swim" },
+      usesWhen: { route: (d: ActivityView) => d.sport === "swim" },
     });
-    expect(avail.route).toBe(false);
+    expect(ctl.route).toBe("disabled");
   });
 });

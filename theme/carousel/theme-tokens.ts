@@ -126,19 +126,25 @@ export interface CarouselLook {
  * (`speedSeries` falls back to per-split speeds), so the capability is
  * declared — toggling Splits off legitimately drops that sparkline. Data
  * presence (`availableVisibility`) handles sport-appropriateness (pace, speed),
- * so no `usesWhen` is needed. Drives the editor toggles via `themeAvailability`;
- * `defineCarouselTheme` uses this as the default `uses`.
+ * so no `usesWhen` is needed. Drives the editor toggles via `themeControls`;
+ * `defineCarouselTheme` uses this as the default `uses`. Every carousel theme
+ * also renders the title, date, distance, time, and a background photo.
  */
 export const CAROUSEL_CAPABILITIES: readonly CapabilityKey[] = [
   "athleteName",
   "cadence",
+  "date",
+  "distance",
   "elevation",
   "elevationViz",
   "heartRate",
   "location",
   "pace",
+  "photo",
   "power",
   "route",
   "speed",
   "splits",
+  "time",
+  "title",
 ];

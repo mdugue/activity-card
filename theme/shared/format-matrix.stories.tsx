@@ -59,7 +59,7 @@ const meta = preview.type<{ args: FormatMatrixArgs }>().meta({
         "colors",
         "imageTransform",
         "photoEffects",
-        "photoBackdropEnabled",
+        "photo",
         "photoUrl",
         "imageSize",
       ],

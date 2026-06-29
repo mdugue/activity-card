@@ -22,7 +22,18 @@ import { useFormat, useSafeInsets } from "../shared/format-context";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoLayer } from "../shared/photo-layer";
 
-const USES = ["athleteName", "elevation", "location", "pace", "route"] as const;
+const USES = [
+  "athleteName",
+  "date",
+  "distance",
+  "elevation",
+  "location",
+  "pace",
+  "photo",
+  "route",
+  "time",
+  "title",
+] as const;
 
 type ThemePhotoProps = ThemeProps<(typeof USES)[number]>;
 
@@ -112,12 +123,18 @@ export function ThemePhoto({
   } else if (sport === "triathlon") {
     subParts.push("triathlon");
   }
-  const hero: { big: string | number; unit: string; sub: string } = {
-    big:
+  let heroBig = "—";
+  if (isNum(data.distanceKm)) {
+    heroBig =
       sport === "swim"
         ? (data.distanceKm * 1000).toFixed(0)
-        : data.distanceKm.toFixed(1),
-    unit: sport === "swim" ? "m" : "km",
+        : data.distanceKm.toFixed(1);
+  }
+  const distanceUnit = sport === "swim" ? "m" : "km";
+  const hero: { big: string | number; unit: string; sub: string } = {
+    big: heroBig,
+    // No unit beside the em-dash placeholder when distance is stripped.
+    unit: isNum(data.distanceKm) ? distanceUnit : "",
     sub: subParts.join(" · "),
   };
 

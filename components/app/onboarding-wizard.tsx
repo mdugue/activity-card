@@ -105,8 +105,8 @@ const SAMPLE_PHOTOS = [
 ] as const;
 
 function activityMeta(a: {
-  distanceKm: number;
-  durationSec: number;
+  distanceKm?: number;
+  durationSec?: number;
   elevationGainM?: number;
 }): string {
   const parts = [`${formatNumber(a.distanceKm, 1)} km`];
