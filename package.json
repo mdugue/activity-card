@@ -35,7 +35,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.1",
+    "@biomejs/biome": "2.5.2",
     "@chromatic-com/storybook": "^5.2.1",
     "@playwright/cli": "^0.1.14",
     "@playwright/test": "^1.61.1",
@@ -52,14 +52,14 @@
     "@types/react-dom": "^19.2.3",
     "@typescript/native-preview": "^7.0.0-dev.20260624.1",
     "babel-plugin-react-compiler": "^1.0.0",
-    "eslint": "^9.39.4",
+    "eslint": "^10.6.0",
     "eslint-config-next": "16.2.9",
     "eslint-plugin-storybook": "^10.4.6",
     "openapi-typescript": "^7.13.0",
     "storybook": "^10.4.6",
     "tailwindcss": "^4.3.1",
     "typescript": "^6.0.3",
-    "ultracite": "7.8.3",
+    "ultracite": "7.9.2",
     "vite": "^8.1.0"
   },
   "name": "activity-card",
