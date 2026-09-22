@@ -5,12 +5,12 @@ import {
   CaretRightIcon,
   CaretDownIcon,
 } from "@phosphor-icons/react";
-import { cn } from "cn";
 import * as React from "react";
 import { DayPicker, getDefaultClassNames } from "react-day-picker";
 import type { DayButton, Locale } from "react-day-picker";
 
 import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 function Calendar({
   className,

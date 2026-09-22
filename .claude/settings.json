@@ -8,7 +8,8 @@
       "Bash(npx -y modern-web-guidance@latest search \"responsive layout with container query units and CSS custom properties for safe-area insets\" --skill-version 2026_05_16-c5e7870)",
       "Bash(npx -y modern-web-guidance@latest search \"viewport units svh dvh and safe-area-inset env variables for device notch\" --skill-version 2026_05_16-c5e7870)",
       "Bash(npx -y modern-web-guidance@latest retrieve \"fluid-scaling,size-aware-styling\")",
-      "Bash(bunx biome *)",
+      "Bash(bunx oxlint *)",
+      "Bash(bunx oxfmt *)",
       "Bash(bun run *)",
       "WebSearch",
       "WebFetch(domain:support.strava.com)",
@@ -25,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun fix --skip=correctness/noUnusedImports"
+            "command": "bunx oxlint --fix -A no-unused-vars && bunx oxfmt"
           }
         ]
       }

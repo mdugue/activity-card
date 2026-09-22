@@ -25,8 +25,9 @@ export default defineConfig({
   extends: [core, react, next],
   ignorePatterns: [
     ...(core.ignorePatterns ?? []),
-    // Vendored agent skills installed via `npx skills add`, pinned by
-    // skills-lock.json. Third-party content — re-add/update, don't edit.
+    // Vendored agent skills under `.agents/skills`, installed via
+    // `npx skills add` and pinned by skills-lock.json. Third-party content —
+    // re-add/update, don't edit.
     "**/skills",
     // Generated, gitignored test artifacts — the Playwright HTML report
     // bundles minified vendor JS that would otherwise be flagged by the
@@ -102,8 +103,11 @@ export default defineConfig({
     "react/todo": "off",
 
     // ── Type-aware rules (`--type-aware`, via oxlint-tsgolint) ──────────
-    // The promise, deprecation and assertion checks below are the reason this
-    // repo runs type-aware linting at all; only these four are dialled back.
+    // `typescript/no-floating-promises`, `no-deprecated`, `await-thenable`,
+    // `unbound-method`, `no-misused-spread` and the unnecessary-assertion
+    // checks are the reason this repo lints with type information at all, and
+    // they stay on. What is dialled back below is the maximalist end of the
+    // set — rules that would rewrite an idiom rather than catch a defect.
     //
     // Truthiness is this codebase's idiom for "absent or empty" (`if (!src)`,
     // `if (!ctx)`); spelling every one of them out as an explicit null/length
@@ -122,8 +126,9 @@ export default defineConfig({
     // the next source, which `??` would not do.
     "typescript/prefer-nullish-coalescing": "off",
     // In a React event handler an `async` callback is the normal shape and the
-    // `() => { void f(); }` wrapper adds nothing; the conditional and spread
-    // checks that actually catch bugs stay on below.
+    // `() => { void f(); }` wrapper adds nothing. The conditional and spread
+    // checks the same rule performs — the ones that actually catch bugs — stay
+    // on; `waitForFonts` testing a promise for truthiness was one of them.
     "typescript/no-misused-promises": ["error", { checksVoidReturn: false }],
     "typescript/strict-void-return": "off",
     // Contradicts `typescript/no-non-null-assertion`, which is also on and is

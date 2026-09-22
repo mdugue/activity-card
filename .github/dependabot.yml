@@ -10,15 +10,26 @@ updates:
     open-pull-requests-limit: 5
     groups:
       next:
-        patterns: [next, "@next/*", eslint-config-next]
+        patterns: [next, "@next/*"]
       react:
         patterns: [react, react-dom, "@types/react", "@types/react-dom"]
       tailwind:
         patterns: [tailwindcss, "@tailwindcss/*", tw-animate-css]
       shadcn:
         patterns: [shadcn, "@base-ui/*"]
+      # The whole lint/format toolchain moves together: oxlint and oxfmt are
+      # versioned in lockstep by Ultracite's peer ranges, and oxlint-tsgolint
+      # tracks the TypeScript release the type-aware rules compile against.
       lint-and-format:
-        patterns: [eslint, eslint-*, biome, "@biomejs/*", ultracite]
+        patterns: [oxlint, "@oxlint/*", oxfmt, ultracite]
+      typescript:
+        patterns: [typescript, oxlint-tsgolint]
+      storybook:
+        patterns: [storybook, "@storybook/*", "@chromatic-com/storybook"]
+      remotion:
+        patterns: [remotion, "@remotion/*"]
+      playwright:
+        patterns: ["@playwright/*"]
       types:
         patterns: ["@types/*"]
         exclude-patterns: ["@types/react*"]
