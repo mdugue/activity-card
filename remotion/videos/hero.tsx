@@ -6,6 +6,7 @@
 
 import { linearTiming, TransitionSeries } from "@remotion/transitions";
 import { fade } from "@remotion/transitions/fade";
+
 import { cutSlices } from "../components/cut-slices";
 import { FPS, LANDSCAPE } from "../design/tokens";
 import {

@@ -7,7 +7,9 @@
 // decorator, so it isn't set here.
 
 import { NO_EFFECTS } from "@/lib/photo-effects";
-import { CAROUSEL_THEMES, type CarouselThemeId } from "./registry";
+
+import { CAROUSEL_THEMES } from "./registry";
+import type { CarouselThemeId } from "./registry";
 
 export function carouselArgs(id: CarouselThemeId) {
   const theme = CAROUSEL_THEMES[id];

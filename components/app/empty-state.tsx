@@ -4,22 +4,21 @@ import { ArrowRightIcon, CaretDownIcon } from "@phosphor-icons/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+
 import { EffortMark, EffortWordmark } from "@/components/app/effort-wordmark";
 import {
   claimStyle,
   IntroReplay,
-  type IntroStage,
   PANEL_REST_CLASS,
   panelFadeStyle,
   panelPartStyle,
   RevealOverlay,
   useEmptyStateIntro,
 } from "@/components/app/empty-state-intro";
+import type { IntroStage } from "@/components/app/empty-state-intro";
 import { IntroVideo } from "@/components/app/intro-video";
-import {
-  type OnboardingResult,
-  OnboardingWizard,
-} from "@/components/app/onboarding-wizard";
+import { OnboardingWizard } from "@/components/app/onboarding-wizard";
+import type { OnboardingResult } from "@/components/app/onboarding-wizard";
 import { StravaCompatLink } from "@/components/app/strava-footer";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -41,7 +40,7 @@ function RouteGlyph() {
   return (
     <svg
       aria-hidden="true"
-      className="block size-full text-primary"
+      className="text-primary block size-full"
       preserveAspectRatio="none"
       viewBox="0 0 100 70"
     >
@@ -65,7 +64,7 @@ function ElevationGlyph() {
   return (
     <svg
       aria-hidden="true"
-      className="block size-full text-primary"
+      className="text-primary block size-full"
       preserveAspectRatio="none"
       viewBox="0 0 100 56"
     >
@@ -105,7 +104,7 @@ const PANELS: { glyph: React.ReactNode; word: string; wordClass: string }[] = [
     word: "EFFORT",
     wordClass: "text-[2.75rem] leading-[0.86] text-primary lg:text-[3.125rem]",
     glyph: (
-      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 font-heading text-background text-xl lg:text-2xl">
+      <div className="font-heading text-background grid grid-cols-2 gap-x-3 gap-y-1.5 text-xl lg:text-2xl">
         {["82.4KM", "3:14", "1240M", "148"].map((v) => (
           <span key={v}>{v}</span>
         ))}
@@ -130,7 +129,7 @@ function ClaimPanel({
   return (
     <div
       className={cn(
-        "relative flex h-80 w-64 shrink-0 snap-center flex-col overflow-hidden bg-foreground p-5 text-background lg:h-[26rem] lg:w-auto lg:flex-1 lg:basis-0 lg:p-6",
+        "bg-foreground text-background relative flex h-80 w-64 shrink-0 snap-center flex-col overflow-hidden p-5 lg:h-[26rem] lg:w-auto lg:flex-1 lg:basis-0 lg:p-6",
         PANEL_REST_CLASS[index]
       )}
       style={panelFadeStyle(stage, index)}
@@ -155,24 +154,24 @@ function ClaimPanel({
       </div>
       <div
         aria-hidden
-        className="absolute inset-0 z-10 bg-linear-to-b from-foreground/60 via-foreground/10 to-foreground/90"
+        className="from-foreground/60 via-foreground/10 to-foreground/90 absolute inset-0 z-10 bg-linear-to-b"
         style={panelPartStyle(stage, "scrim", index)}
       />
       <div
         aria-hidden
-        className="absolute inset-0 z-10 bg-foreground opacity-25 mix-blend-color"
+        className="bg-foreground absolute inset-0 z-10 opacity-25 mix-blend-color"
         style={panelPartStyle(stage, "tint", index)}
       />
 
       <div
-        className="relative z-20 flex justify-between font-mono text-[11px] text-background/55 tracking-[0.18em]"
+        className="text-background/55 relative z-20 flex justify-between font-mono text-[11px] tracking-[0.18em]"
         style={panelPartStyle(stage, "num", index)}
       >
         <span>{String(index + 1).padStart(2, "0")}</span>
         <span>/ 0{PANEL_COUNT}</span>
       </div>
       <p
-        className={cn("relative z-20 mt-5 font-heading uppercase", wordClass)}
+        className={cn("font-heading relative z-20 mt-5 uppercase", wordClass)}
         style={panelPartStyle(stage, "word", index)}
       >
         {word}
@@ -201,7 +200,7 @@ export function EmptyState({
   // its Strava picker (auto-opened via initialStravaPickerOpen) is visible.
   useEffect(() => {
     if (autoStravaPicker) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      // oxlint-disable-next-line react/set-state-in-effect
       setWizardOpen(true);
     }
   }, [autoStravaPicker]);
@@ -223,19 +222,19 @@ export function EmptyState({
     // A dedicated scroll-snap container (scoped here, so snapping never leaks
     // into the editor/download views). `proximity` keeps it gentle — tall
     // content never traps the user — and reduced motion drops snap + smoothing.
-    <div className="h-dvh snap-y snap-proximity overflow-y-auto scroll-smooth bg-background text-foreground motion-reduce:snap-none motion-reduce:scroll-auto">
+    <div className="bg-background text-foreground h-dvh snap-y snap-proximity overflow-y-auto scroll-smooth motion-reduce:snap-none motion-reduce:scroll-auto">
       {/* ───── Section 1 · Hero (light) — the animated claim, panels, CTA ───── */}
       <section className="relative flex min-h-dvh snap-start flex-col px-6 pt-7 pb-10 lg:pt-9">
         <div className="mx-auto flex w-full max-w-[64rem] items-start justify-between">
           <EffortWordmark />
-          <p className="font-medium font-mono text-[10px] tracking-[0.22em] opacity-55 sm:text-[11px]">
+          <p className="font-mono text-[10px] font-medium tracking-[0.22em] opacity-55 sm:text-[11px]">
             TURN ANY EFFORT INTO A CARD
           </p>
         </div>
 
         <div className="flex flex-1 flex-col items-center justify-center gap-5 lg:gap-8">
           <h1
-            className="w-full max-w-[64rem] text-balance text-left font-medium text-foreground/70 text-lg leading-snug lg:mx-auto lg:text-center lg:text-xl"
+            className="text-foreground/70 w-full max-w-[64rem] text-left text-lg leading-snug font-medium text-balance lg:mx-auto lg:text-center lg:text-xl"
             style={claimStyle(intro.stage)}
           >
             {intro.claim}
@@ -270,8 +269,8 @@ export function EmptyState({
                 className={cn(
                   "h-1.5 rounded-full transition-all",
                   i === activeSlide
-                    ? "w-4 bg-primary"
-                    : "w-1.5 bg-foreground/25"
+                    ? "bg-primary w-4"
+                    : "bg-foreground/25 w-1.5"
                 )}
                 key={p.word}
               />
@@ -279,18 +278,18 @@ export function EmptyState({
           </div>
 
           {/* Action bar — a single GET STARTED CTA opens the two-step wizard. */}
-          <div className="flex w-full max-w-[64rem] flex-col gap-4 bg-foreground p-5 text-background shadow-2xl shadow-foreground/20 lg:mx-auto lg:flex-row lg:items-center lg:gap-8 lg:px-8 lg:py-7">
+          <div className="bg-foreground text-background shadow-foreground/20 flex w-full max-w-[64rem] flex-col gap-4 p-5 shadow-2xl lg:mx-auto lg:flex-row lg:items-center lg:gap-8 lg:px-8 lg:py-7">
             <div className="hidden lg:block">
-              <p className="font-medium font-mono text-[11px] text-background/55 uppercase tracking-[0.2em]">
+              <p className="text-background/55 font-mono text-[11px] font-medium tracking-[0.2em] uppercase">
                 Ready in two steps
               </p>
-              <p className="mt-1.5 font-heading text-3xl uppercase leading-none">
+              <p className="font-heading mt-1.5 text-3xl leading-none uppercase">
                 Make your card
               </p>
             </div>
 
             <Button
-              className="h-auto justify-center px-8 py-4 font-heading text-2xl uppercase tracking-wide shadow-primary/50 shadow-xl hover:-translate-y-0.5"
+              className="font-heading shadow-primary/50 h-auto justify-center px-8 py-4 text-2xl tracking-wide uppercase shadow-xl hover:-translate-y-0.5"
               onClick={() => setWizardOpen(true)}
               size="lg"
             >
@@ -299,12 +298,12 @@ export function EmptyState({
             </Button>
 
             <div className="flex items-center justify-between gap-4 lg:ml-auto lg:block lg:text-right">
-              <div className="flex items-center gap-2 font-medium font-mono text-[11px] text-background/60 uppercase tracking-[0.14em] lg:justify-end">
-                <span className="size-1.5 bg-primary" />
+              <div className="text-background/60 flex items-center gap-2 font-mono text-[11px] font-medium tracking-[0.14em] uppercase lg:justify-end">
+                <span className="bg-primary size-1.5" />
                 Add activity
               </div>
-              <div className="flex items-center gap-2 font-medium font-mono text-[11px] text-background/60 uppercase tracking-[0.14em] lg:mt-2 lg:justify-end">
-                <span className="size-1.5 bg-primary" />
+              <div className="text-background/60 flex items-center gap-2 font-mono text-[11px] font-medium tracking-[0.14em] uppercase lg:mt-2 lg:justify-end">
+                <span className="bg-primary size-1.5" />
                 Add a photo
               </div>
             </div>
@@ -312,7 +311,7 @@ export function EmptyState({
         </div>
 
         {/* Scroll cue — invites the user down into the sections below. */}
-        <div className="pointer-events-none flex flex-col items-center gap-1 text-foreground/40">
+        <div className="text-foreground/40 pointer-events-none flex flex-col items-center gap-1">
           <span className="caption-micro">Scroll</span>
           <CaretDownIcon
             className="size-4 motion-safe:animate-bounce"
@@ -324,43 +323,43 @@ export function EmptyState({
       </section>
 
       {/* ───── Section 2 · Intro video (dark) ───── */}
-      <section className="flex min-h-[92dvh] snap-start items-center bg-foreground px-6 py-20 text-background">
+      <section className="bg-foreground text-background flex min-h-[92dvh] snap-start items-center px-6 py-20">
         <div className="mx-auto grid w-full max-w-[68rem] items-center gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
           <div>
             <p className="caption-label">See it in action</p>
-            <h2 className="mt-4 text-balance font-heading text-4xl uppercase leading-[0.95] lg:text-5xl">
+            <h2 className="font-heading mt-4 text-4xl leading-[0.95] text-balance uppercase lg:text-5xl">
               From activity to art
             </h2>
-            <p className="mt-5 max-w-md text-background/70 leading-relaxed">
+            <p className="text-background/70 mt-5 max-w-md leading-relaxed">
               Drop a ride, run, or swim, add a favourite photo, and Effort lays
               it out as a share-ready carousel — route, elevation, and the
               numbers that matter. Here’s the gist.
             </p>
             <Link
-              className="mt-6 inline-flex items-center gap-2 font-medium font-mono text-[11px] text-background/60 uppercase tracking-[0.16em] transition-colors hover:text-background"
+              className="text-background/60 hover:text-background mt-6 inline-flex items-center gap-2 font-mono text-[11px] font-medium tracking-[0.16em] uppercase transition-colors"
               href="/tutorials"
             >
               Watch the tutorials
               <ArrowRightIcon className="size-3.5" weight="bold" />
             </Link>
           </div>
-          <IntroVideo className="shadow-2xl shadow-black/40 ring-1 ring-background/15" />
+          <IntroVideo className="ring-background/15 shadow-2xl ring-1 shadow-black/40" />
         </div>
       </section>
 
       {/* ───── Section 3 · Footer (light) — final CTA + attribution ───── */}
-      <footer className="flex min-h-dvh snap-start flex-col bg-background px-6 pt-20 pb-8">
+      <footer className="bg-background flex min-h-dvh snap-start flex-col px-6 pt-20 pb-8">
         <div className="mx-auto flex w-full max-w-[64rem] flex-1 flex-col items-center justify-center gap-6 text-center">
           <EffortMark className="size-12 lg:size-14" />
-          <h2 className="text-balance font-heading text-5xl uppercase leading-[0.9] lg:text-7xl">
+          <h2 className="font-heading text-5xl leading-[0.9] text-balance uppercase lg:text-7xl">
             Make your card
           </h2>
-          <p className="max-w-md text-balance text-foreground/65 leading-relaxed">
+          <p className="text-foreground/65 max-w-md leading-relaxed text-balance">
             Every ride, run, and swim deserves a finish worth sharing. Two
             steps, no account needed.
           </p>
           <Button
-            className="h-auto justify-center px-8 py-4 font-heading text-2xl uppercase tracking-wide shadow-primary/50 shadow-xl hover:-translate-y-0.5"
+            className="font-heading shadow-primary/50 h-auto justify-center px-8 py-4 text-2xl tracking-wide uppercase shadow-xl hover:-translate-y-0.5"
             onClick={() => setWizardOpen(true)}
             size="lg"
           >
@@ -369,11 +368,11 @@ export function EmptyState({
           </Button>
         </div>
 
-        <div className="mx-auto mt-16 flex w-full max-w-[64rem] flex-col items-center gap-5 border-foreground/10 border-t pt-8 sm:flex-row sm:justify-between">
-          <span className="font-mono text-[11px] uppercase tracking-[0.16em] opacity-80">
+        <div className="border-foreground/10 mx-auto mt-16 flex w-full max-w-[64rem] flex-col items-center gap-5 border-t pt-8 sm:flex-row sm:justify-between">
+          <span className="font-mono text-[11px] tracking-[0.16em] uppercase opacity-80">
             <StravaCompatLink />
           </span>
-          <nav className="flex items-center gap-5 font-medium font-mono text-[11px] uppercase tracking-[0.16em]">
+          <nav className="flex items-center gap-5 font-mono text-[11px] font-medium tracking-[0.16em] uppercase">
             <Link
               className="opacity-60 transition-opacity hover:opacity-100"
               href="/tutorials"
@@ -394,7 +393,7 @@ export function EmptyState({
             </Link>
           </nav>
           <a
-            className="group font-medium font-mono text-[11px] text-foreground/60 uppercase tracking-[0.16em] transition-colors hover:text-foreground"
+            className="group text-foreground/60 hover:text-foreground font-mono text-[11px] font-medium tracking-[0.16em] uppercase transition-colors"
             href="https://manuel.fyi/"
             rel="noopener noreferrer"
             target="_blank"

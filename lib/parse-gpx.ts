@@ -6,14 +6,11 @@
 
 import { XMLParser } from "fast-xml-parser";
 import { z } from "zod/mini";
-import {
-  detectSport,
-  finalise,
-  type ParsedActivity,
-  type TrackPoint,
-} from "./parse-shared";
 
-const GPX_EXT_RE = /\.gpx$/i;
+import { detectSport, finalise } from "./parse-shared";
+import type { ParsedActivity, TrackPoint } from "./parse-shared";
+
+const GPX_EXT_RE = /\.gpx$/iu;
 
 // fast-xml-parser may yield numbers or strings depending on input; accept both
 // and coerce in the mapping below.

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+
 import { connectStrava, openWizard, uploadActivity } from "./helpers";
 
 /**
@@ -11,7 +12,7 @@ import { connectStrava, openWizard, uploadActivity } from "./helpers";
  * request/response shape end-to-end, not just the UI.
  */
 
-const CONNECT_BUTTON = { name: /connect with strava/i };
+const CONNECT_BUTTON = { name: /connect with strava/iu };
 
 test.describe("strava OAuth + picker", () => {
   test.beforeEach(async ({ page }) => {
@@ -36,7 +37,7 @@ test.describe("strava OAuth + picker", () => {
     // the user connects.
     const footer = page.locator("footer");
     await expect(
-      footer.getByRole("link", { name: /compatible with strava/i })
+      footer.getByRole("link", { name: /compatible with strava/iu })
     ).toBeVisible();
   });
 
@@ -45,19 +46,19 @@ test.describe("strava OAuth + picker", () => {
 
     // After the mock approves and the callback exchanges the code, the app
     // redirects to /?strava=connected and auto-opens the picker.
-    await page.waitForURL(/\/$/, { timeout: 10_000 });
+    await page.waitForURL(/\/$/u, { timeout: 10_000 });
     await expect(
-      page.getByRole("heading", { name: /your recent/i })
+      page.getByRole("heading", { name: /your recent/iu })
     ).toBeVisible();
     // The first page should include the named ride at the top.
     await expect(
-      page.getByRole("button", { name: /saturday in the elbsandstein/i })
+      page.getByRole("button", { name: /saturday in the elbsandstein/iu })
     ).toBeVisible();
     // §4 attribution is present on the picker, not just the empty screen.
     await expect(
       page
         .locator("footer")
-        .getByRole("link", { name: /compatible with strava/i })
+        .getByRole("link", { name: /compatible with strava/iu })
     ).toBeVisible();
   });
 
@@ -65,16 +66,16 @@ test.describe("strava OAuth + picker", () => {
     page,
   }) => {
     await connectStrava(page);
-    await page.waitForURL(/\/$/);
+    await page.waitForURL(/\/$/u);
     await expect(
-      page.getByRole("heading", { name: /your recent/i })
+      page.getByRole("heading", { name: /your recent/iu })
     ).toBeVisible();
 
     // The picker is a dialog over the wizard; "Back" closes it and reveals the
     // wizard underneath, which now offers "Pick from Strava" (still connected).
-    await page.getByRole("button", { name: /^back$/i }).click();
+    await page.getByRole("button", { name: /^back$/iu }).click();
     await expect(
-      page.getByRole("button", { name: /pick from strava/i })
+      page.getByRole("button", { name: /pick from strava/iu })
     ).toBeVisible();
     // The official Connect button is hidden in the connected state.
     await expect(page.getByRole("link", CONNECT_BUTTON)).not.toBeVisible();
@@ -84,21 +85,21 @@ test.describe("strava OAuth + picker", () => {
     page,
   }) => {
     await connectStrava(page);
-    await page.waitForURL(/\/$/);
+    await page.waitForURL(/\/$/u);
     await page
-      .getByRole("button", { name: /saturday in the elbsandstein/i })
+      .getByRole("button", { name: /saturday in the elbsandstein/iu })
       .click();
     // Picking returns to the wizard (now on the photo step); hand off to edit.
-    await page.getByRole("button", { name: /open the editor/i }).click();
+    await page.getByRole("button", { name: /open the editor/iu }).click();
 
     await expect(page.getByTestId("export-action")).toBeVisible();
 
     // Source + "View on Strava" live in the ACTIVITY section (visible in the
     // desktop sidebar).
-    await expect(page.getByText(/Strava · Alex/i)).toBeVisible();
+    await expect(page.getByText(/Strava · Alex/iu)).toBeVisible();
 
     // "View on Strava" link points at the picked activity (id 1001 per the mock).
-    const link = page.getByRole("link", { name: /view on strava/i });
+    const link = page.getByRole("link", { name: /view on strava/iu });
     await expect(link).toBeVisible();
     await expect(link).toHaveAttribute(
       "href",
@@ -107,7 +108,7 @@ test.describe("strava OAuth + picker", () => {
 
     // §6 Working Disconnect is reachable from the editor's activity overlay too.
     await expect(
-      page.getByRole("button", { name: /disconnect strava/i })
+      page.getByRole("button", { name: /disconnect strava/iu })
     ).toBeVisible();
   });
 
@@ -115,31 +116,31 @@ test.describe("strava OAuth + picker", () => {
     page,
   }) => {
     await connectStrava(page);
-    await page.waitForURL(/\/$/);
+    await page.waitForURL(/\/$/u);
     await page
-      .getByRole("button", { name: /saturday in the elbsandstein/i })
+      .getByRole("button", { name: /saturday in the elbsandstein/iu })
       .click();
 
     // Back in the wizard, the photo step offers the ride's two mock photos
     // next to the regular Browse drop zone.
-    await expect(page.getByText(/from your strava activity/i)).toBeVisible();
-    await expect(page.getByText(/browse photos/i)).toBeVisible();
-    const thumbs = page.getByRole("button", { name: /use strava photo/i });
+    await expect(page.getByText(/from your strava activity/iu)).toBeVisible();
+    await expect(page.getByText(/browse photos/iu)).toBeVisible();
+    const thumbs = page.getByRole("button", { name: /use strava photo/iu });
     await expect(thumbs).toHaveCount(2);
     await thumbs.first().click();
-    await expect(page.getByText(/strava photo 1/i)).toBeVisible();
+    await expect(page.getByText(/strava photo 1/iu)).toBeVisible();
     // The no-photo path stays one click away even with a photo staged —
     // both loaded rows (activity + photo) expose a Remove button.
-    await expect(page.getByRole("button", { name: /^remove$/i })).toHaveCount(
+    await expect(page.getByRole("button", { name: /^remove$/iu })).toHaveCount(
       2
     );
 
-    await page.getByRole("button", { name: /open the editor/i }).click();
+    await page.getByRole("button", { name: /open the editor/iu }).click();
     await expect(page.getByTestId("export-action")).toBeVisible();
     // The photo flowed through the proxy → File pipeline: the PHOTO group
     // shows it loaded, and the Strava strip stays available for swapping.
-    await expect(page.getByText(/photo loaded/i)).toBeVisible();
-    await expect(page.getByText(/^from strava$/i)).toBeVisible();
+    await expect(page.getByText(/photo loaded/iu)).toBeVisible();
+    await expect(page.getByText(/^from strava$/iu)).toBeVisible();
   });
 
   test("card itself carries NO in-image Strava mark, regardless of source", async ({
@@ -148,7 +149,7 @@ test.describe("strava OAuth + picker", () => {
     // Uploaded file: no Strava mark anywhere.
     await uploadActivity(page);
     await expect(
-      page.getByRole("img", { name: /powered by strava/i })
+      page.getByRole("img", { name: /powered by strava/iu })
     ).toHaveCount(0);
   });
 
@@ -156,32 +157,34 @@ test.describe("strava OAuth + picker", () => {
     page,
   }) => {
     await connectStrava(page);
-    await page.waitForURL(/\/$/);
+    await page.waitForURL(/\/$/u);
     await expect(
-      page.getByRole("heading", { name: /your recent/i })
+      page.getByRole("heading", { name: /your recent/iu })
     ).toBeVisible();
 
     // Multi-select: ride (id 1001) + run (id 1002).
-    await page.getByRole("switch", { name: /multi-select/i }).click();
+    await page.getByRole("switch", { name: /multi-select/iu }).click();
     await page
-      .getByRole("button", { name: /saturday in the elbsandstein/i })
+      .getByRole("button", { name: /saturday in the elbsandstein/iu })
       .click();
-    await page.getByRole("button", { name: /föhrer westwind/i }).click();
+    await page.getByRole("button", { name: /föhrer westwind/iu }).click();
 
-    await page.getByRole("button", { name: /^combine 2 activities$/i }).click();
+    await page
+      .getByRole("button", { name: /^combine 2 activities$/iu })
+      .click();
     // Combining returns to the wizard (photo step); hand off to the editor.
-    await page.getByRole("button", { name: /open the editor/i }).click();
+    await page.getByRole("button", { name: /open the editor/iu }).click();
 
     await expect(page.getByTestId("export-action")).toBeVisible();
     await expect(
-      page.getByText(/Strava · 2 activities combined/i)
+      page.getByText(/Strava · 2 activities combined/iu)
     ).toBeVisible();
 
     // Segment-aligned links: ride sorts first by start_date so segment 1
     // is BIKE (mapped from "ride") → id 1001, segment 2 is RUN → id 1002.
     // The mock orders: 2026-05-17 run, 2026-05-18 ride → so sorted is
     // [run (1002), ride (1001)] meaning segment 1 is RUN, segment 2 is BIKE.
-    const links = page.getByRole("link", { name: /^(run|bike|swim)$/i });
+    const links = page.getByRole("link", { name: /^(run|bike|swim)$/iu });
     await expect(links).toHaveCount(2);
     // Don't pin to a specific order — just verify both ids are linked.
     const hrefs = await links.evaluateAll((els) =>
@@ -193,30 +196,30 @@ test.describe("strava OAuth + picker", () => {
 
   test("pagination renders page numbers and advances", async ({ page }) => {
     await connectStrava(page);
-    await page.waitForURL(/\/$/);
+    await page.waitForURL(/\/$/u);
     await expect(
-      page.getByRole("heading", { name: /your recent/i })
+      page.getByRole("heading", { name: /your recent/iu })
     ).toBeVisible();
 
     const pagination = page.locator("nav[aria-label='pagination']");
-    const page1 = pagination.getByRole("button", { name: /^1$/ });
-    const page2 = pagination.getByRole("button", { name: /^2$/ });
+    const page1 = pagination.getByRole("button", { name: /^1$/u });
+    const page2 = pagination.getByRole("button", { name: /^2$/u });
     await expect(page1).toBeVisible();
     await expect(page2).toBeVisible();
     await expect(page1).toHaveAttribute("aria-current", "page");
 
     await expect(
-      page.getByRole("button", { name: /saturday in the elbsandstein/i })
+      page.getByRole("button", { name: /saturday in the elbsandstein/iu })
     ).toBeVisible();
 
     await page2.click();
 
     await expect(
-      page.getByRole("button", { name: /mock ride #28/i })
+      page.getByRole("button", { name: /mock ride #28/iu })
     ).toBeVisible();
     await expect(page2).toHaveAttribute("aria-current", "page");
     await expect(
-      page.getByRole("button", { name: /saturday in the elbsandstein/i })
+      page.getByRole("button", { name: /saturday in the elbsandstein/iu })
     ).toHaveCount(0);
   });
 
@@ -224,42 +227,42 @@ test.describe("strava OAuth + picker", () => {
     page,
   }) => {
     await connectStrava(page);
-    await page.waitForURL(/\/$/);
+    await page.waitForURL(/\/$/u);
     await expect(
-      page.getByRole("heading", { name: /your recent/i })
+      page.getByRole("heading", { name: /your recent/iu })
     ).toBeVisible();
 
-    await page.getByRole("switch", { name: /multi-select/i }).click();
+    await page.getByRole("switch", { name: /multi-select/iu }).click();
 
     const row = page.getByRole("button", {
-      name: /saturday in the elbsandstein/i,
+      name: /saturday in the elbsandstein/iu,
     });
     await expect(row.locator('[data-sport="ride"]')).toBeVisible();
 
     await row.click();
-    await expect(page.getByText(/1 selected/i)).toBeVisible();
+    await expect(page.getByText(/1 selected/iu)).toBeVisible();
     await row.click();
-    await expect(page.getByText(/0 selected/i)).toBeVisible();
+    await expect(page.getByText(/0 selected/iu)).toBeVisible();
   });
 
   test("Swap on a Strava activity reopens the picker, not the file dialog", async ({
     page,
   }) => {
     await connectStrava(page);
-    await page.waitForURL(/\/$/);
+    await page.waitForURL(/\/$/u);
     await page
-      .getByRole("button", { name: /saturday in the elbsandstein/i })
+      .getByRole("button", { name: /saturday in the elbsandstein/iu })
       .click();
     // Picking returns to the wizard (photo step); hand off to the editor.
-    await page.getByRole("button", { name: /open the editor/i }).click();
+    await page.getByRole("button", { name: /open the editor/iu }).click();
     await expect(page.getByTestId("export-action")).toBeVisible();
 
     // Swap now lives in the ACTIVITY section.
-    const swap = page.getByRole("button", { name: /swap — pick another/i });
+    const swap = page.getByRole("button", { name: /swap — pick another/iu });
     await expect(swap).toBeVisible();
     await swap.click();
     await expect(
-      page.getByRole("heading", { name: /your recent/i })
+      page.getByRole("heading", { name: /your recent/iu })
     ).toBeVisible();
   });
 
@@ -267,14 +270,14 @@ test.describe("strava OAuth + picker", () => {
     page,
   }) => {
     await connectStrava(page);
-    await page.waitForURL(/\/$/);
+    await page.waitForURL(/\/$/u);
     // The picker header carries the connection status + Disconnect — the
     // single home for it now that the app chrome no longer does.
-    await expect(page.getByText(/connected as alex/i)).toBeVisible();
-    await page.getByRole("button", { name: /^disconnect$/i }).click();
+    await expect(page.getByText(/connected as alex/iu)).toBeVisible();
+    await page.getByRole("button", { name: /^disconnect$/iu }).click();
 
     // Connection cleared → "Connected as" disappears.
-    await expect(page.getByText(/connected as/i)).toHaveCount(0);
+    await expect(page.getByText(/connected as/iu)).toHaveCount(0);
 
     // Reload to confirm the cookies are actually gone. The Connect button now
     // lives in the wizard, so open it before asserting.
@@ -289,11 +292,11 @@ test.describe("strava OAuth + picker", () => {
     await page.goto(
       "/api/strava/authorize?return_to=https%3A%2F%2Fattacker.example%2Fphish"
     );
-    await page.waitForURL(/^http:\/\/localhost:3100\/(\?.*)?$/, {
+    await page.waitForURL(/^http:\/\/localhost:3100\/(\?.*)?$/u, {
       timeout: 10_000,
     });
     await expect(
-      page.getByRole("heading", { name: /your recent/i })
+      page.getByRole("heading", { name: /your recent/iu })
     ).toBeVisible();
   });
 
@@ -316,16 +319,16 @@ test.describe("strava OAuth + picker", () => {
       `/api/strava/callback?code=intercepted&state=${encodeURIComponent(state)}`,
       { waitUntil: "commit" }
     );
-    expect(page.url()).toMatch(/strava=bounce_rejected/);
+    expect(page.url()).toMatch(/strava=bounce_rejected/u);
   });
 
   test("502 from /api/strava/activity surfaces an upstream alert", async ({
     page,
   }) => {
     await connectStrava(page);
-    await page.waitForURL(/\/$/);
+    await page.waitForURL(/\/$/u);
     await expect(
-      page.getByRole("heading", { name: /your recent/i })
+      page.getByRole("heading", { name: /your recent/iu })
     ).toBeVisible();
 
     await page.route("**/api/strava/activity/*", (route) =>
@@ -336,10 +339,10 @@ test.describe("strava OAuth + picker", () => {
       })
     );
     await page
-      .getByRole("button", { name: /saturday in the elbsandstein/i })
+      .getByRole("button", { name: /saturday in the elbsandstein/iu })
       .click();
-    await expect(page.getByText(/strava had a hiccup/i)).toBeVisible();
-    await expect(page.getByText(/HTTP 502 from Strava/i)).toBeVisible();
+    await expect(page.getByText(/strava had a hiccup/iu)).toBeVisible();
+    await expect(page.getByText(/HTTP 502 from Strava/iu)).toBeVisible();
   });
 
   test("429 from /api/strava/activities surfaces a rate-limit alert with countdown", async ({
@@ -354,13 +357,15 @@ test.describe("strava OAuth + picker", () => {
       })
     );
     await connectStrava(page);
-    await page.waitForURL(/\/$/);
+    await page.waitForURL(/\/$/u);
 
-    await expect(page.getByText(/strava is rate-limiting us/i)).toBeVisible();
+    await expect(page.getByText(/strava is rate-limiting us/iu)).toBeVisible();
     // Countdown shows the retry-after seconds.
-    await expect(page.getByText(/30s|29s|28s/i)).toBeVisible();
+    await expect(page.getByText(/30s|29s|28s/iu)).toBeVisible();
     // Retry button is disabled until the countdown finishes.
-    await expect(page.getByRole("button", { name: /^retry$/i })).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: /^retry$/iu })
+    ).toBeDisabled();
   });
 
   test("502 from /api/strava/me surfaces a server-broken alert in the wizard", async ({
@@ -373,16 +378,16 @@ test.describe("strava OAuth + picker", () => {
     await openWizard(page);
 
     await expect(
-      page.getByText(/we can.?t reach the Effort server/i)
+      page.getByText(/we can.?t reach the Effort server/iu)
     ).toBeVisible();
   });
 
   test.describe("OAuth callback toasts", () => {
     for (const { flag, copy } of [
-      { flag: "denied", copy: /declined to connect strava/i },
-      { flag: "state_mismatch", copy: /couldn.?t verify the strava sign-in/i },
-      { flag: "token_exchange", copy: /strava rejected the sign-in/i },
-      { flag: "failed", copy: /couldn.?t start the strava sign-in/i },
+      { flag: "denied", copy: /declined to connect strava/iu },
+      { flag: "state_mismatch", copy: /couldn.?t verify the strava sign-in/iu },
+      { flag: "token_exchange", copy: /strava rejected the sign-in/iu },
+      { flag: "failed", copy: /couldn.?t start the strava sign-in/iu },
     ]) {
       test(`?strava=${flag} shows the specific toast`, async ({ page }) => {
         await page.goto(`/?strava=${flag}`);

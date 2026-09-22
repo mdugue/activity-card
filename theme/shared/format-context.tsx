@@ -18,18 +18,11 @@
 // Storybook story) gets 1080×1350 / 48 px safe; every theme's own margins exceed
 // 48 px, so `useSafeInsets` returns them unchanged and the master is unchanged.
 
-import {
-  type CSSProperties,
-  createContext,
-  type ReactNode,
-  useContext,
-} from "react";
-import {
-  EXPORT_FORMATS,
-  type ExportFormat,
-  mergeSafe,
-  type SafeInsets,
-} from "@/theme/core/export-formats";
+import { createContext, useContext } from "react";
+import type { CSSProperties, ReactNode } from "react";
+
+import { EXPORT_FORMATS, mergeSafe } from "@/theme/core/export-formats";
+import type { ExportFormat, SafeInsets } from "@/theme/core/export-formats";
 
 const FormatContext = createContext<ExportFormat>(
   EXPORT_FORMATS["instagram-feed"]

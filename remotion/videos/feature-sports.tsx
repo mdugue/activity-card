@@ -4,6 +4,7 @@
 import { linearTiming, TransitionSeries } from "@remotion/transitions";
 import { fade } from "@remotion/transitions/fade";
 import { useVideoConfig } from "remotion";
+
 import {
   SAMPLE_RIDE,
   SAMPLE_RUN,
@@ -12,6 +13,7 @@ import {
 } from "@/components/app/sample-data";
 import type { ActivityData } from "@/lib/activity";
 import type { ThemeId } from "@/theme/single-card";
+
 import { CardScaled } from "../components/card-showcase";
 import { RiseIn } from "../components/rise-in";
 import { Pill } from "../components/stat-chip";

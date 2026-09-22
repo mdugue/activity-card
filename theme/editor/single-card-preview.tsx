@@ -13,8 +13,10 @@ import type { ImageTransform } from "@/lib/image-transform";
 import type { PhotoEffects } from "@/lib/photo-effects";
 import type { ColorScheme } from "@/theme/core/colors";
 import type { ExportFormat } from "@/theme/core/export-formats";
-import { RenderTheme, type ThemeId } from "@/theme/editor/render-theme";
+import { RenderTheme } from "@/theme/editor/render-theme";
+import type { ThemeId } from "@/theme/editor/render-theme";
 import { SafeZoneOverlay } from "@/theme/editor/safe-zone-overlay";
+
 import { AdjustControls, usePhotoAdjust } from "./photo-adjust";
 
 interface SingleCardPreviewProps {

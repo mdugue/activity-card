@@ -15,16 +15,15 @@
 // (`CarouselTheme`), the same pattern as `defineTheme`.
 
 import type { FC } from "react";
+
 import {
   CAROUSEL_MARK_DEFAULTS,
   CAROUSEL_MARK_PARAMS,
 } from "@/theme/carousel/marks";
 import type { EffectiveStyle } from "@/theme/carousel/resolve";
 import type { StatOpts } from "@/theme/carousel/stats";
-import {
-  CAROUSEL_CAPABILITIES,
-  type CarouselLook,
-} from "@/theme/carousel/theme-tokens";
+import { CAROUSEL_CAPABILITIES } from "@/theme/carousel/theme-tokens";
+import type { CarouselLook } from "@/theme/carousel/theme-tokens";
 import type { ParamDef } from "@/theme/core/params/kinds";
 import type {
   CapabilityKey,
@@ -140,7 +139,7 @@ export function defineCarouselTheme<
     // they persist in the per-theme config — no carousel-only flags in the
     // shared `Visibility`. Theme-specific marks (STRATA's legend) follow them.
     params: [...CAROUSEL_MARK_PARAMS, ...(d.params ?? [])],
-    defaults: { ...CAROUSEL_MARK_DEFAULTS, ...(d.defaults ?? {}) },
+    defaults: { ...CAROUSEL_MARK_DEFAULTS, ...d.defaults },
     look,
     // reason: the registry stores every carousel theme under one widened
     // signature; the narrow `Caps` generic is fully checked above, at the

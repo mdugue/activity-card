@@ -6,14 +6,11 @@
 
 import FitParser from "fit-file-parser";
 import { z } from "zod/mini";
-import {
-  detectSport,
-  finalise,
-  type ParsedActivity,
-  type TrackPoint,
-} from "./parse-shared";
 
-const FIT_EXT_RE = /\.fit$/i;
+import { detectSport, finalise } from "./parse-shared";
+import type { ParsedActivity, TrackPoint } from "./parse-shared";
+
+const FIT_EXT_RE = /\.fit$/iu;
 
 const DateLike = z.union([z.string(), z.date()]);
 
@@ -49,64 +46,65 @@ const FitDataSchema = z.object({
   records: z.optional(z.array(FitRecordSchema)),
 });
 
-export function parseFit(
+export async function parseFit(
   buffer: ArrayBuffer,
   filename: string
 ): Promise<ParsedActivity> {
-  return new Promise((resolve, reject) => {
-    const parser = new FitParser({
-      force: true,
-      speedUnit: "km/h",
-      lengthUnit: "km",
-      elapsedRecordField: true,
-      mode: "list",
-    });
-    parser.parse(buffer, (err, data) => {
-      if (err) {
-        reject(new Error(`${filename} could not be read as FIT.`));
-        return;
-      }
-      const parsed = FitDataSchema.safeParse(data ?? {});
-      if (!parsed.success) {
-        reject(new Error(`${filename} does not look like a valid FIT file.`));
-        return;
-      }
-      const fit = parsed.data;
-      const session = fit.activity?.sessions?.[0];
-      const records = fit.records || [];
-      const points: TrackPoint[] = records
-        .filter(
-          (r) => r.position_lat !== undefined && r.position_long !== undefined
-        )
-        .map((r) => ({
-          lat: r.position_lat,
-          lng: r.position_long,
-          elevation: r.altitude,
-          time: r.timestamp
-            ? (() => {
-                const t = new Date(r.timestamp).getTime();
-                return Number.isFinite(t) ? t : undefined;
-              })()
-            : undefined,
-          heartRate: r.heart_rate,
-          cadence: r.cadence,
-        }));
-
-      const sport = detectSport(session?.sport, filename);
-      const result = finalise({
-        points,
-        sport,
-        name: filename.replace(FIT_EXT_RE, ""),
-        isoDate: session?.start_time || points[0]?.time,
-        sessionDistanceKm: session?.total_distance,
-        sessionDurationSec: session?.total_elapsed_time,
-        sessionElevationM: session?.total_ascent,
-        sessionAvgSpeedKmh: session?.avg_speed,
-        sessionMaxSpeedKmh: session?.max_speed,
-        sessionAvgHr: session?.avg_heart_rate,
-        sessionAvgCadence: session?.avg_cadence || session?.avg_running_cadence,
-      });
-      resolve(result);
-    });
+  const parser = new FitParser({
+    force: true,
+    speedUnit: "km/h",
+    lengthUnit: "km",
+    elapsedRecordField: true,
+    mode: "list",
   });
+
+  let data: unknown;
+  try {
+    // fit-file-parser v6 exposes a promise API, so the parse no longer needs a
+    // hand-rolled `new Promise` wrapper around its callback.
+    data = await parser.parseAsync(buffer);
+  } catch {
+    throw new Error(`${filename} could not be read as FIT.`);
+  }
+
+  const parsed = FitDataSchema.safeParse(data ?? {});
+  if (!parsed.success) {
+    throw new Error(`${filename} does not look like a valid FIT file.`);
+  }
+  const fit = parsed.data;
+  const session = fit.activity?.sessions?.[0];
+  const records = fit.records || [];
+  const points: TrackPoint[] = records
+    .filter(
+      (r) => r.position_lat !== undefined && r.position_long !== undefined
+    )
+    .map((r) => ({
+      lat: r.position_lat,
+      lng: r.position_long,
+      elevation: r.altitude,
+      time: r.timestamp ? timestampMs(r.timestamp) : undefined,
+      heartRate: r.heart_rate,
+      cadence: r.cadence,
+    }));
+
+  const sport = detectSport(session?.sport, filename);
+  return finalise({
+    points,
+    sport,
+    name: filename.replace(FIT_EXT_RE, ""),
+    isoDate: session?.start_time || points[0]?.time,
+    sessionDistanceKm: session?.total_distance,
+    sessionDurationSec: session?.total_elapsed_time,
+    sessionElevationM: session?.total_ascent,
+    sessionAvgSpeedKmh: session?.avg_speed,
+    sessionMaxSpeedKmh: session?.max_speed,
+    sessionAvgHr: session?.avg_heart_rate,
+    sessionAvgCadence: session?.avg_cadence || session?.avg_running_cadence,
+  });
+}
+
+/** FIT timestamps arrive as a Date or an ISO string; drop unparseable ones. */
+function timestampMs(value: string | Date): number | undefined {
+  const t = new Date(value).getTime();
+  return Number.isFinite(t) ? t : undefined;
 }

@@ -1,5 +1,6 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
+
 import { parseGpx } from "@/lib/parse-gpx";
 
 function gpx(body: string): string {
@@ -41,7 +42,7 @@ describe("parseGpx", () => {
 
   test("structurally broken GPX throws the schema error", () => {
     expect(() => parseGpx("<gpx><trk>", "broken.gpx")).toThrow(
-      /does not look like a valid GPX/
+      /does not look like a valid GPX/u
     );
   });
 
@@ -49,7 +50,7 @@ describe("parseGpx", () => {
     // Valid XML, but `gpx.trk.trkseg` has the wrong shape (a bare string).
     expect(() =>
       parseGpx(gpx("<trk><trkseg>nope</trkseg></trk>"), "weird.gpx")
-    ).toThrow(/does not look like a valid GPX/);
+    ).toThrow(/does not look like a valid GPX/u);
   });
 
   test("a GPX without any track yields an empty activity, not a crash", () => {

@@ -9,14 +9,11 @@ import {
   SpeakerSimpleHighIcon,
   SpeakerSimpleSlashIcon,
 } from "@phosphor-icons/react";
-import { Player, type PlayerRef } from "@remotion/player";
-import {
-  type ComponentType,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { Player } from "@remotion/player";
+import type { PlayerRef } from "@remotion/player";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { ComponentType } from "react";
+
 import { useCoarsePointer } from "@/hooks/use-coarse-pointer";
 import { cn } from "@/lib/utils";
 
@@ -145,7 +142,7 @@ export function VideoPlayer({
     }
     if (isFullscreen) {
       if (document.fullscreenElement) {
-        document.exitFullscreen?.();
+        void document.exitFullscreen?.();
       }
       setCssFullscreen(false);
       return;
@@ -167,7 +164,7 @@ export function VideoPlayer({
   return (
     <div
       className={cn(
-        "group relative overflow-hidden bg-foreground",
+        "group bg-foreground relative overflow-hidden",
         cssFullscreen
           ? "fixed inset-0 z-[100] flex items-center justify-center"
           : className
@@ -214,13 +211,13 @@ export function VideoPlayer({
         >
           <span className="block h-1 w-full rounded-full bg-white/25 transition-all group-hover/seek:h-1.5">
             <span
-              className="block h-full rounded-full bg-primary"
+              className="bg-primary block h-full rounded-full"
               style={{ width: `${progress * 100}%` }}
             />
           </span>
         </button>
 
-        <div className="pointer-events-auto flex items-center gap-1 text-background">
+        <div className="text-background pointer-events-auto flex items-center gap-1">
           <ControlButton
             label={playing ? "Pause" : "Play"}
             onClick={() => player?.toggle()}
@@ -246,7 +243,7 @@ export function VideoPlayer({
               <SpeakerSimpleHighIcon size={ICON} weight="duotone" />
             )}
           </ControlButton>
-          <span className="ml-1 font-medium font-mono text-[11px] text-background/80 tabular-nums tracking-wide">
+          <span className="text-background/80 ml-1 font-mono text-[11px] font-medium tracking-wide tabular-nums">
             {clock(frame, fps)} / {clock(durationInFrames, fps)}
           </span>
           <span className="flex-1" />
@@ -278,7 +275,7 @@ function ControlButton({
   return (
     <button
       aria-label={label}
-      className="inline-flex size-9 items-center justify-center rounded-full text-background/85 transition-colors hover:bg-white/15 hover:text-background"
+      className="text-background/85 hover:text-background inline-flex size-9 items-center justify-center rounded-full transition-colors hover:bg-white/15"
       onClick={onClick}
       title={label}
       type="button"

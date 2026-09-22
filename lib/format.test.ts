@@ -1,5 +1,6 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
+
 import {
   formatClock,
   formatDate,
@@ -30,7 +31,7 @@ describe("formatDuration", () => {
   });
 
   test("returns a dash for missing, zero, or non-finite input", () => {
-    expect(formatDuration(undefined)).toBe(DASH);
+    expect(formatDuration()).toBe(DASH);
     expect(formatDuration(0)).toBe(DASH);
     expect(formatDuration(-10)).toBe(DASH);
     expect(formatDuration(Number.NaN)).toBe(DASH);
@@ -50,7 +51,7 @@ describe("formatClock", () => {
   });
 
   test("returns a dash for invalid input", () => {
-    expect(formatClock(undefined)).toBe(DASH);
+    expect(formatClock()).toBe(DASH);
     expect(formatClock(0)).toBe(DASH);
     expect(formatClock(Number.NaN)).toBe(DASH);
   });
@@ -69,7 +70,7 @@ describe("formatPaceMin", () => {
   });
 
   test("returns a dash for invalid input", () => {
-    expect(formatPaceMin(undefined)).toBe(DASH);
+    expect(formatPaceMin()).toBe(DASH);
     expect(formatPaceMin(0)).toBe(DASH);
   });
 });
@@ -82,20 +83,20 @@ describe("formatPaceSec", () => {
   });
 
   test("returns a dash for invalid input", () => {
-    expect(formatPaceSec(undefined)).toBe(DASH);
+    expect(formatPaceSec()).toBe(DASH);
     expect(formatPaceSec(0)).toBe(DASH);
   });
 });
 
 describe("formatNumber", () => {
   test("respects the digits argument", () => {
-    expect(formatNumber(1.234_56, 2)).toBe("1.23");
+    expect(formatNumber(1.23456, 2)).toBe("1.23");
     expect(formatNumber(42)).toBe("42");
     expect(formatNumber(42.6)).toBe("43");
   });
 
   test("returns a dash for missing or non-finite input", () => {
-    expect(formatNumber(undefined)).toBe(DASH);
+    expect(formatNumber()).toBe(DASH);
     expect(formatNumber(Number.NaN)).toBe(DASH);
     expect(formatNumber(Number.POSITIVE_INFINITY)).toBe(DASH);
   });
@@ -107,7 +108,7 @@ describe("formatDate", () => {
   });
 
   test("returns an empty string for missing input", () => {
-    expect(formatDate(undefined)).toBe("");
+    expect(formatDate()).toBe("");
     expect(formatDate("")).toBe("");
   });
 

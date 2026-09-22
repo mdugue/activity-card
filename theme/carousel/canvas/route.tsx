@@ -6,6 +6,7 @@
 import { isMultiActivity, segmentRoutes } from "@/lib/multi-activity";
 import type { CanvasProps } from "@/theme/carousel/define-theme";
 import { heroInk } from "@/theme/carousel/resolve";
+
 import { RouteLine } from "../route-line";
 
 export function RouteCanvas({ data, style, w, h, overPhoto }: CanvasProps) {
@@ -36,7 +37,7 @@ export function RouteCanvas({ data, style, w, h, overPhoto }: CanvasProps) {
         routes={heroRoutes}
         showMarkers
         strokeWidth={8}
-        style={style.routeStyle}
+        routeStyle={style.routeStyle}
         w={w}
       />
     </div>

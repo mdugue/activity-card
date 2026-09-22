@@ -1,6 +1,8 @@
 import type { CSSProperties, ReactNode } from "react";
 import { AbsoluteFill } from "remotion";
+
 import { cn } from "@/lib/utils";
+
 import { getFontVars } from "../design/fonts";
 import { INK, PAPER } from "../design/tokens";
 

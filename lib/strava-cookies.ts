@@ -50,7 +50,7 @@ export interface StoredTokens {
   refresh: string;
 }
 
-interface StravaTokenResponse {
+export interface StravaTokenResponse {
   access_token: string;
   athlete?: {
     id?: number;
@@ -182,7 +182,7 @@ export async function ensureFreshToken(): Promise<string> {
   if (tokens.expiresAt - nowSec > 60) {
     return tokens.access;
   }
-  return refreshStoredTokens(tokens);
+  return await refreshStoredTokens(tokens);
 }
 
 /**
@@ -195,7 +195,7 @@ export async function forceRefreshToken(): Promise<string> {
   if (!tokens) {
     throw new StravaNotConnectedError();
   }
-  return refreshStoredTokens(tokens);
+  return await refreshStoredTokens(tokens);
 }
 
 async function refreshStoredTokens(tokens: StoredTokens): Promise<string> {

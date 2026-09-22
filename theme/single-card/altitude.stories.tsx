@@ -1,8 +1,11 @@
 import type { ComponentProps } from "react";
 import { expect } from "storybook/test";
+
 import { SAMPLE_RIDE, SAMPLE_TRI } from "@/components/app/sample-data";
-import { type AltitudeConfig, DEFAULT_ALTITUDE_CONFIG } from "@/lib/altitude";
+import { DEFAULT_ALTITUDE_CONFIG } from "@/lib/altitude";
+import type { AltitudeConfig } from "@/lib/altitude";
 import { SINGLE_CARD_THEMES } from "@/theme/single-card";
+
 import { backgroundArgTypes } from "../../.storybook/backgrounds";
 import preview from "../../.storybook/preview";
 import {
@@ -11,9 +14,9 @@ import {
   colorArgTypes,
   paramArgTypes,
   THEME_PROP_CONTROLS_EXCLUDE,
-  type ThemeStoryExtras,
   ThemeStoryView,
 } from "../../.storybook/theme-controls";
+import type { ThemeStoryExtras } from "../../.storybook/theme-controls";
 import { withFormatMatrix } from "../../.storybook/with-format-matrix";
 import { ThemeAltitude } from "./altitude";
 
@@ -54,7 +57,7 @@ const meta = preview.type<{ args: AltitudeArgs }>().meta({
 // Altitude renders the activity's location (its hero is the elevation claim);
 // asserting it covers more than a blank canvas. The decorator renders one tile
 // per format, so assert the first.
-const RIDE_PLACE = /Schweiz/i;
+const RIDE_PLACE = /Schweiz/iu;
 
 export const Default = meta.story({
   play: async ({ canvas }) => {

@@ -18,14 +18,10 @@ import {
   DownloadSimpleIcon,
   PlusIcon,
 } from "@phosphor-icons/react";
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
 import type { ActivityData } from "@/lib/activity";
 import { routePath } from "@/lib/chart-helpers";
@@ -33,15 +29,14 @@ import type { ImageTransform } from "@/lib/image-transform";
 import type { PhotoEffects } from "@/lib/photo-effects";
 import { cn } from "@/lib/utils";
 import type { ColorScheme } from "@/theme/core/colors";
-import {
-  type ExportFormat,
-  FORMAT_ORDER,
-  getFormat,
-} from "@/theme/core/export-formats";
-import { RenderTheme, type ThemeId } from "@/theme/editor/render-theme";
+import { FORMAT_ORDER, getFormat } from "@/theme/core/export-formats";
+import type { ExportFormat } from "@/theme/core/export-formats";
+import { RenderTheme } from "@/theme/editor/render-theme";
+import type { ThemeId } from "@/theme/editor/render-theme";
 import { SafeZoneOverlay } from "@/theme/editor/safe-zone-overlay";
 import { activityMetadata, exportCard } from "@/theme/export/export-card";
 import { effortDateSlug } from "@/theme/export/export-shared";
+
 import { ToggleRow } from "./control-primitives";
 
 // Each tile takes the format's TRUE shape (fit into this bounding box), so
@@ -179,10 +174,10 @@ export function ExportShell({
       <RouteAura colors={colors} coords={routeCoordinates} />
 
       <div className="relative w-full max-w-5xl lg:max-w-6xl">
-        <div className="font-mono font-semibold text-[11px] tracking-[0.32em] opacity-55">
+        <div className="font-mono text-[11px] font-semibold tracking-[0.32em] opacity-55">
           READY TO SHARE
         </div>
-        <h2 className="mt-1.5 font-heading text-3xl uppercase leading-[0.92] tracking-tight sm:mt-3 sm:text-5xl lg:text-6xl">
+        <h2 className="font-heading mt-1.5 text-3xl leading-[0.92] tracking-tight uppercase sm:mt-3 sm:text-5xl lg:text-6xl">
           Pick a <span className="text-primary">format.</span>
         </h2>
         <p className="mt-2 max-w-xl text-xs leading-relaxed opacity-70 sm:mt-4 sm:text-sm">
@@ -265,7 +260,7 @@ export function ExportTile({
   return (
     <div className="flex flex-col gap-2" style={{ width: tileW }}>
       <div
-        className="relative overflow-hidden rounded-md shadow-sm ring-1 ring-foreground/10"
+        className="ring-foreground/10 relative overflow-hidden rounded-md shadow-sm ring-1"
         style={{ width: tileW, height: tileH }}
       >
         <div
@@ -281,7 +276,7 @@ export function ExportTile({
       </div>
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <div className="truncate font-heading text-sm uppercase tracking-tight">
+          <div className="font-heading truncate text-sm tracking-tight uppercase">
             {label}
           </div>
           <div className="caption-micro opacity-60">{sublabel}</div>
@@ -380,7 +375,7 @@ export function ExportSheet(props: ExportSheetProps) {
       routeCoordinates={props.routeCoordinates ?? data.routeCoordinates}
       subtitle="Each card is optimised for its platform — aspect ratio and safe zones baked in. Download one, or grab the whole set."
     >
-      <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-md border border-foreground/12 px-3 py-2">
+      <div className="border-foreground/12 mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-md border px-3 py-2">
         <div className="min-w-[150px] flex-1 sm:flex-none">
           <ToggleRow
             checked={safeZones}

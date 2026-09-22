@@ -20,11 +20,11 @@ import {
   resolveStrataSource,
   STRATA_DENSITY_K,
   STRATA_MOODS,
-  type StrataConfig,
   smoothPath,
   strataDirectionArrow,
   strataPeakMarker,
 } from "@/lib/strata";
+import type { StrataConfig } from "@/lib/strata";
 import type { EffectiveStyle } from "@/theme/carousel/resolve";
 
 interface StrataCanvasProps {

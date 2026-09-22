@@ -1,13 +1,16 @@
 import type { ComponentProps } from "react";
 import { expect } from "storybook/test";
+
 import {
   SAMPLE_RIDE,
   SAMPLE_RUN,
   SAMPLE_SWIM,
   SAMPLE_TRI,
 } from "@/components/app/sample-data";
-import { DEFAULT_STRATA_CONFIG, type StrataConfig } from "@/lib/strata";
+import { DEFAULT_STRATA_CONFIG } from "@/lib/strata";
+import type { StrataConfig } from "@/lib/strata";
 import { SINGLE_CARD_THEMES } from "@/theme/single-card";
+
 import { backgroundArgTypes } from "../../.storybook/backgrounds";
 import preview from "../../.storybook/preview";
 import {
@@ -16,9 +19,9 @@ import {
   colorArgTypes,
   paramArgTypes,
   THEME_PROP_CONTROLS_EXCLUDE,
-  type ThemeStoryExtras,
   ThemeStoryView,
 } from "../../.storybook/theme-controls";
+import type { ThemeStoryExtras } from "../../.storybook/theme-controls";
 import { withFormatMatrix } from "../../.storybook/with-format-matrix";
 import { ThemeStrata } from "./strata";
 
@@ -51,7 +54,7 @@ const meta = preview.type<{ args: StrataArgs }>().meta({
   render: (args) => <ThemeStoryView args={args} theme={THEME} />,
 });
 
-const RIDE_TITLE = /Elbsandstein/;
+const RIDE_TITLE = /Elbsandstein/u;
 
 // Default (Dusk · Woven · legend on). One play is enough for the file; the
 // variants below re-render with other moods / densities / fixtures.

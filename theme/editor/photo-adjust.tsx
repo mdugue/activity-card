@@ -9,16 +9,15 @@
 
 import { ArrowsOutCardinalIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
+
 import { Badge } from "@/components/ui/badge";
-import {
-  type ImageSize,
-  useImageNaturalSize,
-} from "@/hooks/use-image-natural-size";
-import {
-  clampCoverTransform,
-  type ImageTransform,
-} from "@/lib/image-transform";
-import { isQuarterTurn, type RotateDeg } from "@/lib/photo-effects";
+import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
+import type { ImageSize } from "@/hooks/use-image-natural-size";
+import { clampCoverTransform } from "@/lib/image-transform";
+import type { ImageTransform } from "@/lib/image-transform";
+import { isQuarterTurn } from "@/lib/photo-effects";
+import type { RotateDeg } from "@/lib/photo-effects";
+
 import { ImageAdjustOverlay } from "./image-adjust-overlay";
 
 interface PhotoAdjustArgs {
@@ -70,7 +69,7 @@ export function usePhotoAdjust({
   const adjustAvailable = photoUrl !== null && enabled && imageSize !== null;
   useEffect(() => {
     if (adjusting && !adjustAvailable) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      // oxlint-disable-next-line react/set-state-in-effect
       setAdjusting(false);
     }
   }, [adjusting, adjustAvailable]);
@@ -100,6 +99,8 @@ export function AdjustControls({
       {adjustAvailable && !adjusting ? (
         <Badge
           className="absolute top-3 right-3 z-10 rounded-full bg-black/55 px-3 py-1.5 font-mono text-[10px] text-white backdrop-blur-sm transition-colors hover:bg-black/75"
+          // The Badge children below label this button.
+          // oxlint-disable-next-line jsx-a11y/control-has-associated-label
           render={<button onClick={() => setAdjusting(true)} type="button" />}
         >
           <ArrowsOutCardinalIcon

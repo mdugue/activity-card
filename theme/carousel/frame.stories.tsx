@@ -1,9 +1,9 @@
 import type { ComponentProps } from "react";
+
 import { SAMPLE_BRICK, SAMPLE_RIDE } from "@/components/app/sample-data";
-import {
-  type BackgroundArgs,
-  backgroundArgTypes,
-} from "../../.storybook/backgrounds";
+
+import { backgroundArgTypes } from "../../.storybook/backgrounds";
+import type { BackgroundArgs } from "../../.storybook/backgrounds";
 import preview from "../../.storybook/preview";
 import { activityArgType } from "../../.storybook/theme-controls";
 import { CarouselDeck } from "./deck";

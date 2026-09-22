@@ -12,7 +12,9 @@ import {
   formatPaceMin,
   formatPaceSec,
 } from "@/lib/format";
-import { defineTheme, type ThemeProps } from "@/theme/core/theme-contract";
+import { defineTheme } from "@/theme/core/theme-contract";
+import type { ThemeProps } from "@/theme/core/theme-contract";
+
 import { SafeArea, useFormat } from "../shared/format-context";
 import { PhotoUnderlay } from "../shared/photo-underlay";
 
@@ -313,7 +315,7 @@ export function ThemeTriathlon({
             landscape canvas crosses (every other format is 1080px wide). States
             the intent directly instead of back-solving an auto-fit `minmax` MIN
             against the gap. Square stays 1-up; its `clamp` type shrinks to fit. */}
-        <div className="grid min-h-0 flex-1 auto-rows-fr @min-[1400px]/card:grid-cols-3 grid-cols-1 gap-3.5">
+        <div className="grid min-h-0 flex-1 auto-rows-fr grid-cols-1 gap-3.5 @min-[1400px]/card:grid-cols-3">
           {sports.map((seg, idx) => {
             const accent = accentFor(seg.sport);
             return (

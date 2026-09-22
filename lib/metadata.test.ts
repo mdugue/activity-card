@@ -1,15 +1,16 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
+
 import {
   applyMetadata,
   buildMetadataChunks,
   buildXmp,
   injectPngChunks,
   itxtChunk,
-  type MetadataInput,
   routeCentroid,
   textChunk,
 } from "@/lib/metadata";
+import type { MetadataInput } from "@/lib/metadata";
 
 // Minimal valid-enough PNG: signature + IHDR + IEND (CRCs need not validate for
 // our splice logic, which only walks length/type to locate IEND).
@@ -27,8 +28,7 @@ function chunkBytes(type: string, data: Uint8Array): number[] {
   for (const ch of type) {
     out.push(ch.charCodeAt(0));
   }
-  out.push(...data);
-  out.push(0, 0, 0, 0); // crc placeholder — splice doesn't validate it
+  out.push(...data, 0, 0, 0, 0); // crc placeholder — splice doesn't validate it
   return out;
 }
 
@@ -98,7 +98,7 @@ describe("buildMetadataChunks", () => {
     athleteName: "Manuel Dugué",
     date: "2026-06-14",
     location: "Neustadt, Sachsen",
-    point: { lat: 51.0, lng: 13.9 },
+    point: { lat: 51, lng: 13.9 },
     url: "https://effort.app",
   };
 
@@ -128,7 +128,7 @@ describe("routeCentroid", () => {
   test("inverts the stored [lng, -lat] convention", () => {
     // stored as [lng, -lat] → real lat is the negation
     const c = routeCentroid([
-      [13.0, -51.0],
+      [13, -51],
       [13.2, -51.2],
     ]);
     expect(c?.lng).toBeCloseTo(13.1, 6);
@@ -136,7 +136,7 @@ describe("routeCentroid", () => {
   });
 
   test("empty/undefined → null", () => {
-    expect(routeCentroid(undefined)).toBeNull();
+    expect(routeCentroid()).toBeNull();
     expect(routeCentroid([])).toBeNull();
   });
 });

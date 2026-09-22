@@ -429,7 +429,7 @@ const WRAP_MIN_FONT = 150;
 /** A single line is justified to the full width once it's at least this full. */
 const FILL_RATIO = 0.86;
 const MAX_LINES = 3;
-const WHITESPACE = /\s+/;
+const WHITESPACE = /\s+/u;
 
 export interface ClaimLayout {
   /** Stretch the (single) line to exactly the content width. */

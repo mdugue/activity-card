@@ -9,24 +9,26 @@ import {
   DEFAULT_STRATA_CONFIG,
   STRATA_MOODS,
   STRATA_PARAMS,
-  type StrataConfig,
 } from "@/lib/strata";
+import type { StrataConfig } from "@/lib/strata";
 import {
   ATMOSPHERE_PARAMS,
-  type AtmosphereConfig,
   DEFAULT_ATMOSPHERE_CONFIG,
 } from "@/theme/carousel/atmosphere";
+import type { AtmosphereConfig } from "@/theme/carousel/atmosphere";
 import type { EffectiveStyle } from "@/theme/carousel/resolve";
 import { readableOn } from "@/theme/carousel/resolve";
-import { type CarouselLook, FONT_PAIRS } from "@/theme/carousel/theme-tokens";
+import { FONT_PAIRS } from "@/theme/carousel/theme-tokens";
+import type { CarouselLook } from "@/theme/carousel/theme-tokens";
+
 import { ElevationCanvas } from "./canvas/elevation";
 import { RouteCanvas } from "./canvas/route";
 import { StrataCanvas } from "./canvas/strata";
-import {
-  type CarouselTheme,
-  defineCarouselTheme,
-  type PanelComponent,
-  type ResolveStyle,
+import { defineCarouselTheme } from "./define-theme";
+import type {
+  CarouselTheme,
+  PanelComponent,
+  ResolveStyle,
 } from "./define-theme";
 import { FrameDatumPanel, FrameSignaturePanel } from "./panels/frame-panel";
 import {

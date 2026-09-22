@@ -1,13 +1,13 @@
 import type { ComponentProps } from "react";
+
 import { DEFAULT_ALTITUDE_CONFIG } from "@/lib/altitude";
 import { IDENTITY_TRANSFORM } from "@/lib/image-transform";
 import { NO_EFFECTS } from "@/lib/photo-effects";
 import type { ColorScheme } from "@/theme/core/colors";
 import { THEME_ORDER } from "@/theme/single-card";
-import {
-  type BackgroundArgs,
-  backgroundArgTypes,
-} from "../../.storybook/backgrounds";
+
+import { backgroundArgTypes } from "../../.storybook/backgrounds";
+import type { BackgroundArgs } from "../../.storybook/backgrounds";
 import preview from "../../.storybook/preview";
 import { ExportSheet } from "./export-sheet";
 import { SAMPLE_RIDE } from "./sample-data";

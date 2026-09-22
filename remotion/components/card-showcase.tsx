@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { interpolate } from "remotion";
+
 import { CARD, PAPER_FAINT } from "../design/tokens";
 
 const CARD_SHADOW =

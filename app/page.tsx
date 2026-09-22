@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+
 import { CarouselExportSheet } from "@/components/app/carousel-export-sheet";
 import { EffortWordmark } from "@/components/app/effort-wordmark";
 import { EmptyState } from "@/components/app/empty-state";
 import { ExportSheet } from "@/components/app/export-sheet";
-import { type CardMode, ModeToggle } from "@/components/app/mode-toggle";
+import { ModeToggle } from "@/components/app/mode-toggle";
+import type { CardMode } from "@/components/app/mode-toggle";
 import type { OnboardingResult } from "@/components/app/onboarding-wizard";
 import {
   loadPersistedUi,
@@ -28,31 +30,22 @@ import type { ParsedActivity } from "@/lib/parse-activity";
 import { cn } from "@/lib/utils";
 import {
   CAROUSEL_THEMES,
-  type CarouselThemeId,
   DEFAULT_CAROUSEL_THEME,
 } from "@/theme/carousel/registry";
-import {
-  type ColorChoice,
-  type ColorScheme,
-  resolveColors,
-} from "@/theme/core/colors";
-import {
-  DEFAULT_FORMAT_ID,
-  type ExportFormatId,
-  getFormat,
-} from "@/theme/core/export-formats";
+import type { CarouselThemeId } from "@/theme/carousel/registry";
+import { resolveColors } from "@/theme/core/colors";
+import type { ColorChoice, ColorScheme } from "@/theme/core/colors";
+import { DEFAULT_FORMAT_ID, getFormat } from "@/theme/core/export-formats";
+import type { ExportFormatId } from "@/theme/core/export-formats";
 import { coerceConfig } from "@/theme/core/params/resolve";
-import {
-  effectiveChoiceFor,
-  type ThemeBase,
-  type ThemePhotoPolicy,
-} from "@/theme/core/theme-contract";
+import { effectiveChoiceFor } from "@/theme/core/theme-contract";
+import type { ThemeBase, ThemePhotoPolicy } from "@/theme/core/theme-contract";
 import {
   applyVisibility,
   DEFAULT_VISIBILITY,
   themeAvailability,
-  type Visibility,
 } from "@/theme/core/visibility";
+import type { Visibility } from "@/theme/core/visibility";
 import { CarouselEditState } from "@/theme/editor/carousel-edit-state";
 import { EditState } from "@/theme/editor/edit-state";
 import type { EditorSession } from "@/theme/editor/editor-session";
@@ -109,6 +102,8 @@ export default function Home() {
   const carousel = useCarousel(CAROUSEL_THEMES[carouselTheme].panels.length);
   // Held outside `data` so it survives between activities and can seed
   // `adoptParsed` when the parsed file lacks an athlete name.
+  // React 19 requires an explicit initial value.
+  // oxlint-disable-next-line unicorn/no-useless-undefined
   const persistedAthleteNameRef = useRef<string | undefined>(undefined);
 
   // Both families express a theme through the same descriptor core
@@ -156,7 +151,7 @@ export default function Home() {
   // path) buys nothing over this small, one-shot read.
   useEffect(() => {
     const persisted = loadPersistedUi();
-    /* eslint-disable react-hooks/set-state-in-effect */
+    /* oxlint-disable react/set-state-in-effect */
     // Validate both ids against the current theme sets: a stale id from an
     // older build or hand-edited storage would otherwise throw downstream on
     // the registry lookup.
@@ -184,7 +179,7 @@ export default function Home() {
     if (persisted.athleteName) {
       persistedAthleteNameRef.current = persisted.athleteName;
     }
-    /* eslint-enable react-hooks/set-state-in-effect */
+    /* oxlint-enable react/set-state-in-effect */
   }, []);
 
   // Persist on change. Athlete name comes from `data` (which the user edits
@@ -397,7 +392,7 @@ export default function Home() {
   return (
     <div
       className={cn(
-        "relative flex flex-col overflow-hidden bg-background text-foreground",
+        "bg-background text-foreground relative flex flex-col overflow-hidden",
         // The editor is a non-scrolling app-shell pinned to the dynamic viewport
         // on mobile (panels scroll internally, the page doesn't). The empty
         // state is a scroll-snap landing that owns its own internal scroller, so
@@ -568,7 +563,7 @@ function EditTopBar({
       <EffortWordmark labelClassName="hidden sm:inline" size="sm" />
       <div className="flex items-center gap-5">
         <Link
-          className="hidden font-medium font-mono text-[11px] uppercase tracking-[0.16em] opacity-55 transition-opacity hover:opacity-100 md:inline"
+          className="hidden font-mono text-[11px] font-medium tracking-[0.16em] uppercase opacity-55 transition-opacity hover:opacity-100 md:inline"
           href="/tutorials"
         >
           Tutorials
@@ -585,11 +580,11 @@ function Header({ date, status }: { date?: string; status?: string }) {
     <header className="absolute top-0 right-0 left-0 z-10 flex items-start justify-between px-6 pt-7 md:px-10">
       <EffortWordmark />
       {status ? (
-        <div className="font-medium font-mono text-[10px] tracking-[0.22em] opacity-55 sm:text-[11px]">
+        <div className="font-mono text-[10px] font-medium tracking-[0.22em] opacity-55 sm:text-[11px]">
           {status}
         </div>
       ) : (
-        <div className="hidden font-medium font-mono text-[11px] tracking-[0.22em] opacity-55 sm:block">
+        <div className="hidden font-mono text-[11px] font-medium tracking-[0.22em] opacity-55 sm:block">
           ACTIVITY CARD{upper ? ` · ${upper}` : ""}
         </div>
       )}

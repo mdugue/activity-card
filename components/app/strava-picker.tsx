@@ -9,6 +9,7 @@ import {
   PersonSimpleSwimIcon,
 } from "@phosphor-icons/react";
 import { useEffect, useId, useState } from "react";
+
 import { StravaFooter } from "@/components/app/strava-footer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -68,7 +69,7 @@ function PickerConnection() {
     return null;
   }
   return (
-    <div className="flex shrink-0 items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] opacity-70">
+    <div className="flex shrink-0 items-center gap-2 font-mono text-[10px] tracking-[0.18em] uppercase opacity-70">
       <span
         aria-hidden
         className="size-1.5 rounded-full"
@@ -85,7 +86,7 @@ function PickerConnection() {
       <button
         className="underline-offset-4 hover:underline"
         onClick={() => {
-          strava.disconnect();
+          void strava.disconnect();
         }}
         type="button"
       >
@@ -123,6 +124,17 @@ async function readErrorEnvelope(res: Response): Promise<ServerErrorEnvelope> {
   }
 }
 
+/** `Retry-After` in seconds, or undefined when the header is absent or junk —
+ *  `Number(null)` is 0, which would otherwise read as a valid delay. */
+function retryAfterHeader(headers: Headers): number | undefined {
+  const raw = headers.get("retry-after");
+  if (!raw) {
+    return undefined;
+  }
+  const seconds = Number(raw);
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
+}
+
 function toFetchError(
   res: Response,
   envelope: ServerErrorEnvelope
@@ -135,8 +147,7 @@ function toFetchError(
       kind: "rate_limited",
       // Server may compute a fresh retryAfter; fall back to the response
       // header if it didn't set one.
-      retryAfter:
-        envelope.retryAfter ?? Number(res.headers.get("retry-after")) ?? 60,
+      retryAfter: envelope.retryAfter ?? retryAfterHeader(res.headers) ?? 60,
     };
   }
   return {
@@ -161,12 +172,12 @@ async function fetchActivities(page: number): Promise<LoadResult> {
       activities: StravaSummaryActivity[];
     };
     return { kind: "ok", activities: data.activities };
-  } catch (err) {
+  } catch (error) {
     return {
       kind: "err",
       error: {
         kind: "network",
-        message: err instanceof Error ? err.message : "Network error.",
+        message: error instanceof Error ? error.message : "Network error.",
       },
     };
   }
@@ -192,12 +203,12 @@ async function fetchDetail(id: number): Promise<DetailResult> {
       return { kind: "err", error: { kind: "empty_activity" } };
     }
     return { kind: "ok", parts: data.parts };
-  } catch (err) {
+  } catch (error) {
     return {
       kind: "err",
       error: {
         kind: "network",
-        message: err instanceof Error ? err.message : "Network error.",
+        message: error instanceof Error ? error.message : "Network error.",
       },
     };
   }
@@ -246,7 +257,7 @@ export function StravaPicker({
   // fails we just hide the "of Y" suffix and fall back to canGoNext.
   useEffect(() => {
     let cancelled = false;
-    fetchTotalPages().then((tp) => {
+    void fetchTotalPages().then((tp) => {
       if (!cancelled) {
         setTotalPages(tp);
       }
@@ -261,9 +272,9 @@ export function StravaPicker({
   // localStorage hydration in page.tsx.
   useEffect(() => {
     let cancelled = false;
-    /* eslint-disable react-hooks/set-state-in-effect */
+    /* oxlint-disable react/set-state-in-effect */
     setState({ kind: "loading" });
-    fetchActivities(page).then((result) => {
+    void fetchActivities(page).then((result) => {
       if (cancelled) {
         return;
       }
@@ -281,7 +292,7 @@ export function StravaPicker({
           : { kind: "ready", activities: result.activities }
       );
     });
-    /* eslint-enable react-hooks/set-state-in-effect */
+    /* oxlint-enable react/set-state-in-effect */
     return () => {
       cancelled = true;
     };
@@ -366,14 +377,14 @@ export function StravaPicker({
       )}
     >
       <div className="flex items-center justify-between gap-4">
-        <div className="font-medium font-mono text-xs tracking-[0.32em] opacity-55">
+        <div className="font-mono text-xs font-medium tracking-[0.32em] opacity-55">
           PICK FROM STRAVA
         </div>
         <PickerConnection />
       </div>
       <h1
         className={cn(
-          "mt-5 font-heading uppercase leading-[0.92] tracking-tight",
+          "font-heading mt-5 leading-[0.92] tracking-tight uppercase",
           embedded ? "text-3xl sm:text-4xl" : "mt-7 text-5xl sm:text-6xl"
         )}
       >
@@ -384,7 +395,7 @@ export function StravaPicker({
         triathlon / multi-sport effort.
       </p>
 
-      <div className="mt-8 flex items-center justify-between border-foreground/15 border-y py-3">
+      <div className="border-foreground/15 mt-8 flex items-center justify-between border-y py-3">
         <Label className="flex items-center gap-3 text-sm" htmlFor={multiId}>
           <Switch
             checked={multiSelect}
@@ -432,7 +443,7 @@ export function StravaPicker({
         totalPages={totalPages}
       />
 
-      <div className="mt-8 flex justify-between border-foreground/15 border-t pt-6">
+      <div className="border-foreground/15 mt-8 flex justify-between border-t pt-6">
         <Button onClick={onCancel} variant="ghost">
           Back
         </Button>
@@ -446,12 +457,12 @@ export function StravaPicker({
       {multiSelect && selectedCount > 0 ? (
         <div
           className={cn(
-            "inset-x-0 bottom-0 z-20 border-foreground/15 border-t bg-background/95 px-6 py-4 shadow-lg backdrop-blur md:px-10",
+            "border-foreground/15 bg-background/95 inset-x-0 bottom-0 z-20 border-t px-6 py-4 shadow-lg backdrop-blur md:px-10",
             embedded ? "sticky" : "fixed"
           )}
         >
           <div className="mx-auto flex max-w-2xl items-center justify-between gap-4">
-            <div className="font-medium font-mono text-xs tracking-wide opacity-80">
+            <div className="font-mono text-xs font-medium tracking-wide opacity-80">
               {selectedCount === 1
                 ? "Select one more to combine"
                 : `${selectedCount} activities selected`}
@@ -540,7 +551,7 @@ function PickerPagination({
   const range: RangeItem[] | null =
     totalPages === null ? null : paginationRange(page, totalPages);
   return (
-    <Pagination className="mt-8 font-mono text-[11px] uppercase tracking-[0.18em]">
+    <Pagination className="mt-8 font-mono text-[11px] tracking-[0.18em] uppercase">
       <PaginationContent>
         <PaginationItem>
           <PaginationPrevious
@@ -693,8 +704,11 @@ function ActivityItem({
       data-selected={isSelected ? "true" : undefined}
       onClick={handleClick}
       render={
+        // The label is the Item's aria-label above, which base-ui renders onto
+        // this button.
+        // oxlint-disable-next-line jsx-a11y/control-has-associated-label
         <button
-          className="cursor-pointer text-left disabled:cursor-not-allowed disabled:opacity-50 data-[selected=true]:border-primary data-[selected=true]:bg-primary/5"
+          className="data-[selected=true]:border-primary data-[selected=true]:bg-primary/5 cursor-pointer text-left disabled:cursor-not-allowed disabled:opacity-50"
           disabled={disabled}
           type="button"
         />
@@ -922,7 +936,7 @@ function RateLimitAlert({
   // Reset + tick the countdown whenever the parent hands us a fresh
   // retryAfter (legit external-prop sync).
   useEffect(() => {
-    /* eslint-disable-next-line react-hooks/set-state-in-effect */
+    /* oxlint-disable-next-line react/set-state-in-effect */
     setSeconds(retryAfter);
     const id = window.setInterval(() => {
       setSeconds((s) => (s > 0 ? s - 1 : 0));

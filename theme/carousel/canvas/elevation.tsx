@@ -8,6 +8,7 @@ import { isMultiActivity, segmentProfiles } from "@/lib/multi-activity";
 import type { CanvasProps } from "@/theme/carousel/define-theme";
 import { pickProfile } from "@/theme/carousel/profile";
 import { heroInk } from "@/theme/carousel/resolve";
+
 import { ElevationBand } from "../elevation-band";
 
 export function ElevationCanvas({ data, style, w, h, overPhoto }: CanvasProps) {

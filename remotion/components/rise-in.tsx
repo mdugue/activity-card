@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+
 import { DUR, RISE_PX, SETTLE_SPRING } from "../design/tokens";
 
 /**

@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
+
 import { cameraDrift } from "../design/motion";
 
 /**

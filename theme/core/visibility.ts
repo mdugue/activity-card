@@ -1,9 +1,6 @@
 import type { ActivityData } from "@/lib/activity";
-import {
-  type CapabilityKey,
-  GOVERNED_FIELDS,
-  type ThemeBase,
-} from "@/theme/core/theme-contract";
+import { GOVERNED_FIELDS } from "@/theme/core/theme-contract";
+import type { CapabilityKey, ThemeBase } from "@/theme/core/theme-contract";
 
 /**
  * Per-element visibility. Every overlay the card can show has a switch here.
@@ -145,7 +142,7 @@ export function themeAvailability(
       continue;
     }
     const refine = theme.usesWhen?.[key];
-    out[key] = out[key] && (refine ? refine(data) : true);
+    out[key] &&= refine ? refine(data) : true;
   }
   return out;
 }

@@ -5,6 +5,7 @@
 // activity — StatRow and StatGrid just choose the grid shape.
 
 import { detailStats } from "@/theme/carousel/stats";
+
 import type { PanelProps } from "../define-theme";
 import { DetailViz } from "../detail-viz";
 import { Stat } from "../stat-block";

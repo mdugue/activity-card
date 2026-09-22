@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useRef } from "react";
+
 import { useInView } from "@/hooks/use-in-view";
 import { cn } from "@/lib/utils";
 
@@ -12,8 +13,8 @@ const IntroPlayer = dynamic(() => import("@/components/app/intro-player"), {
 });
 
 /**
- * The hero clip — the Hero Remotion composition rendered on-page through
- * @remotion/player. Lazily mounted only once scrolled into view. The
+ * The hero clip — the Hero Remotion composition rendered on-page through the
+ * Remotion player. Lazily mounted only once scrolled into view. The
  * surrounding section copy lives at the call site.
  */
 export function IntroVideo({ className }: { className?: string }) {
@@ -22,7 +23,7 @@ export function IntroVideo({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "relative aspect-video w-full overflow-hidden bg-foreground",
+        "bg-foreground relative aspect-video w-full overflow-hidden",
         className
       )}
       ref={frameRef}

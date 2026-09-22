@@ -11,6 +11,8 @@ import { useState } from "react";
  * ssr:false), so there's no hydration-mismatch risk.
  */
 export function useCoarsePointer(): boolean {
+  // Read once at mount; there is deliberately no setter (see the note above).
+  // oxlint-disable-next-line react/hook-use-state
   const [coarse] = useState(
     () =>
       typeof window !== "undefined" &&

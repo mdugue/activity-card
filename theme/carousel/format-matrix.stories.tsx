@@ -1,15 +1,13 @@
 import type { ComponentProps } from "react";
+
 import { SAMPLE_RIDE } from "@/components/app/sample-data";
 import { CarouselDeck } from "@/theme/carousel/deck";
-import {
-  CAROUSEL_THEMES,
-  type CarouselThemeId,
-} from "@/theme/carousel/registry";
+import { CAROUSEL_THEMES } from "@/theme/carousel/registry";
+import type { CarouselThemeId } from "@/theme/carousel/registry";
 import { FORMAT_ORDER, getFormat } from "@/theme/core/export-formats";
-import {
-  type BackgroundArgs,
-  backgroundArgTypes,
-} from "../../.storybook/backgrounds";
+
+import { backgroundArgTypes } from "../../.storybook/backgrounds";
+import type { BackgroundArgs } from "../../.storybook/backgrounds";
 import preview from "../../.storybook/preview";
 import { activityArgType } from "../../.storybook/theme-controls";
 import { carouselArgs } from "./story-support";

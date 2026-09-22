@@ -44,17 +44,17 @@ export function ThemeRail<T extends string>({
       {order.map((id) => (
         <ToggleGroupItem
           className={cn(
-            "h-auto shrink-0 flex-col items-start gap-1 whitespace-nowrap border-2 border-foreground/20 px-3.5 py-2.5 text-left",
+            "border-foreground/20 h-auto shrink-0 flex-col items-start gap-1 border-2 px-3.5 py-2.5 text-left whitespace-nowrap",
             "hover:border-foreground/45",
             "data-pressed:!bg-foreground data-pressed:!text-background data-pressed:border-foreground!"
           )}
           key={id}
           value={id}
         >
-          <span className="font-heading text-base uppercase leading-none tracking-wide">
+          <span className="font-heading text-base leading-none tracking-wide uppercase">
             {labels[id].label}
           </span>
-          <span className="font-medium font-mono text-[9px] uppercase tracking-[0.12em] opacity-60">
+          <span className="font-mono text-[9px] font-medium tracking-[0.12em] uppercase opacity-60">
             {labels[id].tagline}
           </span>
         </ToggleGroupItem>

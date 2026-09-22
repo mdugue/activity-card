@@ -1,13 +1,14 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
+
 import {
   accentShades,
-  type Coord,
   mixHex,
   projectRoutes,
   sequencePaths,
   sequenceProfiles,
 } from "@/lib/chart-helpers";
+import type { Coord } from "@/lib/chart-helpers";
 
 describe("projectRoutes", () => {
   test("returns an index-aligned empty result when every route is absent", () => {

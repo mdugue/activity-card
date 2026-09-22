@@ -18,7 +18,7 @@ function Slider({
 
   return (
     <SliderPrimitive.Root
-      className={cn("data-vertical:h-full data-horizontal:w-full", className)}
+      className={cn("data-horizontal:w-full data-vertical:h-full", className)}
       data-slot="slider"
       defaultValue={defaultValue}
       max={max}
@@ -27,19 +27,19 @@ function Slider({
       value={value}
       {...props}
     >
-      <SliderPrimitive.Control className="relative flex w-full touch-none select-none items-center data-vertical:h-full data-vertical:min-h-40 data-vertical:w-auto data-vertical:flex-col data-disabled:opacity-50">
+      <SliderPrimitive.Control className="relative flex w-full touch-none items-center select-none data-disabled:opacity-50 data-vertical:h-full data-vertical:min-h-40 data-vertical:w-auto data-vertical:flex-col">
         <SliderPrimitive.Track
-          className="relative grow select-none overflow-hidden bg-input/50 data-horizontal:h-0.5 data-vertical:h-full data-horizontal:w-full data-vertical:w-0.5"
+          className="bg-input/50 relative grow overflow-hidden select-none data-horizontal:h-0.5 data-horizontal:w-full data-vertical:h-full data-vertical:w-0.5"
           data-slot="slider-track"
         >
           <SliderPrimitive.Indicator
-            className="select-none bg-primary data-horizontal:h-full data-vertical:w-full"
+            className="bg-primary select-none data-horizontal:h-full data-vertical:w-full"
             data-slot="slider-range"
           />
         </SliderPrimitive.Track>
         {Array.from({ length: _values.length }, (_, index) => (
           <SliderPrimitive.Thumb
-            className="block size-3 shrink-0 select-none border-none bg-primary transition-colors hover:ring-2 hover:ring-ring/30 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-50"
+            className="bg-primary hover:ring-ring/30 focus-visible:ring-ring/30 block size-3 shrink-0 border-none transition-colors select-none hover:ring-2 focus-visible:ring-2 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
             data-slot="slider-thumb"
             key={index}
           />

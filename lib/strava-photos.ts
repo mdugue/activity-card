@@ -2,7 +2,7 @@ import type { StravaPhotoRef } from "@/lib/activity";
 
 // Strava's photo CDN encodes the rendition's pixel size in the filename,
 // e.g. `…-576x768.jpg` (portrait) / `…-2048x1536.jpg` (landscape).
-const CDN_SIZE_SUFFIX_RE = /-(\d+)x(\d+)(\.(?:jpe?g|png|webp))$/i;
+const CDN_SIZE_SUFFIX_RE = /-(\d+)x(\d+)(\.(?:jpe?g|png|webp))$/iu;
 
 /**
  * Pick the largest rendition from a Strava photo's `urls` record (keyed by
@@ -11,7 +11,7 @@ const CDN_SIZE_SUFFIX_RE = /-(\d+)x(\d+)(\.(?:jpe?g|png|webp))$/i;
  * than asked for — taking the first entry can silently land on a thumbnail.
  */
 export function largestPhotoUrl(
-  urls: Record<string, string> | undefined
+  urls?: Record<string, string>
 ): string | undefined {
   if (!urls) {
     return;
@@ -41,7 +41,7 @@ export function largestPhotoUrl(
  * and fall back to the original.
  */
 export function upscaledPhotoUrl(src: string, target: number): string | null {
-  const match = src.match(CDN_SIZE_SUFFIX_RE);
+  const match = CDN_SIZE_SUFFIX_RE.exec(src);
   if (!match) {
     return null;
   }

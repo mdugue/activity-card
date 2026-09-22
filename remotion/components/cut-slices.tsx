@@ -3,6 +3,7 @@ import type {
   TransitionPresentationComponentProps,
 } from "@remotion/transitions";
 import { AbsoluteFill } from "remotion";
+
 import { EASE_CUT, PAPER } from "../design/tokens";
 
 export interface CutSlicesProps extends Record<string, unknown> {

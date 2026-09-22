@@ -11,6 +11,7 @@ import {
   segmentRoutes,
 } from "@/lib/multi-activity";
 import { bandModeFor, pickProfile } from "@/theme/carousel/profile";
+
 import { ElevationBand } from "./elevation-band";
 import { RouteLine } from "./route-line";
 
@@ -69,7 +70,7 @@ export function MiniViz({
         routes={multi ? segmentRoutes(data).map((r) => r.coords) : undefined}
         showMarkers={showMarkers}
         strokeWidth={4}
-        style="poster"
+        routeStyle="poster"
         w={w}
       />
     );

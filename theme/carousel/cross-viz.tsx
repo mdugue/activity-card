@@ -7,6 +7,7 @@ import type {
   CrossViz as CrossVizKind,
   FontPair,
 } from "@/theme/carousel/theme-tokens";
+
 import { MiniViz, vizHasKind } from "./mini-viz";
 
 interface CrossVizProps {

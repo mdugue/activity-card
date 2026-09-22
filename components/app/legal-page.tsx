@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+
 import { EffortWordmark } from "@/components/app/effort-wordmark";
 
 // Shared shell for the placeholder legal pages (imprint, privacy). Server
@@ -16,13 +17,13 @@ export function LegalPage({
       <Link aria-label="Back to Effort" className="w-fit" href="/">
         <EffortWordmark size="sm" />
       </Link>
-      <h1 className="mt-12 font-heading text-4xl uppercase leading-none lg:text-5xl">
+      <h1 className="font-heading mt-12 text-4xl leading-none uppercase lg:text-5xl">
         {title}
       </h1>
-      <div className="mt-6 space-y-4 text-foreground/75 leading-relaxed">
+      <div className="text-foreground/75 mt-6 space-y-4 leading-relaxed">
         {children}
       </div>
-      <p className="mt-auto pt-12 font-medium font-mono text-[11px] text-foreground/40 uppercase tracking-[0.16em]">
+      <p className="text-foreground/40 mt-auto pt-12 font-mono text-[11px] font-medium tracking-[0.16em] uppercase">
         Placeholder page · full content coming before launch
       </p>
     </main>

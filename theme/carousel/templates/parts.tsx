@@ -5,7 +5,9 @@
 import type { ActivityData } from "@/lib/activity";
 import { formatDateUpper } from "@/lib/format";
 import type { FontPair } from "@/theme/carousel/theme-tokens";
-import { type SlideTextColors, slideNumber } from "./shared";
+
+import { slideNumber } from "./shared";
+import type { SlideTextColors } from "./shared";
 
 interface MetaBandProps {
   colors: SlideTextColors;

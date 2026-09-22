@@ -1,4 +1,6 @@
-import { expect, type Page } from "@playwright/test";
+import { expect } from "@playwright/test";
+import type { Page } from "@playwright/test";
+
 import { SINGLE_RUN_GPX } from "./fixtures";
 
 /**
@@ -8,7 +10,7 @@ import { SINGLE_RUN_GPX } from "./fixtures";
  */
 export async function selectTheme(page: Page, theme: string): Promise<void> {
   const btn = page.getByRole("button", {
-    name: new RegExp(`^${theme}\\b`, "i"),
+    name: new RegExp(`^${theme}\\b`, "iu"),
   });
   await btn.click();
   await expect(btn).toHaveAttribute("aria-pressed", "true");
@@ -21,7 +23,7 @@ export async function selectTheme(page: Page, theme: string): Promise<void> {
  * this works whether the editor opened in single-card or carousel.
  */
 export async function selectSingleCard(page: Page): Promise<void> {
-  const button = page.getByRole("button", { name: /Single Card/i });
+  const button = page.getByRole("button", { name: /Single Card/iu });
   await button.click();
   await expect(button).toHaveAttribute("aria-pressed", "true");
 }
@@ -32,7 +34,7 @@ export async function selectSingleCard(page: Page): Promise<void> {
  * survive a change to the default `CardMode`.
  */
 export async function selectCarousel(page: Page): Promise<void> {
-  const button = page.getByRole("button", { name: /^Carousel$/i });
+  const button = page.getByRole("button", { name: /^Carousel$/iu });
   await button.click();
   await expect(button).toHaveAttribute("aria-pressed", "true");
 }
@@ -45,7 +47,7 @@ export async function openWizard(page: Page): Promise<void> {
   // The landing shows the same "Get started" CTA twice — in the hero and again
   // in the closing footer — so target the first (hero) one.
   await page
-    .getByRole("button", { name: /get started/i })
+    .getByRole("button", { name: /get started/iu })
     .first()
     .click();
   // Sync point: the dialog must be open before callers interact with it.
@@ -55,7 +57,7 @@ export async function openWizard(page: Page): Promise<void> {
 /** Open the wizard and click the official "Connect with Strava" button. */
 export async function connectStrava(page: Page): Promise<void> {
   await openWizard(page);
-  await page.getByRole("link", { name: /connect with strava/i }).click();
+  await page.getByRole("link", { name: /connect with strava/iu }).click();
 }
 
 /**
@@ -72,7 +74,7 @@ export async function uploadActivity(page: Page): Promise<void> {
     mimeType: "application/gpx+xml",
     buffer: Buffer.from(SINGLE_RUN_GPX),
   });
-  await page.getByRole("button", { name: /open the editor/i }).click();
+  await page.getByRole("button", { name: /open the editor/iu }).click();
   await expect(page.getByTestId("export-action")).toBeVisible();
 }
 

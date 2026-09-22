@@ -384,8 +384,8 @@ function toIsoDate(input?: string | number | Date): string {
 
 function prettifyName(name: string): string {
   return name
-    .replace(/[_-]+/g, " ")
-    .replace(/\s+/g, " ")
+    .replaceAll(/[_-]+/gu, " ")
+    .replaceAll(/\s+/gu, " ")
     .trim()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+    .replaceAll(/\b\w/gu, (c) => c.toUpperCase());
 }

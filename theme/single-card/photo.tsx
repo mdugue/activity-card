@@ -17,7 +17,9 @@ import {
 } from "@/lib/format";
 import { isMultiActivity, segmentRoutes } from "@/lib/multi-activity";
 import type { ColorScheme } from "@/theme/core/colors";
-import { defineTheme, type ThemeProps } from "@/theme/core/theme-contract";
+import { defineTheme } from "@/theme/core/theme-contract";
+import type { ThemeProps } from "@/theme/core/theme-contract";
+
 import { useFormat, useSafeInsets } from "../shared/format-context";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoLayer } from "../shared/photo-layer";
@@ -80,7 +82,7 @@ function colorsToVars(
     ["--accent" as string]: colors?.primary ?? fb.accent,
     ["--accent-2" as string]: colors?.secondary ?? colors?.primary ?? fb.accent,
     ["--on-accent" as string]: colors?.onPrimary ?? fb.onAccent,
-  } as React.CSSProperties;
+  };
 }
 
 export function ThemePhoto({

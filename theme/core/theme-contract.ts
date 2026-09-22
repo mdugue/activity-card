@@ -11,6 +11,7 @@
  */
 
 import type { FC } from "react";
+
 import type { ActivityData } from "@/lib/activity";
 import type { ImageTransform } from "@/lib/image-transform";
 import type {
@@ -203,6 +204,7 @@ export function pickThemeData(
       continue;
     }
     for (const field of GOVERNED_FIELDS[cap]) {
+      // oxlint-disable-next-line unicorn/prefer-ternary
       if (field === "athleteName" || field === "location") {
         out[field] = "";
       } else {

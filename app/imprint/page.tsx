@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+
 import { LegalPage } from "@/components/app/legal-page";
 
 export const metadata: Metadata = { title: "Imprint · Effort" };

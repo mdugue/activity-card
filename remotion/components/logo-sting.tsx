@@ -5,6 +5,7 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
+
 import { FONT, PAPER, PAPER_DIM, RUST, TRACKING, TYPE } from "../design/tokens";
 import { RiseIn } from "./rise-in";
 
@@ -28,6 +29,8 @@ export function AnimatedMark({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const draw = interpolate(frame - delay, [0, 22], [0, 1], {
+    // Remotion's easings are standalone functions, not bound methods.
+    // oxlint-disable-next-line typescript/unbound-method
     easing: Easing.inOut(Easing.cubic),
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",

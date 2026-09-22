@@ -1,12 +1,13 @@
 /// <reference types="bun" />
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+
 import {
   decodeOAuthState,
   encodeOAuthState,
   isAllowedBounceOrigin,
-  type OAuthStatePayload,
   safeRelativePath,
 } from "@/lib/strava-oauth-state";
+import type { OAuthStatePayload } from "@/lib/strava-oauth-state";
 
 describe("encode/decode OAuth state", () => {
   test("round-trips a full payload", () => {
@@ -29,7 +30,7 @@ describe("encode/decode OAuth state", () => {
 
   test("produces URL-safe base64 (no +, /, or = padding)", () => {
     const encoded = encodeOAuthState({ r: "a".repeat(40) });
-    expect(encoded).not.toMatch(/[+/=]/);
+    expect(encoded).not.toMatch(/[+/=]/u);
   });
 
   test("returns null for malformed base64 / non-JSON", () => {
@@ -145,7 +146,7 @@ describe("safeRelativePath", () => {
 
   test("rejects control characters to block header smuggling", () => {
     expect(safeRelativePath("/foo\r\nLocation: https://evil")).toBeNull();
-    expect(safeRelativePath("/foo\x00bar")).toBeNull();
-    expect(safeRelativePath("/foo\x7fbar")).toBeNull();
+    expect(safeRelativePath("/foo\u0000bar")).toBeNull();
+    expect(safeRelativePath("/foo\x7Fbar")).toBeNull();
   });
 });

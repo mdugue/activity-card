@@ -95,8 +95,8 @@ export function useStravaConnection(): UseStravaConnection {
   // The setState-in-effect rule's preferred "fix" would be a custom store +
   // useSyncExternalStore — that buys nothing for a cold-start hydration.
   useEffect(() => {
-    /* eslint-disable-next-line react-hooks/set-state-in-effect */
-    refresh();
+    /* oxlint-disable-next-line react/set-state-in-effect */
+    void refresh();
   }, [refresh]);
 
   return { ...state, refresh, disconnect };

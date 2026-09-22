@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+
 import { enterEditViaUpload, selectSingleCard, selectTheme } from "./helpers";
 
 const THEMES = [
@@ -48,10 +49,10 @@ test.describe("themes", () => {
     await page.getByTestId("export-action").click();
     const downloadPromise = page.waitForEvent("download");
     await page
-      .getByRole("button", { name: /download instagram feed/i })
+      .getByRole("button", { name: /download instagram feed/iu })
       .click();
     const download = await downloadPromise;
-    expect(download.suggestedFilename()).toMatch(/^effort_.+\.png$/);
+    expect(download.suggestedFilename()).toMatch(/^effort_.+\.png$/u);
 
     // Save and check dimensions via a quick image-header read.
     const fs = await import("node:fs/promises");
@@ -63,9 +64,10 @@ test.describe("themes", () => {
     // The same theme renders format-aware into a 9:16 story (2× = 2160×3840).
     const storyPromise = page.waitForEvent("download");
     await page
-      .getByRole("button", { name: /download instagram story/i })
+      .getByRole("button", { name: /download instagram story/iu })
       .click();
-    const story = await fs.readFile(await (await storyPromise).path());
+    const storyDownload = await storyPromise;
+    const story = await fs.readFile(await storyDownload.path());
     expect(story.readUInt32BE(16)).toBe(2160);
     expect(story.readUInt32BE(20)).toBe(3840);
   });

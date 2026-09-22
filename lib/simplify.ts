@@ -16,7 +16,7 @@ const SQ_TOL_FLOOR = 1e-12;
 
 export function simplifyRDP(points: Coord[], tolerance: number): Coord[] {
   if (points.length < 3) {
-    return points.slice();
+    return [...points];
   }
   const sqTol = Math.max(tolerance * tolerance, SQ_TOL_FLOOR);
   return rdpRange(points, 0, points.length - 1, sqTol);
@@ -45,7 +45,7 @@ function rdpRange(
   }
   const left = rdpRange(points, i, index, sqTol);
   const right = rdpRange(points, index, j, sqTol);
-  return left.concat(right.slice(1));
+  return [...left, ...right.slice(1)];
 }
 
 function sqSegDist(p: Coord, a: Coord, b: Coord): number {
@@ -75,7 +75,7 @@ function sqSegDist(p: Coord, a: Coord, b: Coord): number {
  */
 export function simplifyToCount(points: Coord[], target: number): Coord[] {
   if (points.length <= target) {
-    return points.slice();
+    return [...points];
   }
   const { dx, dy } = bbox(points);
   const diag = Math.hypot(dx, dy) || 1;
@@ -117,12 +117,12 @@ export function resampleTo(values: number[], count: number): number[] {
     return [];
   }
   if (values.length === count) {
-    return values.slice();
+    return [...values];
   }
   if (count === 1) {
     return [values[0]];
   }
-  const out: number[] = new Array(count);
+  const out: number[] = Array.from({ length: count }, () => 0);
   const last = values.length - 1;
   for (let i = 0; i < count; i++) {
     const t = (i / (count - 1)) * last;
@@ -137,10 +137,10 @@ export function resampleTo(values: number[], count: number): number[] {
 /** Centered rolling-mean smoothing. Window should be odd; clamps at edges. */
 export function smooth(values: number[], window = 5): number[] {
   if (window < 2 || values.length < 2) {
-    return values.slice();
+    return [...values];
   }
   const half = Math.floor(window / 2);
-  const out: number[] = new Array(values.length);
+  const out: number[] = Array.from({ length: values.length }, () => 0);
   for (let i = 0; i < values.length; i++) {
     let sum = 0;
     let n = 0;

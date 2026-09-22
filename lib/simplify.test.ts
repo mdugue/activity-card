@@ -1,12 +1,13 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
+
 import {
-  type Coord,
   resampleTo,
   simplifyRDP,
   simplifyToCount,
   smooth,
 } from "@/lib/simplify";
+import type { Coord } from "@/lib/simplify";
 
 describe("simplifyRDP", () => {
   test("returns a copy unchanged for fewer than three points", () => {
@@ -67,10 +68,10 @@ describe("simplifyToCount", () => {
 
   test("reduces a dense polyline to at or below the target", () => {
     // A jagged saw-tooth of 500 points — no tolerance leaves it collinear.
-    const pts: Coord[] = Array.from(
-      { length: 500 },
-      (_, i): Coord => [i, i % 2]
-    );
+    const pts: Coord[] = Array.from({ length: 500 }, (_, i): Coord => [
+      i,
+      i % 2,
+    ]);
     const out = simplifyToCount(pts, 50);
     expect(out.length).toBeLessThanOrEqual(50);
     expect(out.length).toBeGreaterThan(1);

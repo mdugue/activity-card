@@ -5,6 +5,7 @@
 
 import { ImageSquareIcon } from "@phosphor-icons/react";
 import { useId, useRef } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,16 +39,16 @@ export interface RichSelectOption {
 function RichOptionContent({ option }: { option: RichSelectOption }) {
   return (
     <span className="flex min-w-0 flex-1 items-center gap-3 text-left">
-      <span className="flex shrink-0 items-center text-foreground/75">
+      <span className="text-foreground/75 flex shrink-0 items-center">
         {option.icon}
       </span>
       <span className="flex min-w-0 flex-col">
         <span className="flex items-baseline gap-1">
-          <span className="truncate font-heading text-lg leading-tight tracking-tight">
+          <span className="font-heading truncate text-lg leading-tight tracking-tight">
             {option.primary}
           </span>
           {option.unit ? (
-            <span className="shrink-0 font-medium font-mono text-muted-foreground text-xs">
+            <span className="text-muted-foreground shrink-0 font-mono text-xs font-medium">
               {option.unit}
             </span>
           ) : null}
@@ -90,7 +91,7 @@ export function RichSelect({
       <SelectTrigger
         aria-label={ariaLabel}
         className={cn(
-          "!h-auto w-full items-center gap-3 whitespace-normal border-input px-3 py-2.5 transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-foreground/35 data-[popup-open]:border-foreground data-[popup-open]:bg-muted/30",
+          "border-input hover:bg-muted/40 focus-visible:ring-foreground/35 data-[popup-open]:border-foreground data-[popup-open]:bg-muted/30 !h-auto w-full items-center gap-3 px-3 py-2.5 whitespace-normal transition-colors focus-visible:ring-2",
           className
         )}
       >
@@ -148,7 +149,7 @@ export function DetailField({
 }) {
   const labelEl = (
     <Label
-      className="font-medium font-mono text-[11px] uppercase tracking-[0.22em] opacity-65"
+      className="font-mono text-[11px] font-medium tracking-[0.22em] uppercase opacity-65"
       htmlFor={id}
     >
       {label}
@@ -167,7 +168,7 @@ export function DetailField({
             labelEl
           )}
           {hint ? (
-            <span className="font-medium font-mono text-[9px] uppercase tracking-[0.18em] opacity-50">
+            <span className="font-mono text-[9px] font-medium tracking-[0.18em] uppercase opacity-50">
               {hint}
             </span>
           ) : null}
@@ -182,7 +183,7 @@ export function DetailField({
         ) : null}
       </div>
       <Input
-        className="mt-1 h-auto border-0 border-foreground border-b-2 px-0 py-1.5 font-heading text-lg tracking-tight focus-visible:ring-0"
+        className="border-foreground font-heading mt-1 h-auto border-0 border-b-2 px-0 py-1.5 text-lg tracking-tight focus-visible:ring-0"
         disabled={disabled}
         id={id}
         onChange={(e) => onChange(e.target.value)}
@@ -229,7 +230,7 @@ export function PhotoControl({
       <>
         {fileInput}
         <button
-          className="mt-2 flex w-full flex-col items-center justify-center gap-2 border-2 border-foreground/25 border-dashed bg-muted/40 px-4 py-9 text-center transition-colors hover:border-foreground/55 hover:bg-muted/70"
+          className="border-foreground/25 bg-muted/40 hover:border-foreground/55 hover:bg-muted/70 mt-2 flex w-full flex-col items-center justify-center gap-2 border-2 border-dashed px-4 py-9 text-center transition-colors"
           onClick={pick}
           type="button"
         >
@@ -238,7 +239,7 @@ export function PhotoControl({
             className="size-7 opacity-70"
             weight="duotone"
           />
-          <span className="font-heading text-lg uppercase leading-none tracking-wide">
+          <span className="font-heading text-lg leading-none tracking-wide uppercase">
             Add a background photo
           </span>
           <span className="caption-micro">JPG or PNG · sets the mood</span>
@@ -250,7 +251,7 @@ export function PhotoControl({
   return (
     <div
       className={cn(
-        "mt-2 flex items-center gap-3 border border-foreground/35 border-dashed p-3",
+        "border-foreground/35 mt-2 flex items-center gap-3 border border-dashed p-3",
         disabled && "opacity-45"
       )}
     >
@@ -264,7 +265,7 @@ export function PhotoControl({
             : "linear-gradient(135deg, #d8c5a0, #4a2a18)",
         }}
       />
-      <div className="flex-1 font-medium font-mono text-xs opacity-70">
+      <div className="flex-1 font-mono text-xs font-medium opacity-70">
         {photoUrl ? "Photo loaded" : "NO PHOTO · TAP TO ADD"}
       </div>
       {photoUrl ? (
@@ -305,7 +306,7 @@ export function ToggleRow({
   const id = useId();
   const labelEl = (
     <Label
-      className={cn("font-medium text-sm", disabled && "opacity-50")}
+      className={cn("text-sm font-medium", disabled && "opacity-50")}
       htmlFor={id}
     >
       {label}

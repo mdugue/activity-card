@@ -1,5 +1,6 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
+
 import { SAMPLE_RIDE, SAMPLE_RUN } from "@/components/app/sample-data";
 import {
   buildStats,

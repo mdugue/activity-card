@@ -14,6 +14,7 @@ import {
   formatPaceMin,
   formatPaceSec,
 } from "@/lib/format";
+
 import type { HeroMetric } from "./theme-tokens";
 
 export interface StatItem {

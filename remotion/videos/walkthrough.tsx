@@ -5,6 +5,7 @@
 
 import type { ReactNode } from "react";
 import { AbsoluteFill, useVideoConfig } from "remotion";
+
 import { Backdrop } from "../components/backdrop";
 import { Caption } from "../components/caption";
 import { KineticTitle } from "../components/kinetic-title";

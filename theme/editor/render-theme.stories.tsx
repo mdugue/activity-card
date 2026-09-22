@@ -1,14 +1,14 @@
 import type { ComponentProps } from "react";
 import { expect } from "storybook/test";
+
 import {
   SAMPLE_RIDE,
   SAMPLE_RUN,
   SAMPLE_TRI,
 } from "@/components/app/sample-data";
-import {
-  type BackgroundArgs,
-  backgroundArgTypes,
-} from "../../.storybook/backgrounds";
+
+import { backgroundArgTypes } from "../../.storybook/backgrounds";
+import type { BackgroundArgs } from "../../.storybook/backgrounds";
 import preview from "../../.storybook/preview";
 import { activityArgType } from "../../.storybook/theme-controls";
 import { RenderTheme } from "./render-theme";
@@ -23,7 +23,7 @@ const meta = preview.type<{ args: RenderThemeArgs }>().meta({
   args: { data: SAMPLE_RIDE },
 });
 
-const RIDE_TITLE = /Elbsandstein/;
+const RIDE_TITLE = /Elbsandstein/u;
 
 // The dispatcher must mount the component matching the `theme` id. Asserting the
 // title renders under `theme: "path"` proves the right branch was selected and

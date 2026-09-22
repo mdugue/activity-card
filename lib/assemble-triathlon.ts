@@ -1,4 +1,5 @@
 import type { ActivityData, Transition, TriSegment } from "@/lib/activity";
+
 import type { ParsedActivity } from "./parse-activity";
 
 /**

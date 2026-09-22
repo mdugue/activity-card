@@ -28,8 +28,8 @@ interface RouteLineProps {
    *  system and tinted along an accent2→accent ramp. Overrides `coords`. */
   routes?: Coord[][];
   showMarkers?: boolean;
+  routeStyle: RouteStyle;
   strokeWidth?: number;
-  style: RouteStyle;
   w: number;
 }
 
@@ -76,7 +76,7 @@ export function RouteLine({
   w,
   h,
   pad = 80,
-  style,
+  routeStyle,
   accent,
   accent2,
   ink,
@@ -125,7 +125,7 @@ export function RouteLine({
           const key = `leg-${i}-${pr.d}`;
           return (
             <g key={key}>
-              {style === "poster" && !overPhoto ? (
+              {routeStyle === "poster" && !overPhoto ? (
                 <path
                   d={pr.d}
                   fill="none"
@@ -162,7 +162,7 @@ export function RouteLine({
     return null;
   }
 
-  const stroke = style === "desaturated" ? accent : ink;
+  const stroke = routeStyle === "desaturated" ? accent : ink;
 
   return (
     <svg
@@ -173,7 +173,7 @@ export function RouteLine({
     >
       <title>Route</title>
       {/* Soft underlay for poster mode — gives the line weight on paper. */}
-      {style === "poster" && !overPhoto ? (
+      {routeStyle === "poster" && !overPhoto ? (
         <path
           d={d}
           fill="none"

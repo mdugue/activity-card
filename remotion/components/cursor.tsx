@@ -1,4 +1,5 @@
 import { interpolate, useCurrentFrame } from "remotion";
+
 import { EASE_PANEL, PAPER, RUST_BRIGHT } from "../design/tokens";
 
 export interface CursorKeyframe {

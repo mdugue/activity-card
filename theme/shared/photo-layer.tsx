@@ -4,7 +4,9 @@
 // back to a plain CSS cover so the preview never flashes empty. Filter / grain /
 // mirror come from the same context. Inline CSS only — snapdom safe.
 
-import { IDENTITY_TRANSFORM, type ImageTransform } from "@/lib/image-transform";
+import { IDENTITY_TRANSFORM } from "@/lib/image-transform";
+import type { ImageTransform } from "@/lib/image-transform";
+
 import { CoverPhoto } from "./cover-photo";
 import { useFormat } from "./format-context";
 import {

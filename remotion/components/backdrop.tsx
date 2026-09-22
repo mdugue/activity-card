@@ -1,5 +1,7 @@
 import { AbsoluteFill, Img } from "remotion";
+
 import { GRAIN_BG } from "@/lib/photo-effects";
+
 import { INK, PAPER } from "../design/tokens";
 
 /**

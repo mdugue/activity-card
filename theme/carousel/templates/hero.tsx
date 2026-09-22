@@ -4,6 +4,7 @@
 // read-out, no redundant "distance" label under the number.
 
 import { heroStat } from "@/theme/carousel/stats";
+
 import type { PanelProps } from "../define-theme";
 import { MetaBand } from "./parts";
 import { SlideScaffold } from "./scaffold";

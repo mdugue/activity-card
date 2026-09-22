@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+
 import { cn } from "@/lib/utils";
 
 interface CardStageProps {
@@ -32,7 +33,7 @@ export function CardStage({
 }: CardStageProps) {
   return (
     <div
-      className="max-lg:grid max-lg:min-h-0 max-lg:flex-1 max-lg:place-items-center lg:block max-lg:[container-type:size]"
+      className="max-lg:[container-type:size] max-lg:grid max-lg:min-h-0 max-lg:flex-1 max-lg:place-items-center lg:block"
       style={{ "--card-aspect": aspectRatio } as CSSProperties}
     >
       <div

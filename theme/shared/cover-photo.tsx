@@ -6,17 +6,11 @@
 // Pure inline CSS (no backdrop-filter) so snapdom captures it.
 
 import type { ImageSize } from "@/hooks/use-image-natural-size";
-import {
-  coverSize,
-  IDENTITY_TRANSFORM,
-  type ImageTransform,
-} from "@/lib/image-transform";
-import {
-  filterCss,
-  isQuarterTurn,
-  NO_EFFECTS,
-  type PhotoEffects,
-} from "@/lib/photo-effects";
+import { coverSize, IDENTITY_TRANSFORM } from "@/lib/image-transform";
+import type { ImageTransform } from "@/lib/image-transform";
+import { filterCss, isQuarterTurn, NO_EFFECTS } from "@/lib/photo-effects";
+import type { PhotoEffects } from "@/lib/photo-effects";
+
 import { GrainOverlay } from "./photo-fx";
 
 interface CoverPhotoProps {

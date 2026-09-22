@@ -1,12 +1,13 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
+
 import { SAMPLE_RIDE } from "@/components/app/sample-data";
 import type { ActivityData } from "@/lib/activity";
 import { pickProfile } from "@/theme/carousel/profile";
 
 function withProfiles(
-  elevationProfile: number[] | undefined,
-  paceProfile: number[] | undefined
+  elevationProfile?: number[],
+  paceProfile?: number[]
 ): ActivityData {
   return { ...SAMPLE_RIDE, elevationProfile, paceProfile };
 }
@@ -35,7 +36,7 @@ describe("pickProfile", () => {
   });
 
   test("returns pace mode with no profile when neither is usable", () => {
-    const r = pickProfile(withProfiles(undefined, undefined));
+    const r = pickProfile(withProfiles());
     expect(r.mode).toBe("pace");
     expect(r.profile).toBeUndefined();
   });

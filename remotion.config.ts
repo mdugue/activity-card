@@ -1,4 +1,5 @@
 import path from "node:path";
+
 import { Config } from "@remotion/cli/config";
 import { enableTailwind } from "@remotion/tailwind-v4";
 
@@ -14,10 +15,18 @@ Config.overrideWebpackConfig((current) => {
     ...withTailwind,
     resolve: {
       ...withTailwind.resolve,
-      alias: {
-        ...withTailwind.resolve?.alias,
-        "@": path.resolve(process.cwd()),
-      },
+      // webpack accepts `alias` as an array of { name, alias } entries or as a
+      // record; spreading the array form into an object would turn it into
+      // numeric index keys, so each form is merged in its own shape.
+      alias: Array.isArray(withTailwind.resolve?.alias)
+        ? [
+            ...withTailwind.resolve.alias,
+            { name: "@", alias: path.resolve(process.cwd()) },
+          ]
+        : {
+            ...withTailwind.resolve?.alias,
+            "@": path.resolve(process.cwd()),
+          },
     },
   };
 });

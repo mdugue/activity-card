@@ -4,6 +4,7 @@
 // keep-out, whichever is larger; the photo + canvas bleed underneath.
 
 import type { CSSProperties, ReactNode } from "react";
+
 import { CAROUSEL_NATURAL_MARGIN } from "@/theme/carousel/geometry";
 import type { SafeInsets } from "@/theme/core/export-formats";
 import { SafeArea } from "@/theme/shared/format-context";

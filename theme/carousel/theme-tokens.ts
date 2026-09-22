@@ -8,6 +8,7 @@
 
 import type { ColorChoice } from "@/theme/core/colors";
 import type { CapabilityKey } from "@/theme/core/theme-contract";
+
 import type { FontPairId, RouteStyle } from "./types";
 
 export interface FontPair {

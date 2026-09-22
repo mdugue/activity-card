@@ -1,5 +1,8 @@
 import { interpolate, useCurrentFrame } from "remotion";
-import { type Coord, routePath } from "@/lib/chart-helpers";
+
+import { routePath } from "@/lib/chart-helpers";
+import type { Coord } from "@/lib/chart-helpers";
+
 import { EASE_PANEL, RUST_BRIGHT } from "../design/tokens";
 
 /**

@@ -4,6 +4,7 @@
 // signature. No repeated hero number — distance already lives in the summary.
 
 import { buildStats } from "@/theme/carousel/stats";
+
 import { CrossViz } from "../cross-viz";
 import type { PanelProps } from "../define-theme";
 import { MetaBand, Signature } from "./parts";

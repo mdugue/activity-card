@@ -15,19 +15,17 @@ import {
   paceSeries,
   powerSeries,
   routeSeries,
-  type StatItem,
   speedSeries,
 } from "@/theme/carousel/stats";
+import type { StatItem } from "@/theme/carousel/stats";
 import { SafeArea } from "@/theme/shared/format-context";
+
 import type { PanelProps } from "../define-theme";
 import { ElevationBand } from "../elevation-band";
 import { RouteLine } from "../route-line";
 import { CAROUSEL_NATURAL_PAD } from "../templates/scaffold";
-import {
-  type SlideTextColors,
-  slideNumber,
-  slideText,
-} from "../templates/shared";
+import { slideNumber, slideText } from "../templates/shared";
+import type { SlideTextColors } from "../templates/shared";
 
 const SPARK_W = 900;
 const SPARK_H = 132;
@@ -63,7 +61,7 @@ function FrameRouteSpark({
       routes={multi ? routes : undefined}
       showMarkers={false}
       strokeWidth={4}
-      style="poster"
+      routeStyle="poster"
       w={SPARK_W}
     />
   );
@@ -86,7 +84,6 @@ function frameSeries(
   if (statKey === "pace") {
     return paceSeries(data);
   }
-  return;
 }
 
 /** Band spark (elevation / pace / speed / power) — legs side by side for a project. */

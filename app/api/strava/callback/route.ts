@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+
+import type { StravaTokenResponse } from "@/lib/strava-cookies";
 import {
   clearOAuthState,
   peekOAuthState,
@@ -82,7 +84,9 @@ export async function GET(request: Request) {
   if (!res.ok) {
     return NextResponse.redirect(new URL("/?strava=token_exchange", url));
   }
-  const tokenPayload = await res.json();
+  // Strava's token payload, cast at the boundary the same way the refresh path
+  // in lib/strava-cookies.ts does.
+  const tokenPayload = (await res.json()) as StravaTokenResponse;
   await writeTokens(tokenPayload);
   // Code redeemed successfully — invalidate the state cookie so a stale
   // refresh of the callback URL doesn't try to re-redeem (codes are

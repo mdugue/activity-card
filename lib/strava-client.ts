@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+
 import {
   clearTokens,
   ensureFreshToken,
@@ -132,11 +133,11 @@ export async function stravaFetchOptional<T>(
 ): Promise<T | null> {
   try {
     return await stravaFetch<T>(path, opts);
-  } catch (err) {
-    if (err instanceof StravaUpstreamError) {
+  } catch (error) {
+    if (error instanceof StravaUpstreamError) {
       return null;
     }
-    throw err;
+    throw error;
   }
 }
 

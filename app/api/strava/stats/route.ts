@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+
 import { stravaErrorResponse, stravaFetch } from "@/lib/strava-client";
 import { ensureFreshToken, readTokens } from "@/lib/strava-cookies";
 import type { StravaStats } from "@/lib/strava-types";
@@ -31,7 +32,7 @@ export async function GET() {
       (stats.all_swim_totals?.count ?? 0);
     const totalPages = Math.max(1, Math.ceil(totalCount / PER_PAGE));
     return NextResponse.json({ totalCount, totalPages });
-  } catch (err) {
-    return stravaErrorResponse(err);
+  } catch (error) {
+    return stravaErrorResponse(error);
   }
 }

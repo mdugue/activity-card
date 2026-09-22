@@ -79,16 +79,16 @@ spaces. Never cross-import a single-card theme into the carousel renderer or
 vice-versa — the renderers' guarantees differ (a bespoke poster vs the seamless
 strip).
 
-|                | Single card                                            | Carousel ("accordion")                                              |
-| -------------- | ------------------------------------------------------ | ------------------------------------------------------------------- |
-| Output         | one 1080×1350 poster                                   | an n×1080 × 1350 seamless strip, sliced into slides                 |
-| A theme is…    | **a `defineTheme` descriptor** (component + declaration) | **a `defineCarouselTheme` descriptor** (`canvas?` + `panels[]`)   |
-| Lives in       | `theme/single-card/<name>.tsx`             | `theme/carousel/registry.ts` (descriptor incl. its `look`)  |
-| Id space       | `ThemeId` (`theme/single-card/index.ts`)               | `CarouselThemeId` (`theme/carousel/registry.ts`)        |
-| Registered in  | `SINGLE_CARD_THEMES` (descriptor registry)             | `CAROUSEL_THEMES` (`registry.ts`) · `CAROUSEL_THEME_ORDER`          |
-| Renderer       | the theme component itself                             | one shared `theme/carousel/deck.tsx` (`CarouselDeck`)   |
-| Contract       | `ThemeProps` + capability declaration — see `card-rendering` + `theme-params` skills | `CanvasProps` / `PanelProps` + canvas/panels — see `carousel-themes` skill |
-| Story          | `theme/single-card/<name>.stories.tsx`     | `theme/carousel/<theme>.stories.tsx` (one per theme)    |
+|               | Single card                                                                          | Carousel ("accordion")                                                     |
+| ------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| Output        | one 1080×1350 poster                                                                 | an n×1080 × 1350 seamless strip, sliced into slides                        |
+| A theme is…   | **a `defineTheme` descriptor** (component + declaration)                             | **a `defineCarouselTheme` descriptor** (`canvas?` + `panels[]`)            |
+| Lives in      | `theme/single-card/<name>.tsx`                                                       | `theme/carousel/registry.ts` (descriptor incl. its `look`)                 |
+| Id space      | `ThemeId` (`theme/single-card/index.ts`)                                             | `CarouselThemeId` (`theme/carousel/registry.ts`)                           |
+| Registered in | `SINGLE_CARD_THEMES` (descriptor registry)                                           | `CAROUSEL_THEMES` (`registry.ts`) · `CAROUSEL_THEME_ORDER`                 |
+| Renderer      | the theme component itself                                                           | one shared `theme/carousel/deck.tsx` (`CarouselDeck`)                      |
+| Contract      | `ThemeProps` + capability declaration — see `card-rendering` + `theme-params` skills | `CanvasProps` / `PanelProps` + canvas/panels — see `carousel-themes` skill |
+| Story         | `theme/single-card/<name>.stories.tsx`                                               | `theme/carousel/<theme>.stories.tsx` (one per theme)                       |
 
 Both families share the same **editor machinery**:
 
@@ -97,11 +97,11 @@ Both families share the same **editor machinery**:
   components. Config lives in one coerced slot keyed by theme id; the editor
   groups controls by category (STYLE · LAYOUT · PHOTO · TEXT · STATS · MARKS · ACTIVITY).
 - **Capabilities** (`theme/core/theme-contract.ts`): every theme — both families —
-  *declares* which overlay elements it renders (`uses` / sport-aware `usesWhen`)
+  _declares_ which overlay elements it renders (`uses` / sport-aware `usesWhen`)
   on its `ThemeBase` core. On the single card the declaration also narrows the
   component's `data` prop type (reading an undeclared field is a compile error).
   Both families drive editor availability the same way — `themeAvailability(data,
-  theme)` (`theme/core/visibility.ts`).
+theme)` (`theme/core/visibility.ts`).
 - **Colour** (`theme/core/colors.ts`): themes consume a resolved `ColorScheme`; the user
   picks a `ColorChoice` — a static preset (single hue or pair) or a photo-derived
   strategy — in one control, hidden for fixed-palette themes.
@@ -142,7 +142,7 @@ appear.
 - **Shadows use Tailwind's scale** (`shadow-xs` … `shadow-2xl`), tinted when needed via `shadow-<token>` (e.g. `shadow-primary/50`). No arbitrary `shadow-[…]` in app chrome. Themes in `theme/` are the exception: they rasterise to PNG, so their shadows stay inline as `style={{ boxShadow }}`.
 - **Route/path silhouettes stay geographically faithful.** Project route coordinates with a single uniform scale and centre them in their container — use `projectRoute` / `routePath` (`lib/chart-helpers.ts`), which do exactly this. Never stretch a path per-axis to fill a box (e.g. to span the full carousel width): a distorted silhouette misrepresents the real route. Keep its true proportions and centre it (for the carousel hero, in the middle of the complete viewport).
 - **No console.log in committed code.** Use proper error UI for user-facing failures.
-- **Every theme ships a colocated story** — single-card *and* carousel. Adding or
+- **Every theme ships a colocated story** — single-card _and_ carousel. Adding or
   renaming a theme isn't complete without its `*.stories.tsx`; see [Storybook](#storybook).
 - **Commit messages**: Conventional Commits (`feat:`, `fix:`, `refactor:`, etc.).
 - **Lint + typecheck must be green** before pushing: `bun lint && bun typecheck`.

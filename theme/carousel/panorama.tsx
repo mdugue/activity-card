@@ -9,9 +9,11 @@
 // deck provides (no prop-threading); null when no photo is shown.
 
 import type { CSSProperties } from "react";
+
 import type { ImageTransform } from "@/lib/image-transform";
 import { CoverPhoto } from "@/theme/shared/cover-photo";
 import { usePhotoFx } from "@/theme/shared/photo-fx";
+
 import { useStripGeometry } from "./geometry";
 
 interface PanoramaProps {

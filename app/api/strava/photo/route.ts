@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
+
 import { stravaErrorResponse, stravaFetch } from "@/lib/strava-client";
 import { clampedIntParam } from "@/lib/strava-params";
 import { largestPhotoUrl, upscaledPhotoUrl } from "@/lib/strava-photos";
 import type { StravaPhotoListItem } from "@/lib/strava-types";
 
-const NUMERIC_ID = /^\d+$/;
+const NUMERIC_ID = /^\d+$/u;
 // Strava buckets photo sizes and silently serves a small variant for
 // unsupported values; 5000 is the de-facto "largest available rendition"
 // request, comfortably above the 2160×2700 export canvas.
@@ -64,7 +65,7 @@ export async function GET(request: Request) {
         "cache-control": "private, max-age=3600",
       },
     });
-  } catch (err) {
-    return stravaErrorResponse(err);
+  } catch (error) {
+    return stravaErrorResponse(error);
   }
 }

@@ -13,6 +13,7 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
+
 import {
   SAMPLE_RIDE,
   SAMPLE_RUN,
@@ -23,6 +24,7 @@ import { CarouselDeck } from "@/theme/carousel/deck";
 import { CAROUSEL_THEMES } from "@/theme/carousel/registry";
 import { carouselArgs } from "@/theme/carousel/story-support";
 import type { ThemeId } from "@/theme/single-card";
+
 import { Backdrop } from "../components/backdrop";
 import { CardScaled } from "../components/card-showcase";
 import { FileIcon, StravaChip } from "../components/file-icon";

@@ -1,13 +1,13 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
+
 import { SAMPLE_RIDE, SAMPLE_RUN } from "@/components/app/sample-data";
 import {
-  type CapabilityKey,
   defineTheme,
   GOVERNED_FIELDS,
   pickThemeData,
-  type ThemeProps,
 } from "@/theme/core/theme-contract";
+import type { CapabilityKey, ThemeProps } from "@/theme/core/theme-contract";
 import { themeAvailability } from "@/theme/core/visibility";
 
 const Noop: (props: ThemeProps<"route" | "elevation">) => null = () => null;

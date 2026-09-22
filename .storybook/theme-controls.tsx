@@ -27,18 +27,18 @@ import {
 import { useImagePalette } from "@/hooks/use-image-palette";
 import type { ActivityData } from "@/lib/activity";
 import {
-  type ColorChoice,
   PALETTE_VARIANTS,
   PRESET_SCHEMES,
   resolveColors,
   VARIANT_LABELS,
 } from "@/theme/core/colors";
-import { PARAM_GROUP_LABEL, type ParamDef } from "@/theme/core/params/kinds";
+import type { ColorChoice } from "@/theme/core/colors";
+import { PARAM_GROUP_LABEL } from "@/theme/core/params/kinds";
+import type { ParamDef } from "@/theme/core/params/kinds";
 import { coerceConfig } from "@/theme/core/params/resolve";
-import {
-  pickThemeData,
-  type SingleCardTheme,
-} from "@/theme/core/theme-contract";
+import { pickThemeData } from "@/theme/core/theme-contract";
+import type { SingleCardTheme } from "@/theme/core/theme-contract";
+
 import type { BackgroundArgs } from "./backgrounds";
 
 /* ----------------------------- activity ----------------------------- */

@@ -42,7 +42,7 @@ export function EffortWordmark({
       <EffortMark className={isSm ? "size-5" : "size-8"} />
       <span
         className={cn(
-          "font-heading uppercase leading-none tracking-wide",
+          "font-heading leading-none tracking-wide uppercase",
           isSm ? "text-2xl" : "text-3xl",
           labelClassName
         )}

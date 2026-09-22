@@ -6,7 +6,7 @@ coding agents alike. It covers both families: the **single card** (one
 need to tweak an existing theme's knobs, jump to
 [Adding a knob](#adding-an-adjustable-knob-to-a-theme).
 
-Before starting, skim the focused references — they explain *why* the
+Before starting, skim the focused references — they explain _why_ the
 constraints below exist:
 
 - `.claude/skills/theme-params/SKILL.md` — the descriptor + parameter + colour model
@@ -18,10 +18,10 @@ constraints below exist:
 
 ## Which family?
 
-| You want…                                            | Build a…          |
-| ---------------------------------------------------- | ----------------- |
-| one poster image with its own layout & typography    | single-card theme |
-| a multi-slide Instagram story with a spanning hero   | carousel theme    |
+| You want…                                          | Build a…          |
+| -------------------------------------------------- | ----------------- |
+| one poster image with its own layout & typography  | single-card theme |
+| a multi-slide Instagram story with a spanning hero | carousel theme    |
 
 They are independent systems with separate id spaces. A "theme" that should
 exist in both (like STRATA) is two registrations sharing pure logic from
@@ -64,7 +64,14 @@ export function ThemeExample({
 }: ThemeProps<(typeof USES)[number]>) {
   const accent = colors?.primary ?? DEFAULT_ACCENT;
   return (
-    <div style={{ width: 1080, height: 1350, position: "relative", overflow: "hidden" }}>
+    <div
+      style={{
+        width: 1080,
+        height: 1350,
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
       {photoUrl ? (
         <PhotoLayer imageTransform={imageTransform} photoUrl={photoUrl} />
       ) : null}
@@ -109,7 +116,7 @@ export const exampleTheme = defineTheme({
 - **Adjustable** (`userAdjustable: true`): consume `colors.primary` (and
   optionally `colors.secondary`) everywhere the accent appears; set the
   theme's own hue as `colors.default`. The user then gets the unified COLOUR
-  control — static presets *and*, once a photo is loaded, the five
+  control — static presets _and_, once a photo is loaded, the five
   photo-derived schemes.
 - **Fixed** (`userAdjustable: false`): the palette is the design (Altitude,
   Strata, Triathlon). The control hides; still set `colors.default`
@@ -131,8 +138,8 @@ photo: { defaultOn: true, defaultFilter: "fade", defaultGrain: true }
   - `PhotoLayer` — full-bleed hero (rotation-correct via `CoverPhoto`)
   - `PhotoBackdrop` — blurred art-print wash (`treatment: "path" | "editorial"`)
   - `PhotoUnderlay` — faint wash under dense data layouts
-  Filter / grain / mirror / rotate then work automatically (they arrive via
-  the photo-fx context — your component never sees them).
+    Filter / grain / mirror / rotate then work automatically (they arrive via
+    the photo-fx context — your component never sees them).
 
 ### Step 5 — register
 
@@ -173,14 +180,17 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import type { ComponentProps } from "react";
 import { expect } from "storybook/test";
 import { SAMPLE_RIDE, SAMPLE_RUN } from "@/components/app/sample-data";
-import { type BackgroundArgs, backgroundArgTypes } from "../../../.storybook/backgrounds";
+import {
+  type BackgroundArgs,
+  backgroundArgTypes,
+} from "../../../.storybook/backgrounds";
 import { ThemeExample } from "./example";
 
 const meta = {
   component: ThemeExample,
   tags: ["ai-generated"],
   parameters: { layout: "fullscreen" },
-  argTypes: { ...backgroundArgTypes },   // photo preview controls
+  argTypes: { ...backgroundArgTypes }, // photo preview controls
   args: { data: SAMPLE_RIDE },
 } satisfies Meta<ComponentProps<typeof ThemeExample> & BackgroundArgs>;
 

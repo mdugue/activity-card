@@ -1,7 +1,8 @@
 import type { ActivityData } from "@/lib/activity";
 import type { ColorScheme } from "@/theme/core/colors";
 import { pickThemeData } from "@/theme/core/theme-contract";
-import { SINGLE_CARD_THEMES, type ThemeId } from "@/theme/single-card";
+import { SINGLE_CARD_THEMES } from "@/theme/single-card";
+import type { ThemeId } from "@/theme/single-card";
 
 /**
  * Renders a real single-card theme at its native 1080×1350, exactly as the

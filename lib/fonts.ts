@@ -29,6 +29,7 @@ import {
   Space_Grotesk,
   Syne,
 } from "next/font/google";
+
 import { cn } from "@/lib/utils";
 
 export const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });

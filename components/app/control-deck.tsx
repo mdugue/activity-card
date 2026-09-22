@@ -15,6 +15,7 @@
 // height-capped / fixed-width and scrolls inside its own bounds.
 
 import { useLayoutEffect, useRef, useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
@@ -145,7 +146,7 @@ export function ControlDeck({
         aria-label="Card controls"
         className={cn(
           "min-h-0 [grid-area:panel]",
-          "max-lg:overflow-x-hidden max-lg:border-foreground/12 max-lg:bg-popover",
+          "max-lg:border-foreground/12 max-lg:bg-popover max-lg:overflow-x-hidden",
           PANEL_MOTION,
           // Portrait — height tracks the content (capped), so it animates on both
           // open/close and group switches.
@@ -192,13 +193,13 @@ export function ControlDeck({
       <div
         className={cn(
           "flex items-stretch gap-2 [grid-area:dock]",
-          "max-lg:border-foreground/12 max-lg:border-t max-lg:bg-popover max-lg:p-2 max-lg:pb-[max(0.5rem,env(safe-area-inset-bottom))]",
+          "max-lg:border-foreground/12 max-lg:bg-popover max-lg:border-t max-lg:p-2 max-lg:pb-[max(0.5rem,env(safe-area-inset-bottom))]",
           // Desktop: span the full right column (both grid rows) and sit at its
           // foot via `self-end`, so the sticky box has the whole column as its
           // containing block to range over — a one-row cell gives sticky no room.
           // Then pin to the viewport bottom; `bg-background` masks the controls
           // scrolling behind it, `border-t` divides it from them.
-          "lg:sticky lg:bottom-0 lg:z-20 lg:gap-2 lg:self-end lg:border-foreground/10 lg:border-t lg:bg-background lg:px-0 lg:pt-4 lg:pb-4 lg:[grid-area:1/2/-1/-1]"
+          "lg:border-foreground/10 lg:bg-background lg:sticky lg:bottom-0 lg:z-20 lg:gap-2 lg:self-end lg:border-t lg:px-0 lg:pt-4 lg:pb-4 lg:[grid-area:1/2/-1/-1]"
         )}
       >
         <ToggleGroup
@@ -212,7 +213,7 @@ export function ControlDeck({
             <ToggleGroupItem
               aria-label={tool.label}
               className={cn(
-                "h-auto w-14 shrink-0 flex-col gap-1 rounded-md border-0 bg-transparent px-1 py-2 text-foreground/55 hover:bg-foreground/5",
+                "text-foreground/55 hover:bg-foreground/5 h-auto w-14 shrink-0 flex-col gap-1 rounded-md border-0 bg-transparent px-1 py-2",
                 "aria-pressed:!bg-primary aria-pressed:!text-primary-foreground data-[pressed]:!bg-primary data-[pressed]:!text-primary-foreground"
               )}
               data-testid={`tool-${tool.id}`}
@@ -220,7 +221,7 @@ export function ControlDeck({
               value={tool.id}
             >
               {tool.icon}
-              <span className="font-mono font-semibold text-[9px] uppercase tracking-wide">
+              <span className="font-mono text-[9px] font-semibold tracking-wide uppercase">
                 {tool.label}
               </span>
             </ToggleGroupItem>
@@ -242,11 +243,11 @@ export function ControlDeck({
             <span className="font-mono text-[8.5px] tracking-wide lg:hidden">
               EXPORT
             </span>
-            <span className="hidden font-heading text-lg lg:inline">
+            <span className="font-heading hidden text-lg lg:inline">
               {action.label}
             </span>
           </span>
-          <span className="hidden font-medium font-mono text-[10px] tracking-[0.18em] opacity-75 lg:inline">
+          <span className="hidden font-mono text-[10px] font-medium tracking-[0.18em] opacity-75 lg:inline">
             {action.meta}
           </span>
         </Button>

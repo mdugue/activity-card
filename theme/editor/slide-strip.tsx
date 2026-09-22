@@ -75,7 +75,7 @@ export function SlideStrip(props: SlideStripProps) {
         return (
           <div
             className="flex flex-col items-center gap-1"
-            // biome-ignore lint/suspicious/noArrayIndexKey: slides are positional — the index IS the identity (fixed count, never reordered)
+            // oxlint-disable-next-line react/no-array-index-key -- slides are positional — the index IS the identity (fixed count, never reordered)
             key={`slide-${i}`}
           >
             <button
@@ -102,7 +102,7 @@ export function SlideStrip(props: SlideStripProps) {
                 {canvas}
               </div>
             </button>
-            <span className="font-medium font-mono text-[9px] opacity-50">
+            <span className="font-mono text-[9px] font-medium opacity-50">
               {String(i + 1).padStart(2, "0")}
             </span>
           </div>

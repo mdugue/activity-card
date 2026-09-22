@@ -5,11 +5,10 @@
 // on change.
 
 import type { CardMode } from "@/components/app/mode-toggle";
-import {
-  CAROUSEL_THEMES,
-  type CarouselThemeId,
-} from "@/theme/carousel/registry";
-import { type ColorChoice, coerceColorChoice } from "@/theme/core/colors";
+import { CAROUSEL_THEMES } from "@/theme/carousel/registry";
+import type { CarouselThemeId } from "@/theme/carousel/registry";
+import { coerceColorChoice } from "@/theme/core/colors";
+import type { ColorChoice } from "@/theme/core/colors";
 import type { Visibility } from "@/theme/core/visibility";
 import type { ThemeId } from "@/theme/editor/render-theme";
 
@@ -49,7 +48,7 @@ export function loadPersistedUi(): Partial<PersistedUi> {
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       return {};
     }
-    return parsed as Partial<PersistedUi>;
+    return parsed;
   } catch {
     return {};
   }
