@@ -35,7 +35,11 @@ import type { ActivityView, ThemeProps } from "@/theme/core/theme-contract";
 
 import { CoverPhoto } from "../shared/cover-photo";
 import { useFormat, useSafeInsets } from "../shared/format-context";
-import { usePhotoEffects, usePhotoImageSize } from "../shared/photo-fx";
+import {
+  CssCoverImage,
+  usePhotoEffects,
+  usePhotoImageSize,
+} from "../shared/photo-fx";
 
 const DISPLAY = "var(--font-syne), sans-serif";
 const MONO = "var(--font-mono), monospace";
@@ -334,14 +338,11 @@ export function ThemeStrata({
                 transform={imageTransform}
               />
             ) : (
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  backgroundImage: `url(${photoUrl})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                }}
+              // Natural size unknown yet — the shared CSS cover layer (which
+              // also publishes the export descriptor) stands in.
+              <CssCoverImage
+                imageTransform={imageTransform}
+                photoUrl={photoUrl}
               />
             )}
           </div>

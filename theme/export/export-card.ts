@@ -1,10 +1,9 @@
-import { snapdom } from "@zumer/snapdom";
-
 import type { ActivityData } from "@/lib/activity";
 import { applyMetadata, routeCentroid } from "@/lib/metadata";
 import type { MetadataInput, MetadataOptions } from "@/lib/metadata";
 
 import { deliverFiles, waitForFonts } from "./export-shared";
+import { canvasToPng, rasterizeNode } from "./rasterize";
 
 export interface ExportOptions {
   filename?: string;
@@ -36,23 +35,13 @@ export async function exportCard(
 
   await waitForFonts();
 
-  // snapdom rasterises the live DOM straight to a PNG blob.
-  // - `embedFonts`: inline the theme's @font-face into the snapshot. Its
-  //   default (`'auto'`) already does this in v3; kept explicit because a
-  //   headline silently falling back to a system font is the failure mode.
-  // - `width`/`height`: since snapdom v3 an explicit output size *wins over*
-  //   `scale` instead of being multiplied by it, so the pixel ratio is baked
-  //   into the dimensions here (1080×1350 → 2160×2700).
-  // - `dpr: 1`: left at its default, `dpr` tracks the viewer's screen density
-  //   and a Retina display would double the output again. Pinning it keeps the
-  //   export identical on every device.
-  const blob = await snapdom.toBlob(node, {
+  // The pixel ratio is baked into the requested size (1080×1350 → 2160×2700);
+  // `rasterizeNode` owns the snapdom options and the WebKit photo fallback.
+  const canvas = await rasterizeNode(node, {
     width: width * pixelRatio,
     height: height * pixelRatio,
-    dpr: 1,
-    embedFonts: true,
-    format: "png",
   });
+  const blob = await canvasToPng(canvas);
 
   // Inject Effort metadata into the raw PNG bytes (canvas output carries none).
   const raw = new Uint8Array(await blob.arrayBuffer());

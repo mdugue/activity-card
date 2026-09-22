@@ -1,3 +1,5 @@
+import { crc32, deflateSync } from "node:zlib";
+
 /**
  * Synthetic GPX builder for E2E tests. Lets us drop deterministic
  * "files" into the dropzone without committing binary fixtures.
@@ -117,3 +119,48 @@ export const TINY_PNG_BASE64 =
  */
 export const SOLID_MAGENTA_PNG_BASE64 =
   "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAlElEQVR4nO3QMREAMBDDsOdPOoWhoR60+3y77WenA7QG6ACtATpAa4AO0BqgA7QG6ACtATpAa4AO0BqgA7QG6ACtATpAa4AO0BqgA7QG6ACtATpAa4AO0BqgA7QG6ACtATpAa4AO0BqgA7QG6ACtATpAa4AO0BqgA7QG6ACtATpAa4AO0BqgA7QG6ACtATpAa4AO0B5MtNLCmn7KywAAAABJRU5ErkJggg==";
+
+/**
+ * A 2×2 PNG with four saturated quadrants — red, green / blue, yellow. Solid
+ * colours prove the photo reached the export; this one also proves it landed
+ * the right way round, so a cover-fit, pan or mirror mistake in the export's
+ * photo compositing can't pass unnoticed.
+ */
+export const QUADRANT_PNG_BASE64 =
+  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGO4Iycnt8+GQcPtzrMTGgAhzgVRsZiXAwAAAABJRU5ErkJggg==";
+
+/**
+ * Synthesise a solid-colour PNG of any size. Used to feed the export an
+ * oversized photo (Strava serves renditions up to 5000px) without carrying a
+ * multi-megapixel fixture in the repo — solid colour deflates to a few KB.
+ */
+export function solidPngBuffer(
+  width: number,
+  height: number,
+  rgb: [number, number, number]
+): Buffer {
+  const row = Buffer.concat([
+    Buffer.from([0]),
+    Buffer.from(Array.from({ length: width }, () => rgb).flat()),
+  ]);
+  const raw = Buffer.concat(Array.from({ length: height }, () => row));
+  const chunk = (type: string, data: Buffer): Buffer => {
+    const body = Buffer.concat([Buffer.from(type, "ascii"), data]);
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(data.length);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(body));
+    return Buffer.concat([len, body, crc]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = 8; // bit depth
+  ihdr[9] = 2; // colour type: truecolour
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk("IHDR", ihdr),
+    chunk("IDAT", deflateSync(raw)),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
+}

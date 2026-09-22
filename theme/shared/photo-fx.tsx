@@ -13,6 +13,11 @@ import type { ImageSize } from "@/hooks/use-image-natural-size";
 import { IDENTITY_TRANSFORM, transformToCss } from "@/lib/image-transform";
 import type { ImageTransform } from "@/lib/image-transform";
 import {
+  encodePhotoDraw,
+  PHOTO_LAYER_ATTR,
+  PHOTO_PAINT_ATTR,
+} from "@/lib/photo-draw";
+import {
   effectsTransformSuffix,
   filterCss,
   GRAIN_BG,
@@ -78,21 +83,44 @@ export function CssCoverImage({
   const userFilter = fx ? filterCss(fx.filter) : "";
   const filter = [filterPrefix, userFilter].filter(Boolean).join(" ").trim();
   const inset = fx && isQuarterTurn(fx.rotate) ? -160 : restInset;
+  const t = imageTransform ?? IDENTITY_TRANSFORM;
+  // The transformed div can't describe its own untransformed box, so it sits in
+  // a plain full-bleed wrapper that carries the export descriptor (the exporter
+  // measures the wrapper and applies the inset) — see lib/photo-draw.
   return (
     <div
-      style={{
-        position: "absolute",
-        inset,
-        backgroundImage: `url(${photoUrl})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-        transform: `${transformToCss(imageTransform ?? IDENTITY_TRANSFORM)}${effectsTransformSuffix(fx)}`,
-        transformOrigin: "center center",
-        filter: filter || undefined,
-        opacity,
+      {...{
+        [PHOTO_LAYER_ATTR]: encodePhotoDraw({
+          box: { kind: "inset", inset },
+          filter,
+          flipH: fx?.flipH ?? false,
+          flipV: fx?.flipV ?? false,
+          opacity: opacity ?? 1,
+          rotate: fx?.rotate ?? 0,
+          scale: t.scale,
+          src: photoUrl,
+          x: t.x,
+          y: t.y,
+        }),
       }}
-    />
+      style={{ position: "absolute", inset: 0 }}
+    >
+      <div
+        {...{ [PHOTO_PAINT_ATTR]: "" }}
+        style={{
+          position: "absolute",
+          inset,
+          backgroundImage: `url(${photoUrl})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          transform: `${transformToCss(t)}${effectsTransformSuffix(fx)}`,
+          transformOrigin: "center center",
+          filter: filter || undefined,
+          opacity,
+        }}
+      />
+    </div>
   );
 }
 

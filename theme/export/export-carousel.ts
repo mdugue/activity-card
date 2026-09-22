@@ -6,11 +6,10 @@
 // downloaded sequentially on desktop. Mirrors the single-card pipeline's
 // font-ready wait and snapdom options.
 
-import { snapdom } from "@zumer/snapdom";
-
 import type { ExportFormat } from "@/theme/core/export-formats";
 
 import { deliverFiles, effortDateSlug, waitForFonts } from "./export-shared";
+import { rasterizeNode } from "./rasterize";
 
 const PIXEL_RATIO = 2; // each slide → 2× its format size, matching the single card
 const MAX_CANVAS_DIM = 16_384; // conservative cross-browser canvas width cap
@@ -36,15 +35,11 @@ export async function exportCarousel(
     1,
     Math.min(PIXEL_RATIO, Math.floor(MAX_CANVAS_DIM / width))
   );
-  // `embedFonts` inlines the deck's @font-face; the output size is given
-  // pre-multiplied by `pr` because snapdom v3 lets width/height win over
-  // `scale`; `dpr: 1` keeps the strip independent of screen density (see
-  // theme/export/export-card.ts for the full note).
-  const canvas = await snapdom.toCanvas(wideNode, {
+  // The output size is given pre-multiplied by `pr`; `rasterizeNode` owns the
+  // snapdom options and the WebKit photo fallback.
+  const canvas = await rasterizeNode(wideNode, {
     width: width * pr,
     height: format.height * pr,
-    dpr: 1,
-    embedFonts: true,
   });
 
   const sliceW = format.width * pr;
