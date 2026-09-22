@@ -12,12 +12,11 @@ import {
   isNum,
   sportArticleLabel,
 } from "@/lib/format";
-import {
-  isMultiActivity,
-  type SegmentRoute,
-  segmentRoutes,
-} from "@/lib/multi-activity";
-import { defineTheme, type ThemeProps } from "@/theme/core/theme-contract";
+import { isMultiActivity, segmentRoutes } from "@/lib/multi-activity";
+import type { SegmentRoute } from "@/lib/multi-activity";
+import { defineTheme } from "@/theme/core/theme-contract";
+import type { ThemeProps } from "@/theme/core/theme-contract";
+
 import { SafeArea, useFormat } from "../shared/format-context";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoBackdrop } from "../shared/photo-backdrop";
@@ -127,7 +126,7 @@ export function ThemePath({
             than 1400px" — which only the 1600px landscape canvas crosses; every
             other format is 1080px wide and stays 1-up (square's `clamp` type
             shrinks to fit). States the intent directly, no auto-fit MIN to tune. */}
-        <div className="grid min-h-0 flex-1 auto-rows-fr @min-[1400px]/card:grid-cols-3 grid-cols-1 items-stretch gap-10">
+        <div className="grid min-h-0 flex-1 auto-rows-fr grid-cols-1 items-stretch gap-10 @min-[1400px]/card:grid-cols-3">
           {/* Region 1 — meta band + title */}
           <div
             style={{

@@ -9,10 +9,12 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
+
 import { SAMPLE_RIDE } from "@/components/app/sample-data";
 import { NO_EFFECTS } from "@/lib/photo-effects";
 import type { ColorScheme } from "@/theme/core/colors";
 import { PhotoFxProvider } from "@/theme/shared/photo-fx";
+
 import { CardScaled } from "../components/card-showcase";
 import { PreloadImg } from "../components/preload-img";
 import { PaletteChip, Pill } from "../components/stat-chip";

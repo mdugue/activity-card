@@ -11,13 +11,8 @@
 // flip, with per-element delays sequencing the reveal.
 
 import Image from "next/image";
-import {
-  type CSSProperties,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useState,
-} from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import type { CSSProperties } from "react";
 
 export type IntroStage = "composed" | "hidden" | "playing";
 type IntroRole = "scrim" | "tint" | "num" | "word" | "content";
@@ -251,7 +246,7 @@ export function RevealOverlay({
       />
       {GUTTER_LEFT.map((left, i) => (
         <div
-          className="absolute inset-y-0 w-4 origin-top bg-background"
+          className="bg-background absolute inset-y-0 w-4 origin-top"
           key={left}
           style={{ left, ...gutterStyle(stage, i) }}
         />
@@ -263,7 +258,7 @@ export function RevealOverlay({
 export function IntroReplay({ onReplay }: { onReplay: () => void }) {
   return (
     <button
-      className="absolute right-5 bottom-4 z-40 hidden items-center gap-2 rounded-full border border-foreground/30 px-3 py-2 font-medium font-mono text-[11px] uppercase tracking-[0.16em] opacity-60 transition-opacity hover:opacity-100 lg:inline-flex"
+      className="border-foreground/30 absolute right-5 bottom-4 z-40 hidden items-center gap-2 rounded-full border px-3 py-2 font-mono text-[11px] font-medium tracking-[0.16em] uppercase opacity-60 transition-opacity hover:opacity-100 lg:inline-flex"
       onClick={onReplay}
       type="button"
     >

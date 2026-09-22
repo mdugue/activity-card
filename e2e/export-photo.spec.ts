@@ -1,5 +1,8 @@
 import { promises as fs } from "node:fs";
-import { type Download, expect, type Page, test } from "@playwright/test";
+
+import { expect, test } from "@playwright/test";
+import type { Download, Page } from "@playwright/test";
+
 import { SOLID_MAGENTA_PNG_BASE64 } from "./fixtures";
 import {
   enterEditViaUpload,
@@ -39,8 +42,9 @@ async function magentaFraction(
   download: Download
 ): Promise<number> {
   const path = await download.path();
-  const base64 = (await fs.readFile(path)).toString("base64");
-  return page.evaluate(async (dataB64: string) => {
+  const bytes = await fs.readFile(path);
+  const base64 = bytes.toString("base64");
+  return await page.evaluate(async (dataB64: string) => {
     const img = new Image();
     img.src = `data:image/png;base64,${dataB64}`;
     await img.decode();
@@ -86,12 +90,12 @@ test("single-card Photo export embeds the uploaded background", async ({
   await selectSingleCard(page);
   await selectTheme(page, "PHOTO");
   await page.locator(PHOTO_INPUT).setInputFiles(MAGENTA_PHOTO);
-  await expect(page.getByText(/Photo loaded/i)).toBeVisible();
+  await expect(page.getByText(/Photo loaded/iu)).toBeVisible();
 
   // Open the export sheet and download the 4:5 Instagram Feed (native render).
   await page.getByTestId("export-action").click();
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: /download instagram feed/i }).click();
+  await page.getByRole("button", { name: /download instagram feed/iu }).click();
   const fraction = await magentaFraction(page, await downloadPromise);
 
   // The Photo theme is photo-forward, so the magenta should dominate; a broken
@@ -110,7 +114,7 @@ test("photo upload yields FROM YOUR PHOTO colour schemes (worker palette extract
   await enterEditViaUpload(page);
   await selectCarousel(page);
   await page.locator(PHOTO_INPUT).setInputFiles(MAGENTA_PHOTO);
-  await expect(page.getByText(/from your photo/i)).toBeVisible({
+  await expect(page.getByText(/from your photo/iu)).toBeVisible({
     timeout: 10_000,
   });
 });
@@ -127,18 +131,18 @@ test("carousel Exposure export embeds the uploaded background", async ({
   // "Adjust photo" affordance is gated on the same condition, so its
   // appearance means the panorama is ready to rasterise.
   await expect(
-    page.getByRole("button", { name: /adjust photo/i })
+    page.getByRole("button", { name: /adjust photo/iu })
   ).toBeVisible();
 
   // Export opens the shared overview; download the Instagram Feed strip set.
-  await page.getByRole("button", { name: /export carousel/i }).click();
-  await expect(page.getByRole("heading", { name: /pick a/i })).toBeVisible();
+  await page.getByRole("button", { name: /export carousel/iu }).click();
+  await expect(page.getByRole("heading", { name: /pick a/iu })).toBeVisible();
   // The overview deck redraws the photo once its natural size re-resolves; wait
   // for the rasterised photo layer so the export can't capture a photo-less frame.
   await page.locator('[style*="blob:"]').first().waitFor({ state: "attached" });
 
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: /download instagram feed/i }).click();
+  await page.getByRole("button", { name: /download instagram feed/iu }).click();
   const fraction = await magentaFraction(page, await downloadPromise);
 
   expect(fraction).toBeGreaterThan(0.2);

@@ -1,5 +1,6 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
+
 import { stravaToParsed } from "@/lib/strava-to-parsed";
 import type { StravaActivityDetail, StravaStreams } from "@/lib/strava-types";
 

@@ -17,7 +17,7 @@ export function useImageNaturalSize(
 
   // Re-measure whenever the photo changes — synchronising state to the `src`
   // prop, the legitimate setState-in-effect case.
-  /* eslint-disable react-hooks/set-state-in-effect */
+  /* oxlint-disable react/set-state-in-effect */
   useEffect(() => {
     if (!src) {
       setSize(null);
@@ -25,22 +25,22 @@ export function useImageNaturalSize(
     }
     let cancelled = false;
     const img = new Image();
-    img.onload = () => {
+    img.addEventListener("load", () => {
       if (!cancelled && img.naturalWidth > 0) {
         setSize({ w: img.naturalWidth, h: img.naturalHeight });
       }
-    };
-    img.onerror = () => {
+    });
+    img.addEventListener("error", () => {
       if (!cancelled) {
         setSize(null);
       }
-    };
+    });
     img.src = src;
     return () => {
       cancelled = true;
     };
   }, [src]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  /* oxlint-enable react/set-state-in-effect */
 
   return size;
 }

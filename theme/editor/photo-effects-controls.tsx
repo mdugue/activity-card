@@ -14,22 +14,19 @@ import {
   FilmStripIcon,
   FlipHorizontalIcon,
   FlipVerticalIcon,
-  type Icon,
   ImageSquareIcon,
   MoonIcon,
   SnowflakeIcon,
   SparkleIcon,
   SunIcon,
 } from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import {
-  FILTER_PRESETS,
-  nextRotation,
-  type PhotoEffects,
-} from "@/lib/photo-effects";
+import { FILTER_PRESETS, nextRotation } from "@/lib/photo-effects";
+import type { PhotoEffects } from "@/lib/photo-effects";
 
 // A glyph per preset that hints at its look — sun for warm, snowflake for cool,
 // moon for moody noir, film strip for vintage sepia, half-circle for grayscale.
@@ -69,7 +66,7 @@ export function PhotoFilterControl({ effects, onChange }: PhotoControlProps) {
         return (
           <ToggleGroupItem
             aria-label={p.label}
-            className="data-[pressed]:!border-foreground data-[pressed]:!bg-foreground data-[pressed]:!text-background flex h-auto items-center gap-1.5 px-2.5 py-1.5 font-medium font-mono text-[10px] uppercase tracking-wide"
+            className="data-[pressed]:!border-foreground data-[pressed]:!bg-foreground data-[pressed]:!text-background flex h-auto items-center gap-1.5 px-2.5 py-1.5 font-mono text-[10px] font-medium tracking-wide uppercase"
             key={p.id}
             value={p.id}
           >

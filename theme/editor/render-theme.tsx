@@ -7,7 +7,8 @@ import type { ExportFormat } from "@/theme/core/export-formats";
 import { pickThemeData } from "@/theme/core/theme-contract";
 import { FormatProvider, useFormat } from "@/theme/shared/format-context";
 import { PhotoFxProvider } from "@/theme/shared/photo-fx";
-import { SINGLE_CARD_THEMES, type ThemeId } from "@/theme/single-card";
+import { SINGLE_CARD_THEMES } from "@/theme/single-card";
+import type { ThemeId } from "@/theme/single-card";
 
 export type { ThemeId } from "@/theme/single-card";
 

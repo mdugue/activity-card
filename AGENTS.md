@@ -30,7 +30,10 @@ If a decision is in SPEC.md, follow it. If you want to deviate, raise it and ask
 
 ## Tech stack
 
-- Next.js (App Router) + TypeScript
+- Next.js (App Router) + TypeScript 7, checked with `tsc` (the native compiler)
+- Bun 1.4 as package manager, script runner and unit-test runner
+  (pinned in `.bun-version`, which CI reads)
+- oxlint + oxfmt for linting and formatting, configured through Ultracite
 - Tailwind v4
 - `snapdom` (`@zumer/snapdom`) for DOM-to-PNG
 - `fast-xml-parser` for GPX, `fit-file-parser` for .fit
@@ -43,9 +46,11 @@ If a decision is in SPEC.md, follow it. If you want to deviate, raise it and ask
 bun install
 bun dev          # local dev server
 bun build        # production build
-bun lint
-bun typecheck
-bun run test     # unit tests (bun:test, scoped to ./lib)
+bun lint         # oxlint --type-aware + oxfmt --check (one pass, via ultracite)
+bun run fix      # autofix what oxlint can, then format with oxfmt
+bun run format   # oxfmt only
+bun typecheck    # tsc --noEmit
+bun run test     # unit tests (bun:test, scoped to ./lib + ./theme)
 bun run test:e2e # Playwright e2e
 ```
 
@@ -79,16 +84,16 @@ spaces. Never cross-import a single-card theme into the carousel renderer or
 vice-versa — the renderers' guarantees differ (a bespoke poster vs the seamless
 strip).
 
-|                | Single card                                            | Carousel ("accordion")                                              |
-| -------------- | ------------------------------------------------------ | ------------------------------------------------------------------- |
-| Output         | one 1080×1350 poster                                   | an n×1080 × 1350 seamless strip, sliced into slides                 |
-| A theme is…    | **a `defineTheme` descriptor** (component + declaration) | **a `defineCarouselTheme` descriptor** (`canvas?` + `panels[]`)   |
-| Lives in       | `theme/single-card/<name>.tsx`             | `theme/carousel/registry.ts` (descriptor incl. its `look`)  |
-| Id space       | `ThemeId` (`theme/single-card/index.ts`)               | `CarouselThemeId` (`theme/carousel/registry.ts`)        |
-| Registered in  | `SINGLE_CARD_THEMES` (descriptor registry)             | `CAROUSEL_THEMES` (`registry.ts`) · `CAROUSEL_THEME_ORDER`          |
-| Renderer       | the theme component itself                             | one shared `theme/carousel/deck.tsx` (`CarouselDeck`)   |
-| Contract       | `ThemeProps` + capability declaration — see `card-rendering` + `theme-params` skills | `CanvasProps` / `PanelProps` + canvas/panels — see `carousel-themes` skill |
-| Story          | `theme/single-card/<name>.stories.tsx`     | `theme/carousel/<theme>.stories.tsx` (one per theme)    |
+|               | Single card                                                                          | Carousel ("accordion")                                                     |
+| ------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| Output        | one 1080×1350 poster                                                                 | an n×1080 × 1350 seamless strip, sliced into slides                        |
+| A theme is…   | **a `defineTheme` descriptor** (component + declaration)                             | **a `defineCarouselTheme` descriptor** (`canvas?` + `panels[]`)            |
+| Lives in      | `theme/single-card/<name>.tsx`                                                       | `theme/carousel/registry.ts` (descriptor incl. its `look`)                 |
+| Id space      | `ThemeId` (`theme/single-card/index.ts`)                                             | `CarouselThemeId` (`theme/carousel/registry.ts`)                           |
+| Registered in | `SINGLE_CARD_THEMES` (descriptor registry)                                           | `CAROUSEL_THEMES` (`registry.ts`) · `CAROUSEL_THEME_ORDER`                 |
+| Renderer      | the theme component itself                                                           | one shared `theme/carousel/deck.tsx` (`CarouselDeck`)                      |
+| Contract      | `ThemeProps` + capability declaration — see `card-rendering` + `theme-params` skills | `CanvasProps` / `PanelProps` + canvas/panels — see `carousel-themes` skill |
+| Story         | `theme/single-card/<name>.stories.tsx`                                               | `theme/carousel/<theme>.stories.tsx` (one per theme)                       |
 
 Both families share the same **editor machinery**:
 
@@ -97,11 +102,11 @@ Both families share the same **editor machinery**:
   components. Config lives in one coerced slot keyed by theme id; the editor
   groups controls by category (STYLE · LAYOUT · PHOTO · TEXT · STATS · MARKS · ACTIVITY).
 - **Capabilities** (`theme/core/theme-contract.ts`): every theme — both families —
-  *declares* which overlay elements it renders (`uses` / sport-aware `usesWhen`)
+  _declares_ which overlay elements it renders (`uses` / sport-aware `usesWhen`)
   on its `ThemeBase` core. On the single card the declaration also narrows the
   component's `data` prop type (reading an undeclared field is a compile error).
   Both families drive editor availability the same way — `themeAvailability(data,
-  theme)` (`theme/core/visibility.ts`).
+theme)` (`theme/core/visibility.ts`).
 - **Colour** (`theme/core/colors.ts`): themes consume a resolved `ColorScheme`; the user
   picks a `ColorChoice` — a static preset (single hue or pair) or a photo-derived
   strategy — in one control, hidden for fixed-palette themes.
@@ -142,10 +147,15 @@ appear.
 - **Shadows use Tailwind's scale** (`shadow-xs` … `shadow-2xl`), tinted when needed via `shadow-<token>` (e.g. `shadow-primary/50`). No arbitrary `shadow-[…]` in app chrome. Themes in `theme/` are the exception: they rasterise to PNG, so their shadows stay inline as `style={{ boxShadow }}`.
 - **Route/path silhouettes stay geographically faithful.** Project route coordinates with a single uniform scale and centre them in their container — use `projectRoute` / `routePath` (`lib/chart-helpers.ts`), which do exactly this. Never stretch a path per-axis to fill a box (e.g. to span the full carousel width): a distorted silhouette misrepresents the real route. Keep its true proportions and centre it (for the carousel hero, in the middle of the complete viewport).
 - **No console.log in committed code.** Use proper error UI for user-facing failures.
-- **Every theme ships a colocated story** — single-card *and* carousel. Adding or
+- **Every theme ships a colocated story** — single-card _and_ carousel. Adding or
   renaming a theme isn't complete without its `*.stories.tsx`; see [Storybook](#storybook).
 - **Commit messages**: Conventional Commits (`feat:`, `fix:`, `refactor:`, etc.).
 - **Lint + typecheck must be green** before pushing: `bun lint && bun typecheck`.
+  `bun lint` is one command for both halves — `oxfmt --check` then `oxlint` with
+  `--type-aware`, so the promise, deprecation and assertion rules that need type
+  information run too. Rule decisions and the reason for each deviation from
+  Ultracite's defaults live in `oxlint.config.ts`; read it before adding a
+  suppression comment.
   `bun run build-storybook` is a useful local smoke check when you touch themes
   or stories; it is deliberately not a CI gate.
 
@@ -208,7 +218,7 @@ public/               Static assets.
 - **Components** are `PascalCase` named exports. No default exports except for Next.js
   page/layout files.
 - **Hooks** start with `use` and live in `hooks/`.
-- Prefer `interface` over `type` for object shapes (lint enforces this via ultracite).
+- Prefer `interface` over `type` for object shapes (`typescript/consistent-type-definitions`).
 - Use the `@/...` path alias for absolute imports across folders. Sibling files may use
   relative paths.
 
@@ -236,12 +246,12 @@ public/               Static assets.
 ### Vendor files
 
 `components/ui/**` and `hooks/use-mobile.ts` are scaffolded by the shadcn / Next.js CLIs.
-For these files `biome.jsonc` disables a curated set of rules that shadcn's generated
-code violates (see the `overrides` block); `eslint.config.mjs` ignores them entirely
-since react-hooks rules can't be turned off per-folder cleanly. `components/ui/calendar.tsx`
-is additionally excluded from `bun typecheck` (see `tsconfig.json`) — it ships against
-`react-day-picker` v9 but v10 is installed. Don't restyle vendor files; if a primitive
-doesn't fit, wrap it in `components/app/`.
+`oxlint.config.ts` has one override for them that relaxes the rules shadcn's generated
+code violates, so a re-scaffold is never a lint failure — they are still linted and
+formatted, just at the level their generator ships. Don't restyle vendor files; if a
+primitive doesn't fit, wrap it in `components/app/`. When re-adding one, check its
+import of `cn`: newer registry output imports it from a `cn` package, while this repo
+uses `@/lib/utils`.
 
 ## Non-goals (still out of scope)
 

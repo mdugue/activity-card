@@ -450,19 +450,18 @@ export function buildStrata(opts: BuildStrataOptions): StrataGeometry {
   const innerH = H * routeBand;
   let routePts: Coord[];
   if (stretch) {
-    routePts = rc.map(
-      (p): Coord => [
-        px + ((p[0] - minX) / dx) * innerW,
-        H * routeTop + ((p[1] - minY) / dy) * innerH,
-      ]
-    );
+    routePts = rc.map((p): Coord => [
+      px + ((p[0] - minX) / dx) * innerW,
+      H * routeTop + ((p[1] - minY) / dy) * innerH,
+    ]);
   } else {
     const sc = Math.min(innerW / dx, innerH / dy);
     const offX = px + (innerW - dx * sc) / 2;
     const offY = H * routeTop + (innerH - dy * sc) / 2;
-    routePts = rc.map(
-      (p): Coord => [offX + (p[0] - minX) * sc, offY + (p[1] - minY) * sc]
-    );
+    routePts = rc.map((p): Coord => [
+      offX + (p[0] - minX) * sc,
+      offY + (p[1] - minY) * sc,
+    ]);
   }
 
   // Profile fitted into the BOTTOM band — full width, profile shape.
@@ -471,12 +470,10 @@ export function buildStrata(opts: BuildStrataOptions): StrataGeometry {
   const dv = maxV - minV || 1;
   const eTop = H * elevTop;
   const eH = H * elevBand;
-  const elevPts: Coord[] = pr.map(
-    (v, i): Coord => [
-      px + (i / (N - 1)) * innerW,
-      eTop + (1 - (v - minV) / dv) * eH,
-    ]
-  );
+  const elevPts: Coord[] = pr.map((v, i): Coord => [
+    px + (i / (N - 1)) * innerW,
+    eTop + (1 - (v - minV) / dv) * eH,
+  ]);
 
   const curves: StrataCurve[] = [];
   for (let k = 0; k <= K; k++) {

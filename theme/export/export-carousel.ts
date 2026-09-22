@@ -7,7 +7,9 @@
 // font-ready wait and snapdom options.
 
 import { snapdom } from "@zumer/snapdom";
+
 import type { ExportFormat } from "@/theme/core/export-formats";
+
 import { deliverFiles, effortDateSlug, waitForFonts } from "./export-shared";
 
 const PIXEL_RATIO = 2; // each slide → 2× its format size, matching the single card
@@ -34,13 +36,13 @@ export async function exportCarousel(
     1,
     Math.min(PIXEL_RATIO, Math.floor(MAX_CANVAS_DIM / width))
   );
-  // `embedFonts` inlines the deck's @font-face; `dpr: 1` keeps the strip a
-  // deterministic `pr`× of its native size regardless of screen density (see
+  // `embedFonts` inlines the deck's @font-face; the output size is given
+  // pre-multiplied by `pr` because snapdom v3 lets width/height win over
+  // `scale`; `dpr: 1` keeps the strip independent of screen density (see
   // theme/export/export-card.ts for the full note).
   const canvas = await snapdom.toCanvas(wideNode, {
-    width,
-    height: format.height,
-    scale: pr,
+    width: width * pr,
+    height: format.height * pr,
     dpr: 1,
     embedFonts: true,
   });

@@ -5,11 +5,9 @@
 // Optionally tags the highest and lowest points with a small dot + altitude.
 
 import { useId } from "react";
-import {
-  type OverlayPath,
-  sequencePaths,
-  sequenceProfiles,
-} from "@/lib/chart-helpers";
+
+import { sequencePaths, sequenceProfiles } from "@/lib/chart-helpers";
+import type { OverlayPath } from "@/lib/chart-helpers";
 import type { ElevationColors } from "@/theme/carousel/theme-tokens";
 
 interface ElevationBandProps {
@@ -51,7 +49,7 @@ export function ElevationBand({
     const reach = Math.min(1, Math.max(0.3, 0.7 * exaggeration));
     const curves = sequenceProfiles(
       profiles,
-      weights ?? profiles.map(() => undefined),
+      weights ?? [],
       mode === "elevation"
     );
     const paths = sequencePaths(curves, w, h, reach);

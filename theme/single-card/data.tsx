@@ -4,6 +4,7 @@
 // IG-safe: all text >= 24px on the 1080-wide canvas.
 
 import type { ReactNode } from "react";
+
 import type { Coord } from "@/lib/activity";
 import {
   abstractLanes,
@@ -24,11 +25,13 @@ import {
 } from "@/lib/format";
 import {
   isMultiActivity,
-  type SegmentRoute,
   segmentProfiles,
   segmentRoutes,
 } from "@/lib/multi-activity";
-import { defineTheme, type ThemeProps } from "@/theme/core/theme-contract";
+import type { SegmentRoute } from "@/lib/multi-activity";
+import { defineTheme } from "@/theme/core/theme-contract";
+import type { ThemeProps } from "@/theme/core/theme-contract";
+
 import { SafeArea, useFormat } from "../shared/format-context";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoUnderlay } from "../shared/photo-underlay";
@@ -630,7 +633,7 @@ export function ThemeData({
             landscape canvas crosses 1400px). `minmax(0, 1fr)` (via grid-cols-*)
             lets cells shrink, not overflow. */}
         <div
-          className="grid auto-rows-fr @min-[1400px]/card:grid-cols-5 grid-cols-3"
+          className="grid auto-rows-fr grid-cols-3 @min-[1400px]/card:grid-cols-5"
           style={{
             gap: 14,
             marginBottom: 14,
@@ -801,7 +804,7 @@ export function ThemeData({
                 container — which still sizes each split row's type to THIS grid's
                 height (`cqb` below) so the splits stay inside the panel. */}
             <div
-              className="grid auto-rows-fr @min-[1400px]/card:grid-cols-6 grid-cols-3"
+              className="grid auto-rows-fr grid-cols-3 @min-[1400px]/card:grid-cols-6"
               style={{
                 marginTop: "clamp(8px, 2cqb, 18px)",
                 gap: "clamp(6px, 1.6cqb, 14px) 14px",

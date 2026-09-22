@@ -4,8 +4,10 @@
 // theme's coerced config; the mood-swapped palette arrives via the deck style
 // (STRATA's `resolveStyle`).
 
-import { DEFAULT_STRATA_CONFIG, type StrataConfig } from "@/lib/strata";
+import { DEFAULT_STRATA_CONFIG } from "@/lib/strata";
+import type { StrataConfig } from "@/lib/strata";
 import type { CanvasProps } from "@/theme/carousel/define-theme";
+
 import { StrataHero } from "../strata-canvas";
 
 export function StrataCanvas({

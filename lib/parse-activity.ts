@@ -5,12 +5,12 @@
  * keeping the initial JS the empty state ships small.
  */
 
-export type { ParsedActivity, ParsedSport } from "./parse-shared";
-
 import type { ParsedActivity } from "./parse-shared";
 
+export type { ParsedActivity, ParsedSport } from "./parse-shared";
+
 /** Accepted upload extensions. */
-export const ACTIVITY_FILE_RE = /\.(gpx|fit)$/i;
+export const ACTIVITY_FILE_RE = /\.(gpx|fit)$/iu;
 
 /**
  * Filter a drop/selection down to `.gpx`/`.fit` files and parse each into a
@@ -22,9 +22,7 @@ export const ACTIVITY_FILE_RE = /\.(gpx|fit)$/i;
 export async function parseActivityFiles(
   fileList: FileList | File[]
 ): Promise<ParsedActivity[]> {
-  const files = Array.from(fileList).filter((f) =>
-    ACTIVITY_FILE_RE.test(f.name)
-  );
+  const files = [...fileList].filter((f) => ACTIVITY_FILE_RE.test(f.name));
   if (files.length === 0) {
     throw new Error("Drop a .gpx or .fit file.");
   }
@@ -46,7 +44,7 @@ export async function parseActivityFile(file: File): Promise<ParsedActivity> {
       file.arrayBuffer(),
       import("./parse-fit"),
     ]);
-    return parseFit(buffer, file.name);
+    return await parseFit(buffer, file.name);
   }
   throw new Error(`Unsupported file extension: ${ext}`);
 }

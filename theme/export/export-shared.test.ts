@@ -1,5 +1,6 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
+
 import { effortDateSlug } from "@/theme/export/export-shared";
 
 describe("effortDateSlug", () => {

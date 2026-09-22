@@ -7,7 +7,9 @@
 // changing this hook's shape — see the note at the bottom of palette.ts.
 
 import { useEffect, useState } from "react";
-import { buildPaletteFromImage, type ExtractedPalette } from "@/lib/palette";
+
+import { buildPaletteFromImage } from "@/lib/palette";
+import type { ExtractedPalette } from "@/lib/palette";
 
 /**
  * @param src object URL / data URL of the uploaded photo, or null when no photo
@@ -23,7 +25,7 @@ export function useImagePalette(
   // The synchronous setState below is intentional: it synchronises internal
   // state to an external prop (`src`). The rule warns about cascades when an
   // effect sets state it also depends on — not the case here.
-  /* eslint-disable react-hooks/set-state-in-effect */
+  /* oxlint-disable react/set-state-in-effect */
   useEffect(() => {
     if (!src) {
       setPalette(null);
@@ -47,7 +49,7 @@ export function useImagePalette(
       cancelled = true;
     };
   }, [src]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  /* oxlint-enable react/set-state-in-effect */
 
   return palette;
 }

@@ -7,9 +7,13 @@
 // effect cleanup). `app/page.tsx` composes this with the visibility flag —
 // the `photoBackdrop` switch is deliberately NOT owned here.
 
-import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
-import { IDENTITY_TRANSFORM, type ImageTransform } from "@/lib/image-transform";
-import { NO_EFFECTS, type PhotoEffects } from "@/lib/photo-effects";
+import { useEffect, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
+
+import { IDENTITY_TRANSFORM } from "@/lib/image-transform";
+import type { ImageTransform } from "@/lib/image-transform";
+import { NO_EFFECTS } from "@/lib/photo-effects";
+import type { PhotoEffects } from "@/lib/photo-effects";
 import type { ThemePhotoPolicy } from "@/theme/core/theme-contract";
 
 /** A theme's photo effects (its signature filter + grain) over a base. */

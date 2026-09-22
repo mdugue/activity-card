@@ -3,7 +3,9 @@
 // Top-level Single Card ↔ Carousel switch — a compact segmented control that
 // sits inline with the wordmark in the editor's header line.
 
-import { type Icon, ImageIcon, PanoramaIcon } from "@phosphor-icons/react";
+import { ImageIcon, PanoramaIcon } from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
+
 import { cn } from "@/lib/utils";
 
 export type CardMode = "single" | "carousel";
@@ -20,7 +22,7 @@ const MODES: { id: CardMode; label: string; Icon: Icon }[] = [
 
 export function ModeToggle({ mode, onModeChange }: ModeToggleProps) {
   return (
-    <fieldset className="m-0 inline-flex border border-foreground/15 p-0.5">
+    <fieldset className="border-foreground/15 m-0 inline-flex border p-0.5">
       <legend className="sr-only">Card mode</legend>
       {MODES.map((m) => {
         const active = m.id === mode;
@@ -39,7 +41,7 @@ export function ModeToggle({ mode, onModeChange }: ModeToggleProps) {
             type="button"
           >
             <Icon aria-hidden className="size-4 shrink-0" weight="duotone" />
-            <span className="whitespace-nowrap font-heading text-sm uppercase leading-none tracking-wide">
+            <span className="font-heading text-sm leading-none tracking-wide whitespace-nowrap uppercase">
               {m.label}
             </span>
           </button>

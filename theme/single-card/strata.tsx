@@ -18,7 +18,6 @@ import {
   isNum,
   sportArticleLabel,
 } from "@/lib/format";
-
 import {
   buildStrata,
   DEFAULT_STRATA_CONFIG,
@@ -26,16 +25,14 @@ import {
   STRATA_DENSITY_K,
   STRATA_MOODS,
   STRATA_PARAMS,
-  type StrataConfig,
   smoothPath,
   strataDirectionArrow,
   strataPeakMarker,
 } from "@/lib/strata";
-import {
-  type ActivityView,
-  defineTheme,
-  type ThemeProps,
-} from "@/theme/core/theme-contract";
+import type { StrataConfig } from "@/lib/strata";
+import { defineTheme } from "@/theme/core/theme-contract";
+import type { ActivityView, ThemeProps } from "@/theme/core/theme-contract";
+
 import { CoverPhoto } from "../shared/cover-photo";
 import { useFormat, useSafeInsets } from "../shared/format-context";
 import { usePhotoEffects, usePhotoImageSize } from "../shared/photo-fx";

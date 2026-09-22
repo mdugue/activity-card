@@ -16,26 +16,29 @@
 // to both edges. The cutout clip id MUST be unique per render (`useId`) — see the
 // detailed note at the clip site in `ClaimText`.
 
-import { type CSSProperties, useEffect, useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
+import type { CSSProperties } from "react";
+
 import {
   ALTITUDE_PARAMS,
-  type AltitudeConfig,
-  type AltitudePosition,
-  type ClaimLayout,
   DEFAULT_ALTITUDE_CONFIG,
   layoutClaim,
-  type ResolvedStat,
   resolveClaim,
   supportingStats,
 } from "@/lib/altitude";
-import {
-  type Coord,
-  type NormalizedCurve,
-  sequenceProfiles,
-} from "@/lib/chart-helpers";
+import type {
+  AltitudeConfig,
+  AltitudePosition,
+  ClaimLayout,
+  ResolvedStat,
+} from "@/lib/altitude";
+import { sequenceProfiles } from "@/lib/chart-helpers";
+import type { Coord, NormalizedCurve } from "@/lib/chart-helpers";
 import { formatDateUpper } from "@/lib/format";
 import { isMultiActivity, segmentProfiles } from "@/lib/multi-activity";
-import { defineTheme, type ThemeProps } from "@/theme/core/theme-contract";
+import { defineTheme } from "@/theme/core/theme-contract";
+import type { ThemeProps } from "@/theme/core/theme-contract";
+
 import { useFormat, useSafeInsets } from "../shared/format-context";
 import { PhotoLayer } from "../shared/photo-layer";
 
@@ -58,7 +61,7 @@ const W = 1080;
 const PAD_X = 84;
 // Characters that drop below the baseline — used to reserve descender room only
 // when the text actually needs it (numbers/caps stay tight).
-const DESCENDERS = /[gjpqy]/;
+const DESCENDERS = /[gjpqy]/u;
 
 // --- Anton/Playfair vertical ink metrics (fractions of the font size) --------
 // Measured from the rendered fonts: caps/ascenders rise ~0.92× the font size
@@ -69,7 +72,7 @@ const DESCENDERS = /[gjpqy]/;
 // into empty space: roomy formats render identically.
 const INK_ASCENT = 0.92;
 const TOP_PAD = 0.04;
-const LINE_STEP = 1.0;
+const LINE_STEP = 1;
 // Room below the baseline: descenders, or the elevation curve's dip + its stroke.
 // Unchanged from the original calibration so footer placement is preserved.
 const DESCENT_TEXT = 0.2;
@@ -144,7 +147,7 @@ function probeWidth(
       letterSpacing: "normal",
       fontSize: `${REF_PX}px`,
     });
-    document.body.appendChild(measureProbe);
+    document.body.append(measureProbe);
   }
   measureProbe.style.fontFamily = fontFamily;
   measureProbe.style.fontWeight = String(fontWeight);
@@ -203,8 +206,8 @@ function useFittedFontSize(
       }
     };
     measure();
-    if (typeof document !== "undefined" && document.fonts?.ready) {
-      document.fonts.ready.then(measure);
+    if (typeof document !== "undefined" && document.fonts) {
+      void document.fonts.ready.then(measure);
     }
     return () => {
       alive = false;
@@ -615,7 +618,7 @@ export function ThemeAltitude({
     : null;
   // Unique per render so coexisting cards never share a clip id (see ClaimText).
   // Strip the colons `useId` emits so the id is a clean `url(#…)` reference.
-  const uid = `alt-${useId().replace(/:/g, "")}`;
+  const uid = `alt-${useId().replaceAll(":", "")}`;
 
   const unitFontSize = layout
     ? Math.min(64, Math.max(40, Math.round(layout.fontSize * 0.13)))

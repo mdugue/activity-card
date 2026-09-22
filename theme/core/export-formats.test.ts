@@ -1,16 +1,17 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
+
 import {
   contentBox,
   DEFAULT_FORMAT_ID,
   EXPORT_FORMATS,
-  type ExportFormatId,
   FORMAT_ORDER,
   getFormat,
   isDefaultFormat,
   isExportFormatId,
   mergeSafe,
 } from "@/theme/core/export-formats";
+import type { ExportFormatId } from "@/theme/core/export-formats";
 
 const ALL_IDS = Object.keys(EXPORT_FORMATS) as ExportFormatId[];
 

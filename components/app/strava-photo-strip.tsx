@@ -7,6 +7,7 @@
 // through `/api/strava/photo` so the export canvas stays untainted.
 
 import Image from "next/image";
+
 import { Spinner } from "@/components/ui/spinner";
 import type { StravaPhotoRef } from "@/lib/activity";
 import { stravaPhotoKey } from "@/lib/strava-photos";
@@ -41,8 +42,8 @@ export function StravaPhotoStrip({
             aria-label={`Use Strava photo ${ref.index + 1}`}
             aria-pressed={selected}
             className={cn(
-              "relative h-14 w-20 overflow-hidden outline outline-1 outline-foreground/20 transition-all hover:outline-2 hover:outline-primary",
-              selected && "outline-2 outline-primary"
+              "outline-foreground/20 hover:outline-primary relative h-14 w-20 overflow-hidden outline outline-1 transition-all hover:outline-2",
+              selected && "outline-primary outline-2"
             )}
             disabled={picking}
             key={key}
@@ -58,7 +59,7 @@ export function StravaPhotoStrip({
               unoptimized
             />
             {picking ? (
-              <span className="absolute inset-0 flex items-center justify-center bg-background/60">
+              <span className="bg-background/60 absolute inset-0 flex items-center justify-center">
                 <Spinner className="size-4" />
               </span>
             ) : null}

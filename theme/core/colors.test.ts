@@ -1,13 +1,14 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
+
 import type { ExtractedPalette, PaletteTheme } from "@/lib/palette";
 import {
-  type ColorChoice,
   coerceColorChoice,
   colorChoiceId,
   resolveColors,
   schemeFromPalette,
 } from "@/theme/core/colors";
+import type { ColorChoice } from "@/theme/core/colors";
 
 function paletteTheme(accent: string): PaletteTheme {
   return {

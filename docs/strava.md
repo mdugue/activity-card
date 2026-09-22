@@ -90,29 +90,29 @@ skew), so the picker and detail handlers don't need refresh logic.
 
 ## File map
 
-| File | Responsibility |
-| ---- | -------------- |
-| `app/api/strava/authorize/route.ts` | Builds the Strava authorize URL + state cookie, 302 redirect. |
-| `app/api/strava/callback/route.ts` | Validates `state`, exchanges `code` for tokens, sets cookies, redirects back. |
-| `app/api/strava/me/route.ts` | Reads the athlete cookie. The only endpoint the client polls. |
-| `app/api/strava/activities/route.ts` | Lists activities for the requested `?page=N&per_page=M` (defaults: 30, 1). |
-| `app/api/strava/stats/route.ts` | Returns `{ totalCount, totalPages }` from Strava's `/athletes/{id}/stats`. Only counts ride / run / swim — the picker treats it as a hint and still trusts `canGoNext` (full page) for the actual end of the list. |
-| `app/api/strava/activity/[id]/route.ts` | Detail + streams + photo list → `ParsedActivity[]` (photo previews attached as `stravaPhotos`). |
-| `app/api/strava/photo/route.ts` | Streams one of an activity's photos through our origin (`?activity=ID&index=N`). The image URL is re-resolved server-side from Strava's photo list — the client never supplies a URL — and the same-origin response keeps the export canvas untainted. |
-| `app/api/strava/disconnect/route.ts` | Clears all four cookies. Rejects cross-site POSTs via fetch-metadata. |
-| `lib/strava-cookies.ts` | `readTokens`, `writeTokens`, `clearTokens`, `ensureFreshToken`, `forceRefreshToken`, OAuth state. Single source of truth for the cookie flow. |
-| `lib/strava-client.ts` | `stravaFetch` / `stravaFetchOptional` — the only way handlers talk to Strava. Handles 401-retry, 429, and upstream errors; `stravaErrorResponse` maps thrown errors to HTTP responses. |
-| `lib/strava-types.ts` | Strava model types. Base shapes derive from the generated spec; the `ActivityExtras` layer adds fields the spec omits. |
-| `lib/strava-api.generated.ts` | Auto-generated from Strava's OpenAPI spec via `bun run strava:types`. Do not edit — regenerate. Lint/format/eslint skip it. |
-| `lib/strava-to-parsed.ts` | Maps Strava streams + detail into the same `TrackPoint`/`ParsedActivity` shape the GPX/.fit parsers produce. Reuses `finalise()` and `detectSport()` from `lib/parse-shared.ts`. |
-| `lib/strava-photos.ts` | Client helpers for the photo strip: the proxy URL builder and `fetchStravaPhotoFile()` (proxy download → `File`, so a Strava photo flows through the exact pipeline an upload uses). |
-| `components/app/strava-photo-strip.tsx` | The "images from Strava" thumbnail row, shared by the onboarding wizard's photo step and the editor's PHOTO group. Previews render off Strava's CDN; activation downloads via the proxy. |
-| `components/app/strava-picker.tsx` | Activity-list screen (`AppState === "picking-strava"`) — shadcn `Item`/`Pagination`/`Switch`/`Checkbox`. Owns single-pick, multi-select, pagination, and the per-error-kind `<StravaErrorAlert>` rendering. Its `PickerConnection` header row shows "Connected as … / Disconnect". |
-| `components/app/strava-connect-button.tsx` | Official 237×48 "Connect with Strava" SVG (per §1.1) wrapped in an anchor → `/api/strava/authorize`. The asset is at `public/strava/btn-connect-with-strava-orange.svg` and must not be modified. |
-| `components/app/strava-footer.tsx` | Plain-text "Compatible with Strava" reference. Rendered on the empty + picker states from `app/page.tsx`. |
-| `hooks/use-strava-connection.ts` | `useStravaConnection()` — wraps `/api/strava/me`. Exposes `{ connected, athlete, loading, error }` so the empty state can distinguish "you're not signed in" (`connected:false`) from "the server is broken" (`error:'fetch_failed'`). |
-| `e2e/strava-mock.ts` | Bun.serve mock server used by Playwright tests. |
-| `e2e/strava.spec.ts` | End-to-end coverage of the full flow. |
+| File                                       | Responsibility                                                                                                                                                                                                                                                                     |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app/api/strava/authorize/route.ts`        | Builds the Strava authorize URL + state cookie, 302 redirect.                                                                                                                                                                                                                      |
+| `app/api/strava/callback/route.ts`         | Validates `state`, exchanges `code` for tokens, sets cookies, redirects back.                                                                                                                                                                                                      |
+| `app/api/strava/me/route.ts`               | Reads the athlete cookie. The only endpoint the client polls.                                                                                                                                                                                                                      |
+| `app/api/strava/activities/route.ts`       | Lists activities for the requested `?page=N&per_page=M` (defaults: 30, 1).                                                                                                                                                                                                         |
+| `app/api/strava/stats/route.ts`            | Returns `{ totalCount, totalPages }` from Strava's `/athletes/{id}/stats`. Only counts ride / run / swim — the picker treats it as a hint and still trusts `canGoNext` (full page) for the actual end of the list.                                                                 |
+| `app/api/strava/activity/[id]/route.ts`    | Detail + streams + photo list → `ParsedActivity[]` (photo previews attached as `stravaPhotos`).                                                                                                                                                                                    |
+| `app/api/strava/photo/route.ts`            | Streams one of an activity's photos through our origin (`?activity=ID&index=N`). The image URL is re-resolved server-side from Strava's photo list — the client never supplies a URL — and the same-origin response keeps the export canvas untainted.                             |
+| `app/api/strava/disconnect/route.ts`       | Clears all four cookies. Rejects cross-site POSTs via fetch-metadata.                                                                                                                                                                                                              |
+| `lib/strava-cookies.ts`                    | `readTokens`, `writeTokens`, `clearTokens`, `ensureFreshToken`, `forceRefreshToken`, OAuth state. Single source of truth for the cookie flow.                                                                                                                                      |
+| `lib/strava-client.ts`                     | `stravaFetch` / `stravaFetchOptional` — the only way handlers talk to Strava. Handles 401-retry, 429, and upstream errors; `stravaErrorResponse` maps thrown errors to HTTP responses.                                                                                             |
+| `lib/strava-types.ts`                      | Strava model types. Base shapes derive from the generated spec; the `ActivityExtras` layer adds fields the spec omits.                                                                                                                                                             |
+| `lib/strava-api.generated.ts`              | Auto-generated from Strava's OpenAPI spec via `bun run strava:types`. Do not edit — regenerate. Lint and format skip it.                                                                                                                                                           |
+| `lib/strava-to-parsed.ts`                  | Maps Strava streams + detail into the same `TrackPoint`/`ParsedActivity` shape the GPX/.fit parsers produce. Reuses `finalise()` and `detectSport()` from `lib/parse-shared.ts`.                                                                                                   |
+| `lib/strava-photos.ts`                     | Client helpers for the photo strip: the proxy URL builder and `fetchStravaPhotoFile()` (proxy download → `File`, so a Strava photo flows through the exact pipeline an upload uses).                                                                                               |
+| `components/app/strava-photo-strip.tsx`    | The "images from Strava" thumbnail row, shared by the onboarding wizard's photo step and the editor's PHOTO group. Previews render off Strava's CDN; activation downloads via the proxy.                                                                                           |
+| `components/app/strava-picker.tsx`         | Activity-list screen (`AppState === "picking-strava"`) — shadcn `Item`/`Pagination`/`Switch`/`Checkbox`. Owns single-pick, multi-select, pagination, and the per-error-kind `<StravaErrorAlert>` rendering. Its `PickerConnection` header row shows "Connected as … / Disconnect". |
+| `components/app/strava-connect-button.tsx` | Official 237×48 "Connect with Strava" SVG (per §1.1) wrapped in an anchor → `/api/strava/authorize`. The asset is at `public/strava/btn-connect-with-strava-orange.svg` and must not be modified.                                                                                  |
+| `components/app/strava-footer.tsx`         | Plain-text "Compatible with Strava" reference. Rendered on the empty + picker states from `app/page.tsx`.                                                                                                                                                                          |
+| `hooks/use-strava-connection.ts`           | `useStravaConnection()` — wraps `/api/strava/me`. Exposes `{ connected, athlete, loading, error }` so the empty state can distinguish "you're not signed in" (`connected:false`) from "the server is broken" (`error:'fetch_failed'`).                                             |
+| `e2e/strava-mock.ts`                       | Bun.serve mock server used by Playwright tests.                                                                                                                                                                                                                                    |
+| `e2e/strava.spec.ts`                       | End-to-end coverage of the full flow.                                                                                                                                                                                                                                              |
 
 ## Local dev against the real Strava API
 
@@ -122,11 +122,13 @@ skew), so the picker and detail handlers don't need refresh logic.
      does not accept paths here; the path is in `STRAVA_REDIRECT_URI`).
 
 2. **Copy `.env.example` → `.env.local`** and fill in:
+
    ```
    STRAVA_CLIENT_ID=...
    STRAVA_CLIENT_SECRET=...
    STRAVA_REDIRECT_URI=http://localhost:3000/api/strava/callback
    ```
+
    Leave `STRAVA_OAUTH_URL`, `STRAVA_TOKEN_URL`, `STRAVA_API_BASE`, and
    `STRAVA_INSECURE_COOKIES` unset — the code falls back to the real
    Strava endpoints and uses `Secure` cookies (which work over `http`
@@ -217,7 +219,7 @@ env-driven**. Set `STRAVA_BOUNCE_ALLOWED_HOST_SUFFIX` to your project's
 Vercel namespace — only hosts ending with that suffix (or matching the
 registered callback host) get the relay. Anything else short-circuits
 to `/?strava=bounce_rejected`, surfacing a toast. With no suffix set,
-*no* cross-origin bounce is permitted, which is the safe default for
+_no_ cross-origin bounce is permitted, which is the safe default for
 single-deploy or non-Vercel setups.
 
 Example:
@@ -231,7 +233,7 @@ Why this matters: anyone can deploy `evil.vercel.app` and craft a state
 payload directly with Strava (`?state=base64({b:"https://evil.vercel.app",…})`).
 Without `client_secret` they can't exchange the leaked code for tokens,
 but the code is still confidential data — the suffix-based allowlist
-keeps the relay scoped to *your* previews.
+keeps the relay scoped to _your_ previews.
 
 For local dev / E2E where preview-style origins run over `http://`
 (localhost), set `STRAVA_ALLOW_HTTP_BOUNCE=1` to relax the protocol
@@ -242,13 +244,13 @@ check. Never set in production.
 The browser never sees Strava tokens. All four cookies are `httpOnly`,
 `SameSite=Lax`, `Path=/`, and `Secure` in production:
 
-| Cookie | Contents | Lifetime |
-| ------ | -------- | -------- |
-| `strava_access` | Access token | Until expiry (refreshed silently) |
-| `strava_refresh` | Refresh token | Strava's lifetime (long-lived) |
-| `strava_expires_at` | UNIX seconds when access expires | Tracks the access token |
-| `strava_athlete` | Trimmed athlete JSON (`id`, `firstname`, `avatar`) | Until disconnect |
-| `strava_oauth_state` | Per-request CSRF token | 10 minutes |
+| Cookie               | Contents                                           | Lifetime                          |
+| -------------------- | -------------------------------------------------- | --------------------------------- |
+| `strava_access`      | Access token                                       | Until expiry (refreshed silently) |
+| `strava_refresh`     | Refresh token                                      | Strava's lifetime (long-lived)    |
+| `strava_expires_at`  | UNIX seconds when access expires                   | Tracks the access token           |
+| `strava_athlete`     | Trimmed athlete JSON (`id`, `firstname`, `avatar`) | Until disconnect                  |
+| `strava_oauth_state` | Per-request CSRF token                             | 10 minutes                        |
 
 `ensureFreshToken()` is the only path that talks to `/oauth/token`. Any
 route handler that needs an access token calls it; if there's no token

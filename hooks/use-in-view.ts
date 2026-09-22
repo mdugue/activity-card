@@ -1,6 +1,7 @@
 "use client";
 
-import { type RefObject, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import type { RefObject } from "react";
 
 /**
  * One-shot viewport gate: flips to true the first time the element nears the
@@ -18,7 +19,7 @@ export function useInView(ref: RefObject<Element | null>): boolean {
     // lazy gate and just mount, so the section always renders. One-shot
     // cold-start sync — the initial state stays false for SSR parity.
     if (typeof IntersectionObserver === "undefined") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      // oxlint-disable-next-line react/set-state-in-effect
       setInView(true);
       return;
     }

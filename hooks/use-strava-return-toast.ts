@@ -20,30 +20,37 @@ export function useStravaReturnToast(onConnected: () => void): void {
       return;
     }
     switch (flag) {
-      case "connected":
+      case "connected": {
         toast.success("Connected to Strava");
         // Stay on the empty state; the wizard + its Strava picker open instead.
         onConnected();
         break;
-      case "denied":
+      }
+      case "denied": {
         toast.error("You declined to connect Strava. You can try again.");
         break;
-      case "state_mismatch":
+      }
+      case "state_mismatch": {
         toast.error("Couldn't verify the Strava sign-in. Please try again.");
         break;
-      case "token_exchange":
+      }
+      case "token_exchange": {
         toast.error("Strava rejected the sign-in. Try again in a moment.");
         break;
-      case "failed":
+      }
+      case "failed": {
         toast.error("Couldn't start the Strava sign-in. Try again.");
         break;
-      case "bounce_rejected":
+      }
+      case "bounce_rejected": {
         toast.error(
           "The Strava sign-in was redirected to an unrecognised host. Aborted."
         );
         break;
-      default:
+      }
+      default: {
         toast.error(`Couldn't connect to Strava (${flag})`);
+      }
     }
     // Strip the param so a reload doesn't re-fire the toast.
     const url = new URL(window.location.href);

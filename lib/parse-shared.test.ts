@@ -1,6 +1,8 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
-import { detectSport, finalise, type TrackPoint } from "@/lib/parse-shared";
+
+import { detectSport, finalise } from "@/lib/parse-shared";
+import type { TrackPoint } from "@/lib/parse-shared";
 
 describe("detectSport", () => {
   test("maps cycling keywords from the raw type", () => {
@@ -36,16 +38,13 @@ describe("finalise", () => {
   // A short straight eastward run, one point per minute, ~1.85 km total.
   function linePoints(): TrackPoint[] {
     const start = Date.parse("2026-05-18T07:00:00Z");
-    return Array.from(
-      { length: 11 },
-      (_, i): TrackPoint => ({
-        lat: 0,
-        lng: i * 0.001, // ~111 m per 0.001° at the equator
-        elevation: 100 + i,
-        heartRate: 140 + i,
-        time: start + i * 60_000,
-      })
-    );
+    return Array.from({ length: 11 }, (_, i): TrackPoint => ({
+      lat: 0,
+      lng: i * 0.001, // ~111 m per 0.001° at the equator
+      elevation: 100 + i,
+      heartRate: 140 + i,
+      time: start + i * 60_000,
+    }));
   }
 
   test("derives distance and duration from track points", () => {

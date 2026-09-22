@@ -1,5 +1,6 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
+
 import type { ParamDef } from "@/theme/core/params/kinds";
 import { coerceConfig } from "@/theme/core/params/resolve";
 

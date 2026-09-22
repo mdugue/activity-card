@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+
 import { stravaErrorResponse, stravaFetch } from "@/lib/strava-client";
 import { clampedIntParam } from "@/lib/strava-params";
 import type { StravaSummary } from "@/lib/strava-types";
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
         summary_polyline: a.map?.summary_polyline ?? null,
       })),
     });
-  } catch (err) {
-    return stravaErrorResponse(err);
+  } catch (error) {
+    return stravaErrorResponse(error);
   }
 }

@@ -13,12 +13,11 @@ import {
   formatPaceSec,
   isNum,
 } from "@/lib/format";
-import {
-  isMultiActivity,
-  type SegmentRoute,
-  segmentRoutes,
-} from "@/lib/multi-activity";
-import { defineTheme, type ThemeProps } from "@/theme/core/theme-contract";
+import { isMultiActivity, segmentRoutes } from "@/lib/multi-activity";
+import type { SegmentRoute } from "@/lib/multi-activity";
+import { defineTheme } from "@/theme/core/theme-contract";
+import type { ThemeProps } from "@/theme/core/theme-contract";
+
 import { SafeArea, useFormat } from "../shared/format-context";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoBackdrop } from "../shared/photo-backdrop";
@@ -230,7 +229,7 @@ export function ThemeEditorial({
             overlap; the per-element clamps keep that height in budget on short
             canvases. */}
         <div
-          className="grid flex-1 auto-rows-auto @min-[1400px]/card:grid-cols-2 grid-cols-1 content-start"
+          className="grid flex-1 auto-rows-auto grid-cols-1 content-start @min-[1400px]/card:grid-cols-2"
           style={{
             minHeight: 0,
             gap: "clamp(14px, 3cqi, 64px)",

@@ -6,7 +6,9 @@
  */
 
 import type { ColorScheme } from "@/theme/core/colors";
-import { type CarouselLook, FONT_PAIRS, type FontPair } from "./theme-tokens";
+
+import { FONT_PAIRS } from "./theme-tokens";
+import type { CarouselLook, FontPair } from "./theme-tokens";
 
 /**
  * The look, with the colour-bearing fields resolved (user choice over the
@@ -14,11 +16,10 @@ import { type CarouselLook, FONT_PAIRS, type FontPair } from "./theme-tokens";
  * `resolveStyle` may post-process the whole object (STRATA's mood swaps
  * background/ink/accents/dark per config).
  */
-export interface EffectiveStyle
-  extends Omit<
-    CarouselLook,
-    "defaultColorChoice" | "defaultFilter" | "defaultGrain" | "fontPair"
-  > {
+export interface EffectiveStyle extends Omit<
+  CarouselLook,
+  "defaultColorChoice" | "defaultFilter" | "defaultGrain" | "fontPair"
+> {
   fonts: FontPair;
   /** the theme's display name (Frame's nameplate / signature fallback) */
   label: string;

@@ -1,11 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import {
-  clampTransform,
-  IDENTITY_TRANSFORM,
-  type ImageTransform,
-} from "@/lib/image-transform";
+
+import { clampTransform, IDENTITY_TRANSFORM } from "@/lib/image-transform";
+import type { ImageTransform } from "@/lib/image-transform";
 
 interface PointerPos {
   x: number;

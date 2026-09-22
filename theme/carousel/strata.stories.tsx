@@ -1,10 +1,10 @@
 import type { ComponentProps } from "react";
+
 import { SAMPLE_RIDE, SAMPLE_TRI } from "@/components/app/sample-data";
 import { DEFAULT_STRATA_CONFIG } from "@/lib/strata";
-import {
-  type BackgroundArgs,
-  backgroundArgTypes,
-} from "../../.storybook/backgrounds";
+
+import { backgroundArgTypes } from "../../.storybook/backgrounds";
+import type { BackgroundArgs } from "../../.storybook/backgrounds";
 import preview from "../../.storybook/preview";
 import { activityArgType } from "../../.storybook/theme-controls";
 import { CarouselDeck } from "./deck";

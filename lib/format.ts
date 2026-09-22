@@ -28,7 +28,7 @@ export function sportArticleLabel(sport: string): string {
   return "AN EFFORT";
 }
 
-export function formatDuration(sec: number | undefined): string {
+export function formatDuration(sec?: number): string {
   if (sec === undefined || !Number.isFinite(sec) || sec <= 0) {
     return DASH;
   }
@@ -45,7 +45,7 @@ export function formatDuration(sec: number | undefined): string {
 }
 
 /** Clock form: "1:23:45" or "5:18". Used for splits and transitions. */
-export function formatClock(sec: number | undefined): string {
+export function formatClock(sec?: number): string {
   if (sec === undefined || !Number.isFinite(sec) || sec <= 0) {
     return DASH;
   }
@@ -59,7 +59,7 @@ export function formatClock(sec: number | undefined): string {
 }
 
 /** Run pace, stored as float minutes (4.95) → "4:57". */
-export function formatPaceMin(minutes: number | undefined): string {
+export function formatPaceMin(minutes?: number): string {
   if (minutes === undefined || !Number.isFinite(minutes) || minutes <= 0) {
     return DASH;
   }
@@ -70,7 +70,7 @@ export function formatPaceMin(minutes: number | undefined): string {
 }
 
 /** Swim pace, stored as seconds-per-100m (118) → "1:58". */
-export function formatPaceSec(seconds: number | undefined): string {
+export function formatPaceSec(seconds?: number): string {
   if (seconds === undefined || !Number.isFinite(seconds) || seconds <= 0) {
     return DASH;
   }
@@ -79,14 +79,14 @@ export function formatPaceSec(seconds: number | undefined): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-export function formatNumber(n: number | undefined, digits = 0): string {
+export function formatNumber(n?: number, digits = 0): string {
   if (n === undefined || !Number.isFinite(n)) {
     return DASH;
   }
   return n.toFixed(digits);
 }
 
-export function formatDate(iso: string | undefined): string {
+export function formatDate(iso?: string): string {
   if (!iso) {
     return "";
   }
@@ -102,6 +102,6 @@ export function formatDate(iso: string | undefined): string {
 }
 
 /** ISO date → "MAY 18, 2026". */
-export function formatDateUpper(iso: string | undefined): string {
+export function formatDateUpper(iso?: string): string {
   return formatDate(iso).toUpperCase();
 }

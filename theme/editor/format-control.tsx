@@ -7,6 +7,7 @@
 
 import { FrameCornersIcon } from "@phosphor-icons/react";
 import { useState } from "react";
+
 import { ToggleRow } from "@/components/app/control-primitives";
 import {
   Popover,
@@ -14,12 +15,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import {
-  type ExportFormat,
-  type ExportFormatId,
-  FORMAT_ORDER,
-  getFormat,
-} from "@/theme/core/export-formats";
+import { FORMAT_ORDER, getFormat } from "@/theme/core/export-formats";
+import type { ExportFormat, ExportFormatId } from "@/theme/core/export-formats";
 
 interface FormatControlProps {
   format: ExportFormat;
@@ -42,7 +39,7 @@ export function FormatControl({
       <PopoverTrigger
         aria-label="Export format"
         className={cn(
-          "flex h-auto w-14 shrink-0 flex-col items-center justify-center gap-1 rounded-md px-1 py-2 text-foreground/60 transition-colors hover:bg-foreground/5",
+          "text-foreground/60 hover:bg-foreground/5 flex h-auto w-14 shrink-0 flex-col items-center justify-center gap-1 rounded-md px-1 py-2 transition-colors",
           "data-[popup-open]:bg-foreground/10 data-[popup-open]:text-foreground",
           "lg:w-auto lg:flex-row lg:gap-2 lg:px-4"
         )}
@@ -50,13 +47,13 @@ export function FormatControl({
         type="button"
       >
         <FrameCornersIcon aria-hidden className="size-5" weight="duotone" />
-        <span className="font-mono font-semibold text-[9px] uppercase tracking-wide lg:text-[11px] lg:tracking-[0.14em]">
+        <span className="font-mono text-[9px] font-semibold tracking-wide uppercase lg:text-[11px] lg:tracking-[0.14em]">
           {format.aspectLabel}
         </span>
       </PopoverTrigger>
 
       <PopoverContent align="end" className="w-72 gap-0 p-2" side="top">
-        <div className="px-2 pt-1 pb-2 font-mono text-[10px] uppercase tracking-[0.2em] opacity-55">
+        <div className="px-2 pt-1 pb-2 font-mono text-[10px] tracking-[0.2em] uppercase opacity-55">
           Preview format
         </div>
         <div className="flex flex-col gap-0.5">
@@ -84,7 +81,7 @@ export function FormatControl({
                   weight="duotone"
                 />
                 <span className="flex min-w-0 flex-col">
-                  <span className="truncate font-heading text-sm leading-tight tracking-tight">
+                  <span className="font-heading truncate text-sm leading-tight tracking-tight">
                     {f.label}
                   </span>
                   <span className="caption-micro">
@@ -96,7 +93,7 @@ export function FormatControl({
           })}
         </div>
         {onShowSafeChange ? (
-          <div className="mt-2 border-foreground/10 border-t px-2 pt-3">
+          <div className="border-foreground/10 mt-2 border-t px-2 pt-3">
             <ToggleRow
               checked={showSafe}
               label="Show safe zones"

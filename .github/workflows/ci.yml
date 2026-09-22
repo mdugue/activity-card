@@ -17,7 +17,11 @@ permissions:
 
 jobs:
   lint:
-    name: Lint
+    # One job for both halves of the toolchain: `bun lint` is
+    # `ultracite check --type-aware`, which runs oxfmt in check mode and then
+    # oxlint (with oxlint-tsgolint for the type-aware rules). `--format=github`
+    # turns findings into inline annotations on the PR diff.
+    name: Lint & format
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -26,7 +30,7 @@ jobs:
         with:
           bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
-      - run: bun lint
+      - run: bun lint --format=github
 
   typecheck:
     name: Typecheck

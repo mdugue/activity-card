@@ -10,6 +10,7 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+
 import { initWasm, Resvg } from "@resvg/resvg-wasm";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -18,7 +19,7 @@ const wasm = readFileSync(
 );
 await initWasm(wasm);
 
-const svg = readFileSync(`${root}public/icons/icon-source.svg`, "utf8");
+const svg = readFileSync(`${root}public/icons/icon-source.svg`, "utf-8");
 
 interface IconTarget {
   out: string;

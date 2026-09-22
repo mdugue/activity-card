@@ -5,7 +5,8 @@
 //   node-vibrant  (v4)  → swatch extraction
 //   culori               → OKLCH math + WCAG contrast (perceptually uniform, tree-shakeable)
 
-import { converter, formatHex, type Oklch, parse, wcagContrast } from "culori";
+import { converter, formatHex, parse, wcagContrast } from "culori";
+import type { Oklch } from "culori";
 // The browser entry registers the in-thread pipeline as the baseline, so
 // extraction always works (SSR-rendered imports, tests, environments without
 // Worker). `ensureWorkerPipeline` upgrades it to off-thread quantization.
@@ -31,7 +32,7 @@ function ensureWorkerPipeline(): void {
   // keeps the bundler-recognised `new Worker(new URL(...))` pattern verbatim
   // so the worker chunk is emitted by Next/Vite alike.
   const PaletteWorker = function PaletteWorker() {
-    return new Worker(new URL("./palette.worker.ts", import.meta.url), {
+    return new Worker(new URL("palette.worker.ts", import.meta.url), {
       type: "module",
     });
   } as unknown as ConstructorParameters<typeof WorkerPipeline>[0];
@@ -105,7 +106,7 @@ export interface ExtractedPalette {
 // WCAG AA for normal text
 const MIN_HEADLINE_CONTRAST = 4.5;
 // WCAG AA for large text / secondary
-const MIN_BODY_CONTRAST = 3.0;
+const MIN_BODY_CONTRAST = 3;
 // below this, a photo is "greyish" → skip complementary
 const MIN_ACCENT_CHROMA = 0.06;
 const WHITE = "#ffffff";

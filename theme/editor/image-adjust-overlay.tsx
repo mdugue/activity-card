@@ -1,14 +1,12 @@
 "use client";
 
 import { ArrowCounterClockwiseIcon, CheckIcon } from "@phosphor-icons/react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useImageAdjust } from "@/hooks/use-image-adjust";
-import {
-  IDENTITY_TRANSFORM,
-  type ImageTransform,
-  isIdentityTransform,
-} from "@/lib/image-transform";
+import { IDENTITY_TRANSFORM, isIdentityTransform } from "@/lib/image-transform";
+import type { ImageTransform } from "@/lib/image-transform";
 import { cn } from "@/lib/utils";
 
 interface ImageAdjustOverlayProps {
@@ -73,7 +71,7 @@ export function ImageAdjustOverlay({
         ).map((pos) => (
           <span
             className={cn(
-              "absolute size-4 border-white border-t-2 border-l-2",
+              "absolute size-4 border-t-2 border-l-2 border-white",
               pos
             )}
             key={pos}

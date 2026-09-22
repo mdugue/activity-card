@@ -102,7 +102,7 @@ export function resolveColors(
   return choice.scheme;
 }
 
-const HEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+const HEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/u;
 
 function isHex(v: unknown): v is string {
   return typeof v === "string" && HEX.test(v);

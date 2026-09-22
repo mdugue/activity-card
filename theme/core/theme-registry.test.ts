@@ -1,5 +1,6 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
+
 import { SAMPLE_RIDE } from "@/components/app/sample-data";
 import { ALTITUDE_PARAMS } from "@/lib/altitude";
 import { CAROUSEL_THEMES } from "@/theme/carousel/registry";
@@ -52,7 +53,7 @@ describe("theme registries", () => {
     });
 
     test(`${theme.id}: colour policy has a valid default scheme`, () => {
-      expect(theme.colors.default.primary).toMatch(/^#/);
+      expect(theme.colors.default.primary).toMatch(/^#/u);
     });
   }
 

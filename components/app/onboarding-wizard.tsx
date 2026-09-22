@@ -11,6 +11,7 @@ import {
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+
 import {
   SAMPLE_RIDE,
   SAMPLE_RUN,
@@ -37,21 +38,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
-import {
-  type UseStravaConnection,
-  useStravaConnection,
-} from "@/hooks/use-strava-connection";
+import { useStravaConnection } from "@/hooks/use-strava-connection";
+import type { UseStravaConnection } from "@/hooks/use-strava-connection";
 import type {
   ActivityData,
   ActivitySource,
   StravaPhotoRef,
 } from "@/lib/activity";
 import { formatDuration, formatNumber } from "@/lib/format";
-import {
-  ACTIVITY_FILE_RE,
-  type ParsedActivity,
-  parseActivityFiles,
-} from "@/lib/parse-activity";
+import { ACTIVITY_FILE_RE, parseActivityFiles } from "@/lib/parse-activity";
+import type { ParsedActivity } from "@/lib/parse-activity";
 import { fetchStravaPhotoFile } from "@/lib/strava-photos";
 import { cn } from "@/lib/utils";
 
@@ -156,9 +152,9 @@ function activityKicker(activity: WizardActivity): string {
 function OrDivider() {
   return (
     <div className="my-2.5 flex items-center gap-3">
-      <span className="h-px flex-1 bg-border" />
+      <span className="bg-border h-px flex-1" />
       <span className="caption-micro">or</span>
-      <span className="h-px flex-1 bg-border" />
+      <span className="bg-border h-px flex-1" />
     </div>
   );
 }
@@ -182,7 +178,7 @@ function StepCard({
 }) {
   return (
     <Card
-      className={cn("shrink-0 gap-4", active && "ring-2 ring-primary")}
+      className={cn("shrink-0 gap-4", active && "ring-primary ring-2")}
       size="sm"
     >
       <CardHeader>
@@ -221,7 +217,7 @@ function DropZone({
   return (
     <button
       className={cn(
-        "flex items-center gap-3 border border-foreground/30 border-dashed bg-foreground/[0.015] px-3 py-2.5 text-left transition-colors hover:border-primary hover:bg-primary/5 sm:flex-col sm:gap-2 sm:px-4 sm:py-4 sm:text-center",
+        "border-foreground/30 bg-foreground/[0.015] hover:border-primary hover:bg-primary/5 flex items-center gap-3 border border-dashed px-3 py-2.5 text-left transition-colors sm:flex-col sm:gap-2 sm:px-4 sm:py-4 sm:text-center",
         dragging && "border-primary bg-primary/5"
       )}
       onClick={onBrowse}
@@ -242,11 +238,11 @@ function DropZone({
       }}
       type="button"
     >
-      {parsing ? <Spinner className="size-6 text-primary sm:size-9" /> : icon}
-      <span className="flex-1 text-muted-foreground text-sm sm:flex-none">
+      {parsing ? <Spinner className="text-primary size-6 sm:size-9" /> : icon}
+      <span className="text-muted-foreground flex-1 text-sm sm:flex-none">
         {hint}
       </span>
-      <span className="inline-flex h-8 shrink-0 items-center bg-foreground px-3 font-heading text-background text-xs uppercase tracking-wide sm:h-9 sm:px-5 sm:text-sm">
+      <span className="bg-foreground font-heading text-background inline-flex h-8 shrink-0 items-center px-3 text-xs tracking-wide uppercase sm:h-9 sm:px-5 sm:text-sm">
         {cta}
       </span>
     </button>
@@ -272,22 +268,22 @@ function LoadedRow({
 }) {
   return (
     <>
-      <div className="flex items-stretch overflow-hidden bg-foreground text-background">
+      <div className="bg-foreground text-background flex items-stretch overflow-hidden">
         {thumb ? (
           <div
-            className="w-24 shrink-0 bg-center bg-cover"
+            className="w-24 shrink-0 bg-cover bg-center"
             style={{ backgroundImage: `url(${thumb})` }}
           />
         ) : null}
         <div className="flex min-w-0 flex-1 items-center gap-3 p-4">
-          <span className="flex size-7 shrink-0 items-center justify-center bg-primary text-primary-foreground">
+          <span className="bg-primary text-primary-foreground flex size-7 shrink-0 items-center justify-center">
             <CheckIcon className="size-4" weight="duotone" />
           </span>
           <div className="min-w-0">
             <div className="caption-micro text-background/60">{kicker}</div>
             <div className="truncate font-mono text-sm">{name}</div>
             {sub ? (
-              <div className="truncate text-background/70 text-xs">{sub}</div>
+              <div className="text-background/70 truncate text-xs">{sub}</div>
             ) : null}
           </div>
         </div>
@@ -372,13 +368,13 @@ function ActivityStep({
             hint={
               <>
                 Drop a{" "}
-                <span className="font-semibold text-foreground">.gpx</span> or{" "}
-                <span className="font-semibold text-foreground">.fit</span> file
+                <span className="text-foreground font-semibold">.gpx</span> or{" "}
+                <span className="text-foreground font-semibold">.fit</span> file
               </>
             }
             icon={
               <MapTrifoldIcon
-                className="size-6 text-foreground sm:size-8"
+                className="text-foreground size-6 sm:size-8"
                 weight="duotone"
               />
             }
@@ -475,8 +471,8 @@ function PhotoStepBody({
   }
   if (photoSkipped) {
     return (
-      <div className="flex items-center gap-3 border border-border bg-muted/40 p-4">
-        <span className="flex-1 text-muted-foreground text-sm">
+      <div className="border-border bg-muted/40 flex items-center gap-3 border p-4">
+        <span className="text-muted-foreground flex-1 text-sm">
           No photo for now — you can add one anytime in the editor.
         </span>
         <Button onClick={onUnskip} size="xs" variant="link">
@@ -487,9 +483,9 @@ function PhotoStepBody({
   }
   return (
     <>
-      <p className="mb-4 text-muted-foreground text-sm">
+      <p className="text-muted-foreground mb-4 text-sm">
         A real photo makes the card unmistakably{" "}
-        <span className="font-semibold text-foreground">yours</span>.
+        <span className="text-foreground font-semibold">yours</span>.
       </p>
       {stravaPhotos.length > 0 ? (
         <>
@@ -506,7 +502,7 @@ function PhotoStepBody({
         hint="Drop a photo"
         icon={
           <ImageIcon
-            className="size-6 text-foreground sm:size-8"
+            className="text-foreground size-6 sm:size-8"
             weight="duotone"
           />
         }
@@ -521,7 +517,7 @@ function PhotoStepBody({
           <div className="flex gap-2">
             {SAMPLE_PHOTOS.map((p) => (
               <button
-                className="relative h-14 w-20 overflow-hidden outline outline-1 outline-foreground/20 transition-all hover:outline-2 hover:outline-primary"
+                className="outline-foreground/20 hover:outline-primary relative h-14 w-20 overflow-hidden outline outline-1 transition-all hover:outline-2"
                 key={p.url}
                 onClick={() => onChooseSample(p.url, p.name)}
                 type="button"
@@ -589,7 +585,7 @@ export function OnboardingWizard({
   // connected (the flag flips after mount, so a useState initialiser misses it).
   useEffect(() => {
     if (initialStravaPickerOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      // oxlint-disable-next-line react/set-state-in-effect
       setStravaPickerOpen(true);
     }
   }, [initialStravaPickerOpen]);
@@ -613,9 +609,7 @@ export function OnboardingWizard({
       const parts = await parseActivityFiles(files);
       // Count only the activity files (drag-drop can include others), so the
       // confirmation label matches what was actually loaded.
-      const matched = Array.from(files).filter((f) =>
-        ACTIVITY_FILE_RE.test(f.name)
-      );
+      const matched = [...files].filter((f) => ACTIVITY_FILE_RE.test(f.name));
       setActivity({
         kind: "parts",
         source: "upload",
@@ -625,8 +619,10 @@ export function OnboardingWizard({
         label: parts[0].title,
         meta: activityMeta(parts[0]),
       });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not read that file.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not read that file."
+      );
     } finally {
       setParsing(false);
     }
@@ -720,20 +716,20 @@ export function OnboardingWizard({
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent
-        className="flex max-h-[96dvh] w-full max-w-[calc(100%-0.5rem)] flex-col gap-0 bg-background p-0 sm:max-h-[88vh] sm:max-w-[60rem]"
+        className="bg-background flex max-h-[96dvh] w-full max-w-[calc(100%-0.5rem)] flex-col gap-0 p-0 sm:max-h-[88vh] sm:max-w-[60rem]"
         showCloseButton={false}
       >
         {/* Brutalist top accent, as a child bar. The dialog deliberately has
             NO overflow-hidden: combined with its transform positioning, iOS
             Safari clips this top edge. The scrollable body clips itself. */}
-        <div aria-hidden className="h-1 shrink-0 bg-foreground" />
+        <div aria-hidden className="bg-foreground h-1 shrink-0" />
         <input
           accept=".gpx,.fit"
           className="hidden"
           multiple
           onChange={(e) => {
             if (e.target.files?.length) {
-              loadFiles(e.target.files);
+              void loadFiles(e.target.files);
             }
             e.target.value = "";
           }}
@@ -827,15 +823,15 @@ export function OnboardingWizard({
 
         {/* Footer — one row: status on the left, the gated hand-off on the
             right. On mobile the description sits beside a compact "Open". */}
-        <div className="flex items-center gap-3 border-border border-t bg-background px-6 py-3 sm:gap-4 sm:px-8 sm:py-4">
+        <div className="border-border bg-background flex items-center gap-3 border-t px-6 py-3 sm:gap-4 sm:px-8 sm:py-4">
           <div className="flex min-w-0 flex-col gap-0.5">
             <span className="caption-micro truncate">{note.kicker}</span>
-            <span className="hidden truncate text-muted-foreground text-sm sm:block">
+            <span className="text-muted-foreground hidden truncate text-sm sm:block">
               {note.hint}
             </span>
           </div>
           <Button
-            className="ml-auto h-11 shrink-0 px-6 font-heading text-base uppercase tracking-wide sm:h-12 sm:px-8 sm:text-lg"
+            className="font-heading ml-auto h-11 shrink-0 px-6 text-base tracking-wide uppercase sm:h-12 sm:px-8 sm:text-lg"
             disabled={!activity || finishing}
             onClick={finish}
             size="lg"
@@ -853,10 +849,10 @@ export function OnboardingWizard({
               step 1 so the photo step still follows. */}
         <Dialog onOpenChange={setStravaPickerOpen} open={stravaPickerOpen}>
           <DialogContent
-            className="flex max-h-[90dvh] w-full max-w-2xl flex-col gap-0 bg-background p-0 sm:max-h-[85vh]"
+            className="bg-background flex max-h-[90dvh] w-full max-w-2xl flex-col gap-0 p-0 sm:max-h-[85vh]"
             showCloseButton={false}
           >
-            <div aria-hidden className="h-1 shrink-0 bg-foreground" />
+            <div aria-hidden className="bg-foreground h-1 shrink-0" />
             <DialogTitle className="sr-only">Pick from Strava</DialogTitle>
             <DialogDescription className="sr-only">
               Choose a recent Strava activity to turn into a card.

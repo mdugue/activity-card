@@ -1,4 +1,6 @@
-import { type Coord, routePath } from "@/lib/chart-helpers";
+import { routePath } from "@/lib/chart-helpers";
+import type { Coord } from "@/lib/chart-helpers";
+
 import { FONT, INK, PAPER, RUST_BRIGHT } from "../design/tokens";
 
 const STRAVA_ORANGE = "#fc5200";

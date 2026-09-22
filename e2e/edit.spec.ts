@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+
 import { TINY_PNG_BASE64 } from "./fixtures";
 import {
   enterEditViaUpload,
@@ -17,7 +18,7 @@ test.describe("edit controls", () => {
     // Pick a theme that prints the title verbatim — the default (Altitude)
     // headlines a metric instead, so a typed title never reaches its card.
     await selectTheme(page, "PATH");
-    const titleInput = page.getByLabel(/^Title$/i);
+    const titleInput = page.getByLabel(/^Title$/iu);
     await titleInput.fill("Sunrise Loop");
     // The Path theme title shows the user-entered value in the preview.
     await expect(
@@ -27,7 +28,7 @@ test.describe("edit controls", () => {
 
   test("heart rate toggle drives the AVG HR cell value", async ({ page }) => {
     await selectTheme(page, "DATA");
-    const hrSwitch = page.getByRole("switch", { name: /heart rate/i });
+    const hrSwitch = page.getByRole("switch", { name: /heart rate/iu });
 
     // SINGLE_RUN_GPX emits a constant HR of 150, so the computed mean is
     // exactly 150 — stable for the visibility-toggle round trip.
@@ -54,18 +55,18 @@ test.describe("edit controls", () => {
       mimeType: "image/png",
       buffer: Buffer.from(TINY_PNG_BASE64, "base64"),
     });
-    await expect(page.getByText(/Photo loaded/i)).toBeVisible();
-    await expect(page.getByRole("button", { name: /Remove/i })).toBeVisible();
+    await expect(page.getByText(/Photo loaded/iu)).toBeVisible();
+    await expect(page.getByRole("button", { name: /Remove/iu })).toBeVisible();
   });
 
   test("athlete name input persists across reload", async ({ page }) => {
-    const nameInput = page.getByRole("textbox", { name: /athlete name/i });
+    const nameInput = page.getByRole("textbox", { name: /athlete name/iu });
     await nameInput.fill("RIVER STONE");
     // Reload without clearing localStorage; re-upload to re-enter edit.
     await page.reload();
     await uploadActivity(page);
     await expect(
-      page.getByRole("textbox", { name: /athlete name/i })
+      page.getByRole("textbox", { name: /athlete name/iu })
     ).toHaveValue("RIVER STONE");
   });
 });
@@ -76,7 +77,7 @@ test.describe("persistence", () => {
     await selectSingleCard(page);
 
     await selectTheme(page, "EDITORIAL");
-    const hrSwitch = page.getByRole("switch", { name: /heart rate/i });
+    const hrSwitch = page.getByRole("switch", { name: /heart rate/iu });
     // Default is now `heartRate: true`. Toggle off so we can verify the
     // change survives a reload — picking a non-default value is the only
     // way this test exercises real persistence.
@@ -91,10 +92,10 @@ test.describe("persistence", () => {
     await uploadActivity(page);
     // The persisted theme shows as the pressed toggle in the rail.
     await expect(
-      page.getByRole("button", { name: /^EDITORIAL\b/i })
+      page.getByRole("button", { name: /^EDITORIAL\b/iu })
     ).toHaveAttribute("aria-pressed", "true");
     await expect(
-      page.getByRole("switch", { name: /heart rate/i })
+      page.getByRole("switch", { name: /heart rate/iu })
     ).not.toBeChecked();
   });
 });

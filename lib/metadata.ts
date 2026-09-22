@@ -1,5 +1,5 @@
-// biome-ignore-all lint/suspicious/noBitwiseOperators: CRC32 and PNG chunk
-// byte-packing are inherently bitwise — this is the standard PNG algorithm.
+// CRC32 and PNG chunk byte-packing are inherently bitwise — this is the
+// standard PNG algorithm.
 
 /**
  * PNG metadata injection — Effort attribution (+ optional GPS) baked into the
@@ -179,10 +179,10 @@ function toXmpCoord(value: number, positive: string, negative: string): string {
 
 function xmpEscape(s: string): string {
   return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
 }
 
 /** Build an XMP packet carrying attribution and (optionally) GPS. */
@@ -231,8 +231,10 @@ export function buildMetadataChunks(
     chunks.push(itxtChunk("Title", input.title));
   }
   if (input.athleteName) {
-    chunks.push(itxtChunk("Author", input.athleteName));
-    chunks.push(textChunk("Copyright", `© ${input.athleteName}`));
+    chunks.push(
+      itxtChunk("Author", input.athleteName),
+      textChunk("Copyright", `© ${input.athleteName}`)
+    );
   }
   if (input.date) {
     chunks.push(textChunk("Creation Time", input.date));
@@ -242,8 +244,10 @@ export function buildMetadataChunks(
     withGps && input.location ? input.location : null,
     `Created with ${APP_NAME}`,
   ].filter(Boolean);
-  chunks.push(itxtChunk("Description", descBits.join(" · ")));
-  chunks.push(itxtChunk("XML:com.adobe.xmp", buildXmp(input, withGps)));
+  chunks.push(
+    itxtChunk("Description", descBits.join(" · ")),
+    itxtChunk("XML:com.adobe.xmp", buildXmp(input, withGps))
+  );
   return chunks;
 }
 
@@ -263,7 +267,7 @@ export function applyMetadata(
  * exact start.
  */
 export function routeCentroid(
-  coords: readonly (readonly [number, number])[] | undefined
+  coords?: readonly (readonly [number, number])[]
 ): GeoPoint | null {
   if (!coords || coords.length === 0) {
     return null;

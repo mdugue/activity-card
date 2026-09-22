@@ -1,6 +1,7 @@
 import addonA11y from "@storybook/addon-a11y";
 import addonDocs from "@storybook/addon-docs";
 import { definePreview } from "@storybook/nextjs-vite";
+
 // The app's global stylesheet: Tailwind layer + the OKLCH theme tokens
 // (--primary, --foreground, …) every card and chrome component reads.
 // Importing it here is what makes stories render with the real styles.
@@ -45,8 +46,8 @@ export default definePreview({
   parameters: {
     controls: {
       matchers: {
-        color: /(background|color)$/i,
-        date: /Date$/i,
+        color: /(background|color)$/iu,
+        date: /Date$/iu,
       },
     },
 

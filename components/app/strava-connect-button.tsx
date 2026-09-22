@@ -1,4 +1,5 @@
 import Image from "next/image";
+
 import { cn } from "@/lib/utils";
 
 interface StravaConnectButtonProps {
@@ -24,10 +25,12 @@ export function StravaConnectButton({
   ref,
 }: StravaConnectButtonProps) {
   return (
+    // The href is a Route Handler that redirects to Strava, not an in-app page.
+    // oxlint-disable-next-line nextjs/no-html-link-for-pages
     <a
       aria-label="Connect with Strava"
       className={cn(
-        "inline-flex items-center justify-center rounded-md outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "focus-visible:ring-ring focus-visible:ring-offset-background inline-flex items-center justify-center rounded-md transition outline-none hover:opacity-90 focus-visible:ring-2 focus-visible:ring-offset-2",
         className
       )}
       href="/api/strava/authorize"

@@ -1,9 +1,5 @@
-import {
-  detectSport,
-  finalise,
-  type ParsedActivity,
-  type TrackPoint,
-} from "./parse-shared";
+import { detectSport, finalise } from "./parse-shared";
+import type { ParsedActivity, TrackPoint } from "./parse-shared";
 import type {
   StravaActivityDetail,
   StravaStream,
@@ -116,6 +112,9 @@ export function stravaToParsed(
   return [parsed];
 }
 
+// The type parameter names what the caller expects of an `unknown` upstream
+// stream; there is deliberately no relation to the argument type.
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters
 function pickArray<T>(stream: StravaStream<unknown> | undefined): T[] | null {
   if (!(stream && Array.isArray(stream.data))) {
     return null;

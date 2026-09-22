@@ -1,5 +1,6 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
+
 import {
   SAMPLE_RIDE,
   SAMPLE_RUN,
@@ -225,10 +226,10 @@ describe("strataDirectionArrow", () => {
 
   test("sits beside the path, inside the field, pointing along travel", () => {
     // A horizontal route across the middle: the arrow offsets vertically off it.
-    const route: Coord[] = Array.from(
-      { length: 40 },
-      (_, i): Coord => [i * 2, 50]
-    );
+    const route: Coord[] = Array.from({ length: 40 }, (_, i): Coord => [
+      i * 2,
+      50,
+    ]);
     const a = strataDirectionArrow(route, 100, 100, 12);
     expect(a).not.toBeNull();
     if (a) {

@@ -1,13 +1,4 @@
 #!/usr/bin/env bun
-// Minimal local declaration for the one Bun global we use — avoids pulling
-// `@types/bun` into the dependency tree just for the test mock.
-declare const Bun: {
-  serve(opts: {
-    port: number;
-    fetch: (req: Request) => Response | Promise<Response>;
-  }): { stop(): void };
-};
-
 /**
  * Mock Strava service for E2E tests.
  *
@@ -136,11 +127,11 @@ function makeStreams(count: number) {
   };
 }
 
-const DETAIL_RE = /^\/api\/v3\/activities\/(\d+)$/;
-const STREAMS_RE = /^\/api\/v3\/activities\/(\d+)\/streams$/;
-const STATS_RE = /^\/api\/v3\/athletes\/(\d+)\/stats$/;
-const PHOTOS_RE = /^\/api\/v3\/activities\/(\d+)\/photos$/;
-const PHOTO_FILE_RE = /^\/photos\/(\d+)-(\d+)\.png$/;
+const DETAIL_RE = /^\/api\/v3\/activities\/(\d+)$/u;
+const STREAMS_RE = /^\/api\/v3\/activities\/(\d+)\/streams$/u;
+const STATS_RE = /^\/api\/v3\/athletes\/(\d+)\/stats$/u;
+const PHOTOS_RE = /^\/api\/v3\/activities\/(\d+)\/photos$/u;
+const PHOTO_FILE_RE = /^\/photos\/(\d+)-(\d+)\.png$/u;
 
 // How many photos each fixture activity carries (others have none). The ride
 // gets two so the strip and "pick the second one" flows are coverable.
@@ -156,7 +147,7 @@ const PHOTO_PNG = Uint8Array.from(
 
 /** The photo list endpoint + the static images its URLs point at. */
 function handlePhotoRoutes(url: URL): Response | null {
-  const photosMatch = url.pathname.match(PHOTOS_RE);
+  const photosMatch = PHOTOS_RE.exec(url.pathname);
   if (photosMatch) {
     const id = Number(photosMatch[1]);
     const size = url.searchParams.get("size") || "600";
@@ -169,7 +160,7 @@ function handlePhotoRoutes(url: URL): Response | null {
       }))
     );
   }
-  if (url.pathname.match(PHOTO_FILE_RE)) {
+  if (PHOTO_FILE_RE.test(url.pathname)) {
     return new Response(PHOTO_PNG, {
       headers: { "content-type": "image/png" },
     });
@@ -219,7 +210,7 @@ function handle(req: Request): Response | Promise<Response> {
     return Response.json(ACTIVITIES.slice(start, start + perPage));
   }
 
-  const detailMatch = url.pathname.match(DETAIL_RE);
+  const detailMatch = DETAIL_RE.exec(url.pathname);
   if (detailMatch) {
     const id = Number(detailMatch[1]);
     const summary = ACTIVITIES.find((a) => a.id === id);
@@ -240,7 +231,7 @@ function handle(req: Request): Response | Promise<Response> {
     });
   }
 
-  if (url.pathname.match(STREAMS_RE)) {
+  if (STREAMS_RE.test(url.pathname)) {
     return Response.json(makeStreams(60));
   }
 
@@ -249,7 +240,7 @@ function handle(req: Request): Response | Promise<Response> {
     return photoResponse;
   }
 
-  if (url.pathname.match(STATS_RE)) {
+  if (STATS_RE.test(url.pathname)) {
     // Split the 53 fixture activities by sport so the picker's "Page X of Y"
     // matches the actual pageable content.
     const rideCount = ACTIVITIES.filter((a) =>

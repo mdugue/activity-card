@@ -11,6 +11,7 @@
 
 import { useCallback, useRef } from "react";
 import { toast } from "sonner";
+
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
 import type { ActivityData } from "@/lib/activity";
 import type { ImageTransform } from "@/lib/image-transform";
@@ -19,23 +20,21 @@ import { CarouselDeck } from "@/theme/carousel/deck";
 import type { CarouselTheme } from "@/theme/carousel/define-theme";
 import { stripGeometry } from "@/theme/carousel/geometry";
 import type { ColorScheme } from "@/theme/core/colors";
-import {
-  type ExportFormat,
-  FORMAT_ORDER,
-  getFormat,
-} from "@/theme/core/export-formats";
+import { FORMAT_ORDER, getFormat } from "@/theme/core/export-formats";
+import type { ExportFormat } from "@/theme/core/export-formats";
 import type { Visibility } from "@/theme/core/visibility";
 import {
   carouselBaseName,
   exportCarousel,
 } from "@/theme/export/export-carousel";
+
 import {
   ExportShell,
   ExportTile,
-  type TileBox,
   useFormatExports,
   useTileMax,
 } from "./export-sheet";
+import type { TileBox } from "./export-sheet";
 
 // Wide-strip tile box (vs the single card's portrait one): a strip is several
 // slides across, so it wants a wider, shorter footprint to stay legible.

@@ -1,7 +1,9 @@
 import { useState } from "react";
+
 import { SAMPLE_RIDE } from "@/components/app/sample-data";
 import { ALTITUDE_PARAMS } from "@/lib/altitude";
 import type { ParamCtx, ParamDef } from "@/theme/core/params/kinds";
+
 import preview from "../../.storybook/preview";
 import { ParamControl } from "./param-control";
 

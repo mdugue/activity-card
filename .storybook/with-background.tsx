@@ -9,10 +9,10 @@
 
 import type { Decorator } from "@storybook/nextjs-vite";
 import type { ReactNode } from "react";
-import {
-  type ImageSize,
-  useImageNaturalSize,
-} from "@/hooks/use-image-natural-size";
+
+import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
+import type { ImageSize } from "@/hooks/use-image-natural-size";
+
 import { BACKGROUND_PRESETS } from "./backgrounds";
 
 function resolveUrl(

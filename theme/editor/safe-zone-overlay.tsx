@@ -2,7 +2,8 @@
 // UI zones and dashes the content box. A display-only layer — shared by the
 // export sheet and the editor preview, and never part of an exported node.
 
-import { contentBox, type ExportFormat } from "@/theme/core/export-formats";
+import { contentBox } from "@/theme/core/export-formats";
+import type { ExportFormat } from "@/theme/core/export-formats";
 
 export function SafeZoneOverlay({
   format,

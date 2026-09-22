@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+
 import { readTokens } from "@/lib/strava-cookies";
 
 export async function GET() {

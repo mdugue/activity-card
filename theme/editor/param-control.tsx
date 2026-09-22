@@ -16,12 +16,13 @@ import {
   TextAaIcon,
   TimerIcon,
 } from "@phosphor-icons/react";
+
 import {
   ControlBlock,
   RichSelect,
-  type RichSelectOption,
   ToggleRow,
 } from "@/components/app/control-primitives";
+import type { RichSelectOption } from "@/components/app/control-primitives";
 import { Slider } from "@/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
@@ -69,7 +70,7 @@ function OptionGlyph({ glyph, swatch }: { glyph?: string; swatch?: string }) {
     return (
       <span
         aria-hidden
-        className="size-5 rounded-full border border-foreground/25"
+        className="border-foreground/25 size-5 rounded-full border"
         style={{ background: swatch }}
       />
     );
@@ -77,7 +78,7 @@ function OptionGlyph({ glyph, swatch }: { glyph?: string; swatch?: string }) {
   return (
     <span
       aria-hidden
-      className="size-4 rounded-full border border-foreground/30"
+      className="border-foreground/30 size-4 rounded-full border"
     />
   );
 }
@@ -120,14 +121,16 @@ export function ParamControl({ def, value, onChange, ctx }: ParamControlProps) {
             className="flex-1"
             max={def.max}
             min={def.min}
-            onValueChange={(v) => {
-              const next = Array.isArray(v) ? v[0] : v;
-              onChange(Math.round(Number(next)));
+            onValueChange={(v: number | readonly number[]) => {
+              // `Array.isArray` widens a readonly array to `any[]`, so narrow on
+              // the scalar side instead.
+              const next = typeof v === "number" ? v : (v[0] ?? 0);
+              onChange(Math.round(next));
             }}
             step={def.step ?? 1}
             value={[n]}
           />
-          <span className="w-12 text-right font-medium font-mono text-xs tabular-nums opacity-70">
+          <span className="w-12 text-right font-mono text-xs font-medium tabular-nums opacity-70">
             {n}
             {def.unit ?? ""}
           </span>
@@ -176,7 +179,7 @@ export function ParamControl({ def, value, onChange, ctx }: ParamControlProps) {
             key={o.id}
             value={o.id}
           >
-            <div className="font-heading text-base uppercase leading-none">
+            <div className="font-heading text-base leading-none uppercase">
               {o.label}
             </div>
             {o.blurb ? (

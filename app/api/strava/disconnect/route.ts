@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+
 import { clearTokens } from "@/lib/strava-cookies";
 
 /**

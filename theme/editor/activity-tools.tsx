@@ -23,6 +23,7 @@ import {
 } from "@phosphor-icons/react";
 import { useId, useState } from "react";
 import { toast } from "sonner";
+
 import { ActivitySource } from "@/components/app/activity-source";
 import type { ControlTool } from "@/components/app/control-deck";
 import {
@@ -30,15 +31,16 @@ import {
   DetailField,
   PhotoControl,
   RichSelect,
-  type RichSelectOption,
   ToggleRow,
 } from "@/components/app/control-primitives";
+import type { RichSelectOption } from "@/components/app/control-primitives";
 import type { CardMode } from "@/components/app/mode-toggle";
 import { StravaPhotoStrip } from "@/components/app/strava-photo-strip";
 import type { Sport, StravaPhotoRef } from "@/lib/activity";
 import { fetchStravaPhotoFile, stravaPhotoKey } from "@/lib/strava-photos";
 import type { ParamCtx } from "@/theme/core/params/kinds";
 import type { Visibility } from "@/theme/core/visibility";
+
 import { ColorControl } from "./color-control";
 import type { EditorSession } from "./editor-session";
 import {
@@ -211,7 +213,9 @@ export function useActivityTools({
   // STYLE leads: the theme rail, the unified colour control (static presets +
   // photo-derived schemes, hidden for fixed-palette themes), then any STYLE
   // params the theme exposes (atmosphere). The "what does this card look like"
-  // choices live together.
+  // choices live together. The deck is assembled conditionally, so an empty
+  // list plus guarded pushes is the shape that stays readable.
+  // oxlint-disable-next-line unicorn/no-immediate-mutation
   tools.push({
     id: "style",
     label: "STYLE",
@@ -306,66 +310,67 @@ export function useActivityTools({
   }
 
   // Text overlays — all styled the same, none more prominent than another.
-  tools.push({
-    id: "text",
-    label: "TEXT",
-    icon: <TextAaIcon {...ICON_PROPS} />,
-    content: (
-      <ControlBlock label="TEXT">
-        <div className="mt-2 flex flex-col gap-4">
-          <DetailField
-            id={titleId}
-            label="Title"
-            onChange={onTitleChange}
-            placeholder="Name this effort"
-            toggle={{
-              checked: visibility.title,
-              onChange: (c) => set("title", c),
-            }}
-            value={title}
-          />
-          <DetailField
-            id={locationId}
-            label="Location"
-            onChange={onLocationChange}
-            placeholder="Where was this?"
-            toggle={{
-              checked: visibility.location,
-              onChange: (c) => set("location", c),
-            }}
-            value={location}
-          />
-          <ToggleRow
-            checked={available.date && visibility.date}
-            disabled={!available.date}
-            disabledReason="No date on this activity"
-            label="Date"
-            onCheckedChange={(c) => set("date", c)}
-          />
+  tools.push(
+    {
+      id: "text",
+      label: "TEXT",
+      icon: <TextAaIcon {...ICON_PROPS} />,
+      content: (
+        <ControlBlock label="TEXT">
+          <div className="mt-2 flex flex-col gap-4">
+            <DetailField
+              id={titleId}
+              label="Title"
+              onChange={onTitleChange}
+              placeholder="Name this effort"
+              toggle={{
+                checked: visibility.title,
+                onChange: (c) => set("title", c),
+              }}
+              value={title}
+            />
+            <DetailField
+              id={locationId}
+              label="Location"
+              onChange={onLocationChange}
+              placeholder="Where was this?"
+              toggle={{
+                checked: visibility.location,
+                onChange: (c) => set("location", c),
+              }}
+              value={location}
+            />
+            <ToggleRow
+              checked={available.date && visibility.date}
+              disabled={!available.date}
+              disabledReason="No date on this activity"
+              label="Date"
+              onCheckedChange={(c) => set("date", c)}
+            />
+          </div>
+        </ControlBlock>
+      ),
+    },
+    {
+      id: "stats",
+      label: "STATS",
+      icon: <ChartBarIcon {...ICON_PROPS} />,
+      content: (
+        <div className="flex flex-col gap-5">
+          <ControlBlock label="STATS">
+            <div className="mt-2 flex flex-col gap-2.5">
+              {STAT_TOGGLES.map(renderToggle)}
+            </div>
+          </ControlBlock>
+          <ControlBlock label="VISUALISATIONS">
+            <div className="mt-2 flex flex-col gap-2.5">
+              {VIZ_TOGGLES.map(renderToggle)}
+            </div>
+          </ControlBlock>
         </div>
-      </ControlBlock>
-    ),
-  });
-
-  tools.push({
-    id: "stats",
-    label: "STATS",
-    icon: <ChartBarIcon {...ICON_PROPS} />,
-    content: (
-      <div className="flex flex-col gap-5">
-        <ControlBlock label="STATS">
-          <div className="mt-2 flex flex-col gap-2.5">
-            {STAT_TOGGLES.map(renderToggle)}
-          </div>
-        </ControlBlock>
-        <ControlBlock label="VISUALISATIONS">
-          <div className="mt-2 flex flex-col gap-2.5">
-            {VIZ_TOGGLES.map(renderToggle)}
-          </div>
-        </ControlBlock>
-      </div>
-    ),
-  });
+      ),
+    }
+  );
 
   // MARKS — annotations the theme exposes as MARKS params: the carousel chrome
   // (effort mark, page numbers — appended to every carousel theme by

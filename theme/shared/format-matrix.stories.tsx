@@ -1,24 +1,23 @@
 import type { ComponentProps } from "react";
+
 import {
   SAMPLE_RIDE,
   SAMPLE_RUN,
   SAMPLE_TRI,
 } from "@/components/app/sample-data";
 import { RenderTheme } from "@/theme/editor/render-theme";
-import {
-  SINGLE_CARD_THEMES,
-  THEME_ORDER,
-  type ThemeId,
-} from "@/theme/single-card";
+import { SINGLE_CARD_THEMES, THEME_ORDER } from "@/theme/single-card";
+import type { ThemeId } from "@/theme/single-card";
+
 import { backgroundArgTypes } from "../../.storybook/backgrounds";
 import preview from "../../.storybook/preview";
 import {
   activityArgType,
   activityTuningArgTypes,
   colorArgTypes,
-  type ThemeStoryExtras,
   useStoryThemeProps,
 } from "../../.storybook/theme-controls";
+import type { ThemeStoryExtras } from "../../.storybook/theme-controls";
 import { withFormatMatrix } from "../../.storybook/with-format-matrix";
 
 // One theme across every export format, switchable live. The `Theme` control

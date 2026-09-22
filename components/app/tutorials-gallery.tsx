@@ -2,8 +2,10 @@
 
 import dynamic from "next/dynamic";
 import { useRef } from "react";
+
 import { useInView } from "@/hooks/use-in-view";
-import { FEATURE_VIDEOS, type FeatureVideo } from "@/remotion/videos/catalog";
+import { FEATURE_VIDEOS } from "@/remotion/videos/catalog";
+import type { FeatureVideo } from "@/remotion/videos/catalog";
 
 // The Remotion runtime stays out of the page's initial bundle — each player
 // chunk loads client-only, and only once its card scrolls near the viewport.
@@ -32,16 +34,16 @@ function TutorialCard({
         <p className="caption-label text-primary opacity-100">
           {String(index + 1).padStart(2, "0")} · {video.kicker}
         </p>
-        <h2 className="mt-3 text-balance font-heading text-3xl uppercase leading-[0.95] lg:text-4xl">
+        <h2 className="font-heading mt-3 text-3xl leading-[0.95] text-balance uppercase lg:text-4xl">
           {video.title}
         </h2>
-        <p className="mt-4 max-w-md text-foreground/70 leading-relaxed">
+        <p className="text-foreground/70 mt-4 max-w-md leading-relaxed">
           {video.blurb}
         </p>
         <p className="caption-micro mt-4">{formatDuration(video)} min</p>
       </div>
       <div
-        className="relative aspect-video w-full overflow-hidden rounded-lg bg-foreground shadow-2xl shadow-foreground/25 ring-1 ring-foreground/10"
+        className="bg-foreground shadow-foreground/25 ring-foreground/10 relative aspect-video w-full overflow-hidden rounded-lg shadow-2xl ring-1"
         ref={frameRef}
       >
         {inView ? <TutorialPlayer index={index} /> : null}

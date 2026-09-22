@@ -10,7 +10,9 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
+
 import { SAMPLE_RIDE } from "@/components/app/sample-data";
+
 import { CardScaled } from "../components/card-showcase";
 import { PreloadImg } from "../components/preload-img";
 import { RiseIn } from "../components/rise-in";

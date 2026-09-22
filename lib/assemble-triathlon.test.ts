@@ -1,5 +1,6 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
+
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
 import type { ParsedActivity } from "@/lib/parse-shared";
 
@@ -25,7 +26,7 @@ function makePart(
 describe("assembleTriathlon", () => {
   test("rejects fewer than two parts", () => {
     expect(() => assembleTriathlon([makePart("ride")])).toThrow(
-      /at least two activities/
+      /at least two activities/u
     );
   });
 

@@ -11,16 +11,19 @@
 import type { ImageSize } from "@/hooks/use-image-natural-size";
 import type { ActivityData } from "@/lib/activity";
 import type { ImageTransform } from "@/lib/image-transform";
-import { NO_EFFECTS, type PhotoEffects } from "@/lib/photo-effects";
+import { NO_EFFECTS } from "@/lib/photo-effects";
+import type { PhotoEffects } from "@/lib/photo-effects";
 import { carouselMarks } from "@/theme/carousel/marks";
 import { resolveDeckStyle } from "@/theme/carousel/resolve";
 import { statOptsFor } from "@/theme/carousel/stats";
 import type { ColorScheme } from "@/theme/core/colors";
 import type { ExportFormat } from "@/theme/core/export-formats";
-import { DEFAULT_VISIBILITY, type Visibility } from "@/theme/core/visibility";
+import { DEFAULT_VISIBILITY } from "@/theme/core/visibility";
+import type { Visibility } from "@/theme/core/visibility";
 import { CoverPhoto } from "@/theme/shared/cover-photo";
 import { FormatProvider, useFormat } from "@/theme/shared/format-context";
 import { PhotoFxProvider } from "@/theme/shared/photo-fx";
+
 import type { CarouselTheme } from "./define-theme";
 import { stripFormat, stripGeometry } from "./geometry";
 

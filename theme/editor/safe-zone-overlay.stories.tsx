@@ -1,8 +1,6 @@
-import {
-  type ExportFormatId,
-  FORMAT_ORDER,
-  getFormat,
-} from "@/theme/core/export-formats";
+import { FORMAT_ORDER, getFormat } from "@/theme/core/export-formats";
+import type { ExportFormatId } from "@/theme/core/export-formats";
+
 import preview from "../../.storybook/preview";
 import { SafeZoneOverlay } from "./safe-zone-overlay";
 

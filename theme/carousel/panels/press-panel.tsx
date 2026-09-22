@@ -6,8 +6,10 @@
 import type { ActivityData } from "@/lib/activity";
 import { formatDateUpper } from "@/lib/format";
 import type { EffectiveStyle } from "@/theme/carousel/resolve";
-import { pressSlideStats, type StatItem } from "@/theme/carousel/stats";
+import { pressSlideStats } from "@/theme/carousel/stats";
+import type { StatItem } from "@/theme/carousel/stats";
 import { SafeArea } from "@/theme/shared/format-context";
+
 import type { PanelProps } from "../define-theme";
 import { MiniViz, vizHasKind } from "../mini-viz";
 import { CAROUSEL_NATURAL_PAD } from "../templates/scaffold";

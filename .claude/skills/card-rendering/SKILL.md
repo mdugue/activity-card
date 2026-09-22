@@ -18,19 +18,21 @@ export async function rasteriseCard(node: HTMLElement): Promise<Blob> {
   await document.fonts.ready
 
   return snapdom.toBlob(node, {
-    width: 1080,
-    height: 1350,
-    scale: 2,         // 1080×1350 → crisp 2160×2700
-    dpr: 1,           // deterministic — ignore the viewer's screen density
-    embedFonts: true, // inline the theme's @font-face into the snapshot
-    type: 'png',
+    // 2× the 1080×1350 native size — since snapdom v3 an explicit width/height
+    // WINS over `scale`, so the ratio is baked into the dimensions.
+    width: 2160,
+    height: 2700,
+    dpr: 1,             // deterministic — ignore the viewer's screen density
+    embedFonts: true,   // inline the theme's @font-face into the snapshot
+    format: 'png',
   })
 }
 ```
 
 ### Why these specific options
 
-- **`scale: 2` + `dpr: 1`** — themes are authored at the format's native size (the 4:5 master is 1080×1350); `scale` upscales the output to a crisp 2×. snapdom's `dpr` defaults to the viewer's `devicePixelRatio`, which would double the output **again** on a Retina screen — pin it to `1` so the export is the same pixel size on every device.
+- **Pre-multiplied `width`/`height` + `dpr: 1`** — themes are authored at the format's native size (the 4:5 master is 1080×1350) and export at 2×. In snapdom v2 you wrote `width: 1080, scale: 2`; **in v3 an explicit width/height wins over `scale` instead of being multiplied by it**, so pass the final size (`width: 1080 * pixelRatio`). snapdom's `dpr` defaults to the viewer's `devicePixelRatio`, which would double the output **again** on a Retina screen — pin it to `1` so the export is the same pixel size on every device.
+- **`format`, not `type`** — v3 deprecated the `type` alias.
 - **`embedFonts: true`** — REQUIRED. snapdom rasterises through a serialised `<svg><foreignObject>`, which renders in an isolated context with no access to the page's loaded fonts. Without `embedFonts` only **icon** fonts are inlined, so every theme headline silently falls back to a system font in the export even though the preview looks right.
 - **`await document.fonts.ready`** — ensures the live DOM is laid out with the real fonts before snapdom measures + clones it; otherwise fallback metrics leak into the snapshot.
 - **No iOS double-call** — snapdom primes the WebKit font/decode pipeline itself (`safariWarmupAttempts`, default 3). The old html-to-image "rasterise twice on iOS and discard the first pass" workaround is gone; **don't reintroduce it.**
@@ -199,8 +201,8 @@ unfiltered.
 
 Themes are **format-aware**: each renders at the target format's native size and
 reads its dimensions + safe insets from the `FormatContext`
-(`theme/shared/format-context.tsx`). The 4:5 master is **1080×1350**;
-snapdom's `scale: 2` at export time produces the crisp 2160×2700 PNG. Don't
+(`theme/shared/format-context.tsx`). The 4:5 master is **1080×1350**, which
+export doubles to a crisp 2160×2700 PNG. Don't
 hardcode a fixed-size root — size from the format (see the `theme-architecture`
 skill for the format-aware contract).
 
@@ -241,4 +243,4 @@ If the PNG looks wrong vs the preview:
 4. Are you using `backdrop-filter`? It doesn't survive the foreignObject snapshot. Switch to a solid/`filter` overlay.
 5. Is the captured node itself transformed (`transform: scale()`)? snapdom keeps root scale transforms — capture an untransformed node and scale a wrapper instead.
 
-If the PNG is blank or low-res: check fonts are ready, and that `dpr`/`scale` are set as above (a stray default `dpr` can blow the canvas past the size cap).
+If the PNG is blank or low-res: check fonts are ready, and that `width`/`height`/`dpr` are set as above (a stray default `dpr` can blow the canvas past the size cap, and a leftover v2 `scale` next to an explicit size is now silently ignored).

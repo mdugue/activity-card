@@ -1,11 +1,13 @@
 import type { ComponentProps } from "react";
 import { expect } from "storybook/test";
+
 import {
   SAMPLE_RIDE,
   SAMPLE_RUN,
   SAMPLE_TRI,
 } from "@/components/app/sample-data";
 import { SINGLE_CARD_THEMES } from "@/theme/single-card";
+
 import { backgroundArgTypes } from "../../.storybook/backgrounds";
 import preview from "../../.storybook/preview";
 import {
@@ -13,9 +15,9 @@ import {
   activityTuningArgTypes,
   colorArgTypes,
   THEME_PROP_CONTROLS_EXCLUDE,
-  type ThemeStoryExtras,
   ThemeStoryView,
 } from "../../.storybook/theme-controls";
+import type { ThemeStoryExtras } from "../../.storybook/theme-controls";
 import { withFormatMatrix } from "../../.storybook/with-format-matrix";
 import { ThemeEditorial } from "./editorial";
 
@@ -41,7 +43,7 @@ const meta = preview.type<{ args: EditorialArgs }>().meta({
   render: (args) => <ThemeStoryView args={args} theme={THEME} />,
 });
 
-const RUN_TITLE = /Westwind/;
+const RUN_TITLE = /Westwind/u;
 
 // Typography-led layout — the title is the hero, so assert it landed.
 export const Run = meta.story({

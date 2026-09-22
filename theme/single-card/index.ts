@@ -5,6 +5,7 @@
 // dispatch — derives from these rows; there is no parallel metadata table.
 
 import type { SingleCardTheme } from "@/theme/core/theme-contract";
+
 import { altitudeTheme } from "./altitude";
 import { dataTheme } from "./data";
 import { editorialTheme } from "./editorial";

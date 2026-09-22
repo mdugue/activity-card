@@ -21,7 +21,7 @@ export function StravaCompatLink({ className }: { className?: string }) {
 // `StravaCompatLink` inline within its own footer section instead.
 export function StravaFooter() {
   return (
-    <footer className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 px-4 py-4 font-mono text-[10px] uppercase tracking-[0.18em] opacity-70">
+    <footer className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 px-4 py-4 font-mono text-[10px] tracking-[0.18em] uppercase opacity-70">
       <StravaCompatLink />
     </footer>
   );

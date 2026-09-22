@@ -1,11 +1,10 @@
 import { randomBytes } from "node:crypto";
+
 import { NextResponse } from "next/server";
+
 import { setOAuthState } from "@/lib/strava-cookies";
-import {
-  encodeOAuthState,
-  type OAuthStatePayload,
-  safeRelativePath,
-} from "@/lib/strava-oauth-state";
+import { encodeOAuthState, safeRelativePath } from "@/lib/strava-oauth-state";
+import type { OAuthStatePayload } from "@/lib/strava-oauth-state";
 
 /**
  * Kick off the Strava OAuth round-trip.

@@ -9,14 +9,14 @@
 
 /** Fonts must be ready before rasterisation or fallbacks leak into the export. */
 export async function waitForFonts(): Promise<void> {
-  if (typeof document !== "undefined" && document.fonts?.ready) {
+  if (typeof document !== "undefined" && document.fonts) {
     await document.fonts.ready;
   }
 }
 
 /** Numeric date slug for export filenames (`date` is an ISO yyyy-mm-dd). */
 export function effortDateSlug(date: string): string {
-  return date.replace(/[^0-9-]/g, "") || "undated";
+  return date.replaceAll(/[^0-9-]/gu, "") || "undated";
 }
 
 export function isDesktopDevice(): boolean {
@@ -33,21 +33,23 @@ export function isDesktopDevice(): boolean {
   return isDesktopPlatform && !isIPad;
 }
 
-const DESKTOP_PLATFORM_REGEX = /Macintosh|Windows|Linux/;
+const DESKTOP_PLATFORM_REGEX = /Macintosh|Windows|Linux/u;
 
 export function triggerDownload(file: File): void {
   const url = URL.createObjectURL(file);
   const a = document.createElement("a");
   a.href = url;
   a.download = file.name;
-  document.body.appendChild(a);
+  document.body.append(a);
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
 }
 
 function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 /** Share the set on mobile (Web Share API), else download each in order. A
@@ -64,8 +66,8 @@ export async function deliverFiles(
     try {
       await nav.share({ files, title: opts.title });
       return;
-    } catch (err) {
-      if ((err as DOMException)?.name === "AbortError") {
+    } catch (error) {
+      if ((error as DOMException)?.name === "AbortError") {
         return;
       }
       // fall through to downloads

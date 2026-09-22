@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+
 import {
   stravaErrorResponse,
   stravaFetch,
@@ -15,7 +16,7 @@ import type {
 
 const STREAM_KEYS =
   "latlng,altitude,heartrate,cadence,velocity_smooth,time,distance";
-const NUMERIC_ID = /^\d+$/;
+const NUMERIC_ID = /^\d+$/u;
 // Thumbnail size for the photo strip; activation fetches the full size
 // through /api/strava/photo.
 const PHOTO_PREVIEW_SIZE = 600;
@@ -58,7 +59,7 @@ export async function GET(
       parts[0].stravaPhotos = photos;
     }
     return NextResponse.json({ parts });
-  } catch (err) {
-    return stravaErrorResponse(err);
+  } catch (error) {
+    return stravaErrorResponse(error);
   }
 }

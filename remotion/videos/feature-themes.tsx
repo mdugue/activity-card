@@ -9,15 +9,15 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
+
 import { SAMPLE_RIDE } from "@/components/app/sample-data";
 import type { StrataMood } from "@/lib/strata";
 import { CarouselDeck } from "@/theme/carousel/deck";
-import {
-  CAROUSEL_THEMES,
-  type CarouselThemeId,
-} from "@/theme/carousel/registry";
+import { CAROUSEL_THEMES } from "@/theme/carousel/registry";
+import type { CarouselThemeId } from "@/theme/carousel/registry";
 import { carouselArgs } from "@/theme/carousel/story-support";
 import { SINGLE_CARD_THEMES, THEME_ORDER } from "@/theme/single-card";
+
 import { CardScaled, StripPan } from "../components/card-showcase";
 import { PreloadImg } from "../components/preload-img";
 import { Pill } from "../components/stat-chip";

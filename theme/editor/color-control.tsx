@@ -8,19 +8,19 @@
 // for themes whose palette is fixed (`userAdjustable: false`).
 
 import { ArrowCounterClockwiseIcon } from "@phosphor-icons/react";
+
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { ExtractedPalette } from "@/lib/palette";
 import { cn } from "@/lib/utils";
 import {
-  type ColorChoice,
-  type ColorScheme,
   colorChoiceId,
   PALETTE_VARIANTS,
   PRESET_SCHEMES,
   schemeFromPalette,
   VARIANT_LABELS,
 } from "@/theme/core/colors";
+import type { ColorChoice, ColorScheme } from "@/theme/core/colors";
 
 /** A round swatch; pairs render as a two-hue split disc. */
 function Swatch({ scheme }: { scheme: ColorScheme }) {
@@ -30,15 +30,15 @@ function Swatch({ scheme }: { scheme: ColorScheme }) {
   return (
     <span
       aria-hidden
-      className="block size-8 rounded-full border border-foreground/15"
+      className="border-foreground/15 block size-8 rounded-full border"
       style={{ background }}
     />
   );
 }
 
 const SWATCH_ITEM_CLASSES = cn(
-  "size-9 rounded-full border-2 border-transparent p-0 outline-none transition-transform",
-  "ring-foreground ring-offset-2 ring-offset-background",
+  "size-9 rounded-full border-2 border-transparent p-0 transition-transform outline-none",
+  "ring-foreground ring-offset-background ring-offset-2",
   "data-[pressed]:scale-110 data-[pressed]:ring-2"
 );
 
@@ -82,7 +82,7 @@ export function ColorControl({
       <div className="caption-micro mt-4 mb-2">COLOUR</div>
       {palette ? (
         <>
-          <div className="caption-micro mb-1.5 text-primary">
+          <div className="caption-micro text-primary mb-1.5">
             FROM YOUR PHOTO
           </div>
           <ToggleGroup
@@ -105,7 +105,7 @@ export function ColorControl({
                   value={colorChoiceId(c)}
                 >
                   <Swatch scheme={schemeFromPalette(palette, variant)} />
-                  <span className="font-medium font-mono text-[8px] uppercase tracking-wide">
+                  <span className="font-mono text-[8px] font-medium tracking-wide uppercase">
                     {VARIANT_LABELS[variant]}
                   </span>
                 </ToggleGroupItem>

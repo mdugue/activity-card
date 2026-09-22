@@ -1,12 +1,13 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
+
 import type { ActivityData } from "@/lib/activity";
 import {
   applyVisibility,
   DEFAULT_VISIBILITY,
   themeAvailability,
-  type Visibility,
 } from "@/theme/core/visibility";
+import type { Visibility } from "@/theme/core/visibility";
 
 const FULL: ActivityData = {
   sport: "ride",

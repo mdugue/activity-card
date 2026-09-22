@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+
 import "./globals.css";
 import { IconDefaults } from "@/components/app/icon-defaults";
 import { Toaster } from "@/components/ui/sonner";

@@ -1,14 +1,14 @@
 import type { ComponentProps } from "react";
 import { expect } from "storybook/test";
+
 import {
   SAMPLE_BRICK,
   SAMPLE_RIDE,
   SAMPLE_TRI,
 } from "@/components/app/sample-data";
-import {
-  type BackgroundArgs,
-  backgroundArgTypes,
-} from "../../.storybook/backgrounds";
+
+import { backgroundArgTypes } from "../../.storybook/backgrounds";
+import type { BackgroundArgs } from "../../.storybook/backgrounds";
 import preview from "../../.storybook/preview";
 import { activityArgType } from "../../.storybook/theme-controls";
 import { CarouselDeck } from "./deck";
@@ -29,14 +29,14 @@ const meta = preview
     args: { data: SAMPLE_RIDE, ...carouselArgs("trace") },
   });
 
-const RIDE_TITLE = /Elbsandstein/;
+const RIDE_TITLE = /Elbsandstein/u;
 
 // Smoke check: the activity title reaches the deck (it can appear on several
 // slides, so assert at least one and that it's visible).
 export const Dawn = meta.story({
   play: async ({ canvas }) => {
     const titles = canvas.getAllByText(RIDE_TITLE);
-    expect(titles.length).toBeGreaterThan(0);
+    await expect(titles.length).toBeGreaterThan(0);
     await expect(titles[0]).toBeVisible();
   },
 });

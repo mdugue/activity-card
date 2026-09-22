@@ -1,6 +1,8 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
+
 import { EXPORT_FORMATS, mergeSafe } from "@/theme/core/export-formats";
+
 import {
   CAROUSEL_NATURAL_MARGIN,
   stripFormat,

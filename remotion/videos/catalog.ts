@@ -3,6 +3,7 @@
 // Add a new tutorial here and it shows up in both.
 
 import type { FC } from "react";
+
 import { FPS, LANDSCAPE } from "../design/tokens";
 import {
   CAROUSEL_DURATION_IN_FRAMES,

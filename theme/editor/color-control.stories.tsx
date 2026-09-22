@@ -1,6 +1,8 @@
 import { useState } from "react";
+
 import type { ExtractedPalette, PaletteTheme } from "@/lib/palette";
 import type { ColorChoice } from "@/theme/core/colors";
+
 import preview from "../../.storybook/preview";
 import { ColorControl } from "./color-control";
 

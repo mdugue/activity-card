@@ -1,5 +1,6 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
+
 import {
   largestPhotoUrl,
   stravaPhotoKey,
@@ -26,7 +27,7 @@ describe("largestPhotoUrl", () => {
 
   test("handles a single entry and missing input", () => {
     expect(largestPhotoUrl({ "600": "only" })).toBe("only");
-    expect(largestPhotoUrl(undefined)).toBeUndefined();
+    expect(largestPhotoUrl()).toBeUndefined();
     expect(largestPhotoUrl({})).toBeUndefined();
   });
 

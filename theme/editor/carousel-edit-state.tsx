@@ -11,6 +11,7 @@
 
 import { ImagesIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
+
 import { CardStage } from "@/components/app/card-stage";
 import { ControlDeck, PANEL_MOTION } from "@/components/app/control-deck";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,9 +22,10 @@ import { stripGeometry } from "@/theme/carousel/geometry";
 import {
   CAROUSEL_THEME_ORDER,
   CAROUSEL_THEMES,
-  type CarouselThemeId,
 } from "@/theme/carousel/registry";
+import type { CarouselThemeId } from "@/theme/carousel/registry";
 import type { ExportFormat, ExportFormatId } from "@/theme/core/export-formats";
+
 import { useActivityTools } from "./activity-tools";
 import type { EditorSession } from "./editor-session";
 import { FormatControl } from "./format-control";
@@ -231,7 +233,7 @@ export function CarouselEditState({
                 ? Array.from({ length: count }, (_, i) => (
                     <div
                       aria-hidden
-                      // biome-ignore lint/suspicious/noArrayIndexKey: slides are positional — the index IS the identity (fixed count, never reordered)
+                      // oxlint-disable-next-line react/no-array-index-key -- slides are positional — the index IS the identity (fixed count, never reordered)
                       key={`safe-${i}`}
                       style={{
                         position: "absolute",
@@ -250,7 +252,7 @@ export function CarouselEditState({
               {Array.from({ length: count }, (_, i) => (
                 <div
                   aria-hidden
-                  // biome-ignore lint/suspicious/noArrayIndexKey: slides are positional — the index IS the identity (fixed count, never reordered)
+                  // oxlint-disable-next-line react/no-array-index-key -- slides are positional — the index IS the identity (fixed count, never reordered)
                   key={`snap-${i}`}
                   style={{
                     flex: "0 0 100cqw",
