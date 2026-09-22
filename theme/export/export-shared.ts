@@ -3,9 +3,11 @@
 // delivery (single File vs a sliced File[] + canvases), but the font-gate and
 // filename date-slug are identical and live here.
 //
-// snapdom primes the WebKit font/decode pipeline itself (`safariWarmupAttempts`,
-// default 3), so neither pipeline needs the old "rasterise twice on iOS and
-// discard the first pass" dance that html-to-image required.
+// WebKit's quirks are NOT handled for us: snapdom v3 has no Safari warm-up
+// option, and re-rasterising wouldn't help with the real problem anyway —
+// WebKit drops a photo-sized bitmap from the SVG it rasterises through, so the
+// background silently vanishes from the export. `rasterize.ts` probes for that
+// and composites the photo onto the canvas itself.
 
 /** Fonts must be ready before rasterisation or fallbacks leak into the export. */
 export async function waitForFonts(): Promise<void> {

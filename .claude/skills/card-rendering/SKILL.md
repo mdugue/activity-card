@@ -35,8 +35,17 @@ export async function rasteriseCard(node: HTMLElement): Promise<Blob> {
 - **`format`, not `type`** — v3 deprecated the `type` alias.
 - **`embedFonts: true`** — REQUIRED. snapdom rasterises through a serialised `<svg><foreignObject>`, which renders in an isolated context with no access to the page's loaded fonts. Without `embedFonts` only **icon** fonts are inlined, so every theme headline silently falls back to a system font in the export even though the preview looks right.
 - **`await document.fonts.ready`** — ensures the live DOM is laid out with the real fonts before snapdom measures + clones it; otherwise fallback metrics leak into the snapshot.
-- **No iOS double-call** — snapdom primes the WebKit font/decode pipeline itself (`safariWarmupAttempts`, default 3). The old html-to-image "rasterise twice on iOS and discard the first pass" workaround is gone; **don't reintroduce it.**
+- **No iOS double-call** — the old html-to-image "rasterise twice on iOS and discard the first pass" workaround is gone; **don't reintroduce it.** (Note that snapdom v3 has no `safariWarmupAttempts` option — an earlier comment here claimed it did. What it does have is a WebKit pass that attaches the snapshot image off-screen and re-draws for up to 600ms until something paints.)
 - **No `cacheBust`** — that was an html-to-image footgun (it appended `?cache-bust=…` to every resource URL, which broke the uploaded photo's `blob:` object URL so the background silently dropped). snapdom never rewrites resource URLs. The `e2e/export-photo.spec.ts` regression guard asserts the photo actually lands in the PNG.
+
+### The background photo: capped on the way in, composited if the engine drops it
+
+A photo-led card exported on an iPhone came back with **no background** (Strava photo, Altitude theme) while the preview looked right. Two defences, both in the export pipeline:
+
+1. **Size cap** (`lib/photo-resize.ts`). Every photo is re-encoded to at most 3840px on the long edge / 12 MP before it becomes an object URL. That is already more than the largest export (1080×1920 at 2×) can show, and it keeps a Strava rendition — they go up to 5000px, ~19 MP, ~75 MB decoded, decoded *twice* on export — inside what a phone can hold. Mobile WebKit drops a decode it can't afford silently, which reads exactly like "the photo didn't export".
+2. **Photo compositing** (`theme/export/photo-composite.ts`, reached from `theme/export/rasterize.ts`). If the engine can't paint a bitmap embedded in an SVG-as-image at all (`lib/svg-raster-support.ts` probes for it — Chromium, Firefox and current WebKit all can), the exporter paints the photo onto the output canvas itself. It rasterises the card twice, with every photo layer filled black and then white, and reconstructs the true pixels from the two: everything painted *over* the photo composites linearly onto that fill, so `A + (B − A)·P/255` is exact without the exporter knowing anything about the theme. Each photo layer publishes what to paint via `data-effort-photo` (`lib/photo-draw.ts`) — so **a new photo layer must go through `CoverPhoto` / `CssCoverImage`**, not a hand-rolled `background-image` div, or it won't composite.
+
+`?photoComposite=force` (or `=off`) overrides the probe — how `e2e/export-photo.spec.ts` covers the fallback on Chromium, and a way to test the fallback on a real device.
 
 ### The captured node must be untransformed
 
@@ -242,5 +251,6 @@ If the PNG looks wrong vs the preview:
 3. Is the background image cross-origin? Stream it same-origin or use an object/data URL.
 4. Are you using `backdrop-filter`? It doesn't survive the foreignObject snapshot. Switch to a solid/`filter` overlay.
 5. Is the captured node itself transformed (`transform: scale()`)? snapdom keeps root scale transforms — capture an untransformed node and scale a wrapper instead.
+6. Is the background photo missing on a phone but fine in the preview? Check it went through the size cap, then try `?photoComposite=force` — see the photo section above.
 
 If the PNG is blank or low-res: check fonts are ready, and that `width`/`height`/`dpr` are set as above (a stray default `dpr` can blow the canvas past the size cap, and a leftover v2 `scale` next to an explicit size is now silently ignored).

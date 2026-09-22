@@ -27,6 +27,7 @@ import type { ActivityData, ActivitySource, Sport } from "@/lib/activity";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
 import { formatDateUpper } from "@/lib/format";
 import type { ParsedActivity } from "@/lib/parse-activity";
+import { capPhotoResolution } from "@/lib/photo-resize";
 import { cn } from "@/lib/utils";
 import {
   CAROUSEL_THEMES,
@@ -283,11 +284,15 @@ export default function Home() {
     }
   };
 
-  const handlePhotoChange = (file: File | null) => {
+  const handlePhotoChange = async (file: File | null) => {
     // A new (or removed) photo invalidates any previous pan/zoom. A fresh photo
     // adopts the active theme's photo policy from scratch (effects reset, not
-    // carried over from the previous photo).
-    photo.adopt(file, activePhotoPolicy);
+    // carried over from the previous photo). Oversized photos are capped first
+    // — see lib/photo-resize.
+    photo.adopt(
+      file ? await capPhotoResolution(file) : null,
+      activePhotoPolicy
+    );
     if (file) {
       setVisibility((v) => ({
         ...v,
@@ -315,7 +320,9 @@ export default function Home() {
     }
     setData(next);
     if (onboardingPhoto) {
-      handlePhotoChange(onboardingPhoto);
+      // Fire-and-forget: capping the photo is asynchronous, and the editor
+      // opens on the activity alone — the photo lands a frame later.
+      void handlePhotoChange(onboardingPhoto);
     }
     carousel.regenerate();
     setState("edit");

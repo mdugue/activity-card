@@ -81,9 +81,14 @@ export async function uploadActivity(page: Page): Promise<void> {
 /**
  * Fresh-session entry into the edit state. Replaces the old "Try a sample"
  * button — using a real upload keeps the parse → edit pipeline honest.
+ * `query` appends a query string to the landing URL (e.g. the export pipeline's
+ * `?photoComposite=force` switch).
  */
-export async function enterEditViaUpload(page: Page): Promise<void> {
-  await page.goto("/");
+export async function enterEditViaUpload(
+  page: Page,
+  query = ""
+): Promise<void> {
+  await page.goto(`/${query}`);
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await uploadActivity(page);

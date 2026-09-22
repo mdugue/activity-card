@@ -8,6 +8,11 @@
 import type { ImageSize } from "@/hooks/use-image-natural-size";
 import { coverSize, IDENTITY_TRANSFORM } from "@/lib/image-transform";
 import type { ImageTransform } from "@/lib/image-transform";
+import {
+  encodePhotoDraw,
+  PHOTO_LAYER_ATTR,
+  PHOTO_PAINT_ATTR,
+} from "@/lib/photo-draw";
 import { filterCss, isQuarterTurn, NO_EFFECTS } from "@/lib/photo-effects";
 import type { PhotoEffects } from "@/lib/photo-effects";
 
@@ -54,9 +59,28 @@ export function CoverPhoto({
     .filter(Boolean)
     .join(" ");
 
+  const left = (boxW - elW) / 2;
+  const top = (boxH - elH) / 2;
+
   return (
     <div
       aria-hidden
+      // Published so the export pipeline can repaint this layer itself on
+      // engines that drop bitmaps from the rasterised SVG — see lib/photo-draw.
+      {...{
+        [PHOTO_LAYER_ATTR]: encodePhotoDraw({
+          box: { kind: "box", x: left, y: top, w: elW, h: elH },
+          filter: filterParts,
+          flipH: fx.flipH,
+          flipV: fx.flipV,
+          opacity: 1,
+          rotate: fx.rotate,
+          scale: t.scale,
+          src: photoUrl,
+          x: t.x,
+          y: t.y,
+        }),
+      }}
       style={{
         position: "absolute",
         inset: 0,
@@ -66,12 +90,13 @@ export function CoverPhoto({
       }}
     >
       <div
+        {...{ [PHOTO_PAINT_ATTR]: "" }}
         style={{
           position: "absolute",
           width: elW,
           height: elH,
-          left: (boxW - elW) / 2,
-          top: (boxH - elH) / 2,
+          left,
+          top,
           backgroundImage: `url(${photoUrl})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
