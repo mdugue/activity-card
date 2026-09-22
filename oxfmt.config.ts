@@ -11,7 +11,7 @@ export default defineConfig({
   // diffs stay line-sized — keep the authored wrapping.
   proseWrap: "preserve",
   ignorePatterns: [
-    ...ultracite.ignorePatterns,
+    ...(ultracite.ignorePatterns ?? []),
     // Vendored agent skills installed via `npx skills add` and pinned by
     // skills-lock.json, plus local agent state. Third-party or machine-owned —
     // re-add/update, don't reformat.
