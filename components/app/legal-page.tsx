@@ -22,7 +22,7 @@ export const LegalPage = ({
     <div className="text-foreground/75 mt-6 space-y-4 leading-relaxed">
       {children}
     </div>
-    <p className="text-foreground/40 mt-auto pt-12 font-mono text-[11px] font-medium tracking-[0.16em] uppercase">
+    <p className="text-foreground/40 tracking-caps mt-auto pt-12 font-mono text-xs font-medium uppercase">
       Placeholder page · full content coming before launch
     </p>
   </main>

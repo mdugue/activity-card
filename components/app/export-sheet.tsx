@@ -19,7 +19,7 @@ import {
   PlusIcon,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -183,6 +183,11 @@ interface ExportShellProps {
   subtitle: string;
 }
 
+/** The fallback aura's accent-tinted glow. */
+interface AuraStyle extends CSSProperties {
+  "--aura-bg": string;
+}
+
 /** The activity's route draws itself in behind the grid (or a soft colour aura
  *  when there's no route — e.g. a pool swim). Decorative, never exported. */
 const RouteAura = ({
@@ -193,6 +198,9 @@ const RouteAura = ({
   coords?: [number, number][];
 }) => {
   const accent = colors.primary ?? "#c45a2c";
+  const auraStyle: AuraStyle = {
+    "--aura-bg": `radial-gradient(circle, ${accent}55, transparent 70%)`,
+  };
   if (coords && coords.length > 1) {
     return (
       <svg
@@ -209,11 +217,9 @@ const RouteAura = ({
           stroke={accent}
           strokeLinecap="round"
           strokeLinejoin="round"
+          strokeDasharray={1}
           strokeWidth={9}
-          style={{
-            animation: "effort-route-draw 2.8s ease-out forwards",
-            strokeDasharray: 1,
-          }}
+          className="animate-route-draw"
         />
       </svg>
     );
@@ -224,11 +230,8 @@ const RouteAura = ({
       className="pointer-events-none absolute inset-0 overflow-hidden"
     >
       <div
-        className="absolute top-1/2 left-1/2 size-[70vmin] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
-        style={{
-          animation: "effort-aura 6s ease-in-out infinite",
-          background: `radial-gradient(circle, ${accent}55, transparent 70%)`,
-        }}
+        className="animate-aura absolute top-1/2 left-1/2 size-[70vmin] -translate-x-1/2 -translate-y-1/2 rounded-full bg-(image:--aura-bg) blur-3xl"
+        style={auraStyle}
       />
     </div>
   );
@@ -252,10 +255,10 @@ export const ExportShell = ({
     <RouteAura colors={colors} coords={routeCoordinates} />
 
     <div className="relative w-full max-w-5xl lg:max-w-6xl">
-      <div className="font-mono text-xs font-semibold tracking-[0.32em] opacity-55">
+      <div className="tracking-caps-display font-mono text-xs font-semibold opacity-55">
         READY TO SHARE
       </div>
-      <h2 className="font-heading mt-1.5 text-3xl leading-[0.92] tracking-tight uppercase sm:mt-3 sm:text-5xl lg:text-6xl">
+      <h2 className="font-heading leading-display mt-1.5 text-3xl tracking-tight uppercase sm:mt-3 sm:text-5xl lg:text-6xl">
         Pick a <span className="text-primary">format.</span>
       </h2>
       <p className="mt-2 max-w-xl text-xs leading-relaxed opacity-70 sm:mt-4 sm:text-sm">
@@ -285,6 +288,15 @@ export const ExportShell = ({
     </div>
   </div>
 );
+
+/** A tile's display + native sizes and scale, as CSS custom properties. */
+interface TileStyle extends CSSProperties {
+  "--native-h": string;
+  "--native-w": string;
+  "--tile-h": string;
+  "--tile-scale": string;
+  "--tile-w": string;
+}
 
 interface ExportTileProps {
   busy: string | null;
@@ -329,17 +341,21 @@ export const ExportTile = ({
   const tileW = nativeW * scale;
   const tileH = nativeH * scale;
   const isBusy = busy === busyId;
+  // Tile + native sizes ride CSS custom properties (px); the scale lives on the
+  // wrapper so the captured mount stays untransformed.
+  const tileStyle: TileStyle = {
+    "--native-h": `${nativeH}px`,
+    "--native-w": `${nativeW}px`,
+    "--tile-h": `${tileH}px`,
+    "--tile-scale": `scale(${scale})`,
+    "--tile-w": `${tileW}px`,
+  };
 
   return (
-    <div className="flex flex-col gap-2" style={{ width: tileW }}>
-      <div
-        className="ring-foreground/10 relative overflow-hidden rounded-md shadow-sm ring-1"
-        style={{ height: tileH, width: tileW }}
-      >
-        <div
-          style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}
-        >
-          <div ref={registerMount} style={{ height: nativeH, width: nativeW }}>
+    <div className="flex w-(--tile-w) flex-col gap-2" style={tileStyle}>
+      <div className="ring-foreground/10 relative h-(--tile-h) w-(--tile-w) overflow-hidden rounded-md shadow-sm ring-1">
+        <div className="origin-top-left transform-(--tile-scale)">
+          <div className="h-(--native-h) w-(--native-w)" ref={registerMount}>
             {children}
           </div>
         </div>

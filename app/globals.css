@@ -84,6 +84,8 @@
   /* The mobile control deck's drawer easing. */
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   --animate-scroll-cue: effort-scroll-cue 1.6s ease-in-out infinite;
+  --animate-route-draw: effort-route-draw 2.8s ease-out forwards;
+  --animate-aura: effort-aura 6s ease-in-out infinite;
 }
 
 :root {
@@ -192,18 +194,39 @@
 }
 
 /* Transition only the properties a component animates (never
-   transition-all). */
+   transition-all), with Tailwind's default duration / easing like its own
+   transition-* utilities (duration-* / ease-* still override). */
 @utility transition-drawer {
   transition-property: max-height, max-width, opacity, visibility;
+  transition-timing-function: var(
+    --tw-ease,
+    var(--default-transition-timing-function)
+  );
+  transition-duration: var(--tw-duration, var(--default-transition-duration));
 }
 @utility transition-outline {
   transition-property: outline-color, outline-width;
+  transition-timing-function: var(
+    --tw-ease,
+    var(--default-transition-timing-function)
+  );
+  transition-duration: var(--tw-duration, var(--default-transition-duration));
 }
 @utility transition-size-colors {
   transition-property: width, background-color;
+  transition-timing-function: var(
+    --tw-ease,
+    var(--default-transition-timing-function)
+  );
+  transition-duration: var(--tw-duration, var(--default-transition-duration));
 }
 @utility transition-height {
   transition-property: height;
+  transition-timing-function: var(
+    --tw-ease,
+    var(--default-transition-timing-function)
+  );
+  transition-duration: var(--tw-duration, var(--default-transition-duration));
 }
 
 /* Bottom padding that clears the iOS home indicator. */

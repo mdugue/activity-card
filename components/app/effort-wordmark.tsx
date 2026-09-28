@@ -45,7 +45,6 @@ export const EffortWordmark = ({
           isSm ? "text-2xl" : "text-3xl",
           labelClassName
         )}
-        style={{ fontFamily: "var(--font-heading)" }}
       >
         EFFORT
       </span>

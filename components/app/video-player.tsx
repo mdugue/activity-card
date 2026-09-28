@@ -12,10 +12,15 @@ import {
 import { Player } from "@remotion/player";
 import type { PlayerRef } from "@remotion/player";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ComponentType } from "react";
+import type { ComponentType, CSSProperties } from "react";
 
 import { useCoarsePointer } from "@/hooks/use-coarse-pointer";
 import { cn } from "@/lib/utils";
+
+/** The scrubber fill, as a CSS custom property (percent). */
+interface ProgressStyle extends CSSProperties {
+  "--progress": string;
+}
 
 interface VideoPlayerProps {
   /** start from the top once the player scrolls into view (the landing hero) */
@@ -210,6 +215,7 @@ export const VideoPlayer = ({
   // on hover via CSS so the div needs no mouse handlers (keeps a11y happy).
   const forceShow = coarse || !playing;
   const progress = durationInFrames > 1 ? frame / (durationInFrames - 1) : 0;
+  const progressStyle: ProgressStyle = { "--progress": `${progress * 100}%` };
 
   return (
     <div
@@ -234,6 +240,7 @@ export const VideoPlayer = ({
         loop={loop}
         ref={setPlayer}
         spaceKeyToPlayOrPause
+        // oxlint-disable-next-line shadcn/no-inline-styles -- Remotion's Player writes its own inline width/height (the composition size) unless `style` sets them, so a class cannot size it
         style={{ height: "100%", width: "100%" }}
       />
 
@@ -259,10 +266,10 @@ export const VideoPlayer = ({
           }}
           type="button"
         >
-          <span className="block h-1 w-full rounded-full bg-white/25 transition-[height] group-hover/seek:h-1.5">
+          <span className="transition-height block h-1 w-full rounded-full bg-white/25 group-hover/seek:h-1.5">
             <span
-              className="bg-primary block h-full rounded-full"
-              style={{ width: `${progress * 100}%` }}
+              className="bg-primary block h-full w-(--progress) rounded-full"
+              style={progressStyle}
             />
           </span>
         </button>
@@ -300,7 +307,7 @@ export const VideoPlayer = ({
               <SpeakerSimpleHighIcon size={ICON} weight="duotone" />
             )}
           </ControlButton>
-          <span className="text-background/80 ml-1 font-mono text-[11px] font-medium tracking-wide tabular-nums">
+          <span className="text-background/80 ml-1 font-mono text-xs font-medium tracking-wide tabular-nums">
             {clock(frame, fps)} / {clock(durationInFrames, fps)}
           </span>
           <span className="flex-1" />

@@ -11,6 +11,7 @@
 
 import { ImagesIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 
 import { CardStage } from "@/components/app/card-stage";
 import { ControlDeck, PANEL_MOTION } from "@/components/app/control-deck";
@@ -33,6 +34,21 @@ import { AdjustControls, usePhotoAdjust } from "./photo-adjust";
 import { SafeZoneOverlay } from "./safe-zone-overlay";
 import { SlideStrip } from "./slide-strip";
 import { ThemeRail } from "./theme-rail";
+
+/** The preview window's slide/strip geometry, as CSS custom properties. */
+interface CarouselViewportStyle extends CSSProperties {
+  "--slide-fit": string;
+  "--slide-h": string;
+  "--slide-ratio": string;
+  "--slide-w": string;
+  "--strip-w": string;
+  "--view-strip-w": string;
+}
+
+/** One slide's left offset in strip space. */
+interface SlideOffsetStyle extends CSSProperties {
+  "--slide-left": string;
+}
 
 interface CarouselEditStateProps {
   carousel: CarouselController;
@@ -194,6 +210,17 @@ export const CarouselEditState = ({
     ),
   });
 
+  // The slide geometry rides CSS custom properties (px, in format space); the
+  // strip is laid out at master size and scaled to the viewport's width.
+  const viewportStyle: CarouselViewportStyle = {
+    "--slide-fit": `scale(calc(100cqw / ${slideW}px))`,
+    "--slide-h": `${slideH}px`,
+    "--slide-ratio": `${slideW} / ${slideH}`,
+    "--slide-w": `${slideW}px`,
+    "--strip-w": `${stripW}px`,
+    "--view-strip-w": `calc(100cqw * ${count})`,
+  };
+
   const preview = (
     // Fill the preview area on the mobile app-shell so the seamless window can
     // scale to fit the space it's given; on desktop it's a fixed-width column.
@@ -205,61 +232,48 @@ export const CarouselEditState = ({
         maxWidthClassName="max-w-[360px]"
       >
         <div
-          className="@container relative w-full overflow-x-auto overflow-y-hidden bg-white shadow-[0_24px_50px_-14px_rgba(26,23,20,0.3)]"
+          className={cn(
+            "shadow-lift @container relative aspect-(--slide-ratio) w-full overflow-y-hidden bg-white",
+            adjusting
+              ? "snap-none overflow-x-hidden"
+              : "snap-x snap-mandatory overflow-x-auto"
+          )}
           data-testid="carousel-preview"
           onScroll={handleScroll}
           ref={viewportRef}
-          style={{
-            aspectRatio: `${slideW} / ${slideH}`,
-            overflowX: adjusting ? "hidden" : "auto",
-            scrollSnapType: adjusting ? "none" : "x mandatory",
-          }}
+          style={viewportStyle}
         >
-          <div
-            className="relative h-full"
-            style={{ width: `calc(100cqw * ${count})` }}
-          >
-            <div
-              className="absolute top-0 left-0 origin-top-left"
-              style={{
-                height: slideH,
-                transform: `scale(calc(100cqw / ${slideW}px))`,
-                width: stripW,
-              }}
-            >
+          <div className="relative h-full w-(--view-strip-w)">
+            <div className="absolute top-0 left-0 h-(--slide-h) w-(--strip-w) origin-top-left transform-(--slide-fit)">
               <CarouselDeck {...deckProps} />
               {/* Per-slide keep-out guide (display-only — never on the export
                   mount below). Each slide is one format box in strip space. */}
               {showSafe
-                ? Array.from({ length: count }, (_, i) => (
-                    <div
-                      aria-hidden
-                      // oxlint-disable-next-line react/no-array-index-key -- slides are positional — the index IS the identity (fixed count, never reordered)
-                      key={`safe-${i}`}
-                      style={{
-                        height: slideH,
-                        left: i * slideW,
-                        position: "absolute",
-                        top: 0,
-                        width: slideW,
-                      }}
-                    >
-                      <SafeZoneOverlay format={format} scale={1} />
-                    </div>
-                  ))
+                ? Array.from({ length: count }, (_, i) => {
+                    const slideStyle: SlideOffsetStyle = {
+                      "--slide-left": `${i * slideW}px`,
+                    };
+                    return (
+                      <div
+                        aria-hidden
+                        className="absolute top-0 left-(--slide-left) h-(--slide-h) w-(--slide-w)"
+                        // oxlint-disable-next-line react/no-array-index-key -- slides are positional — the index IS the identity (fixed count, never reordered)
+                        key={`safe-${i}`}
+                        style={slideStyle}
+                      >
+                        <SafeZoneOverlay format={format} scale={1} />
+                      </div>
+                    );
+                  })
                 : null}
             </div>
             <div className="absolute inset-0 flex">
               {Array.from({ length: count }, (_, i) => (
                 <div
                   aria-hidden
+                  className="w-[100cqw] flex-[0_0_100cqw] snap-start"
                   // oxlint-disable-next-line react/no-array-index-key -- slides are positional — the index IS the identity (fixed count, never reordered)
                   key={`snap-${i}`}
-                  style={{
-                    flex: "0 0 100cqw",
-                    scrollSnapAlign: "start",
-                    width: "100cqw",
-                  }}
                 />
               ))}
             </div>

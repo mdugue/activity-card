@@ -34,7 +34,7 @@ const TutorialCard = ({
         <p className="caption-label text-primary opacity-100">
           {String(index + 1).padStart(2, "0")} · {video.kicker}
         </p>
-        <h2 className="font-heading mt-3 text-3xl leading-[0.95] text-balance uppercase lg:text-4xl">
+        <h2 className="font-heading leading-display-loose mt-3 text-3xl text-balance uppercase lg:text-4xl">
           {video.title}
         </h2>
         <p className="text-foreground/70 mt-4 max-w-md leading-relaxed">

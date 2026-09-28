@@ -11,11 +11,21 @@
 // keep-out guides the app's editor/export sheet draw (`SafeZoneOverlay`).
 
 import type { Decorator } from "@storybook/nextjs-vite";
+import type { CSSProperties } from "react";
 import type { GlobalTypes } from "storybook/internal/types";
 
 import { FORMAT_ORDER, getFormat } from "@/theme/core/export-formats";
 import { SafeZoneOverlay } from "@/theme/editor/safe-zone-overlay";
 import { FormatProvider } from "@/theme/shared/format-context";
+
+/** A tile's size and scale, as CSS custom properties. */
+interface TileStyle extends CSSProperties {
+  "--fmt-h": string;
+  "--fmt-w": string;
+  "--tile-h": string;
+  "--tile-scale": string;
+  "--tile-w": string;
+}
 
 const TILE_W = 400;
 const TILE_H = 400;
@@ -47,20 +57,20 @@ export const withFormatMatrix: Decorator = (Story, context) => {
       {FORMAT_ORDER.map((id) => {
         const f = getFormat(id);
         const scale = Math.min(TILE_W / f.width, TILE_H / f.height);
+        const tileStyle: TileStyle = {
+          "--fmt-h": `${f.height}px`,
+          "--fmt-w": `${f.width}px`,
+          "--tile-h": `${f.height * scale}px`,
+          "--tile-scale": `scale(${scale})`,
+          "--tile-w": `${f.width * scale}px`,
+        };
         return (
           <div className="flex flex-col gap-2" key={id}>
             <div
-              className="relative overflow-hidden rounded-lg shadow-lg"
-              style={{ height: f.height * scale, width: f.width * scale }}
+              className="relative h-(--tile-h) w-(--tile-w) overflow-hidden rounded-lg shadow-lg"
+              style={tileStyle}
             >
-              <div
-                style={{
-                  height: f.height,
-                  transform: `scale(${scale})`,
-                  transformOrigin: "top left",
-                  width: f.width,
-                }}
-              >
+              <div className="h-(--fmt-h) w-(--fmt-w) origin-top-left transform-(--tile-scale)">
                 <FormatProvider value={f}>
                   <Story />
                 </FormatProvider>

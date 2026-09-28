@@ -19,6 +19,7 @@ import type { ActivityData } from "@/lib/activity";
 import { formatDate } from "@/lib/format";
 import { parseActivityFiles } from "@/lib/parse-activity";
 import type { ParsedActivity } from "@/lib/parse-activity";
+import { cn } from "@/lib/utils";
 
 interface ActivitySourceProps {
   data: ActivityData;
@@ -39,7 +40,7 @@ const ViewOnStravaLinks = ({ data }: { data: ActivityData }) => {
   if (ids.length === 1 && ids[0] !== null) {
     return (
       <a
-        className="inline-flex items-center gap-1 font-mono text-xs font-bold tracking-[0.14em] text-[#FC5200] uppercase underline-offset-4 hover:underline"
+        className="tracking-caps-sm text-strava inline-flex items-center gap-1 font-mono text-xs font-bold uppercase underline-offset-4 hover:underline"
         href={`https://www.strava.com/activities/${ids[0]}/overview`}
         rel="noopener noreferrer"
         target="_blank"
@@ -60,12 +61,12 @@ const ViewOnStravaLinks = ({ data }: { data: ActivityData }) => {
     return null;
   }
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[10px] tracking-[0.14em] uppercase opacity-80">
+    <div className="text-2xs tracking-caps-sm flex flex-wrap items-center gap-x-2 gap-y-1 font-mono uppercase opacity-80">
       <span>View on Strava:</span>
       {links.map(({ id, sport }, i) => (
         <span key={id}>
           <a
-            className="font-bold text-[#FC5200] underline-offset-4 hover:underline"
+            className="text-strava font-bold underline-offset-4 hover:underline"
             href={`https://www.strava.com/activities/${id}/overview`}
             rel="noopener noreferrer"
             target="_blank"
@@ -144,8 +145,10 @@ export const ActivitySource = ({
       <div className="caption-micro flex items-center gap-1.5">
         <span
           aria-hidden
-          className="size-1.5 rounded-full"
-          style={{ background: fromStrava ? "#FC5200" : "var(--primary)" }}
+          className={cn(
+            "size-1.5 rounded-full",
+            fromStrava ? "bg-strava" : "bg-primary"
+          )}
         />
         {isSwapping ? "Reading…" : sourceLabel}
       </div>

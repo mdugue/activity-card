@@ -5,6 +5,8 @@
 // agree. Click a thumbnail to bring it into the preview. The theme defines how
 // many slides exist (its panel count); the strip is just navigation.
 
+import type { CSSProperties } from "react";
+
 import type { ImageSize } from "@/hooks/use-image-natural-size";
 import type { ActivityData } from "@/lib/activity";
 import type { ImageTransform } from "@/lib/image-transform";
@@ -23,6 +25,15 @@ import type { Visibility } from "@/theme/core/visibility";
 // they're unchanged; only the taller-than-4:5 formats become height-bound.
 const THUMB_MAX_W = 92;
 const THUMB_MAX_H = 116;
+
+/** A thumbnail's size and strip slice, as CSS custom properties. */
+interface ThumbStyle extends CSSProperties {
+  "--strip-h": string;
+  "--strip-w": string;
+  "--thumb-h": string;
+  "--thumb-slice": string;
+  "--thumb-w": string;
+}
 
 interface SlideStripProps {
   colors: ColorScheme;
@@ -73,6 +84,15 @@ export const SlideStrip = (props: SlideStripProps) => {
     <div className="flex items-stretch justify-center gap-2">
       {Array.from({ length: total }, (_, i) => {
         const active = i === selectedIndex;
+        // Each thumbnail windows onto its own slice of the full strip; the
+        // geometry rides CSS custom properties (px).
+        const thumbStyle: ThumbStyle = {
+          "--strip-h": `${format.height}px`,
+          "--strip-w": `${format.width * total}px`,
+          "--thumb-h": `${thumbH}px`,
+          "--thumb-slice": `translateX(${-(i * thumbW)}px) scale(${scale})`,
+          "--thumb-w": `${thumbW}px`,
+        };
         return (
           <div
             className="flex flex-col items-center gap-1"
@@ -83,7 +103,7 @@ export const SlideStrip = (props: SlideStripProps) => {
               aria-label={`Slide ${i + 1}: ${theme.label}`}
               aria-pressed={active}
               className={cn(
-                "relative overflow-hidden border-2 bg-white transition-all",
+                "relative h-(--thumb-h) w-(--thumb-w) overflow-hidden border-2 bg-white transition-all",
                 active
                   ? "border-foreground shadow-md"
                   : "border-foreground/15 opacity-80 hover:opacity-100"
@@ -91,17 +111,10 @@ export const SlideStrip = (props: SlideStripProps) => {
               onClick={() => {
                 onSelect(i);
               }}
-              style={{ height: thumbH, width: thumbW }}
+              style={thumbStyle}
               type="button"
             >
-              <div
-                className="origin-top-left"
-                style={{
-                  height: format.height,
-                  transform: `translateX(${-(i * thumbW)}px) scale(${scale})`,
-                  width: format.width * total,
-                }}
-              >
+              <div className="h-(--strip-h) w-(--strip-w) origin-top-left transform-(--thumb-slice)">
                 {canvas}
               </div>
             </button>

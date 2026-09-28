@@ -9,6 +9,8 @@
 import Image from "next/image";
 import type { CSSProperties } from "react";
 
+import { cn } from "@/lib/utils";
+
 import type { IntroStage } from "./empty-state-intro-motion";
 
 const CUT_EASE = "cubic-bezier(0.65, 0, 0.35, 1)";
@@ -23,30 +25,24 @@ const GUTTER_LEFT = [
   "calc(2 * (100% - 32px) / 3 + 16px)",
 ];
 
-const revealStyle = (stage: IntroStage): CSSProperties => {
-  if (stage === "hidden") {
-    return { opacity: 1, transition: "none" };
-  }
-  if (stage === "playing") {
-    return {
-      opacity: 0,
-      transition: `opacity 0.42s ease-in-out ${CUT_START + GUTTER_LEFT.length * CUT_STAGGER}s`,
-    };
-  }
-  return { opacity: 0 };
-};
+/** The overlay's reveal timing, as CSS custom properties. */
+interface RevealStyle extends CSSProperties {
+  "--cut-ease": string;
+  "--reveal-delay": string;
+  "--reveal-ease": string;
+}
 
-const gutterStyle = (stage: IntroStage, i: number): CSSProperties => {
-  if (stage === "hidden") {
-    return { transform: "scaleY(0)", transition: "none" };
-  }
-  if (stage === "playing") {
-    return {
-      transform: "scaleY(1)",
-      transition: `transform 0.42s ${CUT_EASE} ${CUT_START + i * CUT_STAGGER}s`,
-    };
-  }
-  return { transform: "scaleY(1)" };
+/** One gutter's seam position and cut delay. */
+interface GutterStyle extends CSSProperties {
+  "--cut-delay": string;
+  "--gutter-left": string;
+}
+
+// The photo fades once every gutter has cut.
+const REVEAL_STYLE: RevealStyle = {
+  "--cut-ease": CUT_EASE,
+  "--reveal-delay": `${CUT_START + GUTTER_LEFT.length * CUT_STAGGER}s`,
+  "--reveal-ease": "ease-in-out",
 };
 
 /**
@@ -64,29 +60,47 @@ export const RevealOverlay = ({
 }) => (
   <div
     aria-hidden="true"
-    className="pointer-events-none absolute inset-0 z-30 hidden overflow-hidden lg:block"
-    style={revealStyle(stage)}
+    className={cn(
+      "pointer-events-none absolute inset-0 z-30 hidden overflow-hidden lg:block",
+      stage === "hidden" && "opacity-100 transition-none",
+      stage === "playing" &&
+        "opacity-0 transition-opacity delay-(--reveal-delay) duration-420 ease-(--reveal-ease)",
+      stage === "composed" && "opacity-0"
+    )}
+    style={REVEAL_STYLE}
   >
     <Image
       alt=""
-      className="object-cover brightness-[0.8] contrast-[1.05] grayscale-[0.42]"
+      className="object-cover brightness-80 contrast-105 grayscale-42"
       fill
       sizes="1024px"
       src={photoSrc}
     />
-    {GUTTER_LEFT.map((left, i) => (
-      <div
-        className="bg-background absolute inset-y-0 w-4 origin-top"
-        key={left}
-        style={{ left, ...gutterStyle(stage, i) }}
-      />
-    ))}
+    {GUTTER_LEFT.map((left, i) => {
+      const gutterStyle: GutterStyle = {
+        "--cut-delay": `${CUT_START + i * CUT_STAGGER}s`,
+        "--gutter-left": left,
+      };
+      return (
+        <div
+          className={cn(
+            "bg-background absolute inset-y-0 left-(--gutter-left) w-4 origin-top",
+            stage === "hidden" && "transform-[scaleY(0)] transition-none",
+            stage === "playing" &&
+              "transform-[scaleY(1)] transition-transform delay-(--cut-delay) duration-420 ease-(--cut-ease)",
+            stage === "composed" && "transform-[scaleY(1)]"
+          )}
+          key={left}
+          style={gutterStyle}
+        />
+      );
+    })}
   </div>
 );
 
 export const IntroReplay = ({ onReplay }: { onReplay: () => void }) => (
   <button
-    className="border-foreground/30 absolute right-5 bottom-4 z-40 hidden items-center gap-2 rounded-full border px-3 py-2 font-mono text-xs font-medium tracking-[0.16em] uppercase opacity-60 transition-opacity hover:opacity-100 lg:inline-flex"
+    className="border-foreground/30 tracking-caps absolute right-5 bottom-4 z-40 hidden items-center gap-2 rounded-full border px-3 py-2 font-mono text-xs font-medium uppercase opacity-60 transition-opacity hover:opacity-100 lg:inline-flex"
     onClick={onReplay}
     type="button"
   >

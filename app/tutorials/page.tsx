@@ -19,7 +19,7 @@ const TutorialsPage = () => (
         <EffortWordmark size="sm" />
       </Link>
       <Link
-        className="inline-flex items-center gap-2 font-mono text-[11px] font-medium tracking-[0.16em] uppercase opacity-60 transition-opacity hover:opacity-100"
+        className="tracking-caps inline-flex items-center gap-2 font-mono text-xs font-medium uppercase opacity-60 transition-opacity hover:opacity-100"
         href="/"
       >
         <ArrowLeftIcon className="size-3.5" weight="bold" />
@@ -29,7 +29,7 @@ const TutorialsPage = () => (
 
     <main className="mx-auto w-full max-w-[68rem] px-6 pt-16 pb-24 lg:pt-24">
       <p className="caption-label">Tutorials</p>
-      <h1 className="font-heading mt-4 max-w-3xl text-5xl leading-[0.92] text-balance uppercase lg:text-6xl">
+      <h1 className="font-heading leading-display mt-4 max-w-3xl text-5xl text-balance uppercase lg:text-6xl">
         Everything Effort does, in five short clips
       </h1>
       <p className="text-foreground/70 mt-6 max-w-xl leading-relaxed">
@@ -43,7 +43,7 @@ const TutorialsPage = () => (
       </div>
 
       <div className="border-foreground/10 mt-24 flex flex-col items-center gap-5 border-t pt-14 text-center">
-        <h2 className="font-heading text-3xl leading-[0.95] text-balance uppercase lg:text-4xl">
+        <h2 className="font-heading leading-display-loose text-3xl text-balance uppercase lg:text-4xl">
           Ready to make yours?
         </h2>
         <Button

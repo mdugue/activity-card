@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 // footer section and the picker can both reuse the exact approved mark.
 export const StravaCompatLink = ({ className }: { className?: string }) => (
   <a
-    className={cn("font-semibold text-[#FC5200] hover:underline", className)}
+    className={cn("text-strava font-semibold hover:underline", className)}
     href="https://www.strava.com"
     rel="noopener noreferrer"
     target="_blank"
@@ -18,7 +18,7 @@ export const StravaCompatLink = ({ className }: { className?: string }) => (
 // Standalone footer wrapper, used on the Strava picker. The landing page renders
 // `StravaCompatLink` inline within its own footer section instead.
 export const StravaFooter = () => (
-  <footer className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 px-4 py-4 font-mono text-xs tracking-[0.18em] uppercase opacity-70">
+  <footer className="tracking-caps-md flex flex-wrap items-center justify-center gap-x-4 gap-y-1 px-4 py-4 font-mono text-xs uppercase opacity-70">
     <StravaCompatLink />
   </footer>
 );

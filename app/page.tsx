@@ -237,7 +237,7 @@ const EditTopBar = ({
     <EffortWordmark labelClassName="hidden sm:inline" size="sm" />
     <div className="flex items-center gap-5">
       <Link
-        className="hidden font-mono text-[11px] font-medium tracking-[0.16em] uppercase opacity-55 transition-opacity hover:opacity-100 md:inline"
+        className="tracking-caps hidden font-mono text-xs font-medium uppercase opacity-55 transition-opacity hover:opacity-100 md:inline"
         href="/tutorials"
       >
         Tutorials
@@ -253,11 +253,11 @@ const Header = ({ date, status }: { date?: string; status?: string }) => {
     <header className="absolute top-0 right-0 left-0 z-10 flex items-start justify-between px-6 pt-7 md:px-10">
       <EffortWordmark />
       {status !== undefined && status !== "" ? (
-        <div className="font-mono text-xs font-medium tracking-[0.22em] opacity-55">
+        <div className="tracking-caps-xl font-mono text-xs font-medium opacity-55">
           {status}
         </div>
       ) : (
-        <div className="hidden font-mono text-xs font-medium tracking-[0.22em] opacity-55 sm:block">
+        <div className="tracking-caps-xl hidden font-mono text-xs font-medium opacity-55 sm:block">
           ACTIVITY CARD{upper === "" ? "" : ` · ${upper}`}
         </div>
       )}
