@@ -10,6 +10,12 @@ import {
 } from "@phosphor-icons/react";
 import { Suspense, use, useEffect, useId, useRef, useState } from "react";
 
+import { ControlLabel } from "@/components/app/primitives/label";
+import {
+  Pager,
+  PagerNext,
+  PagerPrevious,
+} from "@/components/app/primitives/pager";
 import { StravaFooter } from "@/components/app/strava-footer";
 import {
   fetchActivities,
@@ -34,15 +40,11 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@/components/ui/item";
-import { Label } from "@/components/ui/label";
 import {
-  Pagination,
   PaginationContent,
   PaginationEllipsis,
   PaginationItem,
   PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
@@ -70,12 +72,8 @@ const PickerConnection = () => {
     return null;
   }
   return (
-    <div className="flex shrink-0 items-center gap-2 font-mono text-xs tracking-[0.18em] uppercase opacity-70">
-      <span
-        aria-hidden
-        className="size-1.5 rounded-full"
-        style={{ background: "#FC5200" }}
-      />
+    <div className="tracking-caps-md flex shrink-0 items-center gap-2 font-mono text-xs uppercase opacity-70">
+      <span aria-hidden className="bg-strava size-1.5 rounded-full" />
       <span className="hidden sm:inline">
         {hasText(strava.athlete?.firstname)
           ? `Connected as ${strava.athlete.firstname}`
@@ -165,12 +163,11 @@ const PickerPagination = ({
   const range: RangeItem[] | null =
     totalPages === null ? null : paginationRange(page, totalPages);
   return (
-    <Pagination className="mt-8 font-mono text-[11px] tracking-[0.18em] uppercase">
+    <Pager className="mt-8">
       <PaginationContent>
         <PaginationItem>
-          <PaginationPrevious
-            aria-disabled={!canGoPrev}
-            className={canGoPrev ? "" : "pointer-events-none opacity-40"}
+          <PagerPrevious
+            disabled={!canGoPrev}
             onClick={() => {
               if (canGoPrev) {
                 onPageChange(page - 1);
@@ -203,9 +200,8 @@ const PickerPagination = ({
           </PaginationItem>
         )}
         <PaginationItem>
-          <PaginationNext
-            aria-disabled={!canGoNext}
-            className={canGoNext ? "" : "pointer-events-none opacity-40"}
+          <PagerNext
+            disabled={!canGoNext}
             onClick={() => {
               if (canGoNext) {
                 onPageChange(page + 1);
@@ -214,7 +210,7 @@ const PickerPagination = ({
           />
         </PaginationItem>
       </PaginationContent>
-    </Pagination>
+    </Pager>
   );
 };
 
@@ -238,7 +234,7 @@ const PickAffordance = ({
     return null;
   }
   return (
-    <span className="flex items-center gap-1 font-mono text-xs tracking-[0.18em] opacity-50">
+    <span className="tracking-caps-md flex items-center gap-1 font-mono text-xs opacity-50">
       PICK
       <ArrowRightIcon aria-hidden className="size-3" weight="duotone" />
     </span>
@@ -781,14 +777,14 @@ export const StravaPicker = ({
       )}
     >
       <div className="flex items-center justify-between gap-4">
-        <div className="font-mono text-xs font-medium tracking-[0.32em] opacity-55">
+        <div className="tracking-caps-display font-mono text-xs font-medium opacity-55">
           PICK FROM STRAVA
         </div>
         <PickerConnection />
       </div>
       <h1
         className={cn(
-          "font-heading mt-5 leading-[0.92] tracking-tight uppercase",
+          "font-heading leading-display mt-5 tracking-tight uppercase",
           embedded ? "text-3xl sm:text-4xl" : "mt-7 text-5xl sm:text-6xl"
         )}
       >
@@ -800,14 +796,14 @@ export const StravaPicker = ({
       </p>
 
       <div className="border-foreground/15 mt-8 flex items-center justify-between border-y py-3">
-        <Label className="flex items-center gap-3 text-sm" htmlFor={multiId}>
+        <ControlLabel htmlFor={multiId} variant="switch">
           <Switch
             checked={multiSelect}
             id={multiId}
             onCheckedChange={handleMultiToggle}
           />
           Multi-select
-        </Label>
+        </ControlLabel>
         {multiSelect ? (
           <span className="font-mono text-xs tracking-wide opacity-60">
             {selectedCount} selected

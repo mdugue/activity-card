@@ -69,13 +69,19 @@
   --leading-display-tight: 0.9;
   --leading-display: 0.92;
   --leading-display-loose: 0.95;
-  /* Micro text for dense chrome (swatch captions, slide numbers) where 12px
-     does not fit; prefer text-xs everywhere else. */
+  /* Micro text for dense chrome (dock tabs, swatch captions, theme-rail
+     taglines) where 12px does not fit; prefer text-xs everywhere else. No
+     paired line-height: like the arbitrary sizes they replace, they inherit
+     the surrounding line-height. */
   --text-2xs: 0.625rem;
-  --text-2xs--line-height: 1rem;
+  --text-3xs: 0.5625rem;
 
   /* Strava's brand orange (docs/strava.md brand guidelines). */
   --color-strava: #fc5200;
+  /* The warm sand-to-umber wash that stands in for a photo before one is
+     picked (photo thumbnails in the editor). */
+  --color-photo-placeholder-from: #d8c5a0;
+  --color-photo-placeholder-to: #4a2a18;
 
   --shadow-lift: 0 24px 50px -14px rgb(26 23 20 / 0.3);
   /* Dims everything around a focused element (image-adjust overlay). */
@@ -227,6 +233,18 @@
     var(--default-transition-timing-function)
   );
   transition-duration: var(--tw-duration, var(--default-transition-duration));
+}
+
+/* The landing intro's JS-timed frames (components/app/empty-state-intro-motion.ts):
+   the stage machine writes --intro-* custom properties and adds these
+   classes. !important keeps the precedence the frames had as inline styles —
+   a frame always beats the element's resting classes. */
+@utility intro-fade {
+  opacity: var(--intro-opacity) !important;
+  transition: var(--intro-transition) !important;
+}
+@utility intro-rise {
+  transform: var(--intro-transform) !important;
 }
 
 /* Bottom padding that clears the iOS home indicator. */

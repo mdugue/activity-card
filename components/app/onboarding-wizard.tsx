@@ -10,8 +10,19 @@ import {
 } from "@phosphor-icons/react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { toast } from "sonner";
 
+import { FilledBadge } from "@/components/app/primitives/badge";
+import { CtaButton } from "@/components/app/primitives/button";
+import {
+  DisplayDialogTitle,
+  SheetDialogContent,
+} from "@/components/app/primitives/dialog";
+import {
+  PanelCard,
+  PanelCardTitle,
+} from "@/components/app/primitives/panel-card";
 import {
   SAMPLE_RIDE,
   SAMPLE_RUN,
@@ -21,19 +32,11 @@ import { StravaConnectButton } from "@/components/app/strava-connect-button";
 import { StravaPhotoStrip } from "@/components/app/strava-photo-strip";
 import { StravaPicker } from "@/components/app/strava-picker";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { CardAction, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Dialog,
   DialogClose,
-  DialogContent,
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -175,33 +178,30 @@ const OrDivider = () => (
 const StepCard = ({
   active,
   badge,
-  badgeClass,
+  badgeTone,
   children,
   num,
   title,
 }: {
   active: boolean;
   badge: string;
-  badgeClass: string;
+  badgeTone: "inverse" | "primary";
   children: React.ReactNode;
   num: string;
   title: string;
 }) => (
-  <Card
-    className={cn("shrink-0 gap-4", active && "ring-primary ring-2")}
-    size="sm"
-  >
+  <PanelCard active={active} className="shrink-0" size="sm">
     <CardHeader>
-      <CardTitle className="flex items-center gap-2">
+      <PanelCardTitle>
         <span className="font-heading">{num}</span>
         {title}
-      </CardTitle>
+      </PanelCardTitle>
       <CardAction>
-        <Badge className={cn("px-2 py-1", badgeClass)}>{badge}</Badge>
+        <FilledBadge tone={badgeTone}>{badge}</FilledBadge>
       </CardAction>
     </CardHeader>
     <CardContent className="flex flex-col">{children}</CardContent>
-  </Card>
+  </PanelCard>
 );
 
 const DropZone = ({
@@ -246,7 +246,15 @@ const DropZone = ({
     }}
     type="button"
   >
-    {parsing ? <Spinner className="text-primary size-6 sm:size-9" /> : icon}
+    {parsing ? (
+      // `contents`: the wrapper only tints the spinner (it draws in
+      // currentColor) — the svg stays the flex item.
+      <span className="text-primary contents">
+        <Spinner className="size-6 sm:size-9" />
+      </span>
+    ) : (
+      icon
+    )}
     <span className="text-muted-foreground flex-1 text-sm sm:flex-none">
       {hint}
     </span>
@@ -255,6 +263,21 @@ const DropZone = ({
     </span>
   </button>
 );
+
+/** The loaded item's thumbnail, read by `bg-(image:--thumb)`. */
+interface ThumbVars extends CSSProperties {
+  "--thumb": string;
+}
+
+const LoadedThumb = ({ src }: { src: string }) => {
+  const thumbVars: ThumbVars = { "--thumb": `url(${src})` };
+  return (
+    <div
+      className="w-24 shrink-0 bg-(image:--thumb) bg-cover bg-center"
+      style={thumbVars}
+    />
+  );
+};
 
 const LoadedRow = ({
   kicker,
@@ -275,12 +298,7 @@ const LoadedRow = ({
 }) => (
   <>
     <div className="bg-foreground text-background flex items-stretch overflow-hidden">
-      {hasText(thumb) ? (
-        <div
-          className="w-24 shrink-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${thumb})` }}
-        />
-      ) : null}
+      {hasText(thumb) ? <LoadedThumb src={thumb} /> : null}
       <div className="flex min-w-0 flex-1 items-center gap-3 p-4">
         <span className="bg-primary text-primary-foreground flex size-7 shrink-0 items-center justify-center">
           <CheckIcon className="size-4" weight="duotone" />
@@ -338,7 +356,7 @@ const ActivityStep = ({
     <StepCard
       active={active}
       badge="Required"
-      badgeClass="bg-foreground text-background"
+      badgeTone="inverse"
       num="01"
       title="Add your activity"
     >
@@ -416,7 +434,6 @@ const ActivityStep = ({
               <span className="caption-micro">Try a sample</span>
               {SAMPLES.map(({ data, sport }) => (
                 <Button
-                  className="px-3"
                   key={sport}
                   onClick={() => {
                     onLoadSample(data);
@@ -524,7 +541,7 @@ const PhotoStepBody = ({
           <div className="flex gap-2">
             {SAMPLE_PHOTOS.map((p) => (
               <button
-                className="outline-foreground/20 hover:outline-primary relative h-14 w-20 overflow-hidden outline outline-1 transition-[outline-color,outline-width] hover:outline-2"
+                className="outline-foreground/20 hover:outline-primary transition-outline relative h-14 w-20 overflow-hidden outline outline-1 hover:outline-2"
                 key={p.url}
                 onClick={() => {
                   onChooseSample(p.url, p.name);
@@ -559,7 +576,7 @@ const PhotoStep = ({
   <StepCard
     active={active}
     badge="Recommended"
-    badgeClass="bg-primary text-primary-foreground"
+    badgeTone="primary"
     num="02"
     title="Add a photo"
   >
@@ -571,9 +588,7 @@ const PhotoStep = ({
 const WizardHeader = () => (
   <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-3 sm:px-8 sm:pt-6 sm:pb-4">
     <div className="flex flex-col gap-1.5">
-      <DialogTitle className="text-2xl sm:text-3xl">
-        Two steps to your card
-      </DialogTitle>
+      <DisplayDialogTitle>Two steps to your card</DisplayDialogTitle>
       <DialogDescription className="hidden max-w-md sm:block">
         Bring in an activity, add a photo, then make it yours in the editor.
       </DialogDescription>
@@ -603,16 +618,15 @@ const WizardFooter = ({
         {note.hint}
       </span>
     </div>
-    <Button
-      className="font-heading ml-auto h-11 shrink-0 px-6 text-base tracking-wide uppercase sm:h-12 sm:px-8 sm:text-lg"
+    <CtaButton
+      className="ml-auto shrink-0"
       disabled={disabled}
       onClick={onFinish}
-      size="lg"
     >
       <span className="sm:hidden">Open</span>
       <span className="hidden sm:inline">Open the editor</span>
       <ArrowRightIcon />
-    </Button>
+    </CtaButton>
   </div>
 );
 
@@ -631,8 +645,8 @@ const StravaPickerDialog = ({
   open: boolean;
 }) => (
   <Dialog onOpenChange={onOpenChange} open={open}>
-    <DialogContent
-      className="bg-background flex max-h-[90dvh] w-full max-w-2xl flex-col gap-0 p-0 sm:max-h-[85vh]"
+    <SheetDialogContent
+      className="flex max-h-[90dvh] w-full max-w-2xl flex-col sm:max-h-[85vh]"
       showCloseButton={false}
     >
       <div aria-hidden className="bg-foreground h-1 shrink-0" />
@@ -650,7 +664,7 @@ const StravaPickerDialog = ({
           onReauth={handleReauth}
         />
       </div>
-    </DialogContent>
+    </SheetDialogContent>
   </Dialog>
 );
 
@@ -814,8 +828,8 @@ export const OnboardingWizard = ({
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent
-        className="bg-background flex max-h-[96dvh] w-full max-w-[calc(100%-0.5rem)] flex-col gap-0 p-0 sm:max-h-[88vh] sm:max-w-[60rem]"
+      <SheetDialogContent
+        className="flex max-h-[96dvh] w-full max-w-[calc(100%-0.5rem)] flex-col sm:max-h-[88vh] sm:max-w-[60rem]"
         showCloseButton={false}
       >
         {/* Brutalist top accent, as a child bar. The dialog deliberately has
@@ -934,7 +948,7 @@ export const OnboardingWizard = ({
           onOpenChange={setStravaPickerOpen}
           open={stravaPickerOpen}
         />
-      </DialogContent>
+      </SheetDialogContent>
     </Dialog>
   );
 };

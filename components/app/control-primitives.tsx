@@ -5,16 +5,16 @@
 
 import { ImageSquareIcon } from "@phosphor-icons/react";
 import { useId, useRef } from "react";
+import type { CSSProperties } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { ControlLabel } from "@/components/app/primitives/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
+  TileSelectItem,
+  TileSelectTrigger,
+} from "@/components/app/primitives/tile-select";
+import { UnderlineInput } from "@/components/app/primitives/underline-input";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
   Tooltip,
@@ -87,22 +87,16 @@ export const RichSelect = ({
       }}
       value={value}
     >
-      <SelectTrigger
-        aria-label={ariaLabel}
-        className={cn(
-          "border-input hover:bg-muted/40 focus-visible:ring-foreground/35 data-[popup-open]:border-foreground data-[popup-open]:bg-muted/30 !h-auto w-full items-center gap-3 px-3 py-2.5 whitespace-normal transition-colors focus-visible:ring-2",
-          className
-        )}
-      >
+      <TileSelectTrigger aria-label={ariaLabel} className={className}>
         {selected === undefined ? null : (
           <RichOptionContent option={selected} />
         )}
-      </SelectTrigger>
+      </TileSelectTrigger>
       <SelectContent alignItemWithTrigger={false}>
         {options.map((o) => (
-          <SelectItem className="py-2.5" key={o.value} value={o.value}>
+          <TileSelectItem key={o.value} value={o.value}>
             <RichOptionContent option={o} />
-          </SelectItem>
+          </TileSelectItem>
         ))}
       </SelectContent>
     </Select>
@@ -147,12 +141,9 @@ export const DetailField = ({
   value: string;
 }) => {
   const labelEl = (
-    <Label
-      className="font-mono text-xs font-medium tracking-[0.22em] uppercase opacity-65"
-      htmlFor={id}
-    >
+    <ControlLabel htmlFor={id} variant="caps">
       {label}
-    </Label>
+    </ControlLabel>
   );
   return (
     <div className={disabled ? "opacity-45" : undefined}>
@@ -167,7 +158,7 @@ export const DetailField = ({
             labelEl
           )}
           {hasText(hint) ? (
-            <span className="font-mono text-[9px] font-medium tracking-[0.18em] uppercase opacity-50">
+            <span className="text-3xs tracking-caps-md font-mono font-medium uppercase opacity-50">
               {hint}
             </span>
           ) : null}
@@ -183,8 +174,8 @@ export const DetailField = ({
           />
         ) : null}
       </div>
-      <Input
-        className="border-foreground font-heading mt-1 h-auto border-0 border-b-2 px-0 py-1.5 text-lg tracking-tight focus-visible:ring-0"
+      <UnderlineInput
+        className="mt-1"
         disabled={disabled}
         id={id}
         onChange={(e) => {
@@ -196,6 +187,11 @@ export const DetailField = ({
     </div>
   );
 };
+
+/** The photo thumbnail's backdrop, read by `bg-(image:--thumb)`. */
+interface ThumbVars extends CSSProperties {
+  "--thumb": string;
+}
 
 export const PhotoControl = ({
   photoUrl,
@@ -228,6 +224,12 @@ export const PhotoControl = ({
   );
 
   const hasPhoto = hasText(photoUrl);
+  // The loaded photo, or a warm placeholder gradient standing in for one.
+  const thumbVars: ThumbVars = {
+    "--thumb": hasPhoto
+      ? `url(${photoUrl})`
+      : "linear-gradient(135deg, var(--color-photo-placeholder-from), var(--color-photo-placeholder-to))",
+  };
 
   // Empty + supported → a large, inviting drop zone; the photo sets the mood.
   if (!hasPhoto && prominent && !disabled) {
@@ -263,12 +265,8 @@ export const PhotoControl = ({
       {fileInput}
       <div
         aria-hidden
-        className="size-12"
-        style={{
-          background: hasPhoto
-            ? `url(${photoUrl}) center/cover`
-            : "linear-gradient(135deg, #d8c5a0, #4a2a18)",
-        }}
+        className="size-12 bg-(image:--thumb) bg-cover bg-center"
+        style={thumbVars}
       />
       <div className="flex-1 font-mono text-xs font-medium opacity-70">
         {hasPhoto ? "Photo loaded" : "NO PHOTO · TAP TO ADD"}
@@ -312,12 +310,9 @@ export const ToggleRow = ({
 }) => {
   const id = useId();
   const labelEl = (
-    <Label
-      className={cn("text-sm font-medium", disabled && "opacity-50")}
-      htmlFor={id}
-    >
+    <ControlLabel dimmed={disabled} htmlFor={id} variant="row">
       {label}
-    </Label>
+    </ControlLabel>
   );
   return (
     <div

@@ -37,8 +37,34 @@ const CLAIM_RISE_PX = 18;
 const CLAIM_DELAY = 1.7;
 const CLAIM_DURATION = 0.7;
 
-/** No inline overrides: the element keeps its Tailwind resting look. */
-const RESTING: CSSProperties = {};
+/**
+ * One element's intro frame: a static class that applies the motion
+ * (`intro-fade` / `intro-rise`, app/globals.css) plus the values of the
+ * `--intro-*` custom properties it reads (the component writes them into its
+ * `style` as {@link IntroVars}). The classes are `!important`, like the inline
+ * styles they replace, so a frame always wins over the element's resting
+ * classes. The composed stage applies nothing — the element keeps its resting
+ * look.
+ */
+export interface IntroMotion {
+  className: string;
+  opacity?: number;
+  transform?: string;
+  transition?: string;
+}
+
+/** The custom properties an {@link IntroMotion} frame is written through. */
+export interface IntroVars extends CSSProperties {
+  "--intro-opacity"?: number;
+  "--intro-transform"?: string;
+  "--intro-transition"?: string;
+}
+
+/** No overrides: the element keeps its Tailwind resting look. */
+const RESTING: IntroMotion = { className: "" };
+
+const FADE = "intro-fade";
+const FADE_RISE = "intro-fade intro-rise";
 
 interface RoleMotion {
   dur: number;
@@ -64,19 +90,21 @@ const ROLE = {
   word: { dur: 0.55, ease: RISE_EASE, offset: 0.09, opacity: 1, rises: true },
 } satisfies Record<IntroRole, RoleMotion>;
 
-export const panelPartStyle = (
+export const panelPartMotion = (
   stage: IntroStage,
   role: IntroRole,
   panelIndex: number
-): CSSProperties => {
+): IntroMotion => {
   if (stage === "composed") {
     return RESTING;
   }
   const r: RoleMotion = ROLE[role];
+  const className = r.rises ? FADE_RISE : FADE;
   if (stage === "hidden") {
     return {
+      className,
       opacity: 0,
-      transform: r.rises ? `translateY(${RISE_PX}px)` : undefined,
+      transform: `translateY(${RISE_PX}px)`,
       transition: "none",
     };
   }
@@ -85,8 +113,9 @@ export const panelPartStyle = (
     ? `opacity ${r.dur}s ${r.ease} ${delay}s, transform ${r.dur}s ${r.ease} ${delay}s`
     : `opacity ${r.dur}s ${r.ease} ${delay}s`;
   return {
+    className,
     opacity: r.opacity,
-    transform: r.rises ? "translateY(0)" : undefined,
+    transform: "translateY(0)",
     transition,
   };
 };
@@ -94,18 +123,23 @@ export const panelPartStyle = (
 // Whole-panel recede applied to each panel root. Holds full opacity through the
 // fill (the delay) so the photo handoff stays seamless, then eases down to the
 // resting value. `composed` defers to the Tailwind PANEL_REST_CLASS.
-export const panelFadeStyle = (
+export const panelFadeMotion = (
   stage: IntroStage,
   panelIndex: number
-): CSSProperties => {
+): IntroMotion => {
   const rest = PANEL_REST_OPACITY[panelIndex];
-  if (stage === "composed" || rest === 1) {
+  if (stage === "composed" || rest === undefined || rest === 1) {
     return RESTING;
   }
   if (stage === "hidden") {
-    return { opacity: 1, transition: "none" };
+    return {
+      className: FADE,
+      opacity: 1,
+      transition: "none",
+    };
   }
   return {
+    className: FADE,
     opacity: rest,
     transition: `opacity ${FADE_DURATION}s ease-in-out ${FADE_DELAY}s`,
   };
@@ -114,18 +148,20 @@ export const panelFadeStyle = (
 // The single page claim: fades + slides up once the panel reveal has settled.
 // `composed` defers to the element's resting Tailwind look (no-JS / mobile /
 // reduced-motion all show it in place from the start).
-export const claimStyle = (stage: IntroStage): CSSProperties => {
+export const claimMotion = (stage: IntroStage): IntroMotion => {
   if (stage === "composed") {
     return RESTING;
   }
   if (stage === "hidden") {
     return {
+      className: FADE_RISE,
       opacity: 0,
       transform: `translateY(${CLAIM_RISE_PX}px)`,
       transition: "none",
     };
   }
   return {
+    className: FADE_RISE,
     opacity: 1,
     transform: "translateY(0)",
     transition: `opacity ${CLAIM_DURATION}s ${RISE_EASE} ${CLAIM_DELAY}s, transform ${CLAIM_DURATION}s ${RISE_EASE} ${CLAIM_DELAY}s`,

@@ -6,6 +6,7 @@
 // any stored `ParamValue` at this boundary (the theme body stays strictly typed
 // on its own config); each kind parses its own shape as it reads.
 
+import type { CSSProperties } from "react";
 import { z } from "zod/mini";
 
 import {
@@ -14,8 +15,9 @@ import {
   ToggleRow,
 } from "@/components/app/control-primitives";
 import type { RichSelectOption } from "@/components/app/control-primitives";
+import { OptionToggleItem } from "@/components/app/primitives/toggle-group";
 import { Slider } from "@/components/ui/slider";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { ToggleGroup } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import type {
   ParamCtx,
@@ -49,6 +51,22 @@ const ICON_PROPS = {
 const isPresent = (text: string | undefined): text is string =>
   text !== undefined && text !== "";
 
+/** A palette option's hex colour, read by `bg-(--swatch)`. */
+interface SwatchVars extends CSSProperties {
+  "--swatch": string;
+}
+
+const OptionSwatch = ({ color }: { color: string }) => {
+  const swatchVars: SwatchVars = { "--swatch": color };
+  return (
+    <span
+      aria-hidden
+      className="border-foreground/25 size-5 rounded-full border bg-(--swatch)"
+      style={swatchVars}
+    />
+  );
+};
+
 /** The option's semantic duotone icon, a colour swatch (palette picker), or a
  *  neutral disc — so option rows keep a consistent leading mark. */
 const OptionGlyph = ({
@@ -63,13 +81,7 @@ const OptionGlyph = ({
     return <GlyphIcon {...ICON_PROPS} />;
   }
   if (isPresent(swatch)) {
-    return (
-      <span
-        aria-hidden
-        className="border-foreground/25 size-5 rounded-full border"
-        style={{ background: swatch }}
-      />
-    );
+    return <OptionSwatch color={swatch} />;
   }
   return (
     <span
@@ -164,7 +176,7 @@ export const ParamControl = ({
     <ControlBlock label={def.label}>
       <ToggleGroup
         aria-label={def.label}
-        className={cn("mt-2 grid w-full gap-2", cols)}
+        className={cn("mt-2 grid w-full", cols)}
         onValueChange={(values) => {
           if (values[0]) {
             onChange(values[0]);
@@ -175,10 +187,10 @@ export const ParamControl = ({
         variant="outline"
       >
         {options.map((o) => (
-          <ToggleGroupItem
+          <OptionToggleItem
             aria-label={o.label}
-            className="flex h-auto flex-col items-start justify-start px-3 py-2.5 text-left"
             key={o.id}
+            look="tile"
             value={o.id}
           >
             <div className="font-heading text-base leading-none uppercase">
@@ -187,7 +199,7 @@ export const ParamControl = ({
             {isPresent(o.blurb) ? (
               <div className="caption-micro mt-1">{o.blurb}</div>
             ) : null}
-          </ToggleGroupItem>
+          </OptionToggleItem>
         ))}
       </ToggleGroup>
     </ControlBlock>

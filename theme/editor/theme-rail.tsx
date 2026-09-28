@@ -6,8 +6,10 @@
 // (`ThemeId`) and Carousel (`CarouselThemeId`) share it; the caller passes the
 // labels + order for its id space.
 
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { cn } from "@/lib/utils";
+import {
+  OptionToggleItem,
+  ScrollToggleGroup,
+} from "@/components/app/primitives/toggle-group";
 
 interface ThemeLabel {
   label: string;
@@ -29,9 +31,9 @@ export const ThemeRail = <T extends string>({
   labels,
   order,
 }: ThemeRailProps<T>) => (
-  <ToggleGroup
+  <ScrollToggleGroup
     aria-label="Theme"
-    className="no-scrollbar mt-2 flex max-w-full justify-start overflow-x-auto lg:flex-wrap lg:overflow-visible"
+    className="mt-2 flex max-w-full justify-start overflow-x-auto lg:flex-wrap lg:overflow-visible"
     onValueChange={(values) => {
       // Map the pressed value back onto the typed id space it came from.
       const picked = order.find((id) => id === values[0]);
@@ -43,22 +45,14 @@ export const ThemeRail = <T extends string>({
     value={[theme]}
   >
     {order.map((id) => (
-      <ToggleGroupItem
-        className={cn(
-          "border-foreground/20 h-auto shrink-0 flex-col items-start gap-1 border-2 px-3.5 py-2.5 text-left whitespace-nowrap",
-          "hover:border-foreground/45",
-          "data-pressed:!bg-foreground data-pressed:!text-background data-pressed:border-foreground!"
-        )}
-        key={id}
-        value={id}
-      >
+      <OptionToggleItem key={id} look="card" tone="invert" value={id}>
         <span className="font-heading text-base leading-none tracking-wide uppercase">
           {labels[id].label}
         </span>
-        <span className="font-mono text-[9px] font-medium tracking-[0.12em] uppercase opacity-60">
+        <span className="text-3xs tracking-caps-xs font-mono font-medium uppercase opacity-60">
           {labels[id].tagline}
         </span>
-      </ToggleGroupItem>
+      </OptionToggleItem>
     ))}
-  </ToggleGroup>
+  </ScrollToggleGroup>
 );

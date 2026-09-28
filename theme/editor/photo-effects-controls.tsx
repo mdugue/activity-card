@@ -22,9 +22,12 @@ import {
 } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
 
+import {
+  OptionToggle,
+  OptionToggleItem,
+} from "@/components/app/primitives/toggle-group";
 import { Button } from "@/components/ui/button";
-import { Toggle } from "@/components/ui/toggle";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { ToggleGroup } from "@/components/ui/toggle-group";
 import { FILTER_PRESETS, nextRotation } from "@/lib/photo-effects";
 import type { PhotoEffects } from "@/lib/photo-effects";
 
@@ -56,30 +59,31 @@ export const PhotoFilterControl = ({
 }: PhotoControlProps) => (
   <ToggleGroup
     aria-label="Photo filter"
-    className="mt-2 flex flex-wrap gap-1.5"
+    className="mt-2 flex flex-wrap"
     onValueChange={(values) => {
       if (values[0]) {
         onChange({ ...effects, filter: values[0] });
       }
     }}
-    spacing={2}
+    spacing={1.5}
     value={[effects.filter]}
     variant="outline"
   >
     {FILTER_PRESETS.map((p) => {
       const FilterIcon = hasFilterIcon(p.id) ? FILTER_ICONS[p.id] : null;
       return (
-        <ToggleGroupItem
+        <OptionToggleItem
           aria-label={p.label}
-          className="data-[pressed]:!border-foreground data-[pressed]:!bg-foreground data-[pressed]:!text-background flex h-auto items-center gap-1.5 px-2.5 py-1.5 font-mono text-[10px] font-medium tracking-wide uppercase"
           key={p.id}
+          look="chip"
+          tone="invert"
           value={p.id}
         >
           {FilterIcon === null ? null : (
             <FilterIcon aria-hidden className="size-3" weight="duotone" />
           )}
           {p.label}
-        </ToggleGroupItem>
+        </OptionToggleItem>
       );
     })}
   </ToggleGroup>
@@ -102,41 +106,41 @@ export const PhotoTransformControls = ({
       <ArrowClockwiseIcon className="size-3.5" weight="duotone" />
       Rotate
     </Button>
-    <Toggle
-      className="data-[pressed]:!border-foreground data-[pressed]:!bg-foreground data-[pressed]:!text-background gap-1.5"
+    <OptionToggle
       onPressedChange={(p) => {
         onChange({ ...effects, flipH: p });
       }}
       pressed={effects.flipH}
       size="sm"
+      tone="invert"
       variant="outline"
     >
       <FlipHorizontalIcon className="size-3.5" weight="duotone" />
       Mirror
-    </Toggle>
-    <Toggle
-      className="data-[pressed]:!border-foreground data-[pressed]:!bg-foreground data-[pressed]:!text-background gap-1.5"
+    </OptionToggle>
+    <OptionToggle
       onPressedChange={(p) => {
         onChange({ ...effects, flipV: p });
       }}
       pressed={effects.flipV}
       size="sm"
+      tone="invert"
       variant="outline"
     >
       <FlipVerticalIcon className="size-3.5" weight="duotone" />
       Flip
-    </Toggle>
-    <Toggle
-      className="data-[pressed]:!border-foreground data-[pressed]:!bg-foreground data-[pressed]:!text-background gap-1.5"
+    </OptionToggle>
+    <OptionToggle
       onPressedChange={(p) => {
         onChange({ ...effects, grain: p });
       }}
       pressed={effects.grain}
       size="sm"
+      tone="invert"
       variant="outline"
     >
       <DotsNineIcon className="size-3.5" weight="duotone" />
       Grain
-    </Toggle>
+    </OptionToggle>
   </div>
 );
