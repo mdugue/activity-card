@@ -74,8 +74,10 @@ export function formatPaceSec(seconds?: number): string {
   if (seconds === undefined || !Number.isFinite(seconds) || seconds <= 0) {
     return DASH;
   }
-  const m = Math.floor(seconds / 60);
-  const s = Math.round(seconds % 60);
+  // Round the total first so 119.6 carries to "2:00", never "1:60".
+  const totalSec = Math.round(seconds);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 

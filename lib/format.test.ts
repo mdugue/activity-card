@@ -82,6 +82,11 @@ describe("formatPaceSec", () => {
     expect(formatPaceSec(60)).toBe("1:00");
   });
 
+  test("rounds to the nearest second and carries into the minute", () => {
+    // 119.6s → rounds to 120s → 2:00, not 1:60
+    expect(formatPaceSec(119.6)).toBe("2:00");
+  });
+
   test("returns a dash for invalid input", () => {
     expect(formatPaceSec()).toBe(DASH);
     expect(formatPaceSec(0)).toBe(DASH);
