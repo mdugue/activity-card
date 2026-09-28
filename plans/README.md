@@ -19,9 +19,31 @@ is listed under "Findings not yet planned" so it can be picked later
 | 002  | [Local calendar date in every timezone](./002-local-calendar-date.md)          | P1       | S      | —          | DONE   |
 | 003  | [Sign the OAuth bounce target](./003-sign-oauth-bounce-target.md)              | P1       | S      | —          | DONE   |
 | 004  | [Declared sport wins; robust GPX](./004-sport-detection-and-gpx-robustness.md) | P2       | S      | —          | DONE   |
-| 005  | [Agent-facing doc drift](./005-fix-agent-facing-doc-drift.md)                  | P2       | S      | —          | TODO   |
+| 005  | [Agent-facing doc drift](./005-fix-agent-facing-doc-drift.md)                  | P2       | S      | —          | DONE   |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
+
+## Execution notes (2026-09-28)
+
+All five plans landed on `claude/pending-plans-review-pgjogn`. Where the
+execution deviated from a plan:
+
+- **002** — the plan's `isoDate: start_date_local?.slice(0, 10)` would have
+  moved every Strava activity's `startTimeMs` to UTC midnight (finalise
+  derives both from `isoDate`), breaking triathlon ordering. `isoDate` stays
+  `start_date`; only `date` is overridden from `start_date_local`. A test
+  pins both.
+- **003** — besides the unit tests, an e2e test now proves an unsigned
+  bounce is refused even when its host passes the allowlist
+  (`STRAVA_ALLOW_HTTP_BOUNCE=1` in the e2e server env). A signed happy-path
+  e2e is not possible: `next start` reports every request as `localhost`,
+  so a second origin can't initiate a bounce.
+- **004** — name hints also split camelCase ("MorningRun.gpx" kept working
+  under whole-word matching) and "triathlon" wins over the leg words a
+  triathlon title names. Sport words are looked up in a `Map` so
+  `constructor.gpx` can't hit `Object.prototype`.
+- **005** — items 1–6 had already been fixed in the dependency-refresh
+  commit; only item 7 (Strava cookie lifetimes and token paths) was left.
 
 ## Dependency notes
 
