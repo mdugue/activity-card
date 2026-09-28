@@ -30,6 +30,12 @@ export const useStravaReturnToast = (onConnected: () => void): void => {
         toast.error("You declined to connect Strava. You can try again.");
         break;
       }
+      case "scope_missing": {
+        toast.error(
+          "Strava didn't share your activities. Connect again and keep “View data about your activities” ticked."
+        );
+        break;
+      }
       case "state_mismatch": {
         toast.error("Couldn't verify the Strava sign-in. Please try again.");
         break;

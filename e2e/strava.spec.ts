@@ -64,6 +64,30 @@ test.describe("strava OAuth + picker", () => {
     ).toBeVisible();
   });
 
+  test("a grant without activity access stops at a clear message", async ({
+    page,
+  }) => {
+    // Simulate the athlete unticking "View data about your activities" on
+    // Strava's consent screen. The mock grants whatever scope the authorize
+    // redirect asks for, so narrow that redirect to `read` only.
+    await page.route("**/api/strava/authorize*", async (route) => {
+      const response = await route.fetch({ maxRedirects: 0 });
+      const location = new URL(response.headers().location ?? "");
+      location.searchParams.set("scope", "read");
+      await route.fulfill({
+        headers: { ...response.headers(), location: location.toString() },
+        response,
+      });
+    });
+    await connectStrava(page);
+    await expect(
+      page.getByText(/didn.?t share your activities/iu)
+    ).toBeVisible();
+    // No tokens were stored, so the app is still disconnected.
+    const me = await page.request.get("/api/strava/me");
+    expect(await me.json()).toMatchObject({ connected: false });
+  });
+
   test("after connecting, the wizard offers 'Pick from Strava'", async ({
     page,
   }) => {
@@ -390,6 +414,7 @@ test.describe("strava OAuth + picker", () => {
       { copy: /couldn.?t verify the strava sign-in/iu, flag: "state_mismatch" },
       { copy: /strava rejected the sign-in/iu, flag: "token_exchange" },
       { copy: /couldn.?t start the strava sign-in/iu, flag: "failed" },
+      { copy: /didn.?t share your activities/iu, flag: "scope_missing" },
     ]) {
       test(`?strava=${flag} shows the specific toast`, async ({ page }) => {
         await page.goto(`/?strava=${flag}`);

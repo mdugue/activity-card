@@ -410,6 +410,23 @@ caused by a browser blocking cookies or by the redirect crossing a
 different origin than expected. Confirm `STRAVA_REDIRECT_URI` points
 at the same origin the app is running on.
 
+**Strava sends you back to `/?strava=scope_missing`.**
+The athlete unticked "View data about your activities" on Strava's
+consent screen. The callback still gets a valid code, but the token
+couldn't list a single activity, so the callback checks the `scope`
+Strava reports (`grantsActivityRead` in `lib/strava-scope.ts`) and
+stops before storing any token. Connecting again shows the consent
+screen again, because the earlier grant lacks a requested scope. The
+production bounce relays `scope` to the preview along with `code` and
+`state`.
+
+**The picker is empty in one browser profile but works in another.**
+Clearing this site's cookies and storage doesn't sign you out of
+strava.com. That profile may be signed in to a different Strava
+account, whose activities are the ones you see. Revoke Effort under
+Strava → Settings → My Apps and connect again to be sure which account
+and which permissions are in play.
+
 **"Your Strava sign-in expired" alert in the picker.**
 The access token was rejected (and refresh also failed) — usually
 because the user revoked the app's access from their Strava settings,

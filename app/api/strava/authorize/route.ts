@@ -10,6 +10,7 @@ import {
   signBounce,
 } from "@/lib/strava-oauth-state";
 import type { OAuthStatePayload } from "@/lib/strava-oauth-state";
+import { STRAVA_SCOPE } from "@/lib/strava-scope";
 
 /**
  * Kick off the Strava OAuth round-trip.
@@ -67,7 +68,7 @@ export const GET = async (request: Request) => {
   authorize.searchParams.set("redirect_uri", redirectUri);
   authorize.searchParams.set("response_type", "code");
   authorize.searchParams.set("approval_prompt", "auto");
-  authorize.searchParams.set("scope", "read,activity:read");
+  authorize.searchParams.set("scope", STRAVA_SCOPE);
   authorize.searchParams.set("state", encodeOAuthState(payload));
 
   return NextResponse.redirect(authorize);

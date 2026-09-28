@@ -12,6 +12,7 @@ import {
   isAllowedBounceOrigin,
   verifyBounce,
 } from "@/lib/strava-oauth-state";
+import { grantsActivityRead } from "@/lib/strava-scope";
 import { readStravaTokenResponse } from "@/lib/strava-token-response";
 import { hasText } from "@/lib/text";
 
@@ -82,6 +83,11 @@ export const GET = async (request: Request) => {
     const bounce = new URL("/api/strava/callback", payload.b);
     bounce.searchParams.set("code", code);
     bounce.searchParams.set("state", stateParam);
+    // The preview checks the granted scope too, so relay what Strava sent.
+    const scope = url.searchParams.get("scope");
+    if (scope !== null) {
+      bounce.searchParams.set("scope", scope);
+    }
     return NextResponse.redirect(bounce);
   }
 
@@ -94,6 +100,15 @@ export const GET = async (request: Request) => {
   const expected = await peekOAuthState();
   if (!hasText(expected) || expected !== payload.r) {
     return NextResponse.redirect(new URL("/?strava=state_mismatch", url));
+  }
+
+  // The athlete can untick activity access on Strava's consent screen; the
+  // code is still valid, but the token couldn't list a single activity and
+  // the picker would just come up empty. Stop here, before any token is
+  // stored, and say what's missing.
+  if (!grantsActivityRead(url.searchParams.get("scope"))) {
+    await clearOAuthState();
+    return NextResponse.redirect(new URL("/?strava=scope_missing", url));
   }
 
   const finalReturnTo = resolveSafeReturnTo(payload.p, url);

@@ -196,6 +196,11 @@ const handle = (req: Request): Response | Promise<Response> => {
     }
     const cb = new URL(redirectUri);
     cb.searchParams.set("code", "mock-auth-code");
+    // Like Strava: report the scopes the athlete granted (here, all asked).
+    cb.searchParams.set(
+      "scope",
+      nonEmptyOr(url.searchParams.get("scope"), "read")
+    );
     if (state !== null && state !== "") {
       cb.searchParams.set("state", state);
     }
