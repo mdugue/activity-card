@@ -22,13 +22,14 @@ import { SafeArea } from "@/theme/shared/format-context";
 
 import type { PanelProps } from "../define-theme";
 import { ElevationBand } from "../elevation-band";
+import { CAROUSEL_NATURAL_PAD } from "../geometry";
 import { RouteLine } from "../route-line";
-import { CAROUSEL_NATURAL_PAD } from "../templates/scaffold";
 import { slideNumber, slideText } from "../templates/shared";
 import type { SlideTextColors } from "../templates/shared";
 
 const SPARK_W = 900;
 const SPARK_H = 132;
+const SPACE_BETWEEN = "space-between";
 
 const bandColors = (color: string) => ({
   fillFrom: color,
@@ -81,9 +82,7 @@ const frameSeries = (
   if (statKey === "power") {
     return powerSeries(data);
   }
-  if (statKey === "pace") {
-    return paceSeries(data);
-  }
+  return statKey === "pace" ? paceSeries(data) : undefined;
 };
 
 /** Band spark (elevation / pace / speed / power) — legs side by side for a project. */
@@ -264,7 +263,7 @@ const FrameSignature = ({
           display: "flex",
           fontFamily: style.fonts.mono,
           fontSize: 20,
-          justifyContent: "space-between",
+          justifyContent: SPACE_BETWEEN,
           letterSpacing: "0.2em",
           marginTop: 28,
           textShadow: c.shadow || undefined,
@@ -294,7 +293,7 @@ const FrameChrome = ({
   return (
     <SafeArea
       pad={CAROUSEL_NATURAL_PAD}
-      style={{ justifyContent: "space-between" }}
+      style={{ justifyContent: SPACE_BETWEEN }}
     >
       <div
         style={{
@@ -302,7 +301,7 @@ const FrameChrome = ({
           display: "flex",
           fontFamily: style.fonts.mono,
           fontSize: 20,
-          justifyContent: "space-between",
+          justifyContent: SPACE_BETWEEN,
           letterSpacing: "0.24em",
           textShadow: c.shadow || undefined,
         }}
@@ -335,13 +334,13 @@ const FrameChrome = ({
 export const FrameDatumPanel = (props: PanelProps) => {
   const { data, style, hasPhoto, index, statOpts } = props;
   const c = slideText(style, hasPhoto);
-  const stat: StatItem | undefined = frameStats(data, statOpts)[index];
+  const stat = frameStats(data, statOpts).at(index);
   return (
     <FrameChrome {...props}>
-      {stat ? (
-        <FrameDatum c={c} data={data} stat={stat} style={style} />
-      ) : (
+      {stat === undefined ? (
         <div aria-hidden />
+      ) : (
+        <FrameDatum c={c} data={data} stat={stat} style={style} />
       )}
     </FrameChrome>
   );

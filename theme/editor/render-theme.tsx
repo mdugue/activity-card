@@ -4,13 +4,12 @@ import type { ImageTransform } from "@/lib/image-transform";
 import type { PhotoEffects } from "@/lib/photo-effects";
 import type { ColorScheme } from "@/theme/core/colors";
 import type { ExportFormat } from "@/theme/core/export-formats";
+import type { ThemeConfig } from "@/theme/core/params/kinds";
 import { pickThemeData } from "@/theme/core/theme-contract";
 import { FormatProvider, useFormat } from "@/theme/shared/format-context";
 import { PhotoFxProvider } from "@/theme/shared/photo-fx";
 import { SINGLE_CARD_THEMES } from "@/theme/single-card";
 import type { ThemeId } from "@/theme/single-card";
-
-import type { ThemeConfigValues } from "./editor-session";
 
 export type { ThemeId } from "@/theme/single-card";
 
@@ -18,7 +17,7 @@ interface RenderThemeProps {
   /** the resolved colour scheme for the active theme (user choice or default) */
   colors?: ColorScheme;
   /** the active theme's coerced parameter config */
-  config?: ThemeConfigValues;
+  config?: ThemeConfig;
   data: ActivityData;
   /** Target export format. The theme renders itself directly at this size and
    *  reads its dimensions + safe insets from the FormatContext. Falls back to the

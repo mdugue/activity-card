@@ -1,13 +1,13 @@
 "use client";
 
 import { VideoPlayer } from "@/components/app/video-player";
+import { Hero } from "@/remotion/videos/hero";
 import {
   HERO_DURATION_IN_FRAMES,
   HERO_FPS,
   HERO_HEIGHT,
   HERO_WIDTH,
-  Hero,
-} from "@/remotion/videos/hero";
+} from "@/remotion/videos/hero-meta";
 
 // The actual @remotion/player surface, split into its own chunk and loaded
 // client-only (see intro-video.tsx). Default export so `next/dynamic` can pick

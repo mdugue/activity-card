@@ -10,7 +10,7 @@ import type { ParsedActivity } from "./parse-shared";
 export type { ParsedActivity, ParsedSport } from "./parse-shared";
 
 /** Accepted upload extensions. */
-export const ACTIVITY_FILE_RE = /\.(gpx|fit)$/iu;
+export const ACTIVITY_FILE_RE = /\.(?:gpx|fit)$/iu;
 
 export const parseActivityFile = async (
   file: File

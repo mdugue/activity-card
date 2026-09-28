@@ -61,6 +61,22 @@ const elevation = (data: ActivityData): StatItem | null =>
         value: formatNumber(data.elevationGainM, 0),
       };
 
+/** A plain numeric stat, or null when the metric wasn't recorded. */
+const num = (
+  key: string,
+  label: string,
+  n: number | undefined,
+  unit: string,
+  digits = 0
+): StatItem | null =>
+  n === undefined || !Number.isFinite(n)
+    ? null
+    : { key, label, unit, value: formatNumber(n, digits) };
+
+/** A recorded, non-zero pace (0 / NaN mean "not recorded"). */
+const hasPace = (n: number | undefined): n is number =>
+  n !== undefined && n !== 0 && !Number.isNaN(n);
+
 /** Distance and time are the irreducible core of a card, so they're never
  *  stripped from the data; the carousel honours their visibility here instead. */
 export interface StatOpts {
@@ -82,17 +98,6 @@ export const buildStats = (data: ActivityData, opts?: StatOpts): StatItem[] => {
       items.push(item);
     }
   };
-  const num = (
-    key: string,
-    label: string,
-    n: number | undefined,
-    unit: string,
-    digits = 0
-  ): StatItem | null =>
-    n === undefined || !Number.isFinite(n)
-      ? null
-      : { key, label, unit, value: formatNumber(n, digits) };
-
   if (data.sport === "ride") {
     push(dur);
     push(num("avgSpeed", "AVG SPEED", data.avgSpeedKmh, "km/h", 1));
@@ -104,7 +109,7 @@ export const buildStats = (data: ActivityData, opts?: StatOpts): StatItem[] => {
     push(num("vam", "VAM", data.vamMph, "m/h"));
   } else if (data.sport === "run") {
     push(
-      data.avgPaceMinPerKm
+      hasPace(data.avgPaceMinPerKm)
         ? {
             key: "pace",
             label: "AVG PACE",
@@ -119,7 +124,7 @@ export const buildStats = (data: ActivityData, opts?: StatOpts): StatItem[] => {
     push(num("cadence", "CADENCE", data.avgCadence, "spm"));
   } else if (data.sport === "swim") {
     push(
-      data.avgPacePer100m
+      hasPace(data.avgPacePer100m)
         ? {
             key: "pace",
             label: "PACE",
@@ -196,7 +201,8 @@ export const pressSlideStats = (
   opts?: StatOpts
 ): StatItem[] => {
   if (index === 0) {
-    return buildStats(data, opts).slice(0, 3); // headline + lede
+    // headline + lede
+    return buildStats(data, opts).slice(0, 3);
   }
   if (index === total - 1) {
     return [];

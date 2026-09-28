@@ -6,6 +6,9 @@
 // fallback palette is applied inline so the card stays legible while
 // extraction is in flight or when no photo is loaded.
 
+import type { CSSProperties } from "react";
+
+import type { Sport } from "@/lib/activity";
 import { routePath, whiteRamp } from "@/lib/chart-helpers";
 import {
   formatDateUpper,
@@ -20,11 +23,22 @@ import type { ColorScheme } from "@/theme/core/colors";
 import type { ThemeProps } from "@/theme/core/theme-contract";
 
 import { useFormat, useSafeInsets } from "../shared/format-context";
+import { hasText } from "../shared/has-text";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoLayer } from "../shared/photo-layer";
 import type { PhotoCapability } from "./photo.theme";
 
 type ThemePhotoProps = ThemeProps<PhotoCapability>;
+type PhotoActivity = ThemePhotoProps["data"];
+
+const PLAYFAIR = "var(--font-playfair), serif";
+const BODY_VAR = "var(--body)";
+const HEADLINE_VAR = "var(--headline)";
+const ACCENT_2_VAR = "var(--accent-2)";
+const WHITE = "#ffffff";
+const SOFT_WHITE = "rgba(255,255,255,0.78)";
+const INK = "#0a0a0a";
+const ROUTE_SHADOW = "drop-shadow(0 0 12px rgba(0,0,0,0.4))";
 
 interface StaticPalette {
   accent: string;
@@ -39,28 +53,38 @@ const fallbackPalette = (sport: string): StaticPalette => {
     return {
       accent: "#6ba8c5",
       background: "#2d5a78",
-      body: "rgba(255,255,255,0.78)",
-      headline: "#ffffff",
-      onAccent: "#0a0a0a",
+      body: SOFT_WHITE,
+      headline: WHITE,
+      onAccent: INK,
     };
   }
   if (sport === "run") {
     return {
       accent: "#d8c5a0",
       background: "#4a2a18",
-      body: "rgba(255,255,255,0.78)",
-      headline: "#ffffff",
-      onAccent: "#0a0a0a",
+      body: SOFT_WHITE,
+      headline: WHITE,
+      onAccent: INK,
     };
   }
   return {
     accent: "#c89d6e",
     background: "#5a6a7e",
-    body: "rgba(255,255,255,0.78)",
-    headline: "#ffffff",
-    onAccent: "#0a0a0a",
+    body: SOFT_WHITE,
+    headline: WHITE,
+    onAccent: INK,
   };
 };
+
+/** The theme's CSS custom properties, spread onto the root's inline style. */
+interface PhotoCssVars {
+  "--accent": string;
+  "--accent-2": string;
+  "--bg": string;
+  "--body": string;
+  "--headline": string;
+  "--on-accent": string;
+}
 
 /**
  * Map the resolved colour scheme onto the theme's CSS variables. A
@@ -71,17 +95,275 @@ const fallbackPalette = (sport: string): StaticPalette => {
 const colorsToVars = (
   colors: ColorScheme | undefined,
   sport: string
-): React.CSSProperties => {
+): PhotoCssVars => {
   const fb = fallbackPalette(sport);
   return {
-    ["--bg" as string]: colors?.roles?.background ?? fb.background,
-    ["--headline" as string]: colors?.roles?.headline ?? fb.headline,
-    ["--body" as string]: colors?.roles?.body ?? fb.body,
-    ["--accent" as string]: colors?.primary ?? fb.accent,
-    ["--accent-2" as string]: colors?.secondary ?? colors?.primary ?? fb.accent,
-    ["--on-accent" as string]: colors?.onPrimary ?? fb.onAccent,
+    "--accent": colors?.primary ?? fb.accent,
+    "--accent-2": colors?.secondary ?? colors?.primary ?? fb.accent,
+    "--bg": colors?.roles?.background ?? fb.background,
+    "--body": colors?.roles?.body ?? fb.body,
+    "--headline": colors?.roles?.headline ?? fb.headline,
+    "--on-accent": colors?.onPrimary ?? fb.onAccent,
   };
 };
+
+// The sub-line only carries metrics the activity actually has — a stripped
+// field (toggled off, or absent from the file) drops out instead of leaving
+// a dashed placeholder in the sentence.
+const heroSubLine = (data: PhotoActivity): string => {
+  const subParts: string[] = [formatDuration(data.durationSec)];
+  if (data.sport === "ride" && isNum(data.elevationGainM)) {
+    subParts.push(`${formatNumber(data.elevationGainM)} m elev`);
+  } else if (data.sport === "run" && isNum(data.avgPaceMinPerKm)) {
+    subParts.push(`${formatPaceMin(data.avgPaceMinPerKm)} /km`);
+  } else if (data.sport === "swim" && isNum(data.avgPacePer100m)) {
+    subParts.push(`${formatPaceSec(data.avgPacePer100m)} /100m`);
+  } else if (data.sport === "triathlon") {
+    subParts.push("triathlon");
+  }
+  return subParts.join(" · ");
+};
+
+const placeholderBackground = (sport: string): string => {
+  if (sport === "swim") {
+    return "linear-gradient(180deg, #6ba8c5 0%, #2d5a78 50%, #0e2030 100%)";
+  }
+  if (sport === "run") {
+    return "linear-gradient(180deg, #d8c5a0 0%, #a87d52 40%, #4a2a18 100%)";
+  }
+  return "linear-gradient(180deg, #2c3848 0%, #5a6a7e 40%, #8e7458 80%, #c89d6e 100%)";
+};
+
+const STORY_LABEL = {
+  ride: "A RIDE STORY",
+  run: "A RUNNING STORY",
+  swim: "A SWIM STORY",
+  triathlon: "A TRIATHLON STORY",
+} satisfies Record<Sport, string>;
+
+// Placeholder texture when no photo is loaded: a fine light/dark dot grain.
+const PlaceholderGrain = () => (
+  <svg
+    aria-hidden="true"
+    height="100%"
+    style={{
+      inset: 0,
+      mixBlendMode: "overlay",
+      opacity: 0.45,
+      position: "absolute",
+    }}
+    width="100%"
+  >
+    <title>Texture</title>
+    <defs>
+      <pattern height="6" id="ph-grain" patternUnits="userSpaceOnUse" width="6">
+        <rect fill="transparent" height="6" width="6" />
+        <circle cx="2" cy="2" fill="#fff" opacity="0.5" r="0.6" />
+        <circle cx="4" cy="5" fill="#000" opacity="0.4" r="0.4" />
+      </pattern>
+    </defs>
+    <rect fill="url(#ph-grain)" height="100%" width="100%" />
+  </svg>
+);
+
+const STORY_STYLE = {
+  color: HEADLINE_VAR,
+  fontSize: 26,
+  fontWeight: 700,
+  letterSpacing: "0.2em",
+  lineHeight: 1.45,
+  textAlign: "right",
+} satisfies CSSProperties;
+
+// Top masthead: the "Effort" wordmark + issue line, and the story label.
+const Masthead = ({
+  data,
+  left,
+  right,
+  top,
+}: {
+  data: PhotoActivity;
+  left: number;
+  right: number;
+  top: number;
+}) => (
+  <div
+    style={{
+      alignItems: "flex-start",
+      display: "flex",
+      justifyContent: "space-between",
+      left,
+      position: "absolute",
+      right,
+      top,
+    }}
+  >
+    <div>
+      <div
+        style={{
+          color: ACCENT_2_VAR,
+          fontFamily: PLAYFAIR,
+          fontSize: 52,
+          fontStyle: "italic",
+          letterSpacing: "-0.01em",
+        }}
+      >
+        Effort
+      </div>
+      <div
+        style={{
+          color: BODY_VAR,
+          fontSize: 26,
+          fontWeight: 700,
+          letterSpacing: "0.28em",
+          marginTop: 12,
+        }}
+      >
+        {["VOL. 01", formatDateUpper(data.date)]
+          .filter((bit) => bit !== "")
+          .join(" · ")}
+      </div>
+    </div>
+    <div style={STORY_STYLE}>
+      {STORY_LABEL[data.sport]}
+      {hasText(data.location) ? (
+        <>
+          <br />
+          <span style={{ color: BODY_VAR }}>{data.location.toUpperCase()}</span>
+        </>
+      ) : null}
+    </div>
+  </div>
+);
+
+// Route trace — always white for legibility across arbitrary photos.
+const RouteTrace = ({
+  data,
+  right,
+  top,
+}: {
+  data: PhotoActivity;
+  right: number;
+  top: number;
+}) => {
+  const multi = isMultiActivity(data);
+  const routes = multi ? segmentRoutes(data) : [];
+  return (
+    <svg
+      aria-hidden="true"
+      style={{
+        height: 240,
+        opacity: 0.9,
+        position: "absolute",
+        right,
+        top,
+        width: 320,
+      }}
+      viewBox="0 0 400 300"
+    >
+      <title>Route trace</title>
+      {multi ? (
+        <OverlayRoute
+          colors={whiteRamp(routes.length)}
+          h={300}
+          pad={20}
+          routes={routes.map((r) => r.coords)}
+          shadow={ROUTE_SHADOW}
+          strokeWidth={2.5}
+          w={400}
+        />
+      ) : (
+        <path
+          d={routePath(data.routeCoordinates, 400, 300, 20)}
+          fill="none"
+          stroke={WHITE}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2.5}
+          style={{ filter: ROUTE_SHADOW }}
+        />
+      )}
+    </svg>
+  );
+};
+
+const TITLE_STYLE = {
+  color: HEADLINE_VAR,
+  fontFamily: PLAYFAIR,
+  fontSize: 92,
+  fontStyle: "italic",
+  fontWeight: 400,
+  letterSpacing: "-0.015em",
+  lineHeight: 0.95,
+  margin: 0,
+  maxWidth: 800,
+  textShadow: "0 4px 24px rgba(0,0,0,0.4)",
+  textWrap: "pretty",
+} satisfies CSSProperties;
+
+const HERO_BIG_STYLE = {
+  color: "var(--accent)",
+  fontFamily: PLAYFAIR,
+  fontSize: 130,
+  fontWeight: 400,
+  letterSpacing: "-0.04em",
+  lineHeight: 1,
+} satisfies CSSProperties;
+
+// The hero distance + its unit, over the sub-line of supporting metrics.
+const HeroStat = ({ data }: { data: PhotoActivity }) => {
+  const swim = data.sport === "swim";
+  return (
+    <div>
+      <div style={{ alignItems: "baseline", display: "flex", gap: 12 }}>
+        <span style={HERO_BIG_STYLE}>
+          {swim
+            ? (data.distanceKm * 1000).toFixed(0)
+            : data.distanceKm.toFixed(1)}
+        </span>
+        <span
+          style={{
+            color: ACCENT_2_VAR,
+            fontFamily: PLAYFAIR,
+            fontSize: 40,
+            fontStyle: "italic",
+          }}
+        >
+          {swim ? "m" : "km"}
+        </span>
+      </div>
+      <div
+        style={{
+          color: BODY_VAR,
+          fontSize: 26,
+          fontWeight: 700,
+          letterSpacing: "0.16em",
+          marginTop: 14,
+        }}
+      >
+        {heroSubLine(data).toUpperCase()}
+      </div>
+    </div>
+  );
+};
+
+const BYLINE_STYLE = {
+  color: BODY_VAR,
+  fontSize: 24,
+  fontWeight: 700,
+  letterSpacing: "0.22em",
+  paddingBottom: 18,
+  textAlign: "right",
+} satisfies CSSProperties;
+
+const BYLINE_NAME_STYLE = {
+  color: ACCENT_2_VAR,
+  fontFamily: PLAYFAIR,
+  fontSize: 42,
+  fontStyle: "italic",
+  fontWeight: 400,
+  letterSpacing: "0",
+} satisfies CSSProperties;
 
 export const ThemePhoto = ({
   data,
@@ -93,61 +375,13 @@ export const ThemePhoto = ({
   // Masthead / title / hero keep to the safe area; the photo + vignette bleed.
   const insets = useSafeInsets({ bottom: 70, left: 80, right: 80, top: 70 });
   const { sport } = data;
-  const isPool = sport === "swim";
-  const multi = isMultiActivity(data);
-  const routes = multi ? segmentRoutes(data) : [];
-
-  const cssVars = colorsToVars(colors, sport);
-
-  // The sub-line only carries metrics the activity actually has — a stripped
-  // field (toggled off, or absent from the file) drops out instead of leaving
-  // a dashed placeholder in the sentence.
-  const subParts: string[] = [formatDuration(data.durationSec)];
-  if (sport === "ride" && isNum(data.elevationGainM)) {
-    subParts.push(`${formatNumber(data.elevationGainM)} m elev`);
-  } else if (sport === "run" && isNum(data.avgPaceMinPerKm)) {
-    subParts.push(`${formatPaceMin(data.avgPaceMinPerKm)} /km`);
-  } else if (sport === "swim" && isNum(data.avgPacePer100m)) {
-    subParts.push(`${formatPaceSec(data.avgPacePer100m)} /100m`);
-  } else if (sport === "triathlon") {
-    subParts.push("triathlon");
-  }
-  const hero: { big: string | number; unit: string; sub: string } = {
-    big:
-      sport === "swim"
-        ? (data.distanceKm * 1000).toFixed(0)
-        : data.distanceKm.toFixed(1),
-    sub: subParts.join(" · "),
-    unit: sport === "swim" ? "m" : "km",
-  };
-
-  let placeholderBg =
-    "linear-gradient(180deg, #2c3848 0%, #5a6a7e 40%, #8e7458 80%, #c89d6e 100%)";
-  if (sport === "swim") {
-    placeholderBg =
-      "linear-gradient(180deg, #6ba8c5 0%, #2d5a78 50%, #0e2030 100%)";
-  } else if (sport === "run") {
-    placeholderBg =
-      "linear-gradient(180deg, #d8c5a0 0%, #a87d52 40%, #4a2a18 100%)";
-  }
-
-  let storyLabel = "A SPORTS STORY";
-  if (sport === "ride") {
-    storyLabel = "A RIDE STORY";
-  } else if (sport === "run") {
-    storyLabel = "A RUNNING STORY";
-  } else if (sport === "swim") {
-    storyLabel = "A SWIM STORY";
-  } else if (sport === "triathlon") {
-    storyLabel = "A TRIATHLON STORY";
-  }
 
   return (
     <div
       style={{
-        ...cssVars,
-        background: placeholderBg,
-        color: "var(--headline)",
+        ...colorsToVars(colors, sport),
+        background: placeholderBackground(sport),
+        color: HEADLINE_VAR,
         fontFamily: "var(--font-dm-sans), sans-serif",
         height,
         overflow: "hidden",
@@ -155,36 +389,10 @@ export const ThemePhoto = ({
         width,
       }}
     >
-      {photoUrl ? (
+      {hasText(photoUrl) ? (
         <PhotoLayer imageTransform={imageTransform} photoUrl={photoUrl} />
-      ) : null}
-      {!photoUrl && (
-        <svg
-          aria-hidden="true"
-          height="100%"
-          style={{
-            inset: 0,
-            mixBlendMode: "overlay",
-            opacity: 0.45,
-            position: "absolute",
-          }}
-          width="100%"
-        >
-          <title>Texture</title>
-          <defs>
-            <pattern
-              height="6"
-              id="ph-grain"
-              patternUnits="userSpaceOnUse"
-              width="6"
-            >
-              <rect fill="transparent" height="6" width="6" />
-              <circle cx="2" cy="2" fill="#fff" opacity="0.5" r="0.6" />
-              <circle cx="4" cy="5" fill="#000" opacity="0.4" r="0.4" />
-            </pattern>
-          </defs>
-          <rect fill="url(#ph-grain)" height="100%" width="100%" />
-        </svg>
+      ) : (
+        <PlaceholderGrain />
       )}
       {/* Neutral vignette — pure black to read consistently across any photo. */}
       <div
@@ -195,102 +403,18 @@ export const ThemePhoto = ({
           position: "absolute",
         }}
       />
-      {/* Top masthead */}
-      <div
-        style={{
-          alignItems: "flex-start",
-          display: "flex",
-          justifyContent: "space-between",
-          left: insets.left,
-          position: "absolute",
-          right: insets.right,
-          top: insets.top,
-        }}
-      >
-        <div>
-          <div
-            style={{
-              color: "var(--accent-2)",
-              fontFamily: "var(--font-playfair), serif",
-              fontSize: 52,
-              fontStyle: "italic",
-              letterSpacing: "-0.01em",
-            }}
-          >
-            Effort
-          </div>
-          <div
-            style={{
-              color: "var(--body)",
-              fontSize: 26,
-              fontWeight: 700,
-              letterSpacing: "0.28em",
-              marginTop: 12,
-            }}
-          >
-            {["VOL. 01", formatDateUpper(data.date)]
-              .filter(Boolean)
-              .join(" · ")}
-          </div>
-        </div>
-        <div
-          style={{
-            color: "var(--headline)",
-            fontSize: 26,
-            fontWeight: 700,
-            letterSpacing: "0.2em",
-            lineHeight: 1.45,
-            textAlign: "right",
-          }}
-        >
-          {storyLabel}
-          {data.location ? (
-            <>
-              <br />
-              <span style={{ color: "var(--body)" }}>
-                {data.location.toUpperCase()}
-              </span>
-            </>
-          ) : null}
-        </div>
-      </div>
-      {/* Route trace — always white for legibility across arbitrary photos. */}
-      {!isPool && (
-        <svg
-          aria-hidden="true"
-          style={{
-            height: 240,
-            opacity: 0.9,
-            position: "absolute",
-            right: Math.max(60, safe.right),
-            top: Math.max(200, safe.top),
-            width: 320,
-          }}
-          viewBox="0 0 400 300"
-        >
-          <title>Route trace</title>
-          {multi ? (
-            <OverlayRoute
-              colors={whiteRamp(routes.length)}
-              h={300}
-              pad={20}
-              routes={routes.map((r) => r.coords)}
-              shadow="drop-shadow(0 0 12px rgba(0,0,0,0.4))"
-              strokeWidth={2.5}
-              w={400}
-            />
-          ) : (
-            <path
-              d={routePath(data.routeCoordinates, 400, 300, 20)}
-              fill="none"
-              stroke="#ffffff"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2.5}
-              style={{ filter: "drop-shadow(0 0 12px rgba(0,0,0,0.4))" }}
-            />
-          )}
-        </svg>
+      <Masthead
+        data={data}
+        left={insets.left}
+        right={insets.right}
+        top={insets.top}
+      />
+      {sport === "swim" ? null : (
+        <RouteTrace
+          data={data}
+          right={Math.max(60, safe.right)}
+          top={Math.max(200, safe.top)}
+        />
       )}
       <div
         style={{
@@ -311,23 +435,7 @@ export const ThemePhoto = ({
             width: 120,
           }}
         />
-        <h1
-          style={{
-            color: "var(--headline)",
-            fontFamily: "var(--font-playfair), serif",
-            fontSize: 92,
-            fontStyle: "italic",
-            fontWeight: 400,
-            letterSpacing: "-0.015em",
-            lineHeight: 0.95,
-            margin: 0,
-            maxWidth: 800,
-            textShadow: "0 4px 24px rgba(0,0,0,0.4)",
-            textWrap: "pretty",
-          }}
-        >
-          {data.title}
-        </h1>
+        <h1 style={TITLE_STYLE}>{data.title}</h1>
       </div>
       {/* Hero stat block + small stats — bottom strip */}
       <div
@@ -341,70 +449,14 @@ export const ThemePhoto = ({
           right: insets.right,
         }}
       >
-        <div>
-          <div style={{ alignItems: "baseline", display: "flex", gap: 12 }}>
-            <span
-              style={{
-                color: "var(--accent)",
-                fontFamily: "var(--font-playfair), serif",
-                fontSize: 130,
-                fontWeight: 400,
-                letterSpacing: "-0.04em",
-                lineHeight: 1,
-              }}
-            >
-              {hero.big}
-            </span>
-            <span
-              style={{
-                color: "var(--accent-2)",
-                fontFamily: "var(--font-playfair), serif",
-                fontSize: 40,
-                fontStyle: "italic",
-              }}
-            >
-              {hero.unit}
-            </span>
-          </div>
-          <div
-            style={{
-              color: "var(--body)",
-              fontSize: 26,
-              fontWeight: 700,
-              letterSpacing: "0.16em",
-              marginTop: 14,
-            }}
-          >
-            {hero.sub.toUpperCase()}
-          </div>
-        </div>
-        {data.athleteName && (
-          <div
-            style={{
-              color: "var(--body)",
-              fontSize: 24,
-              fontWeight: 700,
-              letterSpacing: "0.22em",
-              paddingBottom: 18,
-              textAlign: "right",
-            }}
-          >
+        <HeroStat data={data} />
+        {hasText(data.athleteName) ? (
+          <div style={BYLINE_STYLE}>
             BY
             <br />
-            <span
-              style={{
-                color: "var(--accent-2)",
-                fontFamily: "var(--font-playfair), serif",
-                fontSize: 42,
-                fontStyle: "italic",
-                fontWeight: 400,
-                letterSpacing: "0",
-              }}
-            >
-              {data.athleteName}
-            </span>
+            <span style={BYLINE_NAME_STYLE}>{data.athleteName}</span>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

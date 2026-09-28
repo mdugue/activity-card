@@ -127,7 +127,8 @@ export const useEditorPrefs = (
   // in-place), so it shares this effect rather than getting its own.
   useEffect(() => {
     persistUi.schedule({
-      athleteName: nonEmpty(athleteName) ?? nonEmpty(persistedAthleteNameRef.current),
+      athleteName:
+        nonEmpty(athleteName) ?? nonEmpty(persistedAthleteNameRef.current),
       carouselTheme: prefs.carouselTheme,
       colorChoice: prefs.colorChoice ?? undefined,
       mode: prefs.mode,

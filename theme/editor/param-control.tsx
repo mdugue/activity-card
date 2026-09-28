@@ -21,9 +21,9 @@ import type {
   ParamCtx,
   ParamDef,
   ParamOption,
+  ParamValue,
 } from "@/theme/core/params/kinds";
 
-import type { ParamValue } from "./editor-session";
 import { isOptionGlyph, OPTION_GLYPHS } from "./option-glyphs";
 
 interface ParamControlProps {

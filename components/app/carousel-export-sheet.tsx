@@ -22,6 +22,7 @@ import { stripGeometry } from "@/theme/carousel/geometry";
 import type { ColorScheme } from "@/theme/core/colors";
 import { FORMAT_ORDER, getFormat } from "@/theme/core/export-formats";
 import type { ExportFormat } from "@/theme/core/export-formats";
+import type { ThemeConfig } from "@/theme/core/params/kinds";
 import type { Visibility } from "@/theme/core/visibility";
 
 import {
@@ -47,7 +48,7 @@ const CAROUSEL_TILE: TileBox = {
 
 interface CarouselExportSheetProps {
   colors: ColorScheme;
-  config: Record<string, unknown>;
+  config: ThemeConfig;
   count: number;
   /** visibility-applied data, for rendering the previews */
   data: ActivityData;
@@ -116,7 +117,9 @@ export const CarouselExportSheet = ({
       busy={busy}
       colors={colors}
       disabled={photoNotReady}
-      onDownloadAll={handleAll}
+      onDownloadAll={() => {
+        void handleAll();
+      }}
       onKeepEditing={onKeepEditing}
       onNew={onNew}
       routeCoordinates={routeCoordinates ?? data.routeCoordinates}
@@ -139,8 +142,8 @@ export const CarouselExportSheet = ({
               label={format.label}
               nativeH={slideH}
               nativeW={stripW}
-              onDownload={async () => {
-                await handleOne(format);
+              onDownload={() => {
+                void handleOne(format);
               }}
               registerMount={(node) => {
                 mounts.current[id] = node;

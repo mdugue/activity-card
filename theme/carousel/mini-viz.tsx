@@ -14,21 +14,7 @@ import { bandModeFor, pickProfile } from "@/theme/carousel/profile";
 
 import { ElevationBand } from "./elevation-band";
 import { RouteLine } from "./route-line";
-
-export type VizKind = "elevation" | "route";
-
-/** Whether a route/elevation mini-viz has data to show, project-aware. */
-export const vizHasKind = (data: ActivityData, kind: VizKind): boolean => {
-  if (isMultiActivity(data)) {
-    return kind === "route"
-      ? segmentRoutes(data).length > 0
-      : segmentProfiles(data).profiles.length > 0;
-  }
-  if (kind === "route") {
-    return (data.routeCoordinates?.length ?? 0) > 1;
-  }
-  return pickProfile(data).signal !== "none";
-};
+import type { VizKind } from "./viz-kind";
 
 interface MiniVizProps {
   /** tints the route gradient; defaults to `color` */

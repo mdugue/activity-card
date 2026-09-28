@@ -3,6 +3,8 @@
 // sensibility: text sits in fully-opaque "clipping" boxes (a paper slab, an ink
 // nameplate) rather than a soft scrim, so it reads like a pasted-up poster.
 
+import type { CSSProperties } from "react";
+
 import type { ActivityData } from "@/lib/activity";
 import { formatDateUpper } from "@/lib/format";
 import type { EffectiveStyle } from "@/theme/carousel/resolve";
@@ -11,9 +13,10 @@ import type { StatItem } from "@/theme/carousel/stats";
 import { SafeArea } from "@/theme/shared/format-context";
 
 import type { PanelProps } from "../define-theme";
-import { MiniViz, vizHasKind } from "../mini-viz";
-import { CAROUSEL_NATURAL_PAD } from "../templates/scaffold";
+import { CAROUSEL_NATURAL_PAD } from "../geometry";
+import { MiniViz } from "../mini-viz";
 import { slideNumber } from "../templates/shared";
+import { vizHasKind } from "../viz-kind";
 
 const SLAB_SHADOW = "0 10px 34px rgba(0,0,0,0.3)";
 
@@ -116,6 +119,10 @@ interface SpreadProps {
   style: EffectiveStyle;
 }
 
+/** A stat as running text: "42.1 km", or just the value when unitless. */
+const withUnit = (s: StatItem): string =>
+  s.unit ? `${s.value} ${s.unit}` : s.value;
+
 const FrontPage = ({
   data,
   style,
@@ -125,20 +132,15 @@ const FrontPage = ({
   hasPhoto,
   stats,
 }: SpreadProps) => {
-  const lead = stats[0];
+  const lead = stats.at(0);
   // Build the lede as one sentence, then float its first glyph as the drop cap —
   // so the lead value is never printed twice, and a deck with no lead stat (e.g.
   // Distance + Time both hidden) degrades to a clean sentence instead of
   // "undefined undefined logged".
-  const extras = stats
-    .slice(1, 3)
-    .map((s) => `${s.value}${s.unit ? ` ${s.unit}` : ""}`)
-    .join(", ");
-  const ledePrefix = lead
-    ? `${lead.value}${lead.unit ? ` ${lead.unit}` : ""} logged${
-        extras ? ` — ${extras}` : ""
-      }. `
-    : "";
+  const extras = stats.slice(1, 3).map(withUnit).join(", ");
+  const extrasClause = extras ? ` — ${extras}` : "";
+  const ledePrefix =
+    lead === undefined ? "" : `${withUnit(lead)} logged${extrasClause}. `;
   const lede = `${ledePrefix}A ${data.sport} worth printing.`;
   return (
     <Slab
@@ -232,13 +234,13 @@ const VizCard = ({
     <div
       style={{
         alignSelf: "flex-end",
-        width: VIZ_W + 44,
+        background: ink,
+        boxShadow: "0 16px 44px rgba(0,0,0,0.34)",
         // Overlaps only the stat card's reserved empty band (see paddingBottom).
         marginTop: -58,
-        background: ink,
         padding: 22,
-        boxShadow: "0 16px 44px rgba(0,0,0,0.34)",
         position: "relative",
+        width: VIZ_W + 44,
         zIndex: 1,
       }}
     >
@@ -258,6 +260,14 @@ const VizCard = ({
   );
 };
 
+/** A spread's content column, centred vertically in the slide. */
+const SPREAD_COLUMN = {
+  display: "flex",
+  flexDirection: "column",
+  marginBottom: "auto",
+  marginTop: "auto",
+} as const satisfies CSSProperties;
+
 const Spread = ({
   data,
   style,
@@ -267,7 +277,7 @@ const Spread = ({
   stats,
   index,
 }: SpreadProps & { index: number }) => {
-  const lead = stats[0];
+  const lead = stats.at(0);
   const extras = stats.slice(1);
   const viz = style.detailViz ? (
     <VizCard
@@ -277,19 +287,13 @@ const Spread = ({
       paper={paper}
     />
   ) : null;
-  const column = {
-    display: "flex",
-    flexDirection: "column",
-    marginBottom: "auto",
-    marginTop: "auto",
-  } as const;
   // A sparse activity can leave a spread with no stat — show just the viz cut
   // rather than a blank headline numeral.
-  if (!lead) {
-    return <div style={column}>{viz}</div>;
+  if (lead === undefined) {
+    return <div style={SPREAD_COLUMN}>{viz}</div>;
   }
   return (
-    <div style={column}>
+    <div style={SPREAD_COLUMN}>
       {/* Stat clipping (paper). Reserves a bottom band the viz overlaps into, so
           the dark cut never covers the number. */}
       <Slab

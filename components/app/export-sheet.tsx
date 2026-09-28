@@ -31,13 +31,16 @@ import { cn } from "@/lib/utils";
 import type { ColorScheme } from "@/theme/core/colors";
 import { FORMAT_ORDER, getFormat } from "@/theme/core/export-formats";
 import type { ExportFormat } from "@/theme/core/export-formats";
+import type { ThemeConfig } from "@/theme/core/params/kinds";
 import { RenderTheme } from "@/theme/editor/render-theme";
 import type { ThemeId } from "@/theme/editor/render-theme";
 import { SafeZoneOverlay } from "@/theme/editor/safe-zone-overlay";
 import {
   createInFlightGuard,
   effortDateSlug,
+  fromCallback,
 } from "@/theme/export/export-shared";
+import type { InFlightGuard } from "@/theme/export/export-shared";
 
 import { ToggleRow } from "./control-primitives";
 
@@ -88,13 +91,15 @@ export const useTileMax = (box: TileBox = SINGLE_TILE): TileMax => {
     )
   );
 
+  // The root element's box tracks the viewport width, so observing it catches
+  // every viewport resize; the tile box itself still reads `innerWidth`.
   useEffect(() => {
-    const onResize = () => {
+    const observer = new ResizeObserver(() => {
       setTileMax(tileMaxForWidth(window.innerWidth, box));
-    };
-    window.addEventListener("resize", onResize);
+    });
+    observer.observe(document.documentElement);
     return () => {
-      window.removeEventListener("resize", onResize);
+      observer.disconnect();
     };
   }, [box]);
 
@@ -107,8 +112,10 @@ export const useTileMax = (box: TileBox = SINGLE_TILE): TileMax => {
 const loadExportCard = async () => await import("@/theme/export/export-card");
 
 const delay = async (ms: number): Promise<void> => {
-  await new Promise((resolve) => {
-    setTimeout(resolve, ms);
+  await fromCallback<null>((resolve) => {
+    setTimeout(() => {
+      resolve(null);
+    }, ms);
   });
 };
 
@@ -123,16 +130,21 @@ export const useFormatExports = (
   // state only updates on the next render, so a double click could otherwise
   // read a stale `busy === null` twice and start two captures.
   const [busy, setBusy] = useState<string | null>(null);
-  const guard = useRef(createInFlightGuard());
+  // Created lazily, on the first export, and kept for the sheet's lifetime.
+  const guardRef = useRef<InFlightGuard | null>(null);
 
   const runExclusive = async (id: string, task: () => Promise<void>) => {
-    await guard.current.run(async () => {
+    const guard = guardRef.current ?? createInFlightGuard();
+    guardRef.current = guard;
+    await guard.run(async () => {
       setBusy(id);
       try {
         await task();
-      } finally {
+      } catch (error) {
         setBusy(null);
+        throw error;
       }
+      setBusy(null);
     });
   };
 
@@ -142,11 +154,16 @@ export const useFormatExports = (
     });
   };
 
+  const exportThenPause = async (format: ExportFormat) => {
+    await exportOne(format);
+    await delay(350);
+  };
+
   const handleAll = async () => {
     await runExclusive("all", async () => {
       for (const id of FORMAT_ORDER) {
-        await exportOne(getFormat(id));
-        await delay(350);
+        // oxlint-disable-next-line eslint/no-await-in-loop, react-doctor/async-await-in-loop -- deliberately sequential: browsers rate-limit back-to-back programmatic downloads, so each format exports then pauses before the next
+        await exportThenPause(getFormat(id));
       }
     });
   };
@@ -238,7 +255,7 @@ export const ExportShell = ({
     <RouteAura colors={colors} coords={routeCoordinates} />
 
     <div className="relative w-full max-w-5xl lg:max-w-6xl">
-      <div className="font-mono text-[11px] font-semibold tracking-[0.32em] opacity-55">
+      <div className="font-mono text-xs font-semibold tracking-[0.32em] opacity-55">
         READY TO SHARE
       </div>
       <h2 className="font-heading mt-1.5 text-3xl leading-[0.92] tracking-tight uppercase sm:mt-3 sm:text-5xl lg:text-6xl">
@@ -329,7 +346,7 @@ export const ExportTile = ({
             {children}
           </div>
         </div>
-        {safe?.show ? (
+        {safe?.show === true ? (
           <SafeZoneOverlay format={safe.format} scale={scale} />
         ) : null}
       </div>
@@ -360,7 +377,7 @@ export const ExportTile = ({
 
 interface ExportSheetProps {
   colors: ColorScheme;
-  config: Record<string, unknown>;
+  config: ThemeConfig;
   /** visibility-applied data, for rendering the previews */
   data: ActivityData;
   imageTransform: ImageTransform;
@@ -432,7 +449,9 @@ export const ExportSheet = (props: ExportSheetProps) => {
     <ExportShell
       busy={busy}
       colors={colors}
-      onDownloadAll={handleAll}
+      onDownloadAll={() => {
+        void handleAll();
+      }}
       onKeepEditing={onKeepEditing}
       onNew={onNew}
       routeCoordinates={props.routeCoordinates ?? data.routeCoordinates}
@@ -469,8 +488,8 @@ export const ExportSheet = (props: ExportSheetProps) => {
               label={format.label}
               nativeH={format.height}
               nativeW={format.width}
-              onDownload={async () => {
-                await handleOne(format);
+              onDownload={() => {
+                void handleOne(format);
               }}
               registerMount={(node) => {
                 mounts.current[id] = node;

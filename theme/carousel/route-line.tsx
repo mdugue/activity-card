@@ -47,15 +47,14 @@ const StartArrow = ({
   if (points.length < 2) {
     return null;
   }
-  const [sx, sy] = points[0];
+  const [[sx, sy], [nx, ny]] = points;
   // Look a little down the line for a stable heading (skip jitter at the start).
-  let [ax, ay] = points[1];
-  for (let i = 1; i < points.length; i++) {
-    const dx = points[i][0] - sx;
-    const dy = points[i][1] - sy;
-    if (Math.hypot(dx, dy) > size * 1.6) {
-      ax = points[i][0];
-      ay = points[i][1];
+  let ax = nx;
+  let ay = ny;
+  for (const [px, py] of points.slice(1)) {
+    if (Math.hypot(px - sx, py - sy) > size * 1.6) {
+      ax = px;
+      ay = py;
       break;
     }
   }

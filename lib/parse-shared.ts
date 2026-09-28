@@ -79,6 +79,11 @@ const round = (n: number, digits: number): number => {
   return Math.round(n * f) / f;
 };
 
+/** Truthiness of an optional reading: `undefined`, `0` and `NaN` all mean
+ * "not recorded". */
+const isRecorded = (n: number | undefined): n is number =>
+  n !== undefined && n !== 0 && !Number.isNaN(n);
+
 const sportSpecificStats = (
   sport: ParsedSport,
   avgSpeedKmh: number | undefined,
@@ -89,14 +94,14 @@ const sportSpecificStats = (
 > => {
   if (sport === "ride") {
     return {
-      avgSpeedKmh: avgSpeedKmh ? round(avgSpeedKmh, 1) : undefined,
-      maxSpeedKmh: maxSpeedKmh ? round(maxSpeedKmh, 1) : undefined,
+      avgSpeedKmh: isRecorded(avgSpeedKmh) ? round(avgSpeedKmh, 1) : undefined,
+      maxSpeedKmh: isRecorded(maxSpeedKmh) ? round(maxSpeedKmh, 1) : undefined,
     };
   }
-  if (sport === "run" && avgSpeedKmh && avgSpeedKmh > 0) {
+  if (sport === "run" && avgSpeedKmh !== undefined && avgSpeedKmh > 0) {
     return { avgPaceMinPerKm: 60 / avgSpeedKmh };
   }
-  if (sport === "swim" && avgSpeedKmh && avgSpeedKmh > 0) {
+  if (sport === "swim" && avgSpeedKmh !== undefined && avgSpeedKmh > 0) {
     return { avgPacePer100m: Math.round(360 / avgSpeedKmh) };
   }
   return {};
@@ -109,18 +114,19 @@ const haversineMeters = (
   lng2: number
 ): number => {
   const R = 6_371_000;
-  const φ1 = (lat1 * Math.PI) / 180;
-  const φ2 = (lat2 * Math.PI) / 180;
-  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-  const Δλ = ((lng2 - lng1) * Math.PI) / 180;
+  const phi1 = (lat1 * Math.PI) / 180;
+  const phi2 = (lat2 * Math.PI) / 180;
+  const deltaPhi = ((lat2 - lat1) * Math.PI) / 180;
+  const deltaLambda = ((lng2 - lng1) * Math.PI) / 180;
   const a =
-    Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+    Math.sin(deltaPhi / 2) ** 2 +
+    Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) ** 2;
   return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
 const cumulativeDistanceKm = (points: TrackPoint[]): number => {
   let m = 0;
-  for (let i = 1; i < points.length; i++) {
+  for (let i = 1; i < points.length; i += 1) {
     const a = points[i - 1];
     const b = points[i];
     if (
@@ -136,21 +142,36 @@ const cumulativeDistanceKm = (points: TrackPoint[]): number => {
   return m / 1000;
 };
 
-const isNum = (x: unknown): x is number =>
-  typeof x === "number" && Number.isFinite(x);
+const isNum = (x: number | undefined): x is number =>
+  x !== undefined && Number.isFinite(x);
+
+/** The finite values of one track-point channel, in order. */
+const finiteSeries = (
+  points: TrackPoint[],
+  channel: keyof TrackPoint
+): number[] => {
+  const values: number[] = [];
+  for (const p of points) {
+    const value = p[channel];
+    if (isNum(value)) {
+      values.push(value);
+    }
+  }
+  return values;
+};
 
 const totalDurationSec = (points: TrackPoint[]): number => {
-  const times = points.map((p) => p.time).filter(isNum);
-  if (times.length < 2) {
+  const times = finiteSeries(points, "time");
+  const last = times.at(-1);
+  if (times.length < 2 || last === undefined) {
     return 0;
   }
-  const last = times.at(-1) as number;
   return (last - times[0]) / 1000;
 };
 
 const cumulativeElevationGain = (points: TrackPoint[]): number => {
   let gain = 0;
-  for (let i = 1; i < points.length; i++) {
+  for (let i = 1; i < points.length; i += 1) {
     const a = points[i - 1].elevation;
     const b = points[i].elevation;
     if (a !== undefined && b !== undefined && b > a) {
@@ -169,7 +190,7 @@ const derivePerKmSplits = (
   totalDistanceKm: number
 ): Split[] | undefined => {
   if (totalDistanceKm < 1.5) {
-    return;
+    return undefined;
   }
   const stamped: { time: number; cumM: number }[] = [];
   let cumM = 0;
@@ -190,13 +211,13 @@ const derivePerKmSplits = (
     lastLng = p.lng;
   }
   if (stamped.length < 2) {
-    return;
+    return undefined;
   }
 
   const splits: Split[] = [];
   let nextKm = 1;
   let prevTime = stamped[0].time;
-  for (let i = 1; i < stamped.length; i++) {
+  for (let i = 1; i < stamped.length; i += 1) {
     while (stamped[i].cumM >= nextKm * 1000) {
       const a = stamped[i - 1];
       const b = stamped[i];
@@ -227,12 +248,12 @@ const derivePaceProfile = (points: TrackPoint[]): number[] | undefined => {
     }
   }
   if (stamped.length < 4) {
-    return;
+    return undefined;
   }
   const paces: number[] = [];
   // Window in points — at typical 1Hz this is ~10s of running.
   const win = Math.max(4, Math.floor(stamped.length / 60));
-  for (let i = win; i < stamped.length; i++) {
+  for (let i = win; i < stamped.length; i += 1) {
     const a = stamped[i - win];
     const b = stamped[i];
     const meters = haversineMeters(a.lat, a.lng, b.lat, b.lng);
@@ -246,7 +267,7 @@ const derivePaceProfile = (points: TrackPoint[]): number[] | undefined => {
     }
   }
   if (paces.length < 8) {
-    return;
+    return undefined;
   }
   const smoothed = smooth(paces, PACE_SMOOTH_WINDOW);
   return resampleTo(
@@ -256,16 +277,16 @@ const derivePaceProfile = (points: TrackPoint[]): number[] | undefined => {
 };
 
 const mean = (xs: number[]): number | undefined => {
-  if (!xs.length) {
-    return;
+  if (xs.length === 0) {
+    return undefined;
   }
   return xs.reduce((a, b) => a + b, 0) / xs.length;
 };
 
-const localCalendarDate = (d: Date): string => {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-};
+const pad = (n: number): string => String(n).padStart(2, "0");
+
+const localCalendarDate = (d: Date): string =>
+  `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
 /**
  * The activity's calendar date as `YYYY-MM-DD`. A bare calendar date passes
@@ -274,10 +295,16 @@ const localCalendarDate = (d: Date): string => {
  * where the activity happened. Never the UTC day.
  */
 const toIsoDate = (input?: string | number | Date): string => {
-  if (typeof input === "string" && CALENDAR_DATE_RE.test(input)) {
-    return input;
+  // Only a string can be a bare calendar date: a number or Date never
+  // stringifies to `YYYY-MM-DD`.
+  const text = input === undefined ? "" : String(input);
+  if (CALENDAR_DATE_RE.test(text)) {
+    return text;
   }
-  const d = input ? new Date(input) : new Date();
+  const d =
+    input === undefined || input === "" || input === 0
+      ? new Date()
+      : new Date(input);
   return localCalendarDate(Number.isNaN(d.getTime()) ? new Date() : d);
 };
 
@@ -294,7 +321,7 @@ export const finalise = (input: FinaliseInput): ParsedActivity => {
   const distanceKm = input.sessionDistanceKm ?? cumulativeDistanceKm(points);
   const durationSec = input.sessionDurationSec ?? totalDurationSec(points);
 
-  const ptTimes = points.map((p) => p.time).filter(isNum);
+  const ptTimes = finiteSeries(points, "time");
   // Prefer the declared start time, but only if it parses to a finite epoch.
   // Malformed metadata (e.g. a `<time>` element with junk in it) would
   // otherwise propagate NaN through triathlon ordering and transition math.
@@ -313,10 +340,10 @@ export const finalise = (input: FinaliseInput): ParsedActivity => {
     input.sessionElevationM ?? cumulativeElevationGain(points);
 
   const avgHr =
-    input.sessionAvgHr ?? mean(points.map((p) => p.heartRate).filter(isNum));
+    input.sessionAvgHr ?? mean(finiteSeries(points, "heartRate"));
 
   const avgCadence =
-    input.sessionAvgCadence ?? mean(points.map((p) => p.cadence).filter(isNum));
+    input.sessionAvgCadence ?? mean(finiteSeries(points, "cadence"));
 
   const avgSpeedKmh =
     input.sessionAvgSpeedKmh ??
@@ -325,14 +352,14 @@ export const finalise = (input: FinaliseInput): ParsedActivity => {
   // route in (lng, -lat) so y grows downwards and `chart-helpers` can treat
   // it as plain Cartesian without flipping per call. RDP is run in this same
   // space — its tolerance is degrees, fine for visual simplification.
-  const rawRoute: Coord[] = points
-    .filter((p) => p.lat !== undefined && p.lng !== undefined)
-    .map((p) => [p.lng as number, -(p.lat as number)] as Coord);
+  const rawRoute = points.flatMap<Coord>((p) =>
+    p.lat !== undefined && p.lng !== undefined ? [[p.lng, -p.lat]] : []
+  );
   const routeCoordinates = rawRoute.length
     ? simplifyToCount(rawRoute, ROUTE_TARGET_POINTS)
     : undefined;
 
-  const rawElevation = points.map((p) => p.elevation).filter(isNum);
+  const rawElevation = finiteSeries(points, "elevation");
   const elevationProfile = rawElevation.length
     ? resampleTo(
         rawElevation,
@@ -346,23 +373,24 @@ export const finalise = (input: FinaliseInput): ParsedActivity => {
   const paceProfile = sport === "run" ? derivePaceProfile(points) : undefined;
 
   return {
-    sport,
-    title: prettifyName(name),
-    date: toIsoDate(isoDate),
-    location: "",
+    // The sport-specific keys never overlap the ones below.
+    ...sportSpecificStats(sport, avgSpeedKmh, input.sessionMaxSpeedKmh),
     athleteName: "",
+    avgCadence: isRecorded(avgCadence) ? Math.round(avgCadence) : undefined,
+    avgHeartRate: isRecorded(avgHr) ? Math.round(avgHr) : undefined,
+    date: toIsoDate(isoDate),
     distanceKm: round(distanceKm, 2),
     durationSec: durationSec > 0 ? Math.round(durationSec) : 0,
     elevationGainM: elevationGainM > 0 ? Math.round(elevationGainM) : undefined,
-    ...sportSpecificStats(sport, avgSpeedKmh, input.sessionMaxSpeedKmh),
-    avgHeartRate: avgHr ? Math.round(avgHr) : undefined,
-    avgCadence: avgCadence ? Math.round(avgCadence) : undefined,
-    routeCoordinates,
     elevationProfile,
-    paceProfile,
-    splits,
-    startTimeMs,
     endTimeMs,
+    location: "",
+    paceProfile,
+    routeCoordinates,
+    splits,
+    sport,
+    startTimeMs,
+    title: prettifyName(name),
   };
 };
 
@@ -404,14 +432,14 @@ export const detectSport = (
   raw: string | undefined,
   filename: string
 ): ParsedSport => {
-  const declared = sportFromDeclaredType((raw || "").toLowerCase());
+  const declared = sportFromDeclaredType((raw ?? "").toLowerCase());
   if (declared) {
     return declared;
   }
   // Split camelCase ("MorningRun") before lowercasing so it yields whole words.
   const words = new Set(
     filename
-      .replaceAll(/([a-z])([A-Z])/gu, "$1 $2")
+      .replaceAll(/(?<lower>[a-z])(?<upper>[A-Z])/gu, "$<lower> $<upper>")
       .toLowerCase()
       .split(/[^a-z]+/u)
   );

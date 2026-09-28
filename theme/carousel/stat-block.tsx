@@ -26,57 +26,61 @@ export const Stat = ({
   muted,
   numeralSize,
   shadow,
-}: StatProps) => (
-  <div>
-    <div
-      style={{
-        color: muted,
-        fontFamily: fonts.mono,
-        fontSize: 17,
-        fontWeight: 500,
-        letterSpacing: "0.18em",
-        textShadow: shadow || undefined,
-        textTransform: "uppercase",
-      }}
-    >
-      {item.label}
-    </div>
-    <div
-      style={{
-        alignItems: "baseline",
-        display: "flex",
-        gap: 8,
-        marginTop: 8,
-      }}
-    >
-      <span
+}: StatProps) => {
+  // An empty shadow means "none" — leave the property unset.
+  const textShadow = shadow === "" ? undefined : shadow;
+  return (
+    <div>
+      <div
         style={{
-          ...TABULAR,
-          color: ink,
-          fontFamily: fonts.numeral,
-          fontSize: numeralSize,
-          fontWeight: fonts.numeralWeight,
-          letterSpacing: "-0.01em",
-          lineHeight: 0.86,
-          textShadow: shadow || undefined,
+          color: muted,
+          fontFamily: fonts.mono,
+          fontSize: 17,
+          fontWeight: 500,
+          letterSpacing: "0.18em",
+          textShadow,
+          textTransform: "uppercase",
         }}
       >
-        {item.value}
-      </span>
-      {item.unit ? (
+        {item.label}
+      </div>
+      <div
+        style={{
+          alignItems: "baseline",
+          display: "flex",
+          gap: 8,
+          marginTop: 8,
+        }}
+      >
         <span
           style={{
-            color: muted,
-            fontFamily: fonts.mono,
-            fontSize: Math.round(numeralSize * 0.26),
-            fontWeight: 500,
-            letterSpacing: "0.04em",
-            textShadow: shadow || undefined,
+            ...TABULAR,
+            color: ink,
+            fontFamily: fonts.numeral,
+            fontSize: numeralSize,
+            fontWeight: fonts.numeralWeight,
+            letterSpacing: "-0.01em",
+            lineHeight: 0.86,
+            textShadow,
           }}
         >
-          {item.unit}
+          {item.value}
         </span>
-      ) : null}
+        {item.unit ? (
+          <span
+            style={{
+              color: muted,
+              fontFamily: fonts.mono,
+              fontSize: Math.round(numeralSize * 0.26),
+              fontWeight: 500,
+              letterSpacing: "0.04em",
+              textShadow,
+            }}
+          >
+            {item.unit}
+          </span>
+        ) : null}
+      </div>
     </div>
-  </div>
-);
+  );
+};

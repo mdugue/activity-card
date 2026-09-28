@@ -2,7 +2,9 @@
 // Type: Instrument Serif (display) + Geist Mono (small caps)
 // Cream paper, soft black, single deep-forest accent
 
-import type { Coord } from "@/lib/activity";
+import type { CSSProperties } from "react";
+
+import type { Coord, Sport } from "@/lib/activity";
 import { accentShades, routePath } from "@/lib/chart-helpers";
 import {
   formatDate,
@@ -18,6 +20,7 @@ import type { SegmentRoute } from "@/lib/multi-activity";
 import type { ThemeProps } from "@/theme/core/theme-contract";
 
 import { SafeArea, useFormat } from "../shared/format-context";
+import { hasText } from "../shared/has-text";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoBackdrop } from "../shared/photo-backdrop";
 import { EDITORIAL_ACCENT } from "./default-accents";
@@ -33,27 +36,31 @@ const INK = "#1a1816";
 // the original cream; see the white-canvas siblings (path/data/triathlon).
 const PAPER = "#f9f4ee";
 
+const SERIF = "var(--font-instrument-serif), serif";
+
+type EditorialActivity = ThemeProps<EditorialCapability>["data"];
+
+const ROW_STYLE = {
+  alignItems: "baseline",
+  borderBottom: "1px solid rgba(26,24,22,0.18)",
+  columnGap: 16,
+  // Two tracks (key auto · value 1fr, right-aligned) instead of a
+  // space-between flex: in a narrow 2-up landscape column the value wraps
+  // WITHIN its own track instead of colliding with the key.
+  display: "grid",
+  gridTemplateColumns: "auto 1fr",
+  // Fluid row height: compresses on a short canvas so the full figures
+  // table clears the foot. cqb resolves to the card (container-type:size).
+  padding: "clamp(2px, 0.7cqb, 7px) 0",
+} satisfies CSSProperties;
+
 interface RowProps {
   k: string;
   v: string | number;
 }
 
 const Row = ({ k, v }: RowProps) => (
-  <div
-    style={{
-      // Two tracks (key auto · value 1fr, right-aligned) instead of a
-      // space-between flex: in a narrow 2-up landscape column the value wraps
-      // WITHIN its own track instead of colliding with the key.
-      display: "grid",
-      gridTemplateColumns: "auto 1fr",
-      columnGap: 16,
-      alignItems: "baseline",
-      borderBottom: "1px solid rgba(26,24,22,0.18)",
-      // Fluid row height: compresses on a short canvas so the full figures
-      // table clears the foot. cqb resolves to the card (container-type:size).
-      padding: "clamp(2px, 0.7cqb, 7px) 0",
-    }}
-  >
+  <div style={ROW_STYLE}>
     <span style={{ letterSpacing: "0.1em", opacity: 0.6 }}>{k}</span>
     <span style={{ minWidth: 0, textAlign: "right", wordBreak: "break-word" }}>
       {v}
@@ -121,6 +128,242 @@ const EditorialRoute = ({
   );
 };
 
+// The closing sentence quotes the sport's signature metric, but only when the
+// activity carries it (and it isn't toggled off) — otherwise it falls back to
+// total time rather than printing a dash.
+const paceLabelFor = (data: EditorialActivity): string => {
+  if (data.sport === "ride" && isNum(data.avgSpeedKmh)) {
+    return `${formatNumber(data.avgSpeedKmh, 1)} km/h average`;
+  }
+  if (data.sport === "run" && isNum(data.avgPaceMinPerKm)) {
+    return `${formatPaceMin(data.avgPaceMinPerKm)} per kilometre`;
+  }
+  if (data.sport === "swim" && isNum(data.avgPacePer100m)) {
+    return `${formatPaceSec(data.avgPacePer100m)} per 100 metres`;
+  }
+  return `${formatDuration(data.durationSec)} total time`;
+};
+
+const ISSUE_NUMBER = {
+  ride: "04",
+  run: "03",
+  swim: "02",
+  triathlon: "07",
+} satisfies Record<Sport, string>;
+
+const INTRO = {
+  ride: "A long Saturday in the saddle. ",
+  run: "A wind-pushed coastal run. ",
+  swim: "Pre-dawn open-water laps. ",
+  triathlon: "Three sports, one continuous effort. ",
+} satisfies Record<Sport, string>;
+
+const ROOT_STYLE = {
+  background: PAPER,
+  color: INK,
+  // The card itself is the named query container (`card`): the giant
+  // numeral and the headings size against its width (cqi, narrow in a 2-up
+  // landscape spread) and height (cqb, short in landscape/square), and the
+  // A|B grid's `@container card` width breakpoint keys on it to go 2-up at
+  // x-landscape — no per-aspect branch, the layout just reflows.
+  containerName: "card",
+  containerType: "size",
+  fontFamily: "var(--font-geist-mono), monospace",
+  overflow: "hidden",
+  position: "relative",
+} satisfies CSSProperties;
+
+const EYEBROW_STYLE = {
+  display: "flex",
+  // Size by the card HEIGHT (cqb), not width: in landscape the card
+  // is short — the signal that region A is also narrow — so the
+  // eyebrow shrinks just enough to sit on one line. Feed/story stay
+  // 26px (cqb hits the cap). nowrap stops mid-token breaks.
+  fontSize: "clamp(18px, 2.4cqb, 26px)",
+  fontWeight: 500,
+  gap: 16,
+  justifyContent: "space-between",
+  letterSpacing: "0.32em",
+  opacity: 0.75,
+  whiteSpace: "nowrap",
+} satisfies CSSProperties;
+
+const NUMERAL_STYLE = {
+  color: INK,
+  fontFamily: SERIF,
+  // Clamp HARD: full 320 on the roomy feed master, shrinking
+  // with the card's width (2-up landscape column) or height
+  // (short square / landscape canvas).
+  fontSize: "clamp(110px, min(34cqi, 18cqb), 320px)",
+  fontStyle: "italic",
+  fontWeight: 400,
+  letterSpacing: "-0.04em",
+  lineHeight: 0.85,
+} satisfies CSSProperties;
+
+// Region A — eyebrow + the massive distance numeral + subtitle.
+const RegionA = ({
+  accent,
+  data,
+}: {
+  accent: string;
+  data: EditorialActivity;
+}) => {
+  const swim = data.sport === "swim";
+  const dist = swim
+    ? (data.distanceKm * 1000).toFixed(0)
+    : data.distanceKm.toFixed(1);
+  return (
+    <div style={{ minWidth: 0 }}>
+      {/* Top eyebrow */}
+      <div style={EYEBROW_STYLE}>
+        <span>EFFORT · ISSUE №{ISSUE_NUMBER[data.sport]}</span>
+        <span>{formatDateUpper(data.date)}</span>
+      </div>
+
+      {/* Massive distance numeral as the visual anchor */}
+      <div
+        style={{
+          marginTop: "clamp(16px, 3cqb, 96px)",
+          position: "relative",
+        }}
+      >
+        <div style={NUMERAL_STYLE}>{dist}</div>
+        <div
+          style={{
+            color: accent,
+            fontFamily: SERIF,
+            fontSize: "clamp(28px, min(6cqi, 7cqb), 52px)",
+            fontStyle: "italic",
+            marginTop: 14,
+          }}
+        >
+          {swim ? "meters" : "kilometres"}, and then —
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const REGION_B_STYLE = {
+  alignContent: "start",
+  display: "grid",
+  gap: "clamp(24px, 3cqi, 56px)",
+  // The editorial 1.2/0.9 asymmetry kept; minmax(0,…) lets both
+  // columns shrink below their content so a narrow region-B (the
+  // 2-up landscape spread) compresses instead of overflowing.
+  gridTemplateColumns: "minmax(0, 1.2fr) minmax(0, 0.9fr)",
+  minHeight: 0,
+  minWidth: 0,
+} satisfies CSSProperties;
+
+const SECTION_LABEL_STYLE = {
+  fontSize: "clamp(18px, 2.2cqi, 24px)",
+  fontWeight: 600,
+  letterSpacing: "0.28em",
+  opacity: 0.7,
+} satisfies CSSProperties;
+
+const HEADLINE_STYLE = {
+  fontFamily: SERIF,
+  fontSize: "clamp(40px, min(8cqi, 12cqb), 76px)",
+  fontWeight: 400,
+  letterSpacing: "-0.015em",
+  lineHeight: 1,
+  margin: 0,
+  textWrap: "pretty",
+} satisfies CSSProperties;
+
+// THE EFFORT — the headline plus a one-paragraph story of the activity.
+const EffortText = ({ data }: { data: EditorialActivity }) => {
+  const morningWord = MORNING_WORDS[data.date.length % MORNING_WORDS.length];
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div style={{ ...SECTION_LABEL_STYLE, marginBottom: 20 }}>THE EFFORT</div>
+      <h2 style={HEADLINE_STYLE}>{data.title}.</h2>
+      <div
+        style={{
+          fontSize: "clamp(18px, 2.2cqi, 24px)",
+          lineHeight: 1.55,
+          marginTop: "clamp(20px, 4cqb, 40px)",
+          maxWidth: 460,
+          opacity: 0.8,
+        }}
+      >
+        {INTRO[data.sport]}
+        {hasText(data.location)
+          ? `Recorded in ${data.location.split(",")[0]}, on a ${morningWord} morning.`
+          : `Recorded on a ${morningWord} morning.`}{" "}
+        {paceLabelFor(data)}.
+      </div>
+    </div>
+  );
+};
+
+// THE FIGURES — every row gates on its datum: a field the file lacks (or the
+// user toggled off) drops the whole row, never a dashed value.
+const Figures = ({ data }: { data: EditorialActivity }) => {
+  const { sport } = data;
+  return (
+    <div
+      style={{
+        fontSize: "clamp(16px, min(2cqi, 2.6cqb), 24px)",
+        // Fluid leading in px: tight on a short canvas, airy on the
+        // tall feed master (clamp/cqb resolve to px before capture).
+        lineHeight: "clamp(20px, 2.5cqb, 44px)",
+        minHeight: 0,
+      }}
+    >
+      <div
+        style={{
+          ...SECTION_LABEL_STYLE,
+          marginBottom: "clamp(4px, 1.3cqb, 20px)",
+        }}
+      >
+        THE FIGURES
+      </div>
+      {data.date === "" ? null : <Row k="Date" v={formatDate(data.date)} />}
+      {hasText(data.location) ? <Row k="Place" v={data.location} /> : null}
+      <Row k="Time" v={formatDuration(data.durationSec)} />
+      {sport === "ride" && isNum(data.elevationGainM) ? (
+        <Row k="Elevation" v={`${formatNumber(data.elevationGainM)} m`} />
+      ) : null}
+      {sport === "ride" && isNum(data.avgSpeedKmh) ? (
+        <Row k="Speed" v={`${formatNumber(data.avgSpeedKmh, 1)} km/h`} />
+      ) : null}
+      {sport === "run" && isNum(data.avgPaceMinPerKm) ? (
+        <Row k="Pace" v={`${formatPaceMin(data.avgPaceMinPerKm)} /km`} />
+      ) : null}
+      {sport === "run" && isNum(data.avgCadence) ? (
+        <Row k="Cadence" v={`${formatNumber(data.avgCadence)} spm`} />
+      ) : null}
+      {sport === "swim" && isNum(data.avgPacePer100m) ? (
+        <Row k="/100 m" v={formatPaceSec(data.avgPacePer100m)} />
+      ) : null}
+      {sport === "swim" && isNum(data.swolf) ? (
+        <Row k="SWOLF" v={formatNumber(data.swolf)} />
+      ) : null}
+      {isNum(data.avgHeartRate) ? (
+        <Row k="Heart" v={`${data.avgHeartRate} bpm`} />
+      ) : null}
+      {hasText(data.athleteName) ? <Row k="By" v={data.athleteName} /> : null}
+    </div>
+  );
+};
+
+const FOOT_STYLE = {
+  alignItems: "center",
+  borderTop: `1px solid ${INK}`,
+  display: "flex",
+  fontSize: 24,
+  fontWeight: 600,
+  justifyContent: "space-between",
+  letterSpacing: "0.28em",
+  marginTop: "clamp(20px, 3cqb, 50px)",
+  opacity: 0.85,
+  paddingTop: 26,
+} satisfies CSSProperties;
+
 export const ThemeEditorial = ({
   data,
   photoUrl,
@@ -129,71 +372,12 @@ export const ThemeEditorial = ({
 }: ThemeProps<EditorialCapability>) => {
   const { width, height } = useFormat();
   const accent = colors?.primary ?? EDITORIAL_ACCENT;
-  const { sport } = data;
   const multi = isMultiActivity(data);
   const routes = multi ? segmentRoutes(data) : [];
 
-  const dist =
-    sport === "swim"
-      ? (data.distanceKm * 1000).toFixed(0)
-      : data.distanceKm.toFixed(1);
-  const distUnit = sport === "swim" ? "meters" : "kilometres";
-
-  // The closing sentence quotes the sport's signature metric, but only when the
-  // activity carries it (and it isn't toggled off) — otherwise it falls back to
-  // total time rather than printing a dash.
-  let paceLabel = `${formatDuration(data.durationSec)} total time`;
-  if (sport === "ride" && isNum(data.avgSpeedKmh)) {
-    paceLabel = `${formatNumber(data.avgSpeedKmh, 1)} km/h average`;
-  } else if (sport === "run" && isNum(data.avgPaceMinPerKm)) {
-    paceLabel = `${formatPaceMin(data.avgPaceMinPerKm)} per kilometre`;
-  } else if (sport === "swim" && isNum(data.avgPacePer100m)) {
-    paceLabel = `${formatPaceSec(data.avgPacePer100m)} per 100 metres`;
-  }
-
-  let issueNum = "07";
-  if (sport === "ride") {
-    issueNum = "04";
-  } else if (sport === "run") {
-    issueNum = "03";
-  } else if (sport === "swim") {
-    issueNum = "02";
-  }
-
-  let intro = "";
-  if (sport === "ride") {
-    intro = "A long Saturday in the saddle. ";
-  } else if (sport === "run") {
-    intro = "A wind-pushed coastal run. ";
-  } else if (sport === "swim") {
-    intro = "Pre-dawn open-water laps. ";
-  } else if (sport === "triathlon") {
-    intro = "Three sports, one continuous effort. ";
-  }
-
-  const morningWord = MORNING_WORDS[data.date.length % MORNING_WORDS.length];
-  const friendlyDate = formatDate(data.date);
-
   return (
-    <div
-      style={{
-        width,
-        height,
-        background: PAPER,
-        color: INK,
-        fontFamily: "var(--font-geist-mono), monospace",
-        position: "relative",
-        overflow: "hidden",
-        // The card itself is the named query container (`card`): the giant
-        // numeral and the headings size against its width (cqi, narrow in a 2-up
-        // landscape spread) and height (cqb, short in landscape/square), and the
-        // A|B grid's `@container card` width breakpoint keys on it to go 2-up at
-        // x-landscape — no per-aspect branch, the layout just reflows.
-        containerType: "size",
-        containerName: "card",
-      }}
-    >
-      {photoUrl ? (
+    <div style={{ ...ROOT_STYLE, height, width }}>
+      {hasText(photoUrl) ? (
         <PhotoBackdrop
           imageTransform={imageTransform}
           photoUrl={photoUrl}
@@ -221,121 +405,11 @@ export const ThemeEditorial = ({
             minHeight: 0,
           }}
         >
-          {/* Region A — eyebrow + the massive distance numeral + subtitle */}
-          <div style={{ minWidth: 0 }}>
-            {/* Top eyebrow */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 16,
-                // Size by the card HEIGHT (cqb), not width: in landscape the card
-                // is short — the signal that region A is also narrow — so the
-                // eyebrow shrinks just enough to sit on one line. Feed/story stay
-                // 26px (cqb hits the cap). nowrap stops mid-token breaks.
-                fontSize: "clamp(18px, 2.4cqb, 26px)",
-                letterSpacing: "0.32em",
-                opacity: 0.75,
-                fontWeight: 500,
-                whiteSpace: "nowrap",
-              }}
-            >
-              <span>EFFORT · ISSUE №{issueNum}</span>
-              <span>{formatDateUpper(data.date)}</span>
-            </div>
-
-            {/* Massive distance numeral as the visual anchor */}
-            <div
-              style={{
-                marginTop: "clamp(16px, 3cqb, 96px)",
-                position: "relative",
-              }}
-            >
-              <div
-                style={{
-                  fontFamily: "var(--font-instrument-serif), serif",
-                  // Clamp HARD: full 320 on the roomy feed master, shrinking
-                  // with the card's width (2-up landscape column) or height
-                  // (short square / landscape canvas).
-                  fontSize: "clamp(110px, min(34cqi, 18cqb), 320px)",
-                  lineHeight: 0.85,
-                  letterSpacing: "-0.04em",
-                  fontWeight: 400,
-                  fontStyle: "italic",
-                  color: INK,
-                }}
-              >
-                {dist}
-              </div>
-              <div
-                style={{
-                  color: accent,
-                  fontFamily: "var(--font-instrument-serif), serif",
-                  fontSize: "clamp(28px, min(6cqi, 7cqb), 52px)",
-                  fontStyle: "italic",
-                  marginTop: 14,
-                }}
-              >
-                {distUnit}, and then —
-              </div>
-            </div>
-          </div>
+          <RegionA accent={accent} data={data} />
 
           {/* Region B — THE EFFORT text · THE LINE route · THE FIGURES table */}
-          <div
-            style={{
-              minWidth: 0,
-              minHeight: 0,
-              display: "grid",
-              // The editorial 1.2/0.9 asymmetry kept; minmax(0,…) lets both
-              // columns shrink below their content so a narrow region-B (the
-              // 2-up landscape spread) compresses instead of overflowing.
-              gridTemplateColumns: "minmax(0, 1.2fr) minmax(0, 0.9fr)",
-              gap: "clamp(24px, 3cqi, 56px)",
-              alignContent: "start",
-            }}
-          >
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: "clamp(18px, 2.2cqi, 24px)",
-                  fontWeight: 600,
-                  letterSpacing: "0.28em",
-                  marginBottom: 20,
-                  opacity: 0.7,
-                }}
-              >
-                THE EFFORT
-              </div>
-              <h2
-                style={{
-                  fontFamily: "var(--font-instrument-serif), serif",
-                  fontSize: "clamp(40px, min(8cqi, 12cqb), 76px)",
-                  fontWeight: 400,
-                  letterSpacing: "-0.015em",
-                  lineHeight: 1,
-                  margin: 0,
-                  textWrap: "pretty",
-                }}
-              >
-                {data.title}.
-              </h2>
-              <div
-                style={{
-                  fontSize: "clamp(18px, 2.2cqi, 24px)",
-                  lineHeight: 1.55,
-                  marginTop: "clamp(20px, 4cqb, 40px)",
-                  maxWidth: 460,
-                  opacity: 0.8,
-                }}
-              >
-                {intro}
-                {data.location
-                  ? `Recorded in ${data.location.split(",")[0]}, on a ${morningWord} morning.`
-                  : `Recorded on a ${morningWord} morning.`}{" "}
-                {paceLabel}.
-              </div>
-            </div>
+          <div style={REGION_B_STYLE}>
+            <EffortText data={data} />
 
             <div
               style={{
@@ -348,16 +422,7 @@ export const ThemeEditorial = ({
             >
               {/* Tiny route */}
               <div style={{ minHeight: 0 }}>
-                <div
-                  style={{
-                    fontSize: "clamp(18px, 2.2cqi, 24px)",
-                    fontWeight: 600,
-                    letterSpacing: "0.28em",
-                    opacity: 0.7,
-                  }}
-                >
-                  THE LINE
-                </div>
+                <div style={SECTION_LABEL_STYLE}>THE LINE</div>
                 <svg
                   aria-hidden="true"
                   // Fluid height: tall on the roomy master, shrinking on a
@@ -377,69 +442,12 @@ export const ThemeEditorial = ({
                     coords={data.routeCoordinates}
                     multi={multi}
                     routes={routes}
-                    sport={sport}
+                    sport={data.sport}
                   />
                 </svg>
               </div>
 
-              {/* Metadata table */}
-              <div
-                style={{
-                  fontSize: "clamp(16px, min(2cqi, 2.6cqb), 24px)",
-                  // Fluid leading in px: tight on a short canvas, airy on the
-                  // tall feed master (clamp/cqb resolve to px before capture).
-                  lineHeight: "clamp(20px, 2.5cqb, 44px)",
-                  minHeight: 0,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: "clamp(18px, 2.2cqi, 24px)",
-                    fontWeight: 600,
-                    letterSpacing: "0.28em",
-                    marginBottom: "clamp(4px, 1.3cqb, 20px)",
-                    opacity: 0.7,
-                  }}
-                >
-                  THE FIGURES
-                </div>
-                {/* Every row gates on its datum: a field the file lacks (or the
-                  user toggled off) drops the whole row, never a dashed value. */}
-                {data.date ? <Row k="Date" v={friendlyDate} /> : null}
-                {data.location ? <Row k="Place" v={data.location} /> : null}
-                <Row k="Time" v={formatDuration(data.durationSec)} />
-                {sport === "ride" && isNum(data.elevationGainM) && (
-                  <Row
-                    k="Elevation"
-                    v={`${formatNumber(data.elevationGainM)} m`}
-                  />
-                )}
-                {sport === "ride" && isNum(data.avgSpeedKmh) && (
-                  <Row
-                    k="Speed"
-                    v={`${formatNumber(data.avgSpeedKmh, 1)} km/h`}
-                  />
-                )}
-                {sport === "run" && isNum(data.avgPaceMinPerKm) && (
-                  <Row
-                    k="Pace"
-                    v={`${formatPaceMin(data.avgPaceMinPerKm)} /km`}
-                  />
-                )}
-                {sport === "run" && isNum(data.avgCadence) && (
-                  <Row k="Cadence" v={`${formatNumber(data.avgCadence)} spm`} />
-                )}
-                {sport === "swim" && isNum(data.avgPacePer100m) && (
-                  <Row k="/100 m" v={formatPaceSec(data.avgPacePer100m)} />
-                )}
-                {sport === "swim" && isNum(data.swolf) && (
-                  <Row k="SWOLF" v={formatNumber(data.swolf)} />
-                )}
-                {isNum(data.avgHeartRate) && (
-                  <Row k="Heart" v={`${data.avgHeartRate} bpm`} />
-                )}
-                {data.athleteName && <Row k="By" v={data.athleteName} />}
-              </div>
+              <Figures data={data} />
             </div>
           </div>
           {/* end region B */}
@@ -447,20 +455,7 @@ export const ThemeEditorial = ({
         {/* end reflow grid */}
 
         {/* Foot */}
-        <div
-          style={{
-            alignItems: "center",
-            borderTop: `1px solid ${INK}`,
-            display: "flex",
-            fontSize: 24,
-            fontWeight: 600,
-            justifyContent: "space-between",
-            letterSpacing: "0.28em",
-            marginTop: "clamp(20px, 3cqb, 50px)",
-            opacity: 0.85,
-            paddingTop: 26,
-          }}
-        >
+        <div style={FOOT_STYLE}>
           <span>— FIN —</span>
           <span style={{ color: accent }}>EFFORT · PRINTED MMXXVI</span>
         </div>

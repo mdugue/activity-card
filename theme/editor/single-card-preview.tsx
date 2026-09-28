@@ -13,16 +13,16 @@ import type { ImageTransform } from "@/lib/image-transform";
 import type { PhotoEffects } from "@/lib/photo-effects";
 import type { ColorScheme } from "@/theme/core/colors";
 import type { ExportFormat } from "@/theme/core/export-formats";
+import type { ThemeConfig } from "@/theme/core/params/kinds";
 import { RenderTheme } from "@/theme/editor/render-theme";
 import type { ThemeId } from "@/theme/editor/render-theme";
 import { SafeZoneOverlay } from "@/theme/editor/safe-zone-overlay";
 
-import type { ThemeConfigValues } from "./editor-session";
 import { AdjustControls, usePhotoAdjust } from "./photo-adjust";
 
 interface SingleCardPreviewProps {
   colors: ColorScheme;
-  config: ThemeConfigValues;
+  config: ThemeConfig;
   data: ActivityData;
   /** target format the theme renders itself into (chosen in the FORMAT tool) */
   format: ExportFormat;

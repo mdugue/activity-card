@@ -56,6 +56,11 @@ interface ControlDeckProps {
 export const PANEL_MOTION =
   "max-lg:transition-[max-height,max-width,opacity,visibility] max-lg:duration-300 max-lg:ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none";
 
+// Layout-effect cleanup for the branch that attached nothing.
+const noCleanup = (): void => {
+  // Nothing was observed, so there is nothing to disconnect.
+};
+
 export const ControlDeck = ({
   tools,
   preview,
@@ -80,18 +85,22 @@ export const ControlDeck = ({
   useLayoutEffect(() => {
     const content = contentRef.current;
     const panel = panelRef.current;
-    if (!(content && panel)) {
-      return;
+    if (content === null || panel === null) {
+      return noCleanup;
     }
     const setVar = (h: number) => {
       panel.style.setProperty("--panel-content-h", `${h}px`);
     };
-    setVar(content.offsetHeight); // initial measure, before first paint
+    // Initial measure, before first paint.
+    setVar(content.offsetHeight);
     const ro = new ResizeObserver(([entry]) => {
       // Use the box the observer already computed (off the main thread) rather
       // than reading offsetHeight again, which would force a synchronous reflow.
-      const box = entry.borderBoxSize?.[0];
-      setVar(box ? box.blockSize : content.offsetHeight);
+      // Older Safari doesn't report `borderBoxSize`; measure there instead.
+      const boxes: readonly ResizeObserverSize[] | undefined =
+        entry.borderBoxSize;
+      const box = boxes?.at(0);
+      setVar(box === undefined ? content.offsetHeight : box.blockSize);
     });
     ro.observe(content);
     return () => {
@@ -102,6 +111,10 @@ export const ControlDeck = ({
   // Tapping the active tab deselects it (value === null) → collapse. Tapping any
   // other tab selects that group and expands. Closing keeps `active` so the
   // panel still has content to animate down.
+  const handleAction = () => {
+    action.onAction();
+  };
+
   const handleTab = (next: string | null) => {
     if (next === null) {
       setOpen(false);
@@ -212,7 +225,7 @@ export const ControlDeck = ({
             handleTab(vals[0] ?? null);
           }}
           spacing={1}
-          value={open && active ? [active] : []}
+          value={open && active !== null && active !== "" ? [active] : []}
         >
           {tools.map((tool) => (
             <ToggleGroupItem
@@ -240,7 +253,7 @@ export const ControlDeck = ({
         <Button
           className="h-auto w-14 shrink-0 flex-col gap-1 rounded-md px-1 py-2 lg:w-auto lg:flex-1 lg:flex-row lg:justify-between lg:px-8 lg:py-4"
           data-testid="export-action"
-          onClick={action.onAction}
+          onClick={handleAction}
           size="lg"
         >
           <span className="flex flex-col items-center gap-1 lg:flex-row lg:gap-2.5">

@@ -5,8 +5,9 @@
 import type { ActivityData } from "@/lib/activity";
 import type { FontPair } from "@/theme/carousel/theme-tokens";
 
-import { MiniViz, vizHasKind } from "./mini-viz";
-import type { VizKind } from "./mini-viz";
+import { MiniViz } from "./mini-viz";
+import { vizHasKind } from "./viz-kind";
+import type { VizKind } from "./viz-kind";
 
 interface DetailVizProps {
   color: string;

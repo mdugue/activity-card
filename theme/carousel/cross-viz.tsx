@@ -3,6 +3,26 @@
 // glyph (Ascent / Exposure). Just enough to nod at the other dimension.
 
 import type { ActivityData } from "@/lib/activity";
+import type {
+  CrossViz as CrossVizKind,
+  FontPair,
+} from "@/theme/carousel/theme-tokens";
+
+import { MiniViz } from "./mini-viz";
+import { vizHasKind } from "./viz-kind";
+
+interface CrossVizProps {
+  accent: string;
+  color: string;
+  data: ActivityData;
+  fonts: FontPair;
+  /** chart height (px) */
+  h?: number;
+  kind: CrossVizKind;
+  muted: string;
+  /** chart width (px) */
+  w?: number;
+}
 
 export const CrossViz = ({
   kind,
@@ -45,22 +65,3 @@ export const CrossViz = ({
     </div>
   );
 };
-import type {
-  CrossViz as CrossVizKind,
-  FontPair,
-} from "@/theme/carousel/theme-tokens";
-
-import { MiniViz, vizHasKind } from "./mini-viz";
-
-interface CrossVizProps {
-  accent: string;
-  color: string;
-  data: ActivityData;
-  fonts: FontPair;
-  /** chart height (px) */
-  h?: number;
-  kind: CrossVizKind;
-  muted: string;
-  /** chart width (px) */
-  w?: number;
-}

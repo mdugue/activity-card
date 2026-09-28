@@ -5,17 +5,8 @@
 
 import type { CSSProperties, ReactNode } from "react";
 
-import { CAROUSEL_NATURAL_MARGIN } from "@/theme/carousel/geometry";
-import type { SafeInsets } from "@/theme/core/export-formats";
+import { CAROUSEL_NATURAL_PAD } from "@/theme/carousel/geometry";
 import { SafeArea } from "@/theme/shared/format-context";
-
-/** The panel's natural margin as a per-side inset. */
-export const CAROUSEL_NATURAL_PAD: Partial<SafeInsets> = {
-  bottom: CAROUSEL_NATURAL_MARGIN,
-  left: CAROUSEL_NATURAL_MARGIN,
-  right: CAROUSEL_NATURAL_MARGIN,
-  top: CAROUSEL_NATURAL_MARGIN,
-};
 
 /** A slide panel scaffold: fills the slot, insets content to the merged safe
  *  area, pins `top` (the MetaBand) to the slide top, and anchors the main

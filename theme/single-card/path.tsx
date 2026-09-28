@@ -2,6 +2,8 @@
 // Type: Cormorant Garamond (display) + Manrope (body)
 // Palette: warm off-white paper, deep ink, single rust accent
 
+import type { CSSProperties } from "react";
+
 import { abstractLanes, accentShades, routePath } from "@/lib/chart-helpers";
 import {
   formatDateUpper,
@@ -17,6 +19,7 @@ import type { SegmentRoute } from "@/lib/multi-activity";
 import type { ThemeProps } from "@/theme/core/theme-contract";
 
 import { SafeArea, useFormat } from "../shared/format-context";
+import { hasText } from "../shared/has-text";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoBackdrop } from "../shared/photo-backdrop";
 import { PATH_ACCENT } from "./default-accents";
@@ -59,11 +62,11 @@ const PathRoute = ({
   accent: string;
   coords?: [number, number][];
 }) => {
-  const [first] = coords ?? [];
-  const last = coords?.at(-1);
-  if (!coords || !first || !last) {
+  if (!coords || coords.length === 0) {
     return null;
   }
+  const [first] = coords;
+  const last = coords.at(-1) ?? first;
   const xs = coords.map((c) => c[0]);
   const ys = coords.map((c) => c[1]);
   const minX = Math.min(...xs);
@@ -166,6 +169,81 @@ const RouteHero = ({
   return <PathRoute accent={accent} coords={coords} />;
 };
 
+const SERIF = "var(--font-cormorant), serif";
+
+const ROOT_STYLE = {
+  background: "#ffffff",
+  color: "#1a1714",
+  // Named query container (`card`): big/fixed type sizes to the card box —
+  // narrow in a landscape column (cqi), short in a square card (cqb) — and
+  // the region grid's `@container card` width breakpoint keys on it to go
+  // 3-up at x-landscape. The name skips the nested per-stat containers.
+  containerName: "card",
+  containerType: "size",
+  fontFamily: "var(--font-manrope), sans-serif",
+  overflow: "hidden",
+  position: "relative",
+} satisfies CSSProperties;
+
+const TITLE_STYLE = {
+  fontFamily: SERIF,
+  // Fluid headline: shrinks with the card width (cqi → narrow
+  // landscape column) or height (cqb → short square card); caps
+  // at the original 76px so the feed master is unchanged.
+  fontSize: "clamp(40px, min(8cqi, 9cqb), 76px)",
+  fontStyle: "italic",
+  fontWeight: 400,
+  letterSpacing: "-0.01em",
+  lineHeight: 0.95,
+  margin: 0,
+  maxWidth: "90%",
+  textWrap: "pretty",
+} satisfies CSSProperties;
+
+const STAT_CELL_STYLE = {
+  // Inline-size container so the label sizes to THIS stat
+  // cell's width (narrow in a 3-up landscape stats column),
+  // while the value's cqb still resolves to the card height.
+  containerType: "inline-size",
+  minWidth: 0,
+} satisfies CSSProperties;
+
+const STAT_LABEL_STYLE = {
+  // Fluid label: stays 24px on roomy cards (feed cell ≈300px:
+  // 11cqi caps at 24) but shrinks enough in a narrow landscape
+  // cell (≈149px → ~16px) that 9-char labels like "ELEVATION"
+  // and "AVG SPEED" keep a gap instead of touching.
+  fontSize: "clamp(13px, 11cqi, 24px)",
+  fontWeight: 600,
+  letterSpacing: "0.18em",
+  opacity: 0.55,
+  whiteSpace: "nowrap",
+} satisfies CSSProperties;
+
+const STAT_VALUE_STYLE = {
+  fontFamily: SERIF,
+  // Fluid stat value: 21cqi reads THIS cell's width (feed cell
+  // ≈284px → 60px, master unchanged), shrinking in a narrow
+  // landscape cell; cqb caps it against a short card. Floor 28
+  // keeps it legible; wrapping handles the tightest cells.
+  fontSize: "clamp(28px, min(21cqi, 7cqb), 60px)",
+  fontWeight: 400,
+  lineHeight: 1.05,
+  marginTop: 10,
+} satisfies CSSProperties;
+
+const SIGNOFF_STYLE = {
+  alignItems: "center",
+  display: "flex",
+  fontSize: 24,
+  fontWeight: 600,
+  gap: 16,
+  justifyContent: "space-between",
+  letterSpacing: "0.2em",
+  marginTop: 32,
+  opacity: 0.55,
+} satisfies CSSProperties;
+
 export const ThemePath = ({
   data,
   photoUrl,
@@ -219,24 +297,8 @@ export const ThemePath = ({
   }
 
   return (
-    <div
-      style={{
-        width,
-        height,
-        background: "#ffffff",
-        color: "#1a1714",
-        fontFamily: "var(--font-manrope), sans-serif",
-        position: "relative",
-        overflow: "hidden",
-        // Named query container (`card`): big/fixed type sizes to the card box —
-        // narrow in a landscape column (cqi), short in a square card (cqb) — and
-        // the region grid's `@container card` width breakpoint keys on it to go
-        // 3-up at x-landscape. The name skips the nested per-stat containers.
-        containerType: "size",
-        containerName: "card",
-      }}
-    >
-      {photoUrl ? (
+    <div style={{ ...ROOT_STYLE, height, width }}>
+      {hasText(photoUrl) ? (
         <PhotoBackdrop
           imageTransform={imageTransform}
           photoUrl={photoUrl}
@@ -292,25 +354,8 @@ export const ThemePath = ({
               }}
             />
             <div style={{ marginTop: 38 }}>
-              <h1
-                style={{
-                  fontFamily: "var(--font-cormorant), serif",
-                  fontWeight: 400,
-                  fontStyle: "italic",
-                  // Fluid headline: shrinks with the card width (cqi → narrow
-                  // landscape column) or height (cqb → short square card); caps
-                  // at the original 76px so the feed master is unchanged.
-                  fontSize: "clamp(40px, min(8cqi, 9cqb), 76px)",
-                  lineHeight: 0.95,
-                  letterSpacing: "-0.01em",
-                  margin: 0,
-                  textWrap: "pretty",
-                  maxWidth: "90%",
-                }}
-              >
-                {data.title}
-              </h1>
-              {data.location ? (
+              <h1 style={TITLE_STYLE}>{data.title}</h1>
+              {hasText(data.location) ? (
                 <div
                   style={{
                     fontSize: 26,
@@ -394,65 +439,18 @@ export const ThemePath = ({
                 landscape stats column compresses instead of overflowing. */}
             <div className="grid grid-cols-3 gap-6">
               {statTrio.map(([k, v]) => (
-                <div
-                  key={k}
-                  style={{
-                    minWidth: 0,
-                    // Inline-size container so the label sizes to THIS stat
-                    // cell's width (narrow in a 3-up landscape stats column),
-                    // while the value's cqb still resolves to the card height.
-                    containerType: "inline-size",
-                  }}
-                >
-                  <div
-                    style={{
-                      // Fluid label: stays 24px on roomy cards (feed cell ≈300px:
-                      // 11cqi caps at 24) but shrinks enough in a narrow landscape
-                      // cell (≈149px → ~16px) that 9-char labels like "ELEVATION"
-                      // and "AVG SPEED" keep a gap instead of touching.
-                      fontSize: "clamp(13px, 11cqi, 24px)",
-                      letterSpacing: "0.18em",
-                      opacity: 0.55,
-                      fontWeight: 600,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {k}
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: "var(--font-cormorant), serif",
-                      // Fluid stat value: 21cqi reads THIS cell's width (feed cell
-                      // ≈284px → 60px, master unchanged), shrinking in a narrow
-                      // landscape cell; cqb caps it against a short card. Floor 28
-                      // keeps it legible; wrapping handles the tightest cells.
-                      fontSize: "clamp(28px, min(21cqi, 7cqb), 60px)",
-                      fontWeight: 400,
-                      marginTop: 10,
-                      lineHeight: 1.05,
-                    }}
-                  >
-                    {v}
-                  </div>
+                <div key={k} style={STAT_CELL_STYLE}>
+                  <div style={STAT_LABEL_STYLE}>{k}</div>
+                  <div style={STAT_VALUE_STYLE}>{v}</div>
                 </div>
               ))}
             </div>
-            <div
-              style={{
-                alignItems: "center",
-                display: "flex",
-                fontSize: 24,
-                fontWeight: 600,
-                gap: 16,
-                justifyContent: "space-between",
-                letterSpacing: "0.2em",
-                marginTop: 32,
-                opacity: 0.55,
-              }}
-            >
+            <div style={SIGNOFF_STYLE}>
               <span>№ 01 — EFFORT</span>
               <span>
-                {data.athleteName ? `— ${data.athleteName.toUpperCase()}` : ""}
+                {hasText(data.athleteName)
+                  ? `— ${data.athleteName.toUpperCase()}`
+                  : ""}
               </span>
             </div>
           </div>

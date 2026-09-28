@@ -6,16 +6,20 @@
 // is what replaces the per-theme `*-controls.tsx` files and the `moodControl`
 // special-casing — every theme's knobs flow through one generic path.
 
-import type { ParamCtx, ParamDef, ParamGroup } from "@/theme/core/params/kinds";
+import type {
+  ParamCtx,
+  ParamDef,
+  ParamGroup,
+  ThemeConfig,
+} from "@/theme/core/params/kinds";
 
-import type { ThemeConfigValues } from "./editor-session";
 import { ParamControl } from "./param-control";
 
 interface ThemeParamGroupProps {
-  config: ThemeConfigValues;
+  config: ThemeConfig;
   ctx: ParamCtx;
   group: ParamGroup;
-  onChange: (next: ThemeConfigValues) => void;
+  onChange: (next: ThemeConfig) => void;
   params: ParamDef[];
 }
 

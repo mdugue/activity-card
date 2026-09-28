@@ -73,6 +73,12 @@ export const segmentProfiles = (data: ActivityView): SegmentProfiles => {
   return { distances, profiles, sports, useElevation };
 };
 
+/** Per-segment profiles plus each segment's distance (the x-axis weight). */
+export interface SegmentSeries {
+  distances: number[];
+  profiles: number[][];
+}
+
 /**
  * Collect one *specific* per-leg series (elevation or pace) with its distances —
  * for callers that need a fixed metric rather than `segmentProfiles`'
@@ -81,7 +87,7 @@ export const segmentProfiles = (data: ActivityView): SegmentProfiles => {
 export const segmentSeries = (
   data: ActivityView,
   field: "elevationProfile" | "paceProfile"
-): { distances: number[]; profiles: number[][] } => {
+): SegmentSeries => {
   const profiles: number[][] = [];
   const distances: number[] = [];
   for (const s of data.segments ?? []) {

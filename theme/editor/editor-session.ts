@@ -11,15 +11,8 @@ import type { ExtractedPalette } from "@/lib/palette";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import type { PhotoEffects } from "@/lib/photo-effects";
 import type { ColorChoice, ColorScheme } from "@/theme/core/colors";
-import type { ParamDef } from "@/theme/core/params/kinds";
+import type { ParamDef, ThemeConfig } from "@/theme/core/params/kinds";
 import type { Visibility } from "@/theme/core/visibility";
-
-/** One stored theme-parameter value: a toggle's boolean, a slider's number or
- *  a choice's option id — the only shapes `coerceConfig` lets into a config. */
-export type ParamValue = boolean | number | string;
-
-/** A theme's coerced parameter config, keyed by `ParamDef.id`. */
-export type ThemeConfigValues = Record<string, ParamValue>;
 
 export interface EditorSession {
   /** raw editable overlay text (unstripped, for the inputs) */
@@ -40,13 +33,13 @@ export interface EditorSession {
     scheme: ColorScheme;
   };
   config: {
-    onChange: (next: ThemeConfigValues) => void;
+    onChange: (next: ThemeConfig) => void;
     /** extracted photo palette — colour swatches + calculated param options */
     palette: ExtractedPalette | null;
     /** the active theme's parameter schema */
     params: ParamDef[];
     /** the active theme's coerced config */
-    value: ThemeConfigValues;
+    value: ThemeConfig;
   };
   /** visibility-stripped activity the cards render */
   data: ActivityData;

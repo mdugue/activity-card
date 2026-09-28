@@ -15,7 +15,7 @@ import { CarouselDeck } from "@/theme/carousel/deck";
 import { CAROUSEL_THEMES } from "@/theme/carousel/registry";
 import type { CarouselThemeId } from "@/theme/carousel/registry";
 import { carouselArgs } from "@/theme/carousel/story-support";
-import type { ThemeConfigValues } from "@/theme/editor/editor-session";
+import type { ThemeConfig } from "@/theme/core/params/kinds";
 
 import { StripPan } from "../components/card-showcase";
 import { PreloadImg } from "../components/preload-img";
@@ -41,7 +41,7 @@ const DeckPan = ({
   photo = false,
   showSeams = false,
 }: {
-  config?: ThemeConfigValues;
+  config?: ThemeConfig;
   durationInFrames: number;
   id: CarouselThemeId;
   photo?: boolean;
@@ -70,6 +70,7 @@ const DeckPan = ({
         showSeams={showSeams}
         slideCount={slideCount}
         style={{
+          // oxlint-disable-next-line remotion/slow-css-property -- the soft lifted-card drop shadow is part of the approved video look; no cheaper property renders a blurred shadow
           boxShadow: "0 60px 120px -40px rgba(0,0,0,0.65)",
           width,
         }}
@@ -114,6 +115,7 @@ const AtmosphereStep = ({ durationInFrames }: { durationInFrames: number }) => {
         progress={0}
         slideCount={slideCount}
         style={{
+          // oxlint-disable-next-line remotion/slow-css-property -- the soft lifted-card drop shadow is part of the approved video look; no cheaper property renders a blurred shadow
           boxShadow: "0 60px 120px -40px rgba(0,0,0,0.65)",
           width: width * 0.86,
         }}

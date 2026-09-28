@@ -25,6 +25,7 @@ export const FileIcon = ({
       height={height}
       style={{
         display: "block",
+        // oxlint-disable-next-line remotion/slow-css-property -- the file sheet's drop shadow follows the drawn SVG silhouette (not its box) — part of the approved look; box-shadow could not match it
         filter: "drop-shadow(0 40px 60px rgba(0,0,0,0.55))",
       }}
       viewBox="0 0 100 130"
@@ -94,6 +95,7 @@ export const StravaChip = ({
       height={height}
       style={{
         display: "block",
+        // oxlint-disable-next-line remotion/slow-css-property -- the Strava sheet matches the file sheets: its drop shadow follows the drawn SVG silhouette (not its box) — part of the approved look; box-shadow could not match it
         filter: "drop-shadow(0 40px 60px rgba(0,0,0,0.55))",
       }}
       viewBox="0 0 100 130"

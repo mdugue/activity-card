@@ -26,6 +26,7 @@ export const FileChip = ({
       alignItems: "center",
       backgroundColor: INK_RAISED,
       borderRadius: RADIUS.pill,
+      // oxlint-disable-next-line remotion/slow-css-property -- the chip's soft drop shadow + hairline ring are part of the approved look; no cheaper property renders a blurred shadow
       boxShadow:
         "0 24px 48px -16px rgba(0,0,0,0.55), 0 0 0 1px rgba(247,243,236,0.14)",
       color: PAPER,
@@ -101,12 +102,12 @@ export const PaletteChip = ({
     <div
       style={{
         borderRadius: RADIUS.md,
+        display: "flex",
         // A solid, blur-free ring outside the border box — drawn as an outline
         // (which follows the radius) rather than a spread-only box-shadow.
         outline: active
           ? `3px solid ${RUST_BRIGHT}`
           : "1px solid rgba(247,243,236,0.18)",
-        display: "flex",
         overflow: "hidden",
       }}
     >

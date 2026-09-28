@@ -80,6 +80,7 @@ const BoringStats = ({ width }: { width: number }) => {
         backgroundColor: "#17191c",
         border: "1px solid #24272b",
         borderRadius: 10,
+        // oxlint-disable-next-line remotion/slow-css-property -- the dull stats panel's soft drop shadow is part of the approved look; no cheaper property renders a blurred shadow
         boxShadow: "0 40px 80px -30px rgba(0,0,0,0.6)",
         padding: 30,
         width,
@@ -169,6 +170,7 @@ const BoldHeadline = ({
               letterSpacing: TRACKING.heading,
               lineHeight: 0.96,
               opacity: op,
+              // oxlint-disable-next-line remotion/slow-css-property -- the headline's soft shadow keeps Anton legible over photos — part of the approved look
               textShadow: "0 20px 50px rgba(0,0,0,0.45)",
               textTransform: "uppercase",
               transform: `translateY(${rise}px)`,
@@ -433,6 +435,7 @@ export const OpeningScene = () => {
             lineHeight: 1,
             opacity: clamp01(intro),
             position: "absolute",
+            // oxlint-disable-next-line remotion/slow-css-property -- the EFFORT word's soft shadow keeps it legible over photos — part of the approved look
             textShadow: "0 30px 70px rgba(0,0,0,0.55)",
             textTransform: "uppercase",
             top: "50%",
@@ -747,6 +750,7 @@ export const ThemesScene = ({
   const visual = (
     <div
       style={{
+        // oxlint-disable-next-line remotion/slow-css-property -- the fly-in depth blur on themes arriving from behind the viewer is the approved motion; only the blur filter renders it
         filter: isFirst ? undefined : `blur(${blur}px)`,
         opacity: isFirst ? firstOp : fade,
         transform: isFirst
@@ -944,6 +948,7 @@ export const CarouselScene = ({
                 key={SEAM_KEYS[i]}
                 style={{
                   borderRadius: radius,
+                  // oxlint-disable-next-line remotion/slow-css-property -- the soft lifted-card drop shadow is part of the approved video look; no cheaper property renders a blurred shadow
                   boxShadow: "0 60px 120px -40px rgba(0,0,0,0.65)",
                   height: panelH,
                   overflow: "hidden",

@@ -14,12 +14,12 @@ const triSportFor = (s: ParsedActivity["sport"]): TriSegment["sport"] => {
 
 const deriveTriName = (sorted: ParsedActivity[]): string => {
   const sports = sorted.map((p) => p.sport);
-  const triathlonShape =
+  const isSwimBikeRun =
     sports.length === 3 &&
     sports[0] === "swim" &&
     sports[1] === "ride" &&
     sports[2] === "run";
-  if (triathlonShape) {
+  if (isSwimBikeRun) {
     return "Triathlon";
   }
   if (
@@ -47,7 +47,7 @@ export const assembleTriathlon = (parts: ParsedActivity[]): ActivityData => {
     throw new Error("Need at least two activities to assemble a triathlon");
   }
 
-  const sorted = [...parts].sort((a, b) => {
+  const sorted = parts.toSorted((a, b) => {
     if (a.startTimeMs !== undefined && b.startTimeMs !== undefined) {
       return a.startTimeMs - b.startTimeMs;
     }
@@ -68,7 +68,7 @@ export const assembleTriathlon = (parts: ParsedActivity[]): ActivityData => {
   }));
 
   const transitions: Transition[] = [];
-  for (let i = 0; i + 1 < sorted.length; i++) {
+  for (let i = 0; i + 1 < sorted.length; i += 1) {
     const end = sorted[i].endTimeMs;
     const next = sorted[i + 1].startTimeMs;
     if (end !== undefined && next !== undefined && next > end) {
@@ -87,7 +87,7 @@ export const assembleTriathlon = (parts: ParsedActivity[]): ActivityData => {
     0
   );
 
-  const first = sorted[0];
+  const [first] = sorted;
   const avgHrs = sorted
     .map((p) => p.avgHeartRate)
     .filter((n): n is number => n !== undefined);
