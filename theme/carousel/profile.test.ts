@@ -29,7 +29,8 @@ describe("pickProfile", () => {
   test("falls back to pace when elevation is degenerate (≤1 point)", () => {
     // Regression: a present-but-degenerate elevation array must NOT shadow a
     // usable pace profile — a bare `??` did, blanking the hero band.
-    for (const degenerate of [[] as number[], [100]]) {
+    const degenerateProfiles: number[][] = [[], [100]];
+    for (const degenerate of degenerateProfiles) {
       const r = pickProfile(withProfiles(degenerate, [4, 5, 6, 7]));
       expect(r.mode).toBe("pace");
       expect(r.profile).toEqual([4, 5, 6, 7]);

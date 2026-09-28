@@ -4,6 +4,19 @@ import { describe, expect, test } from "bun:test";
 import { detectSport, finalise } from "@/lib/parse-shared";
 import type { TrackPoint } from "@/lib/parse-shared";
 
+// A short straight eastward run, one point per minute, ~1.85 km total.
+const linePoints = (): TrackPoint[] => {
+  const start = Date.parse("2026-05-18T07:00:00Z");
+  return Array.from({ length: 11 }, (_, i): TrackPoint => ({
+    elevation: 100 + i,
+    heartRate: 140 + i,
+    lat: 0,
+    // ~111 m per 0.001° at the equator
+    lng: i * 0.001,
+    time: start + i * 60_000,
+  }));
+};
+
 describe("detectSport", () => {
   test("splits camelCase names into words", () => {
     expect(detectSport(undefined, "MorningRun.gpx")).toBe("run");
@@ -50,18 +63,6 @@ describe("detectSport", () => {
 });
 
 describe("finalise", () => {
-  // A short straight eastward run, one point per minute, ~1.85 km total.
-  const linePoints = (): TrackPoint[] => {
-    const start = Date.parse("2026-05-18T07:00:00Z");
-    return Array.from({ length: 11 }, (_, i): TrackPoint => ({
-      elevation: 100 + i,
-      heartRate: 140 + i,
-      lat: 0,
-      lng: i * 0.001, // ~111 m per 0.001° at the equator
-      time: start + i * 60_000,
-    }));
-  };
-
   test("derives distance and duration from track points", () => {
     const a = finalise({
       isoDate: "2026-05-18T07:00:00Z",
@@ -84,9 +85,10 @@ describe("finalise", () => {
       sessionDurationSec: 3600,
       sport: "ride",
     });
-    expect(a.distanceKm).toBe(42.2);
+    // Rounded to one decimal: 42.195 → 42.2 (the precision rules out 42.195).
+    expect(a.distanceKm).toBeCloseTo(42.2, 10);
     expect(a.durationSec).toBe(3600);
-    expect(a.avgSpeedKmh).toBe(42.2);
+    expect(a.avgSpeedKmh).toBeCloseTo(42.2, 10);
   });
 
   test("derives pace for runs and speed for rides from the same data", () => {

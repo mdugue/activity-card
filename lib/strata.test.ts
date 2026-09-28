@@ -102,7 +102,6 @@ describe("resolveStrataSource", () => {
         {
           // Route but NO elevation/pace → must be skipped, never concatenated
           // (otherwise this leg's route would morph against the bike's climb).
-          sport: "run",
           distanceKm: 10,
           durationSec: 3000,
           routeCoordinates: [
@@ -110,6 +109,7 @@ describe("resolveStrataSource", () => {
             [6, 6],
             [7, 5],
           ],
+          sport: "run",
         },
       ],
       sport: "triathlon",
@@ -136,7 +136,7 @@ describe("buildStrata", () => {
   });
 
   test("emits K + 1 curves, route (t=0) → profile (t=1)", () => {
-    expect(geo.curves.length).toBe(25);
+    expect(geo.curves).toHaveLength(25);
     expect(geo.curves[0].t).toBe(0);
     expect(geo.curves.at(-1)?.t).toBe(1);
   });
@@ -148,7 +148,7 @@ describe("buildStrata", () => {
 
   test("every layer is resampled to N points within the field box", () => {
     for (const c of geo.curves) {
-      expect(c.pts.length).toBe(220);
+      expect(c.pts).toHaveLength(220);
       for (const [x, y] of c.pts) {
         expect(x).toBeGreaterThanOrEqual(0);
         expect(x).toBeLessThanOrEqual(920);

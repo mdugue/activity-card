@@ -6,7 +6,9 @@ import { createDebouncedWriter } from "@/lib/debounced-writer";
 describe("createDebouncedWriter", () => {
   let writes: number[] = [];
   const writer = () =>
-    createDebouncedWriter((value: number) => writes.push(value), 300);
+    createDebouncedWriter((value: number) => {
+      writes.push(value);
+    }, 300);
 
   beforeEach(() => {
     writes = [];

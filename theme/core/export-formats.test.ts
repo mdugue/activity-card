@@ -13,7 +13,8 @@ import {
 } from "@/theme/core/export-formats";
 import type { ExportFormatId } from "@/theme/core/export-formats";
 
-const ALL_IDS = Object.keys(EXPORT_FORMATS) as ExportFormatId[];
+const ALL_IDS: ExportFormatId[] =
+  Object.keys(EXPORT_FORMATS).filter(isExportFormatId);
 
 describe("registry", () => {
   test("ids are self-consistent and dimensions positive", () => {
@@ -26,7 +27,7 @@ describe("registry", () => {
   });
 
   test("FORMAT_ORDER lists every format exactly once", () => {
-    expect([...FORMAT_ORDER].sort()).toEqual([...ALL_IDS].sort());
+    expect(FORMAT_ORDER.toSorted()).toEqual(ALL_IDS.toSorted());
   });
 
   test("default format is the 4:5 master at 1080×1350", () => {
@@ -79,7 +80,8 @@ describe("mergeSafe", () => {
   test("the platform safe inset floors a smaller theme margin", () => {
     // Story: tall top/bottom keep-out floors the theme's smaller vertical
     // margin, while the wider side margin (80 > 64) still wins per-side.
-    const story = getFormat("instagram-story"); // t220 r64 b220 l64
+    // t220 r64 b220 l64
+    const story = getFormat("instagram-story");
     const i = mergeSafe(story.safe, {
       bottom: 70,
       left: 80,

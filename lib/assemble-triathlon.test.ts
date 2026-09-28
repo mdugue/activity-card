@@ -39,13 +39,15 @@ describe("assembleTriathlon", () => {
       distanceKm: 40,
       durationSec: 4200,
       endTimeMs: T0 + 102.5 * MIN,
-      startTimeMs: T0 + 32.5 * MIN, // 150 s after the swim ends,
+      // 150 s after the swim ends.
+      startTimeMs: T0 + 32.5 * MIN,
     });
     const run = makePart("run", {
       distanceKm: 10,
       durationSec: 3000,
       endTimeMs: T0 + 154 * MIN,
-      startTimeMs: T0 + 104 * MIN, // 90 s after the ride ends,
+      // 90 s after the ride ends.
+      startTimeMs: T0 + 104 * MIN,
     });
 
     // Shuffled input — sorting must restore swim → ride → run.
@@ -75,7 +77,8 @@ describe("assembleTriathlon", () => {
     });
     const run = makePart("run", {
       endTimeMs: T0 + 100 * MIN,
-      startTimeMs: T0 + 55 * MIN, // overlaps the ride end,
+      // Overlaps the ride end.
+      startTimeMs: T0 + 55 * MIN,
     });
     const tri = assembleTriathlon([ride, run]);
     expect(tri.transitions).toBeUndefined();

@@ -15,12 +15,10 @@ import type { MetadataInput } from "@/lib/metadata";
 const chunkBytes = (type: string, data: Uint8Array): number[] => {
   const lenBytes = new Uint8Array(4);
   new DataView(lenBytes.buffer).setUint32(0, data.length);
-  const out: number[] = [...lenBytes];
-  for (const ch of type) {
-    out.push(ch.charCodeAt(0));
-  }
-  out.push(...data, 0, 0, 0, 0); // crc placeholder — splice doesn't validate it
-  return out;
+  // Chunk types are 4 ASCII letters, so their UTF-8 bytes are the char codes.
+  const typeBytes = new TextEncoder().encode(type);
+  // Trailing zeros: crc placeholder — splice doesn't validate it.
+  return [...lenBytes, ...typeBytes, ...data, 0, 0, 0, 0];
 };
 
 // Minimal valid-enough PNG: signature + IHDR + IEND (CRCs need not validate for
@@ -39,7 +37,7 @@ const chunkTypesOf = (png: Uint8Array): string[] => {
   while (offset + 8 <= png.length) {
     const len = dv.getUint32(offset);
     types.push(
-      String.fromCharCode(
+      String.fromCodePoint(
         png[offset + 4],
         png[offset + 5],
         png[offset + 6],
@@ -57,13 +55,13 @@ describe("chunk builders", () => {
     // length prefix = data length = "Software".length + 1 + "Effort".length
     const dv = new DataView(c.buffer, c.byteOffset, c.byteLength);
     expect(dv.getUint32(0)).toBe(8 + 1 + 6);
-    expect(String.fromCharCode(c[4], c[5], c[6], c[7])).toBe("tEXt");
-    expect(c.length).toBe(12 + 8 + 1 + 6);
+    expect(String.fromCodePoint(c[4], c[5], c[6], c[7])).toBe("tEXt");
+    expect(c).toHaveLength(12 + 8 + 1 + 6);
   });
 
   test("iTXt carries the five separators and UTF-8 body", () => {
     const c = itxtChunk("Title", "Café 🚴");
-    expect(String.fromCharCode(c[4], c[5], c[6], c[7])).toBe("iTXt");
+    expect(String.fromCodePoint(c[4], c[5], c[6], c[7])).toBe("iTXt");
     // round-trips longer than the ascii length due to multibyte glyphs
     expect(c.length).toBeGreaterThan(
       12 + "Title".length + 5 + "Café 🚴".length
@@ -76,7 +74,7 @@ describe("injectPngChunks", () => {
     const png = fakePng();
     const out = injectPngChunks(png, [textChunk("Software", "Effort")]);
     expect(chunkTypesOf(out)).toEqual(["IHDR", "tEXt", "IEND"]);
-    expect(out.length).toBe(
+    expect(out).toHaveLength(
       png.length + textChunk("Software", "Effort").length
     );
   });

@@ -1,10 +1,10 @@
 /// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
 
-import type { ParamDef } from "@/theme/core/params/kinds";
+import type { ParamDef, ThemeConfig } from "@/theme/core/params/kinds";
 import { coerceConfig } from "@/theme/core/params/resolve";
 
-interface Cfg extends Record<string, unknown> {
+interface Cfg extends ThemeConfig {
   density: number;
   legend: boolean;
   mood: string;

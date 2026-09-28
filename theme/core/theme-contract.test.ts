@@ -7,13 +7,14 @@ import {
   GOVERNED_FIELDS,
   pickThemeData,
 } from "@/theme/core/theme-contract";
-import type { CapabilityKey, ThemeProps } from "@/theme/core/theme-contract";
+import type { ThemeProps } from "@/theme/core/theme-contract";
 import { themeAvailability } from "@/theme/core/visibility";
 
-const Noop: (props: ThemeProps<"route" | "elevation">) => null = () => null;
+const noopComponent: (props: ThemeProps<"route" | "elevation">) => null = () =>
+  null;
 
 const slim = defineTheme({
-  Component: Noop,
+  Component: noopComponent,
   colors: { default: { primary: "#c45a2c" }, userAdjustable: false },
   id: "slim",
   label: "SLIM",
@@ -53,7 +54,8 @@ describe("themeAvailability", () => {
   test("undeclared capabilities are unavailable even when the data exists", () => {
     const avail = themeAvailability(SAMPLE_RIDE, slim);
     expect(avail.route).toBe(true);
-    expect(avail.heartRate).toBe(false); // data present, capability undeclared
+    // data present, capability undeclared
+    expect(avail.heartRate).toBe(false);
     expect(avail.speed).toBe(false);
     expect(avail.splits).toBe(false);
   });
@@ -72,7 +74,8 @@ describe("themeAvailability", () => {
   });
 
   test("declared capability still requires the data", () => {
-    const noRoute = { ...SAMPLE_RIDE, routeCoordinates: undefined };
+    const noRoute = { ...SAMPLE_RIDE };
+    delete noRoute.routeCoordinates;
     expect(themeAvailability(noRoute, slim).route).toBe(false);
   });
 });
@@ -90,7 +93,7 @@ describe("GOVERNED_FIELDS", () => {
   });
 
   test("capability keys match the visibility toggles they gate", () => {
-    const caps = Object.keys(GOVERNED_FIELDS) as CapabilityKey[];
+    const caps = Object.keys(GOVERNED_FIELDS);
     const avail = themeAvailability(SAMPLE_RIDE, slim);
     for (const cap of caps) {
       expect(cap in avail).toBe(true);

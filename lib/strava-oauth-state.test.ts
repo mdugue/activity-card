@@ -23,11 +23,9 @@ describe("encode/decode OAuth state", () => {
 
   test("round-trips a minimal payload, omitting absent fields", () => {
     const encoded = encodeOAuthState({ r: "only-nonce" });
-    expect(decodeOAuthState(encoded)).toEqual({
-      b: undefined,
-      p: undefined,
-      r: "only-nonce",
-    });
+    // `toEqual` treats a missing key and an `undefined` one alike, so this
+    // pins b/p as absent.
+    expect(decodeOAuthState(encoded)).toEqual({ r: "only-nonce" });
   });
 
   test("produces URL-safe base64 (no +, /, or = padding)", () => {
@@ -51,11 +49,8 @@ describe("encode/decode OAuth state", () => {
     const encoded = Buffer.from(
       JSON.stringify({ b: 42, p: { evil: true }, r: "n" })
     ).toString("base64url");
-    expect(decodeOAuthState(encoded)).toEqual({
-      b: undefined,
-      p: undefined,
-      r: "n",
-    });
+    // b/p must come back absent (`toEqual` ignores undefined keys).
+    expect(decodeOAuthState(encoded)).toEqual({ r: "n" });
   });
 });
 
@@ -65,8 +60,8 @@ describe("isAllowedBounceOrigin", () => {
   const originalHttp = process.env.STRAVA_ALLOW_HTTP_BOUNCE;
 
   beforeEach(() => {
-    process.env.STRAVA_BOUNCE_ALLOWED_HOST_SUFFIX = undefined;
-    process.env.STRAVA_ALLOW_HTTP_BOUNCE = undefined;
+    delete process.env.STRAVA_BOUNCE_ALLOWED_HOST_SUFFIX;
+    delete process.env.STRAVA_ALLOW_HTTP_BOUNCE;
   });
 
   afterEach(() => {
@@ -185,9 +180,9 @@ describe("bounce signature", () => {
 
   test("s survives the state round-trip; a non-string s is dropped", () => {
     const s = signBounce(B, R, KEY);
+    // p stays absent (`toEqual` ignores undefined keys).
     expect(decodeOAuthState(encodeOAuthState({ b: B, r: R, s }))).toEqual({
       b: B,
-      p: undefined,
       r: R,
       s,
     });

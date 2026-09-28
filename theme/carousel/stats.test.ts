@@ -21,11 +21,10 @@ describe("buildStats", () => {
   });
 
   test("omits metrics with no underlying data (never renders a dash)", () => {
-    const stats = buildStats({
-      ...SAMPLE_RIDE,
-      avgHeartRate: undefined,
-      normalizedPowerW: undefined,
-    });
+    const data = { ...SAMPLE_RIDE };
+    delete data.avgHeartRate;
+    delete data.normalizedPowerW;
+    const stats = buildStats(data);
     const keys = stats.map((s) => s.key);
     expect(keys).not.toContain("avgHr");
     expect(keys).not.toContain("power");
@@ -56,7 +55,8 @@ describe("buildStats", () => {
   });
 
   test("heroStat falls back to distance when elevation is missing", () => {
-    const noElevation = { ...SAMPLE_RIDE, elevationGainM: undefined };
+    const noElevation = { ...SAMPLE_RIDE };
+    delete noElevation.elevationGainM;
     expect(heroStat(noElevation, "elevation").key).toBe("distance");
   });
 
@@ -72,9 +72,12 @@ describe("detailStats", () => {
   test("shows every stat except the hero metric (no repeated big number)", () => {
     const stats = detailStats(SAMPLE_RIDE, "distance");
     const keys = stats.map((s) => s.key);
-    expect(keys).not.toContain("distance"); // the hero headline
-    expect(keys).toContain("power"); // a ride's deeper metric still appears
-    expect(new Set(keys).size).toBe(keys.length); // no repeats
+    // the hero headline
+    expect(keys).not.toContain("distance");
+    // a ride's deeper metric still appears
+    expect(keys).toContain("power");
+    // no repeats
+    expect(new Set(keys).size).toBe(keys.length);
   });
 
   test("when the hero headlines elevation, elevation drops from the grid", () => {
@@ -85,7 +88,8 @@ describe("detailStats", () => {
 });
 
 describe("pressSlideStats", () => {
-  const TOTAL = 4; // Press is a 4-slide deck
+  // Press is a 4-slide deck
+  const TOTAL = 4;
 
   test("front page leads with the headline + lede (first three)", () => {
     const front = pressSlideStats(SAMPLE_RIDE, 0, TOTAL);

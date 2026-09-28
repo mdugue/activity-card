@@ -86,12 +86,14 @@ describe("coerceColorChoice", () => {
       scheme: {
         onPrimary: "#ffffff",
         primary: "#abc",
+        // oxlint-disable-next-line eslint/no-script-url -- inert test data: asserts a script URL is dropped as a non-hex colour
         secondary: "javascript:alert(1)",
       },
     });
+    // `secondary` comes back absent/undefined (`toEqual` ignores undefined keys).
     expect(out).toEqual({
       kind: "preset",
-      scheme: { onPrimary: "#ffffff", primary: "#abc", secondary: undefined },
+      scheme: { onPrimary: "#ffffff", primary: "#abc" },
     });
   });
 

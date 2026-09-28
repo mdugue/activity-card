@@ -16,6 +16,31 @@ import {
   triggerDownload,
 } from "@/theme/export/export-shared";
 
+/** The slice of `document` that triggerDownload touches. */
+interface DocumentStub {
+  body: { append: () => void };
+  createElement: () => {
+    click: () => void;
+    download: string;
+    href: string;
+    remove: () => void;
+  };
+}
+
+/** Install `value` as the global `document` (bun's test runner has no DOM). */
+const setGlobalDocument = (
+  value: DocumentStub | Document | undefined
+): void => {
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    enumerable: true,
+    value,
+    writable: true,
+  });
+};
+
+const noop = (): void => {};
+
 describe("effortDateSlug", () => {
   test("keeps a plain ISO date untouched", () => {
     expect(effortDateSlug("2026-05-18")).toBe("2026-05-18");
@@ -43,21 +68,29 @@ describe("triggerDownload", () => {
       events.push(`revoke ${url}`);
     });
     const anchor = {
-      click: () => events.push("click"),
+      click: () => {
+        events.push("click");
+      },
       download: "",
       href: "",
-      remove: () => events.push("remove"),
+      remove: () => {
+        events.push("remove");
+      },
     };
-    // reason: a minimal stand-in for the DOM — only what triggerDownload touches.
-    globalThis.document = {
-      body: { append: () => events.push("append") },
+    // A minimal stand-in for the DOM — only what triggerDownload touches.
+    setGlobalDocument({
+      body: {
+        append: () => {
+          events.push("append");
+        },
+      },
       createElement: () => anchor,
-    } as unknown as Document;
+    });
   });
 
   afterEach(() => {
     jest.useRealTimers();
-    globalThis.document = realDocument;
+    setGlobalDocument(realDocument);
     jest.restoreAllMocks();
   });
 
@@ -76,13 +109,15 @@ describe("triggerDownload", () => {
 describe("createInFlightGuard", () => {
   test("drops a second run while the first is in flight", async () => {
     const guard = createInFlightGuard();
-    let release: () => void = () => {};
+    let release = noop;
     let calls = 0;
     const task = async () => {
       calls += 1;
-      await new Promise<void>((resolve) => {
-        release = resolve;
-      });
+      const gate = Promise.withResolvers<null>();
+      release = () => {
+        gate.resolve(null);
+      };
+      await gate.promise;
     };
 
     const first = guard.run(task);
@@ -98,13 +133,16 @@ describe("createInFlightGuard", () => {
 
   test("frees the gate when the task throws", async () => {
     const guard = createInFlightGuard();
-    const outcome = await guard
-      .run(async () => {
+    let message = "";
+    try {
+      await guard.run(async () => {
         await Promise.resolve();
         throw new Error("capture failed");
-      })
-      .catch((error: unknown) => (error as Error).message);
-    expect(outcome).toBe("capture failed");
+      });
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toBe("capture failed");
     expect(guard.busy).toBe(false);
     expect(await guard.run(async () => {})).toBe(true);
   });

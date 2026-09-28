@@ -6,16 +6,22 @@ import type { StravaActivityDetail, StravaStreams } from "@/lib/strava-types";
 
 const START = "2026-05-18T07:00:00Z";
 
-const makeDetail = (
-  overrides: Partial<StravaActivityDetail> = {}
-): StravaActivityDetail => ({
-  distance: 25_000, // metres
+/** The detail fixture minus `sport_type` / `start_date`, which some tests omit. */
+const DETAIL_CORE = {
+  // metres
+  distance: 25_000,
   id: 1234,
   moving_time: 3600,
   name: "Morning Ride",
+  total_elevation_gain: 300,
+} satisfies StravaActivityDetail;
+
+const makeDetail = (
+  overrides: Partial<StravaActivityDetail> = {}
+): StravaActivityDetail => ({
+  ...DETAIL_CORE,
   sport_type: "Ride",
   start_date: START,
-  total_elevation_gain: 300,
   ...overrides,
 });
 
@@ -37,7 +43,7 @@ const makeStreams = (points: number): StravaStreams => ({
 describe("stravaToParsed", () => {
   test("maps detail + aligned streams to one parsed ride", () => {
     const [parsed, ...rest] = stravaToParsed(makeDetail(), makeStreams(4));
-    expect(rest.length).toBe(0);
+    expect(rest).toHaveLength(0);
     expect(parsed.sport).toBe("ride");
     expect(parsed.title).toBe("Morning Ride");
     expect(parsed.distanceKm).toBe(25);
@@ -57,11 +63,11 @@ describe("stravaToParsed", () => {
 
   test("missing start_date still parses; summary fields survive", () => {
     const [parsed] = stravaToParsed(
-      makeDetail({ start_date: undefined }),
+      { ...DETAIL_CORE, sport_type: "Ride" },
       makeStreams(3)
     );
     expect(parsed.distanceKm).toBe(25);
-    expect(typeof parsed.date).toBe("string");
+    expect(parsed.date).toBeString();
   });
 
   test("empty streams produce a summary-only activity", () => {
@@ -73,10 +79,10 @@ describe("stravaToParsed", () => {
 
   test("multisport activities stay a single triathlon part (no /laps split yet)", () => {
     const parts = stravaToParsed(
-      makeDetail({ name: "Sunday Triathlon", sport_type: undefined }),
+      { ...DETAIL_CORE, name: "Sunday Triathlon", start_date: START },
       {}
     );
-    expect(parts.length).toBe(1);
+    expect(parts).toHaveLength(1);
     expect(parts[0].sport).toBe("triathlon");
   });
 

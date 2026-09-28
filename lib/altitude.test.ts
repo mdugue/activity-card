@@ -42,8 +42,9 @@ describe("resolveClaim", () => {
   });
 
   test("falls back when the requested metric is missing", () => {
-    // No elevation recorded → falls back to the first available metric.
-    const c = resolveClaim("elevation", make({ elevationGainM: undefined }));
+    // No elevation recorded (the fixture omits it) → falls back to the first
+    // available metric.
+    const c = resolveClaim("elevation", make({}));
     expect(c?.key).not.toBe("elevation");
     expect(c?.value).toBeTruthy();
   });
@@ -66,7 +67,7 @@ describe("resolveClaim", () => {
 describe("supportingStats", () => {
   test("returns at most two stats", () => {
     const stats = supportingStats(make({ elevationGainM: 1240 }), null);
-    expect(stats.length).toBe(2);
+    expect(stats).toHaveLength(2);
   });
 
   test("excludes the claim's own metric", () => {
@@ -76,13 +77,9 @@ describe("supportingStats", () => {
   });
 
   test("skips metrics the activity doesn't have", () => {
-    // A ride with only distance present: elevation/speed/vam all absent.
-    const data = make({
-      avgSpeedKmh: undefined,
-      elevationGainM: undefined,
-      maxSpeedKmh: undefined,
-      vamMph: undefined,
-    });
+    // A ride with only distance present: elevation/speed/vam all absent
+    // (the base fixture never sets them).
+    const data = make({});
     const stats = supportingStats(data, null);
     // distance + duration remain.
     expect(stats.map((s) => s.label)).toEqual(["DISTANCE", "TIME"]);
@@ -142,7 +139,7 @@ describe("layoutClaim", () => {
 
   test("keeps a medium name on one line", () => {
     const l = layoutClaim("Running Test", "modern", true, CONTENT_W);
-    expect(l.lines.length).toBe(1);
+    expect(l.lines).toHaveLength(1);
   });
 
   test("wraps a long name across multiple lines", () => {

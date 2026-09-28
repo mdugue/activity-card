@@ -5,7 +5,7 @@ import { mergeProbes } from "./photo-composite";
 /** Minimal stand-in for ImageData — bun's test runner has no DOM. */
 const imageData = (pixels: number[][]): ImageData => {
   const data = Uint8ClampedArray.from(pixels.flat());
-  return { data, height: 1, width: pixels.length } as ImageData;
+  return { colorSpace: "srgb", data, height: 1, width: pixels.length };
 };
 
 /** What the browser would paint: `src` composited over `backdrop`. */

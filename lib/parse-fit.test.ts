@@ -5,11 +5,19 @@ import { fitDataToParsed } from "@/lib/parse-fit";
 
 // Shaped like fit-file-parser's `mode: "list"` output with `lengthUnit: "m"`
 // and `speedUnit: "km/h"`.
-const fitData = (session: Record<string, unknown>) => ({
+interface FitSessionFixture {
+  avg_speed?: number;
+  sport: string;
+  start_time: string;
+  total_ascent?: number;
+  total_distance: number;
+  total_elapsed_time: number;
+}
+
+const fitData = (session: FitSessionFixture) => ({
   // List mode: sessions sit at the top level; `activity` is the bare
   // activity message (no nested sessions).
   activity: { num_sessions: 1 },
-  sessions: [session],
   records: [
     {
       altitude: 500,
@@ -30,16 +38,24 @@ const fitData = (session: Record<string, unknown>) => ({
       timestamp: "2026-05-18T08:00:00Z",
     },
   ],
+  sessions: [session],
 });
 
-const SESSION = {
-  avg_speed: 30, // km/h
+const SESSION_WITHOUT_ASCENT = {
+  // km/h
+  avg_speed: 30,
   sport: "cycling",
   start_time: "2026-05-18T07:00:00Z",
-  total_ascent: 450, // metres
-  total_distance: 42_195, // metres
+  // metres
+  total_distance: 42_195,
   total_elapsed_time: 3600,
-};
+} satisfies FitSessionFixture;
+
+const SESSION = {
+  ...SESSION_WITHOUT_ASCENT,
+  // metres
+  total_ascent: 450,
+} satisfies FitSessionFixture;
 
 describe("fitDataToParsed", () => {
   test("converts the session distance from metres to km", () => {
@@ -60,8 +76,7 @@ describe("fitDataToParsed", () => {
   });
 
   test("derives elevation gain from records without total_ascent", () => {
-    const { total_ascent: _omit, ...withoutAscent } = SESSION;
-    const parsed = fitDataToParsed(fitData(withoutAscent), "ride.fit");
+    const parsed = fitDataToParsed(fitData(SESSION_WITHOUT_ASCENT), "ride.fit");
     expect(parsed.elevationGainM).toBeGreaterThan(0);
   });
 
@@ -74,9 +89,9 @@ describe("fitDataToParsed", () => {
   });
 
   test("still reads a cascade-mode session nested under activity", () => {
-    const { sessions: _omit, ...rest } = fitData(SESSION);
+    // No top-level `sessions`: the session only lives under `activity`.
     const parsed = fitDataToParsed(
-      { ...rest, activity: { sessions: [SESSION] } },
+      { activity: { sessions: [SESSION] }, records: fitData(SESSION).records },
       "ride.fit"
     );
     expect(parsed.elevationGainM).toBe(450);

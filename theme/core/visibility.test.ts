@@ -119,11 +119,13 @@ describe("themeAvailability", () => {
     const avail = themeAvailability(FULL, { uses: ["heartRate", "route"] });
     expect(avail.heartRate).toBe(true);
     expect(avail.route).toBe(true);
-    expect(avail.cadence).toBe(false); // present in data, not declared
+    // present in data, not declared
+    expect(avail.cadence).toBe(false);
   });
 
   test("declared capability without data stays unavailable", () => {
-    const noHr: ActivityData = { ...FULL, avgHeartRate: undefined };
+    const noHr: ActivityData = { ...FULL };
+    delete noHr.avgHeartRate;
     const avail = themeAvailability(noHr, { uses: ["heartRate"] });
     expect(avail.heartRate).toBe(false);
   });
