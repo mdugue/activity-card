@@ -5,6 +5,11 @@ import { detectSport, finalise } from "@/lib/parse-shared";
 import type { TrackPoint } from "@/lib/parse-shared";
 
 describe("detectSport", () => {
+  test("splits camelCase names into words", () => {
+    expect(detectSport(undefined, "MorningRun.gpx")).toBe("run");
+    expect(detectSport(undefined, "EveningSwim.fit")).toBe("swim");
+  });
+
   test("maps cycling keywords from the raw type", () => {
     expect(detectSport("Ride", "x.gpx")).toBe("ride");
     expect(detectSport("VirtualRide", "x.gpx")).toBe("ride");

@@ -200,7 +200,13 @@ export function detectSport(
   if (declared) {
     return declared;
   }
-  const words = new Set(filename.toLowerCase().split(/[^a-z]+/u));
+  // Split camelCase ("MorningRun") before lowercasing so it yields whole words.
+  const words = new Set(
+    filename
+      .replaceAll(/([a-z])([A-Z])/gu, "$1 $2")
+      .toLowerCase()
+      .split(/[^a-z]+/u)
+  );
   for (const [sport, hints] of NAME_SPORT_WORDS) {
     if (hints.some((w) => words.has(w))) {
       return sport;
