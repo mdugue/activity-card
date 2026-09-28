@@ -15,11 +15,11 @@ is listed under "Findings not yet planned" so it can be picked later
 
 | Plan | Title                                                                          | Priority | Effort | Depends on | Status |
 | ---- | ------------------------------------------------------------------------------ | -------- | ------ | ---------- | ------ |
-| 001  | [FIT uploads keep their elevation](./001-fit-elevation-in-metres.md)           | P1       | S      | —          | TODO   |
-| 002  | [Local calendar date in every timezone](./002-local-calendar-date.md)          | P1       | S      | —          | TODO   |
-| 003  | [Sign the OAuth bounce target](./003-sign-oauth-bounce-target.md)              | P1       | S      | —          | TODO   |
-| 004  | [Declared sport wins; robust GPX](./004-sport-detection-and-gpx-robustness.md) | P2       | S      | —          | TODO   |
-| 005  | [Agent-facing doc drift](./005-fix-agent-facing-doc-drift.md)                  | P2       | S      | —          | TODO   |
+| 001  | [FIT uploads keep their elevation](./001-fit-elevation-in-metres.md)           | P1       | S      | —          | DONE   |
+| 002  | [Local calendar date in every timezone](./002-local-calendar-date.md)          | P1       | S      | —          | DONE   |
+| 003  | [Sign the OAuth bounce target](./003-sign-oauth-bounce-target.md)              | P1       | S      | —          | DONE   |
+| 004  | [Declared sport wins; robust GPX](./004-sport-detection-and-gpx-robustness.md) | P2       | S      | —          | DONE   |
+| 005  | [Agent-facing doc drift](./005-fix-agent-facing-doc-drift.md)                  | P2       | S      | —          | DONE   |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
@@ -31,6 +31,21 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - The architecture review's "deepen activity ingestion" candidate would
   absorb 001/002/004. Land these small fixes first — they come with the
   tests that a later deepening needs as a safety net.
+
+## Implemented directly (2026-09-28)
+
+These findings were fixed without a separate plan: F6 (photo proxy
+hardening), F7 (landing route code-split: first-load JS for `/` down from
+~551 KB to ~327 KB gzip), F9 (palette sampled at max 1024 px), F10 (one
+`lib/profile-signal.ts` rule), F11 (baseline security headers), F12 (export
+single-flight, late blob revoke, error toast), F13 (stale photo resize
+dropped), F16 (picker uses `lib/format`), F17 (Panorama removed,
+`StrataField` rename), F18 (token response validation), F19 (`formatPaceSec`
+rounding), F20 (debounced UI persistence).
+
+Still open: F8 (multisport FIT splitting — needs real `.fit` fixtures), F14
+(slide-strip render cost — profile first), F15 (unused shadcn vendor files —
+maintainer call), and the direction options below.
 
 ## Findings not yet planned (vetted, ordered by leverage)
 
