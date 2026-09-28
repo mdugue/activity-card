@@ -18,6 +18,7 @@ import { resolveDeckStyle } from "@/theme/carousel/resolve";
 import { statOptsFor } from "@/theme/carousel/stats";
 import type { ColorScheme } from "@/theme/core/colors";
 import type { ExportFormat } from "@/theme/core/export-formats";
+import type { ThemeConfig } from "@/theme/core/params/kinds";
 import { DEFAULT_VISIBILITY } from "@/theme/core/visibility";
 import type { Visibility } from "@/theme/core/visibility";
 import { CoverPhoto } from "@/theme/shared/cover-photo";
@@ -31,7 +32,7 @@ interface CarouselDeckProps {
   colors: ColorScheme;
   /** the theme's coerced parameter config (STRATA mood / density / legend) —
    *  feeds both the spanning `canvas` and the theme's `resolveStyle` */
-  config?: Record<string, unknown>;
+  config?: ThemeConfig;
   data: ActivityData;
   /** Target export format. The strip renders directly at this size and feeds the
    *  geometry downward; falls back to the surrounding FormatContext (the 4:5 feed
@@ -52,9 +53,7 @@ export const CarouselDeck = ({
   data,
   theme,
   colors,
-  // The theme's own defaults, NOT {} — a bare mount (story, test) must hand a
-  // param-driven canvas (STRATA's mood/density) a complete config.
-  config = theme.defaults,
+  config: configProp,
   photoUrl,
   imageTransform,
   imageSize = null,
@@ -62,6 +61,9 @@ export const CarouselDeck = ({
   visibility = DEFAULT_VISIBILITY,
   format,
 }: CarouselDeckProps) => {
+  // The theme's own defaults, NOT {} — a bare mount (story, test) must hand a
+  // param-driven canvas (STRATA's mood/density) a complete config.
+  const config = configProp ?? theme.defaults;
   const total = theme.panels.length;
   // Explicit prop wins, else inherit the ambient FormatContext (feed by default).
   const ctxFormat = useFormat();
@@ -107,7 +109,10 @@ export const CarouselDeck = ({
             sized/clamped against it. Rendering a cover fallback before then (or on
             decode failure) would drop the rotate/flip/filter effects and use
             different geometry than the export, so preview and output diverge. */}
-          {showPhoto && photoUrl && imageSize ? (
+          {showPhoto &&
+          photoUrl !== undefined &&
+          photoUrl !== null &&
+          imageSize ? (
             <CoverPhoto
               boxH={slideH}
               boxW={stripW}
@@ -154,6 +159,10 @@ export const CarouselDeck = ({
           {/* Per-panel foreground, one component per slide. */}
           {theme.panels.map((Panel, i) => (
             <div
+              // Slides are positional: a theme's panel list is fixed, never
+              // reordered or filtered, and one component may fill several
+              // slots (Frame, Press) — the slot index IS the slide's identity.
+              // oxlint-disable-next-line react-doctor/no-array-index-as-key -- positional slide slots (see above); no other stable id exists
               key={`slide-${i}`}
               style={{
                 height: slideH,
