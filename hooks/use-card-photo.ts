@@ -7,7 +7,7 @@
 // effect cleanup). `app/page.tsx` composes this with the visibility flag —
 // the `photoBackdrop` switch is deliberately NOT owned here.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 
 import { IDENTITY_TRANSFORM } from "@/lib/image-transform";
@@ -54,7 +54,10 @@ export interface UseCardPhoto {
 export function useCardPhoto(activePolicy: ThemePhotoPolicy): UseCardPhoto {
   const [url, setUrl] = useState<string | null>(null);
   const policyRef = useRef(activePolicy);
-  useEffect(() => {
+  // Layout effect, not passive: it runs synchronously in the commit, so a
+  // resize promise resolving right after a theme switch already sees the new
+  // policy (a passive effect would leave a gap before it runs).
+  useLayoutEffect(() => {
     policyRef.current = activePolicy;
   }, [activePolicy]);
   // Bumped by every adopt/clear; an async adopt only lands if it's still the
