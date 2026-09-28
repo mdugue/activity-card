@@ -86,6 +86,14 @@ export function formatNumber(n?: number, digits = 0): string {
   return n.toFixed(digits);
 }
 
+const CALENDAR_DATE_RE = /^\d{4}-\d{2}-\d{2}$/u;
+
+/**
+ * ISO date → "May 18, 2026". A bare `YYYY-MM-DD` is a calendar date, not an
+ * instant: `new Date()` reads it as UTC midnight, so it is formatted in UTC to
+ * print the same day in every viewer timezone. Full timestamps keep the
+ * viewer's local day.
+ */
 export function formatDate(iso?: string): string {
   if (!iso) {
     return "";
@@ -98,6 +106,7 @@ export function formatDate(iso?: string): string {
     month: "long",
     day: "numeric",
     year: "numeric",
+    ...(CALENDAR_DATE_RE.test(iso) && { timeZone: "UTC" }),
   });
 }
 

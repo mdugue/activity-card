@@ -107,6 +107,10 @@ describe("formatDate", () => {
     expect(formatDate("2026-05-18")).toBe("May 18, 2026");
   });
 
+  test("keeps the calendar day across a year boundary", () => {
+    expect(formatDate("2026-01-01")).toBe("January 1, 2026");
+  });
+
   test("returns an empty string for missing input", () => {
     expect(formatDate()).toBe("");
     expect(formatDate("")).toBe("");

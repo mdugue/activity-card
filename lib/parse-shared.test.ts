@@ -109,6 +109,16 @@ describe("finalise", () => {
     expect(valid.date).toBe("2026-05-18");
   });
 
+  test("keeps a bare calendar date unchanged in every timezone", () => {
+    const a = finalise({
+      points: linePoints(),
+      sport: "run",
+      name: "r",
+      isoDate: "2026-05-18",
+    });
+    expect(a.date).toBe("2026-05-18");
+  });
+
   test("omits splits for swims", () => {
     const a = finalise({ points: linePoints(), sport: "swim", name: "s" });
     expect(a.splits).toBeUndefined();

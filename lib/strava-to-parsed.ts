@@ -94,6 +94,13 @@ export function stravaToParsed(
   });
 
   // Overlay Strava-provided fields the finalise pipeline can't infer.
+  // `start_date_local` is wall-clock time with a misleading `Z`, so its first
+  // 10 chars are the local calendar date. It is overlaid rather than passed
+  // as `isoDate`, which must stay the real instant (`start_date`) because
+  // `finalise` derives `startTimeMs` from it for triathlon ordering.
+  if (detail.start_date_local) {
+    parsed.date = detail.start_date_local.slice(0, 10);
+  }
   const athleteName = [detail.athlete?.firstname, detail.athlete?.lastname]
     .filter(Boolean)
     .join(" ");
