@@ -75,12 +75,16 @@ function toText(v: string | number | undefined): string | undefined {
   return v === undefined || v === "" ? undefined : String(v);
 }
 
-/** The value of the first key in `obj` ending with `suffix`, whatever its namespace prefix. */
-function pickBySuffix(obj: unknown, suffix: string): unknown {
+/** The value of the first key in `obj` named `local`, whatever its namespace
+ *  prefix (`gpxtpx:hr`, `ns3:hr`) — or unprefixed, when the exporter declares
+ *  the extension namespace as the default (`<TrackPointExtension xmlns=…>`). */
+function pickByLocalName(obj: unknown, local: string): unknown {
   if (typeof obj !== "object" || obj === null) {
     return;
   }
-  const key = Object.keys(obj).find((k) => k.endsWith(suffix));
+  const key = Object.keys(obj).find(
+    (k) => k === local || k.endsWith(`:${local}`)
+  );
   return key === undefined ? undefined : (obj as Record<string, unknown>)[key];
 }
 
@@ -119,14 +123,14 @@ export function parseGpx(text: string, filename: string): ParsedActivity {
   const trkType = trks.map((t) => toText(t.type)).find(Boolean);
 
   const points: TrackPoint[] = flatPts.map((p) => {
-    const ext = pickBySuffix(p.extensions, ":TrackPointExtension");
+    const ext = pickByLocalName(p.extensions, "TrackPointExtension");
     return {
       lat: toFiniteNumber(p["@_lat"]),
       lng: toFiniteNumber(p["@_lon"]),
       elevation: toFiniteNumber(p.ele),
       time: p.time ? toFiniteNumber(Date.parse(p.time)) : undefined,
-      heartRate: toFiniteNumber(pickBySuffix(ext, ":hr")),
-      cadence: toFiniteNumber(pickBySuffix(ext, ":cad")),
+      heartRate: toFiniteNumber(pickByLocalName(ext, "hr")),
+      cadence: toFiniteNumber(pickByLocalName(ext, "cad")),
     };
   });
 
