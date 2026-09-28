@@ -38,16 +38,6 @@ import react from "ultracite/oxlint/react";
 
 export default defineConfig({
   extends: [core, react, next, jest, jsPlugins, nextJsPlugins, antiSlop],
-  // Re-declared on the root so dependency analysers see the plugin packages
-  // (oxlint itself loads them from the extended presets either way).
-  jsPlugins: [
-    ...(jsPlugins.jsPlugins ?? []),
-    ...(antiSlop.jsPlugins ?? []),
-    { name: "storybook", specifier: "eslint-plugin-storybook" },
-    { name: "remotion", specifier: "@remotion/eslint-plugin" },
-  ],
-  // oxlint does not merge `settings` from extended configs.
-  settings: jsPluginSettings,
   ignorePatterns: [
     ...(core.ignorePatterns ?? []),
     // Vendored agent skills (`.agents/skills`, `.claude/skills`), installed
@@ -57,6 +47,14 @@ export default defineConfig({
     // Generated, gitignored test artifacts.
     "**/playwright-report",
     "**/test-results",
+  ],
+  // Re-declared on the root so dependency analysers see the plugin packages
+  // (oxlint itself loads them from the extended presets either way).
+  jsPlugins: [
+    ...(jsPlugins.jsPlugins ?? []),
+    ...(antiSlop.jsPlugins ?? []),
+    { name: "storybook", specifier: "eslint-plugin-storybook" },
+    { name: "remotion", specifier: "@remotion/eslint-plugin" },
   ],
   overrides: [
     {
@@ -109,6 +107,15 @@ export default defineConfig({
       },
     },
     {
+      // Framework-mandated names: Next.js dispatches Route Handlers by their
+      // exported HTTP-verb name (`GET`, `POST`), which no camelCase pattern
+      // can match.
+      files: ["app/**/route.ts"],
+      rules: {
+        "sonarjs/function-name": "off",
+      },
+    },
+    {
       // Generated code, not ours: `components/ui/**` and `hooks/use-mobile.ts`
       // are scaffolded by the shadcn CLI and re-added with `bunx shadcn add` —
       // never hand-edited (AGENTS.md). Lint them at the level the generator
@@ -134,13 +141,6 @@ export default defineConfig({
         "jsx-a11y/label-has-associated-control": "off",
         "jsx-a11y/no-noninteractive-element-interactions": "off",
         "jsx-a11y/prefer-tag-over-role": "off",
-        "react/button-has-type": "off",
-        "react/function-component-definition": "off",
-        "react/hook-use-state": "off",
-        "react/jsx-no-constructed-context-values": "off",
-        "react/no-danger": "off",
-        "react/no-unstable-nested-components": "off",
-        "react/set-state-in-effect": "off",
         "react-doctor/effect-needs-cleanup": "off",
         "react-doctor/js-combine-iterations": "off",
         "react-doctor/no-array-index-as-key": "off",
@@ -150,6 +150,13 @@ export default defineConfig({
         "react-doctor/only-export-components": "off",
         "react-doctor/prefer-dynamic-import": "off",
         "react-doctor/rerender-memo-before-early-return": "off",
+        "react/button-has-type": "off",
+        "react/function-component-definition": "off",
+        "react/hook-use-state": "off",
+        "react/jsx-no-constructed-context-values": "off",
+        "react/no-danger": "off",
+        "react/no-unstable-nested-components": "off",
+        "react/set-state-in-effect": "off",
         "sonarjs/expression-complexity": "off",
         "sonarjs/function-name": "off",
         "sonarjs/max-union-size": "off",
@@ -172,4 +179,6 @@ export default defineConfig({
       },
     },
   ],
+  // oxlint does not merge `settings` from extended configs.
+  settings: jsPluginSettings,
 });

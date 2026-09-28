@@ -30,10 +30,16 @@ If a decision is in SPEC.md, follow it. If you want to deviate, raise it and ask
 
 ## Tech stack
 
-- Next.js (App Router) + TypeScript 7, checked with `tsc` (the native compiler)
+- Next.js (App Router) + TypeScript 7, checked with `tsc` (the native compiler).
+  TS 7 is installed as `@typescript/native` (it owns the `tsc` binary);
+  `typescript` itself is aliased to `@typescript/typescript6`, the TS 6 API,
+  for tools that still need the compiler API (the sonarjs / github lint
+  plugins, Next's build, Storybook's docgen) — the side-by-side setup the TS 7
+  release notes recommend. Don't "fix" the alias back to plain `typescript`.
 - Bun 1.4 as package manager, script runner and unit-test runner
   (pinned in `.bun-version`, which CI reads)
-- oxlint + oxfmt for linting and formatting, configured through Ultracite
+- oxlint (type-aware, via `oxlint-tsgolint`) + oxfmt, configured through
+  Ultracite with every applicable preset — see [Conventions](#conventions)
 - Tailwind v4
 - `snapdom` (`@zumer/snapdom`) for DOM-to-PNG
 - `fast-xml-parser` for GPX, `fit-file-parser` for .fit
@@ -158,9 +164,15 @@ appear.
 - **Lint + typecheck must be green** before pushing: `bun lint && bun typecheck`.
   `bun lint` is one command for both halves — `oxfmt --check` then `oxlint` with
   `--type-aware`, so the promise, deprecation and assertion rules that need type
-  information run too. Rule decisions and the reason for each deviation from
-  Ultracite's defaults live in `oxlint.config.ts`; read it before adding a
-  suppression comment.
+  information run too. `oxlint.config.ts` takes every applicable Ultracite
+  preset as shipped (core, react, next, jest, js-plugins — github, sonarjs,
+  React Doctor — next/js-plugins, anti-slop) plus eslint-plugin-storybook and
+  @remotion/eslint-plugin, with **no rule deviations** (the only scoped
+  overrides are the vendored shadcn files and Next's verb-named Route
+  Handlers): when a rule fires, change the code. A targeted
+  `// oxlint-disable-next-line <rule> -- <reason>` is the escape hatch for a
+  single line that genuinely cannot comply (a framework contract, a pixel-exact
+  poster size); never a config switch, never a file-level disable.
   `bun run build-storybook` is a useful local smoke check when you touch themes
   or stories; it is deliberately not a CI gate.
 
@@ -222,6 +234,10 @@ public/               Static assets.
 - **Files** are `kebab-case.tsx` / `kebab-case.ts`.
 - **Components** are `PascalCase` named exports. No default exports except for Next.js
   page/layout files.
+- **Functions are arrow-function consts** — `export const Foo = (props: FooProps) => …`,
+  never `function` declarations (`func-style`, `react/function-component-definition`).
+  Without hoisting, a module reads bottom-up: helpers and constants first, the
+  exported component that uses them last (`no-use-before-define`).
 - **Hooks** start with `use` and live in `hooks/`.
 - Prefer `interface` over `type` for object shapes (`typescript/consistent-type-definitions`).
 - Use the `@/...` path alias for absolute imports across folders. Sibling files may use
@@ -251,8 +267,7 @@ public/               Static assets.
 ### Vendor files
 
 `components/ui/**` and `hooks/use-mobile.ts` are scaffolded by the shadcn / Next.js CLIs.
-`oxlint.config.ts` has one override for them that relaxes the rules shadcn's generated
-code violates, so a re-scaffold is never a lint failure — they are still linted and
+`oxlint.config.ts` has one override for them that relaxes the rules shadcn's generated code violates, so a re-scaffold is never a lint failure — they are still linted and
 formatted, just at the level their generator ships. Don't restyle vendor files; if a
 primitive doesn't fit, wrap it in `components/app/`. When re-adding one, check its
 import of `cn`: newer registry output imports it from a `cn` package, while this repo

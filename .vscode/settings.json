@@ -6,7 +6,7 @@
     "source.fixAll.oxc": "explicit"
   },
   "emmet.showExpandedAbbreviation": "never",
-  "js/ts.tsdk.path": "node_modules/typescript/lib",
+  "js/ts.tsdk.path": "node_modules/@typescript/native/lib",
   "js/ts.tsdk.promptToUseWorkspaceVersion": true,
   "oxc.enable": true,
   "oxc.fmt.experimental": true,
