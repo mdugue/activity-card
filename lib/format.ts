@@ -86,6 +86,8 @@ export function formatNumber(n?: number, digits = 0): string {
   return n.toFixed(digits);
 }
 
+const CALENDAR_DATE_RE = /^\d{4}-\d{2}-\d{2}$/u;
+
 export function formatDate(iso?: string): string {
   if (!iso) {
     return "";
@@ -98,6 +100,10 @@ export function formatDate(iso?: string): string {
     month: "long",
     day: "numeric",
     year: "numeric",
+    // A bare `YYYY-MM-DD` is a calendar date, not an instant: JS parses it as
+    // UTC midnight, so format it in UTC or viewers west of UTC see the day
+    // before.
+    ...(CALENDAR_DATE_RE.test(iso) && { timeZone: "UTC" }),
   });
 }
 

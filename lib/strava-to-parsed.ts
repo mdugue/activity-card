@@ -103,6 +103,7 @@ export function stravaToParsed(
   if (location) {
     parsed.location = location;
   }
+  parsed.date = localCalendarDate(detail) ?? parsed.date;
   // Carry the Strava activity id forward so the UI can render a
   // "View on Strava" link (§3 of the brand guidelines).
   if (detail.id !== undefined) {
@@ -110,6 +111,16 @@ export function stravaToParsed(
   }
 
   return [parsed];
+}
+
+/**
+ * `start_date_local` is the athlete's wall-clock time with a misleading `Z`
+ * suffix, so its first 10 characters are the local calendar date. It only
+ * replaces the card date: `isoDate` stays `start_date`, the real instant that
+ * `startTimeMs` (and triathlon ordering) is derived from.
+ */
+function localCalendarDate(detail: StravaActivityDetail): string | undefined {
+  return detail.start_date_local?.slice(0, 10) || undefined;
 }
 
 // The type parameter names what the caller expects of an `unknown` upstream

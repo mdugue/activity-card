@@ -371,15 +371,25 @@ function round(n: number, digits: number): number {
   return Math.round(n * f) / f;
 }
 
+const CALENDAR_DATE_RE = /^\d{4}-\d{2}-\d{2}$/u;
+
+/**
+ * The activity's calendar date as `YYYY-MM-DD`. A bare calendar date passes
+ * through unchanged; an instant is read in the device's timezone — the best
+ * client-side proxy for where the athlete was — not in UTC, which would stamp
+ * an early-morning run east of UTC with the previous day.
+ */
 function toIsoDate(input?: string | number | Date): string {
-  if (!input) {
-    return new Date().toISOString().slice(0, 10);
+  if (typeof input === "string" && CALENDAR_DATE_RE.test(input)) {
+    return input;
   }
-  const d = new Date(input);
-  if (Number.isNaN(d.getTime())) {
-    return new Date().toISOString().slice(0, 10);
-  }
-  return d.toISOString().slice(0, 10);
+  const d = input ? new Date(input) : new Date();
+  return localCalendarDate(Number.isNaN(d.getTime()) ? new Date() : d);
+}
+
+function localCalendarDate(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 function prettifyName(name: string): string {

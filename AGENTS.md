@@ -79,6 +79,11 @@ can't try to execute Playwright specs through the wrong runner. Add new
 unit-test roots to that script (and `bunfig.toml`'s note) if tests grow beyond
 `lib/` and `theme/`.
 
+The unit-test scripts pin `TZ=America/Los_Angeles` so a hidden UTC assumption
+fails locally and in CI, not only for users west of UTC. `ActivityData.date` is
+a calendar date (`YYYY-MM-DD`), never an instant — format it with
+`timeZone: "UTC"` or split the string.
+
 ## Themes — two families
 
 Effort has **two theme families**. Every theme — either family — is expressed

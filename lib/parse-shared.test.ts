@@ -60,6 +60,27 @@ describe("finalise", () => {
     expect(a.durationSec).toBe(600);
   });
 
+  test("a bare calendar date is stored unchanged", () => {
+    const a = finalise({
+      points: [],
+      sport: "run",
+      name: "test",
+      isoDate: "2026-05-18",
+    });
+    expect(a.date).toBe("2026-05-18");
+  });
+
+  test("an instant is stored as the device-local calendar date", () => {
+    const start = new Date(2026, 4, 18, 23, 30); // 23:30 local time
+    const a = finalise({
+      points: [],
+      sport: "run",
+      name: "test",
+      isoDate: start.toISOString(),
+    });
+    expect(a.date).toBe("2026-05-18");
+  });
+
   test("prefers session-level totals over derived values", () => {
     const a = finalise({
       points: linePoints(),
