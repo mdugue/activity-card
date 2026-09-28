@@ -6,6 +6,8 @@ import {
   encodeOAuthState,
   isAllowedBounceOrigin,
   safeRelativePath,
+  signBounce,
+  verifyBounce,
 } from "@/lib/strava-oauth-state";
 import type { OAuthStatePayload } from "@/lib/strava-oauth-state";
 
@@ -148,5 +150,50 @@ describe("safeRelativePath", () => {
     expect(safeRelativePath("/foo\r\nLocation: https://evil")).toBeNull();
     expect(safeRelativePath("/foo\u0000bar")).toBeNull();
     expect(safeRelativePath("/foo\x7Fbar")).toBeNull();
+  });
+});
+
+describe("bounce signature", () => {
+  const B = "https://effort-git-feature-team.vercel.app";
+  const R = "nonce-abc";
+  const KEY = "test-signing-key";
+
+  test("verifies a signature minted for the same b, r and secret", () => {
+    expect(verifyBounce(B, R, signBounce(B, R, KEY), KEY)).toBe(true);
+  });
+
+  test("rejects the signature when b is swapped for an attacker host", () => {
+    const s = signBounce(B, R, KEY);
+    expect(verifyBounce("https://evil-team.vercel.app", R, s, KEY)).toBe(false);
+  });
+
+  test("rejects the signature when replayed with another nonce", () => {
+    const s = signBounce(B, R, KEY);
+    expect(verifyBounce(B, "other-nonce", s, KEY)).toBe(false);
+  });
+
+  test("rejects a signature made with a different secret", () => {
+    const s = signBounce(B, R, "some-other-key");
+    expect(verifyBounce(B, R, s, KEY)).toBe(false);
+  });
+
+  test("rejects a missing or wrong-length signature", () => {
+    expect(verifyBounce(B, R, undefined, KEY)).toBe(false);
+    expect(verifyBounce(B, R, "", KEY)).toBe(false);
+    expect(verifyBounce(B, R, "short", KEY)).toBe(false);
+  });
+
+  test("s survives the state round-trip; a non-string s is dropped", () => {
+    const s = signBounce(B, R, KEY);
+    expect(decodeOAuthState(encodeOAuthState({ r: R, b: B, s }))).toEqual({
+      r: R,
+      b: B,
+      p: undefined,
+      s,
+    });
+    const encoded = Buffer.from(
+      JSON.stringify({ r: R, b: B, s: 123 })
+    ).toString("base64url");
+    expect(decodeOAuthState(encoded)?.s).toBeUndefined();
   });
 });

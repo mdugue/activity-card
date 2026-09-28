@@ -3,7 +3,11 @@ import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { setOAuthState } from "@/lib/strava-cookies";
-import { encodeOAuthState, safeRelativePath } from "@/lib/strava-oauth-state";
+import {
+  encodeOAuthState,
+  safeRelativePath,
+  signBounce,
+} from "@/lib/strava-oauth-state";
 import type { OAuthStatePayload } from "@/lib/strava-oauth-state";
 
 /**
@@ -15,12 +19,15 @@ import type { OAuthStatePayload } from "@/lib/strava-oauth-state";
  * `redirect_uri` (from `STRAVA_REDIRECT_URI`), and stuffing the actual
  * initiating origin into `state.b`. The production callback notices the
  * mismatch and 302s back to the preview, which then runs the normal
- * token exchange against its own cookie store.
+ * token exchange against its own cookie store. `state.b` is signed
+ * (`state.s`, keyed with `STRAVA_CLIENT_SECRET` and bound to the nonce) so
+ * production only relays codes to origins one of our deployments vouched for.
  */
 export async function GET(request: Request) {
   const clientId = process.env.STRAVA_CLIENT_ID;
+  const clientSecret = process.env.STRAVA_CLIENT_SECRET;
   const redirectUri = process.env.STRAVA_REDIRECT_URI;
-  if (!(clientId && redirectUri)) {
+  if (!(clientId && clientSecret && redirectUri)) {
     return NextResponse.json(
       { error: "Strava is not configured on this server" },
       { status: 500 }
@@ -36,9 +43,11 @@ export async function GET(request: Request) {
 
   const payload: OAuthStatePayload = { r: nonce };
   // Bounce field: present only when this deploy isn't the registered
-  // callback host. Production reads it to relay the code back to us.
+  // callback host. Production reads it to relay the code back to us, and
+  // only does so when the signature (bound to this nonce) verifies.
   if (currentOrigin !== redirectOrigin) {
     payload.b = currentOrigin;
+    payload.s = signBounce(currentOrigin, nonce, clientSecret);
   }
   // Optional same-origin path the user wanted to land on (e.g. a deep
   // link). Anything cross-origin is dropped here AND re-validated in

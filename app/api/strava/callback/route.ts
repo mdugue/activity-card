@@ -10,6 +10,7 @@ import {
 import {
   decodeOAuthState,
   isAllowedBounceOrigin,
+  verifyBounce,
 } from "@/lib/strava-oauth-state";
 
 export async function GET(request: Request) {
@@ -43,11 +44,15 @@ export async function GET(request: Request) {
 
   // ── Production bounce ──────────────────────────────────────────────
   // If the initiator advertised a bounce origin different from ours,
-  // we're the production callback acting as a relay. Validate the
-  // target host (open-redirect defence) and 302 the user back to the
-  // preview deploy with the original `code` + `state` intact — the
+  // we're the production callback acting as a relay. Verify the target
+  // was signed by one of our deployments (HMAC bound to this nonce), check
+  // the host allowlist as a second filter, and only then 302 the user back
+  // to the preview deploy with the original `code` + `state` intact — the
   // preview will read its own state cookie and do the real exchange.
   if (payload.b && payload.b !== url.origin) {
+    if (!verifyBounce(payload.b, payload.r, payload.s, clientSecret)) {
+      return NextResponse.redirect(new URL("/?strava=bounce_rejected", url));
+    }
     const registeredHost = new URL(redirectUri).hostname;
     if (!isAllowedBounceOrigin(payload.b, registeredHost)) {
       return NextResponse.redirect(new URL("/?strava=bounce_rejected", url));

@@ -193,6 +193,7 @@ origin into a structured `state` payload:
 state = base64url(JSON.stringify({
   r: random_nonce,         // CSRF — must match the strava_oauth_state cookie
   b?: initiator_origin,    // set only when current origin ≠ registered host
+  s?: bounce_signature,    // HMAC over b + r; present whenever b is
   p?: same_origin_path     // optional landing path after success
 }))
 ```
@@ -200,13 +201,15 @@ state = base64url(JSON.stringify({
 The flow:
 
 1. **Preview-XYZ.vercel.app** sets a `strava_oauth_state` cookie on its
-   own origin, builds `state.b = "https://preview-XYZ.vercel.app"`, and
-   redirects to Strava with `redirect_uri = production_url`.
+   own origin, builds `state.b = "https://preview-XYZ.vercel.app"`, signs
+   it into `state.s`, and redirects to Strava with
+   `redirect_uri = production_url`.
 2. **Strava** redirects to the production callback (which it has on
    file).
 3. **Production callback** decodes `state`, sees `b !== own origin`,
-   validates `b` is in the bounce allowlist (production host **or**
-   `*.vercel.app`), and 302s to
+   verifies the signature `s`, then checks `b` against the host
+   allowlist (registered host or `STRAVA_BOUNCE_ALLOWED_HOST_SUFFIX`),
+   and 302s to
    `${b}/api/strava/callback?code=...&state=...`. Production does NOT
    exchange the code or read the state cookie — it has neither.
 4. **Preview's callback** reads its own `strava_oauth_state` cookie,
@@ -214,12 +217,27 @@ The flow:
    token cookies on the preview origin, and redirects to `state.p`
    (or `/?strava=connected`).
 
-Open-redirect defence: the bounce allowlist is **explicit and
-env-driven**. Set `STRAVA_BOUNCE_ALLOWED_HOST_SUFFIX` to your project's
-Vercel namespace — only hosts ending with that suffix (or matching the
-registered callback host) get the relay. Anything else short-circuits
-to `/?strava=bounce_rejected`, surfacing a toast. With no suffix set,
-_no_ cross-origin bounce is permitted, which is the safe default for
+**Signed bounce target (the actual authorization).** The initiating
+deploy sets `state.s = HMAC-SHA256(b + "\n" + r)` (base64url), keyed
+with `STRAVA_CLIENT_SECRET` (`signBounce` in
+`lib/strava-oauth-state.ts`). The production callback recomputes it and
+compares in constant time (`verifyBounce`) **before** anything else about
+`b` is considered; a missing or wrong signature short-circuits to
+`/?strava=bounce_rejected`. Binding the nonce `r` stops a signature
+being replayed with a different state. Every deployment must therefore
+share the same `STRAVA_CLIENT_SECRET` — which they already must, since
+each one exchanges codes for the same Strava app. Deploy order: ship
+production first; OAuth attempts started on a preview before production
+understands `s` are rejected once and succeed on retry.
+
+**Host allowlist (coarse second filter).** Set
+`STRAVA_BOUNCE_ALLOWED_HOST_SUFFIX` to your project's Vercel namespace.
+A host passes when it equals an entry, or ends with `.entry` or
+`-entry` (the dash form is how Vercel names previews:
+`effort-git-branch-<team>.vercel.app`), or matches the registered
+callback host. Anything else short-circuits to
+`/?strava=bounce_rejected`, surfacing a toast. With no suffix set, _no_
+cross-origin bounce is permitted, which is the safe default for
 single-deploy or non-Vercel setups.
 
 Example:
@@ -232,8 +250,10 @@ STRAVA_BOUNCE_ALLOWED_HOST_SUFFIX=manuel-dugues-projects.vercel.app
 Why this matters: anyone can deploy `evil.vercel.app` and craft a state
 payload directly with Strava (`?state=base64({b:"https://evil.vercel.app",…})`).
 Without `client_secret` they can't exchange the leaked code for tokens,
-but the code is still confidential data — the suffix-based allowlist
-keeps the relay scoped to _your_ previews.
+but the code is still confidential data. The suffix alone can't keep it
+safe — `vercel.app` hostnames are user-chosen, so an attacker can
+register one ending in `-<your-team>.vercel.app` — which is why the
+signature, not the suffix, decides whether a code is relayed.
 
 For local dev / E2E where preview-style origins run over `http://`
 (localhost), set `STRAVA_ALLOW_HTTP_BOUNCE=1` to relax the protocol

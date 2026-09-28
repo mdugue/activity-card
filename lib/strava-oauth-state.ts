@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 /**
  * Structured `state` payload for the Strava OAuth round-trip. The plain
@@ -15,11 +16,16 @@ import { Buffer } from "node:buffer";
  *   p — optional same-origin path the user should land on post-success
  *       (e.g. `/?strava=connected`). Validated against the request
  *       origin in the callback; cross-origin values are dropped.
+ *   s — signature over the bounce target: HMAC-SHA256 of `b` bound to the
+ *       nonce `r`, keyed with the server-only `STRAVA_CLIENT_SECRET` (see
+ *       `signBounce` / `verifyBounce`). Present whenever `b` is.
  */
 export interface OAuthStatePayload {
   b?: string;
   p?: string;
   r: string;
+  /** HMAC over the bounce target `b`, bound to the nonce `r`. */
+  s?: string;
 }
 
 export function encodeOAuthState(payload: OAuthStatePayload): string {
@@ -40,12 +46,42 @@ export function decodeOAuthState(raw: string): OAuthStatePayload | null {
   ) {
     return null;
   }
-  const p = parsed as { b?: unknown; p?: unknown; r: string };
+  const p = parsed as { b?: unknown; p?: unknown; r: string; s?: unknown };
   return {
     r: p.r,
     b: typeof p.b === "string" ? p.b : undefined,
     p: typeof p.p === "string" ? p.p : undefined,
+    s: typeof p.s === "string" ? p.s : undefined,
   };
+}
+
+/**
+ * Sign a bounce target. HMAC-SHA256 over `${b}\n${r}` (base64url), keyed
+ * with a secret every deployment of this app shares and an attacker does
+ * not have. Binding the nonce `r` stops one signature being replayed with
+ * a different state.
+ */
+export function signBounce(b: string, r: string, secret: string): string {
+  return createHmac("sha256", secret).update(`${b}\n${r}`).digest("base64url");
+}
+
+/** Constant-time check that `s` is `signBounce(b, r, secret)`. A missing
+ * or wrong-length signature is rejected before the comparison. */
+export function verifyBounce(
+  b: string,
+  r: string,
+  s: string | undefined,
+  secret: string
+): boolean {
+  if (!s) {
+    return false;
+  }
+  const expected = Buffer.from(signBounce(b, r, secret));
+  const actual = Buffer.from(s);
+  if (actual.length !== expected.length) {
+    return false;
+  }
+  return timingSafeEqual(actual, expected);
 }
 
 /**
@@ -58,12 +94,18 @@ export function decodeOAuthState(raw: string): OAuthStatePayload | null {
  * to their domain. Without `client_secret` they can't exchange the code,
  * but leaking it is still a confidentiality break.
  *
- * Defence: the allowlist is **explicit, env-driven** — operators set
- * `STRAVA_BOUNCE_ALLOWED_HOST_SUFFIX` to the project-specific Vercel
- * pattern (e.g. `manuel-dugues-projects.vercel.app`) and only hosts
- * matching that suffix are accepted. The registered callback host is
- * always accepted. With no suffix configured, *no* cross-origin bounce
- * is permitted (single-deploy mode).
+ * Defence: the actual authorization is the HMAC on the bounce target
+ * (`verifyBounce`) — only a deployment holding the shared secret can mint
+ * a `b` the callback will relay to. This allowlist is a coarse second
+ * filter, not a security boundary on its own: on a shared domain like
+ * `vercel.app` hostnames are user-chosen, so anyone can register a host
+ * ending in `-<suffix>`. Operators set `STRAVA_BOUNCE_ALLOWED_HOST_SUFFIX`
+ * to the project-specific Vercel pattern (e.g.
+ * `manuel-dugues-projects.vercel.app`); a host matches when it equals an
+ * entry or ends with `.entry` / `-entry` (the latter is how Vercel names
+ * previews: `effort-git-branch-<team>.vercel.app`). The registered
+ * callback host is always accepted. With no suffix configured, *no*
+ * cross-origin bounce is permitted (single-deploy mode).
  *
  * Allows http only when `STRAVA_ALLOW_HTTP_BOUNCE=1` (E2E / dev where
  * preview-style origins run over plain http on `localhost`).
