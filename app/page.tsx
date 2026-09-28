@@ -23,6 +23,7 @@ import { useImagePalette } from "@/hooks/use-image-palette";
 import { useStravaReturnToast } from "@/hooks/use-strava-return-toast";
 import type { ActivityData, ActivitySource, Sport } from "@/lib/activity";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
+import { createDebouncedWriter } from "@/lib/debounced-writer";
 import { formatDateUpper } from "@/lib/format";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import { cn } from "@/lib/utils";
@@ -72,6 +73,11 @@ function preloadExport(): void {
   void loadExportSheet();
   void loadCarouselExportSheet();
 }
+
+// UI prefs are written at most once per quiet period (and flushed when the
+// page is hidden — see the effects in `Home`). One writer for the one page.
+const PERSIST_DEBOUNCE_MS = 300;
+const persistUi = createDebouncedWriter(savePersistedUi, PERSIST_DEBOUNCE_MS);
 
 /** Holds the state's flex slot while its chunk loads — no collapse/jump. */
 function StateFallback() {
@@ -228,10 +234,12 @@ export default function Home() {
     /* oxlint-enable react/set-state-in-effect */
   }, []);
 
-  // Persist on change. Athlete name comes from `data` (which the user edits
-  // in-place), so it shares this effect rather than getting its own.
+  // Persist on change — debounced, since a slider drag changes `themeConfigs`
+  // every tick and each save is a JSON.stringify + synchronous localStorage
+  // write. Athlete name comes from `data` (which the user edits in-place), so
+  // it shares this effect rather than getting its own.
   useEffect(() => {
-    savePersistedUi({
+    persistUi.schedule({
       theme,
       carouselTheme,
       colorChoice: colorChoice ?? undefined,
@@ -249,6 +257,25 @@ export default function Home() {
     mode,
     data?.athleteName,
   ]);
+
+  // The debounce timer never fires if the tab is closed or backgrounded (and
+  // then discarded) inside the quiet period, so write the pending prefs out
+  // as soon as the page is hidden — the last change is never lost.
+  useEffect(() => {
+    const flush = () => persistUi.flush();
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        flush();
+      }
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      flush();
+    };
+  }, []);
 
   // In the editor the next stop is the export sheet: warm its chunk (and,
   // through it, the export pipeline) while the user edits.
