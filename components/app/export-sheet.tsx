@@ -37,8 +37,8 @@ import type { ThemeId } from "@/theme/editor/render-theme";
 import { SafeZoneOverlay } from "@/theme/editor/safe-zone-overlay";
 import {
   createInFlightGuard,
+  delay,
   effortDateSlug,
-  fromCallback,
 } from "@/theme/export/export-shared";
 import type { InFlightGuard } from "@/theme/export/export-shared";
 
@@ -92,10 +92,15 @@ export const useTileMax = (box: TileBox = SINGLE_TILE): TileMax => {
   );
 
   // The root element's box tracks the viewport width, so observing it catches
-  // every viewport resize; the tile box itself still reads `innerWidth`.
+  // every viewport resize; the tile box itself still reads `innerWidth`. It
+  // also fires on height-only changes (tiles mounting, fonts loading), so keep
+  // the previous object when the bounds are unchanged — no sheet re-render.
   useEffect(() => {
     const observer = new ResizeObserver(() => {
-      setTileMax(tileMaxForWidth(window.innerWidth, box));
+      const next = tileMaxForWidth(window.innerWidth, box);
+      setTileMax((prev) =>
+        prev.w === next.w && prev.h === next.h ? prev : next
+      );
     });
     observer.observe(document.documentElement);
     return () => {
@@ -110,14 +115,6 @@ export const useTileMax = (box: TileBox = SINGLE_TILE): TileMax => {
 // download tap, so it's loaded on demand rather than with the sheet. The sheet
 // warms it on mount so the first tap never waits on the network.
 const loadExportCard = async () => await import("@/theme/export/export-card");
-
-const delay = async (ms: number): Promise<void> => {
-  await fromCallback<null>((resolve) => {
-    setTimeout(() => {
-      resolve(null);
-    }, ms);
-  });
-};
 
 /** Shared download orchestration: a single `busy` id (a format id, or "all"),
  *  `handleOne` (one format) and `handleAll` (every format, throttled — browsers

@@ -19,11 +19,11 @@ import {
   isNum,
 } from "@/lib/format";
 import { isMultiActivity, segmentRoutes } from "@/lib/multi-activity";
+import { hasText } from "@/lib/text";
 import type { ColorScheme } from "@/theme/core/colors";
 import type { ThemeProps } from "@/theme/core/theme-contract";
 
 import { useFormat, useSafeInsets } from "../shared/format-context";
-import { hasText } from "../shared/has-text";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoLayer } from "../shared/photo-layer";
 import type { PhotoCapability } from "./photo.theme";

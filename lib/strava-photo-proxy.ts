@@ -8,7 +8,7 @@
  * Pure helpers (no Next.js imports) so they're unit-testable with bun:test.
  */
 
-import { hasText } from "./strava-params";
+import { hasText } from "./text";
 
 /** Largest photo body the proxy will stream. Strava's biggest renditions
  * are a few MB; anything this large is not a photo we want to relay. */

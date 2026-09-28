@@ -3,8 +3,8 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 import { z } from "zod/mini";
 
-import { hasText } from "./strava-params";
 import { lenient } from "./strava-schemas";
+import { hasText } from "./text";
 
 /**
  * Structured `state` payload for the Strava OAuth round-trip. The plain

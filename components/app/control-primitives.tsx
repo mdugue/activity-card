@@ -21,11 +21,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { hasText } from "@/lib/text";
 import { cn } from "@/lib/utils";
-
-/** True when an optional text prop actually holds text. */
-const hasText = (s: string | null | undefined): s is string =>
-  s !== undefined && s !== null && s !== "";
 
 /** One row in a {@link RichSelect}: a glyph, a first-class value, and a calm
  * muted sidenote. `unit` rides next to the value (e.g. "1240" + "m"); `hint`

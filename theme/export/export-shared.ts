@@ -92,7 +92,7 @@ export const fromCallback = async <T>(
   // oxlint-disable-next-line promise/avoid-new -- the single adapter for callback-only DOM APIs; Promise.withResolvers needs Safari 17.4, above the supported browser baseline
   await new Promise<T>(start);
 
-const delay = async (ms: number): Promise<void> => {
+export const delay = async (ms: number): Promise<void> => {
   await fromCallback<null>((resolve) => {
     setTimeout(() => {
       resolve(null);

@@ -14,10 +14,10 @@ import {
   formatPaceMin,
   formatPaceSec,
 } from "@/lib/format";
+import { hasText } from "@/lib/text";
 import type { ThemeProps } from "@/theme/core/theme-contract";
 
 import { SafeArea, useFormat } from "../shared/format-context";
-import { hasText } from "../shared/has-text";
 import { PhotoUnderlay } from "../shared/photo-underlay";
 import type { TriathlonCapability } from "./triathlon.theme";
 

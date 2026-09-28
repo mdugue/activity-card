@@ -2,8 +2,8 @@ import { z } from "zod/mini";
 
 import { detectSport, finalise } from "./parse-shared";
 import type { FinaliseInput, ParsedActivity, TrackPoint } from "./parse-shared";
-import { hasText } from "./strava-params";
 import type { StravaActivity, StravaStreams } from "./strava-schemas";
+import { hasText } from "./text";
 
 const MPS_TO_KMH = 3.6;
 

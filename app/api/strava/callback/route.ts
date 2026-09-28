@@ -12,8 +12,8 @@ import {
   isAllowedBounceOrigin,
   verifyBounce,
 } from "@/lib/strava-oauth-state";
-import { hasText } from "@/lib/strava-params";
 import { readStravaTokenResponse } from "@/lib/strava-token-response";
+import { hasText } from "@/lib/text";
 
 const CONNECTED_PATH = "/?strava=connected";
 

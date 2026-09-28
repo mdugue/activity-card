@@ -8,7 +8,7 @@ import {
   PersonSimpleRunIcon,
   PersonSimpleSwimIcon,
 } from "@phosphor-icons/react";
-import { Suspense, use, useEffect, useId, useState } from "react";
+import { Suspense, use, useEffect, useId, useRef, useState } from "react";
 
 import { StravaFooter } from "@/components/app/strava-footer";
 import {
@@ -49,6 +49,7 @@ import { Switch } from "@/components/ui/switch";
 import { useStravaConnection } from "@/hooks/use-strava-connection";
 import { formatDate, formatDuration } from "@/lib/format";
 import type { ParsedActivity } from "@/lib/parse-activity";
+import { hasText } from "@/lib/text";
 import { cn } from "@/lib/utils";
 
 interface StravaPickerProps {
@@ -59,10 +60,6 @@ interface StravaPickerProps {
   onCancel: () => void;
   onReauth: () => void;
 }
-
-/** True when an optional text value actually holds text. */
-const hasText = (s: string | null | undefined): s is string =>
-  s !== undefined && s !== null && s !== "";
 
 /** Connection status + the central Disconnect control, shown in the picker
  * header. This is the single home for "Connected as … / Disconnect" now that
@@ -505,19 +502,6 @@ const ActivitySkeletons = () => (
   </ItemGroup>
 );
 
-/** Load one page of activities. A lapsed grant hands straight off to the
- *  reconnect flow (the list stays in its loading state meanwhile). */
-const loadActivitiesPage = async (
-  page: number,
-  onReauth: () => void
-): Promise<LoadResult> => {
-  const result = await fetchActivities(page);
-  if (result.kind === "err" && result.error.kind === "reauth") {
-    onReauth();
-  }
-  return result;
-};
-
 const toLoadState = (result: LoadResult): LoadState => {
   if (result.kind === "err") {
     return result.error.kind === "reauth"
@@ -573,7 +557,20 @@ const ActivityResults = ({
   selected,
   totalPagesRequest,
 }: ActivityResultsProps) => {
-  const state = toLoadState(use(request));
+  const result = use(request);
+  const state = toLoadState(result);
+  // A lapsed grant hands straight off to the reconnect flow (the list stays in
+  // its loading state meanwhile). Fired from an effect, never from the fetch
+  // itself, so a request started twice (StrictMode) can't navigate twice;
+  // the ref keeps StrictMode's effect re-run from redirecting again.
+  const needsReauth = result.kind === "err" && result.error.kind === "reauth";
+  const reauthStartedRef = useRef(false);
+  useEffect(() => {
+    if (needsReauth && !reauthStartedRef.current) {
+      reauthStartedRef.current = true;
+      onReauth();
+    }
+  }, [needsReauth, onReauth]);
   if (state.kind === "loading") {
     return <ActivitySkeletons />;
   }
@@ -691,7 +688,7 @@ export const StravaPicker = ({
   // best-effort fetch: if it fails we just fall back to the page-is-full
   // heuristic for Next.
   const [requests, setRequests] = useState(() => ({
-    page: loadActivitiesPage(1, onReauth),
+    page: fetchActivities(1),
     totalPages: fetchTotalPages(),
   }));
   const [multiSelect, setMultiSelect] = useState(false);
@@ -706,7 +703,7 @@ export const StravaPicker = ({
       return;
     }
     setPage(next);
-    const pageRequest = loadActivitiesPage(next, onReauth);
+    const pageRequest = fetchActivities(next);
     setRequests((prev) => ({ ...prev, page: pageRequest }));
   };
 

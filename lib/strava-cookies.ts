@@ -2,9 +2,9 @@ import { cookies } from "next/headers";
 import { z } from "zod/mini";
 
 import { envOr, readStravaCredentials } from "./strava-env";
-import { hasText } from "./strava-params";
 import { lenient } from "./strava-schemas";
 import { readStravaTokenResponse } from "./strava-token-response";
+import { hasText } from "./text";
 
 // Strava API endpoints. All three are overridable via env so E2E tests can
 // point the app at a local mock without monkey-patching `fetch`.

@@ -16,10 +16,10 @@ import {
 } from "@/lib/format";
 import { isMultiActivity, segmentRoutes } from "@/lib/multi-activity";
 import type { SegmentRoute } from "@/lib/multi-activity";
+import { hasText } from "@/lib/text";
 import type { ThemeProps } from "@/theme/core/theme-contract";
 
 import { SafeArea, useFormat } from "../shared/format-context";
-import { hasText } from "../shared/has-text";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoBackdrop } from "../shared/photo-backdrop";
 import { PATH_ACCENT } from "./default-accents";

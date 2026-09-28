@@ -49,6 +49,7 @@ import { formatDuration, formatNumber } from "@/lib/format";
 import { ACTIVITY_FILE_RE, parseActivityFiles } from "@/lib/parse-activity";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import { fetchStravaPhotoFile } from "@/lib/strava-photos";
+import { hasText } from "@/lib/text";
 import { cn } from "@/lib/utils";
 
 /** What the wizard hands back when the user opens the editor. Exactly one of
@@ -146,10 +147,6 @@ const footerNote = (hasActivity: boolean, hasPhoto: boolean): FooterNote => {
     kicker: "Photo is optional",
   };
 };
-
-/** True when an optional text prop actually holds text. */
-const hasText = (s: string | null | undefined): s is string =>
-  s !== undefined && s !== null && s !== "";
 
 // The OAuth-init Route Handler redirects to Strava's consent screen.
 const handleReauth = (): void => {

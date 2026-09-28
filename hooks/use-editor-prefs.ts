@@ -18,6 +18,7 @@ import {
 } from "@/components/app/persisted-ui";
 import type { LoadedUi, ThemeConfigs } from "@/components/app/persisted-ui";
 import { createDebouncedWriter } from "@/lib/debounced-writer";
+import { nonEmpty } from "@/lib/text";
 import { DEFAULT_CAROUSEL_THEME } from "@/theme/carousel/registry";
 import type { CarouselThemeId } from "@/theme/carousel/registry";
 import type { ColorChoice } from "@/theme/core/colors";
@@ -73,10 +74,6 @@ const DEFAULT_PREFS: EditorPrefs = {
 const PERSIST_DEBOUNCE_MS = 300;
 const persistUi = createDebouncedWriter(savePersistedUi, PERSIST_DEBOUNCE_MS);
 
-/** `s` when it holds a name, `undefined` when it's empty. */
-const nonEmpty = (s: string | undefined): string | undefined =>
-  s === "" ? undefined : s;
-
 /** Fold what storage holds onto the current prefs: each usable persisted
  *  field replaces its default, anything missing or stale keeps it. */
 const restorePrefs = (prefs: EditorPrefs, persisted: LoadedUi): EditorPrefs => {
@@ -104,6 +101,10 @@ export const useEditorPrefs = (
   athleteName: string | undefined
 ): UseEditorPrefs => {
   const [prefs, setPrefs] = useState<EditorPrefs>(DEFAULT_PREFS);
+  // Nothing is written back until the stored prefs have been applied: the
+  // first commit still holds DEFAULT_PREFS, and saving (or StrictMode's
+  // simulated unmount flushing) those would overwrite what the user stored.
+  const [hydrated, setHydrated] = useState(false);
   // Held outside the activity so it survives between activities and can seed
   // one whose file lacks an athlete name.
   const persistedAthleteNameRef = useRef("");
@@ -116,6 +117,8 @@ export const useEditorPrefs = (
     const persisted = loadPersistedUi();
     // oxlint-disable-next-line react/set-state-in-effect -- one-shot cold-start hydration from localStorage (see above)
     setPrefs((prev) => restorePrefs(prev, persisted));
+    // oxlint-disable-next-line react/set-state-in-effect -- marks the one-shot hydration above as applied
+    setHydrated(true);
     if (persisted.athleteName !== undefined && persisted.athleteName !== "") {
       persistedAthleteNameRef.current = persisted.athleteName;
     }
@@ -126,6 +129,9 @@ export const useEditorPrefs = (
   // write. The athlete name comes from the activity (which the user edits
   // in-place), so it shares this effect rather than getting its own.
   useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
     persistUi.schedule({
       athleteName:
         nonEmpty(athleteName) ?? nonEmpty(persistedAthleteNameRef.current),
@@ -136,7 +142,7 @@ export const useEditorPrefs = (
       themeConfigs: prefs.themeConfigs,
       visibility: prefs.visibility,
     });
-  }, [prefs, athleteName]);
+  }, [prefs, athleteName, hydrated]);
 
   // The debounce timer never fires if the tab is closed or backgrounded (and
   // then discarded) inside the quiet period, so write the pending prefs out

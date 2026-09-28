@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { stravaErrorResponse, stravaFetch } from "@/lib/strava-client";
 import { STRAVA_API_BASE } from "@/lib/strava-cookies";
-import { clampedIntParam, hasText } from "@/lib/strava-params";
+import { clampedIntParam } from "@/lib/strava-params";
 import {
   allowedPhotoContentType,
   exceedsPhotoSizeCap,
@@ -11,6 +11,7 @@ import {
 } from "@/lib/strava-photo-proxy";
 import { largestPhotoUrl, upscaledPhotoUrl } from "@/lib/strava-photos";
 import { StravaPhotoListSchema } from "@/lib/strava-schemas";
+import { hasText } from "@/lib/text";
 
 const NUMERIC_ID = /^\d+$/u;
 // Strava buckets photo sizes and silently serves a small variant for

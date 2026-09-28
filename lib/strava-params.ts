@@ -1,10 +1,3 @@
-/**
- * Is a request / cookie / env value set to something non-empty? Absent
- * (`null` / `undefined`) and blank (`""`) both read as "not provided".
- */
-export const hasText = (value: string | null | undefined): value is string =>
-  value !== null && value !== undefined && value !== "";
-
 // No capture group: named groups need an ES2018 target (tsconfig is ES2017),
 // and `Number` reads the whole match — whitespace, sign and digits — itself.
 const LEADING_INT = /^\s*[+-]?\d+/u;

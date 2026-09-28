@@ -6,7 +6,6 @@ import {
   stravaFetchOptional,
 } from "@/lib/strava-client";
 import { ensureFreshToken } from "@/lib/strava-cookies";
-import { hasText } from "@/lib/strava-params";
 import { largestPhotoUrl } from "@/lib/strava-photos";
 import {
   StravaActivitySchema,
@@ -14,6 +13,7 @@ import {
   StravaStreamsSchema,
 } from "@/lib/strava-schemas";
 import { stravaToParsed } from "@/lib/strava-to-parsed";
+import { hasText } from "@/lib/text";
 
 const STREAM_KEYS =
   "latlng,altitude,heartrate,cadence,velocity_smooth,time,distance";

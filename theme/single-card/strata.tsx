@@ -31,11 +31,11 @@ import {
   strataPeakMarker,
 } from "@/lib/strata";
 import type { StrataConfig } from "@/lib/strata";
+import { hasText } from "@/lib/text";
 import type { ActivityView, ThemeProps } from "@/theme/core/theme-contract";
 
 import { CoverPhoto } from "../shared/cover-photo";
 import { useFormat, useSafeInsets } from "../shared/format-context";
-import { hasText } from "../shared/has-text";
 import {
   CssCoverImage,
   usePhotoEffects,

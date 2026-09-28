@@ -21,16 +21,25 @@ export const GET = async (request: Request) => {
       StravaActivitySummaryListSchema
     );
     return NextResponse.json({
-      activities: list.map((a) => ({
-        distance: a.distance,
-        id: a.id,
-        moving_time: a.moving_time,
-        name: a.name,
-        sport_type: a.sport_type,
-        start_date: a.start_date,
-        summary_polyline: a.map?.summary_polyline ?? null,
-        total_elevation_gain: a.total_elevation_gain,
-      })),
+      // A row without a numeric id can never be picked (the detail route is
+      // keyed by it), so drop it here rather than let one bad row fail the
+      // picker's parse of the whole page.
+      activities: list.flatMap(({ id, ...a }) =>
+        id === null
+          ? []
+          : [
+              {
+                distance: a.distance,
+                id,
+                moving_time: a.moving_time,
+                name: a.name,
+                sport_type: a.sport_type,
+                start_date: a.start_date,
+                summary_polyline: a.map?.summary_polyline ?? null,
+                total_elevation_gain: a.total_elevation_gain,
+              },
+            ]
+      ),
     });
   } catch (error) {
     return stravaErrorResponse(error);

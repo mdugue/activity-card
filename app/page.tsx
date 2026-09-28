@@ -20,6 +20,7 @@ import type { ActivityData, ActivitySource } from "@/lib/activity";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
 import { formatDateUpper } from "@/lib/format";
 import type { ParsedActivity } from "@/lib/parse-activity";
+import { nonEmpty } from "@/lib/text";
 import { cn } from "@/lib/utils";
 import { CAROUSEL_THEMES } from "@/theme/carousel/registry";
 import type { CarouselThemeId } from "@/theme/carousel/registry";
@@ -116,9 +117,6 @@ const StravaPicker = dynamic(
 
 /** `s` when it holds text, `undefined` when it's empty — so `??` chains fall
  *  through blank names the way a truthiness check would. */
-const nonEmpty = (s: string | undefined): string | undefined =>
-  s === "" ? undefined : s;
-
 const adoptParsed = (
   parsed: ParsedActivity,
   persistedAthleteName: string,

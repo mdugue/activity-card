@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { clearTokens } from "@/lib/strava-cookies";
-import { hasText } from "@/lib/strava-params";
+import { hasText } from "@/lib/text";
 
 /**
  * Clearing the Strava cookies is state-changing, so reject cross-site

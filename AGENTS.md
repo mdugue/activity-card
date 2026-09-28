@@ -221,7 +221,8 @@ lib/                  THEME-AGNOSTIC utilities only: the canonical `activity.ts`
                       ActivityData model, parsers (`parse-activity`/`gpx`/`fit`),
                       formatters (`format.ts`), geometry (`chart-helpers`, `simplify`),
                       `image-transform`, `multi-activity`, `strata` geometry, `palette`,
-                      `photo-effects`, the Strava client, and `cn` (`utils.ts`).
+                      `photo-effects`, the Strava client, `hasText` / `nonEmpty` (`text.ts`),
+                      and `cn` (`utils.ts`).
 public/               Static assets.
 .storybook/           Storybook config + the shared preview, background presets,
                       and the background-photo decorator.

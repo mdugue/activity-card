@@ -74,7 +74,7 @@ export interface FinaliseInput {
   sport: ParsedSport;
 }
 
-const round = (n: number, digits: number): number => {
+export const round = (n: number, digits: number): number => {
   const f = 10 ** digits;
   return Math.round(n * f) / f;
 };

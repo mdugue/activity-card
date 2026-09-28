@@ -1,6 +1,7 @@
 import type { ActivityData, Transition, TriSegment } from "@/lib/activity";
 
 import type { ParsedActivity } from "./parse-activity";
+import { round } from "./parse-shared";
 
 const triSportFor = (s: ParsedActivity["sport"]): TriSegment["sport"] => {
   if (s === "ride") {
@@ -30,11 +31,6 @@ const deriveTriName = (sorted: ParsedActivity[]): string => {
     return "Brick session";
   }
   return "Multi-sport effort";
-};
-
-const round = (n: number, digits: number): number => {
-  const f = 10 ** digits;
-  return Math.round(n * f) / f;
 };
 
 /**

@@ -36,10 +36,10 @@ import type { Coord, NormalizedCurve } from "@/lib/chart-helpers";
 import { formatDateUpper } from "@/lib/format";
 import { isMultiActivity, segmentProfiles } from "@/lib/multi-activity";
 import { profileSignal } from "@/lib/profile-signal";
+import { hasText } from "@/lib/text";
 import type { ThemeProps } from "@/theme/core/theme-contract";
 
 import { useFormat, useSafeInsets } from "../shared/format-context";
-import { hasText } from "../shared/has-text";
 import { PhotoLayer } from "../shared/photo-layer";
 import type { AltitudeCapability } from "./altitude.theme";
 

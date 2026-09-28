@@ -1,4 +1,4 @@
-import { hasText } from "./strava-params";
+import { hasText } from "./text";
 
 /** An env value, or `fallback` when it is unset or blank. */
 export const envOr = (value: string | undefined, fallback: string): string =>

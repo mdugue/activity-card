@@ -1,6 +1,8 @@
 // CRC32 and PNG chunk byte-packing are inherently bitwise — this is the
 // standard PNG algorithm.
 
+import { hasText } from "./text";
+
 /**
  * PNG metadata injection — Effort attribution (+ optional GPS) baked into the
  * exported file.
@@ -173,10 +175,6 @@ export interface MetadataOptions {
 
 const APP_NAME = "Effort";
 const APP_URL = "https://effort.app";
-
-/** An optional field that is set to something non-empty. */
-const hasText = (value: string | undefined): value is string =>
-  value !== undefined && value !== "";
 
 /** Decimal degrees → XMP exif "deg,min.mmmmREF" form. */
 const toXmpCoord = (
