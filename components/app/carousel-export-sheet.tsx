@@ -93,6 +93,8 @@ export function CarouselExportSheet({
     async (format: ExportFormat) => {
       const node = mounts.current[format.id];
       if (!node) {
+        // The strip isn't mounted (shouldn't happen) — say so, never no-op.
+        toast.error("Export failed — please try again.");
         return;
       }
       try {

@@ -34,7 +34,10 @@ import type { ExportFormat } from "@/theme/core/export-formats";
 import { RenderTheme } from "@/theme/editor/render-theme";
 import type { ThemeId } from "@/theme/editor/render-theme";
 import { SafeZoneOverlay } from "@/theme/editor/safe-zone-overlay";
-import { effortDateSlug } from "@/theme/export/export-shared";
+import {
+  createInFlightGuard,
+  effortDateSlug,
+} from "@/theme/export/export-shared";
 
 import { ToggleRow } from "./control-primitives";
 
@@ -112,34 +115,33 @@ function delay(ms: number): Promise<void> {
 export function useFormatExports(
   exportOne: (format: ExportFormat) => Promise<void>
 ) {
+  // `busy` drives the UI; the guard is what actually serialises exports. React
+  // state only updates on the next render, so a double click could otherwise
+  // read a stale `busy === null` twice and start two captures.
   const [busy, setBusy] = useState<string | null>(null);
+  const guard = useRef(createInFlightGuard());
 
-  const handleOne = async (format: ExportFormat) => {
-    if (busy) {
-      return;
-    }
-    setBusy(format.id);
-    try {
-      await exportOne(format);
-    } finally {
-      setBusy(null);
-    }
+  const runExclusive = async (id: string, task: () => Promise<void>) => {
+    await guard.current.run(async () => {
+      setBusy(id);
+      try {
+        await task();
+      } finally {
+        setBusy(null);
+      }
+    });
   };
 
-  const handleAll = async () => {
-    if (busy) {
-      return;
-    }
-    setBusy("all");
-    try {
+  const handleOne = (format: ExportFormat) =>
+    runExclusive(format.id, () => exportOne(format));
+
+  const handleAll = () =>
+    runExclusive("all", async () => {
       for (const id of FORMAT_ORDER) {
         await exportOne(getFormat(id));
         await delay(350);
       }
-    } finally {
-      setBusy(null);
-    }
-  };
+    });
 
   return { busy, handleOne, handleAll };
 }
@@ -350,6 +352,8 @@ export function ExportSheet(props: ExportSheetProps) {
     async (format: ExportFormat) => {
       const node = mounts.current[format.id];
       if (!node) {
+        // The tile isn't mounted (shouldn't happen) — say so, never no-op.
+        toast.error("Export failed — please try again.");
         return;
       }
       // Errors are surfaced here (not bubbled) so a failed format in the
