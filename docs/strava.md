@@ -264,17 +264,33 @@ check. Never set in production.
 The browser never sees Strava tokens. All four cookies are `httpOnly`,
 `SameSite=Lax`, `Path=/`, and `Secure` in production:
 
-| Cookie               | Contents                                           | Lifetime                          |
-| -------------------- | -------------------------------------------------- | --------------------------------- |
-| `strava_access`      | Access token                                       | Until expiry (refreshed silently) |
-| `strava_refresh`     | Refresh token                                      | Strava's lifetime (long-lived)    |
-| `strava_expires_at`  | UNIX seconds when access expires                   | Tracks the access token           |
-| `strava_athlete`     | Trimmed athlete JSON (`id`, `firstname`, `avatar`) | Until disconnect                  |
-| `strava_oauth_state` | Per-request CSRF token                             | 10 minutes                        |
+| Cookie               | Contents                                           | Browser lifetime (`maxAge`)              |
+| -------------------- | -------------------------------------------------- | ---------------------------------------- |
+| `strava_access`      | Access token                                       | 1 year, re-set on every exchange/refresh |
+| `strava_refresh`     | Refresh token                                      | 1 year, re-set on every exchange/refresh |
+| `strava_expires_at`  | UNIX seconds when access expires                   | 1 year, re-set on every exchange/refresh |
+| `strava_athlete`     | Trimmed athlete JSON (`id`, `firstname`, `avatar`) | 1 year, re-set on every exchange/refresh |
+| `strava_oauth_state` | Per-request CSRF token                             | 10 minutes                               |
 
-`ensureFreshToken()` is the only path that talks to `/oauth/token`. Any
-route handler that needs an access token calls it; if there's no token
-(or refresh fails) it throws `StravaNotConnectedError`, the handler
+The four token cookies deliberately outlive the access token
+(`ONE_YEAR_SECONDS` in `lib/strava-cookies.ts`): Strava refresh tokens
+are long-lived, so session-scoped cookies would force a reconnect every
+time the browser closes. Access-token expiry is tracked by the
+_value_ of `strava_expires_at`, not by any cookie's own lifetime. The
+cookies go away on **Disconnect**, or when a refresh is rejected with a
+4xx / a request is still 401 after a forced refresh (`clearTokens()`).
+
+Three code paths call `/oauth/token`:
+
+- the callback's code exchange (`grant_type=authorization_code`);
+- `ensureFreshToken()`, which refreshes when the stored access token has
+  under 60s left — every handler that needs a token goes through it
+  (directly or via `stravaFetch`);
+- `forceRefreshToken()`, which `stravaFetch` calls once when Strava
+  401s a token we believed was fresh.
+
+Both refresh paths share `refreshStoredTokens()`. If there's no token
+(or refresh fails) they throw `StravaNotConnectedError`, the handler
 returns 401, and the client treats that as "disconnected" and prompts
 to reconnect.
 
