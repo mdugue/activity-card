@@ -6,6 +6,8 @@ import {
   encodeOAuthState,
   isAllowedBounceOrigin,
   safeRelativePath,
+  signBounce,
+  verifyBounce,
 } from "@/lib/strava-oauth-state";
 import type { OAuthStatePayload } from "@/lib/strava-oauth-state";
 
@@ -54,6 +56,46 @@ describe("encode/decode OAuth state", () => {
       b: undefined,
       p: undefined,
     });
+  });
+});
+
+describe("bounce signature", () => {
+  const B = "https://effort-git-feature-team.vercel.app";
+  const R = "nonce-123";
+  const KEY = "test-key";
+
+  test("verifies a signature made with the same target, nonce and key", () => {
+    expect(verifyBounce(B, R, signBounce(B, R, KEY), KEY)).toBe(true);
+  });
+
+  test("rejects the signature on another target", () => {
+    const s = signBounce(B, R, KEY);
+    expect(verifyBounce("https://evil-team.vercel.app", R, s, KEY)).toBe(false);
+  });
+
+  test("rejects the signature under another nonce", () => {
+    expect(verifyBounce(B, "other-nonce", signBounce(B, R, KEY), KEY)).toBe(
+      false
+    );
+  });
+
+  test("rejects a signature made with another key", () => {
+    expect(verifyBounce(B, R, signBounce(B, R, "other-key"), KEY)).toBe(false);
+  });
+
+  test("rejects a missing or malformed signature", () => {
+    expect(verifyBounce(B, R, undefined, KEY)).toBe(false);
+    expect(verifyBounce(B, R, "", KEY)).toBe(false);
+    expect(verifyBounce(B, R, "short", KEY)).toBe(false);
+  });
+
+  test("the signature survives the state round-trip; non-strings are dropped", () => {
+    const payload: OAuthStatePayload = { r: R, b: B, s: signBounce(B, R, KEY) };
+    expect(decodeOAuthState(encodeOAuthState(payload))).toEqual(payload);
+    const forged = Buffer.from(JSON.stringify({ r: R, b: B, s: 42 })).toString(
+      "base64url"
+    );
+    expect(decodeOAuthState(forged)?.s).toBeUndefined();
   });
 });
 

@@ -71,6 +71,9 @@ export default defineConfig({
         // Tests run over plain http; without this opt-out the Secure
         // cookie flag would prevent any Strava cookie from being set.
         STRAVA_INSECURE_COOKIES: "1",
+        // Puts http://127.0.0.1 on the bounce allowlist, so the bounce test
+        // proves an unsigned target is refused even when its host passes.
+        STRAVA_ALLOW_HTTP_BOUNCE: "1",
       },
     },
   ],

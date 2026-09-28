@@ -303,10 +303,10 @@ test.describe("strava OAuth + picker", () => {
   test("callback rejects a crafted bounce origin (open-redirect defence)", async ({
     page,
   }) => {
-    // Mint a state payload claiming to come from `attacker.example`. Since
-    // the bounce-origin allowlist only accepts the registered prod host or
-    // `*.vercel.app`, the callback should redirect to /?strava=bounce_rejected
-    // rather than relaying the code to the attacker.
+    // Mint a state payload claiming to come from `attacker.example`. It is
+    // neither signed by one of our deploys nor on the bounce allowlist, so
+    // the callback should redirect to /?strava=bounce_rejected rather than
+    // relaying the code to the attacker.
     const payload = JSON.stringify({
       r: "x".repeat(48),
       b: "https://attacker.example",
@@ -320,6 +320,28 @@ test.describe("strava OAuth + picker", () => {
       { waitUntil: "commit" }
     );
     expect(page.url()).toMatch(/strava=bounce_rejected/u);
+  });
+
+  test("callback refuses an unsigned bounce, even to an allowed host", async ({
+    page,
+  }) => {
+    // 127.0.0.1 passes the bounce allowlist (STRAVA_ALLOW_HTTP_BOUNCE), but
+    // no deploy of ours signed it — so the code must not be relayed there.
+    // The signed happy path is unit-tested in lib/strava-oauth-state.test.ts:
+    // `next start` reports every request as `localhost`, so a second origin
+    // can't initiate a real bounce here.
+    const payload = JSON.stringify({
+      r: "x".repeat(48),
+      b: "http://127.0.0.1:3100",
+    });
+    const state = Buffer.from(payload).toString("base64url");
+    await page.goto(
+      `/api/strava/callback?code=intercepted&state=${encodeURIComponent(state)}`,
+      { waitUntil: "commit" }
+    );
+    expect(page.url()).toMatch(
+      /^http:\/\/localhost:3100\/.*strava=bounce_rejected/u
+    );
   });
 
   test("502 from /api/strava/activity surfaces an upstream alert", async ({

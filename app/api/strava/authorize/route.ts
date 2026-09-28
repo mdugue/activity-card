@@ -3,7 +3,11 @@ import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { setOAuthState } from "@/lib/strava-cookies";
-import { encodeOAuthState, safeRelativePath } from "@/lib/strava-oauth-state";
+import {
+  encodeOAuthState,
+  safeRelativePath,
+  signBounce,
+} from "@/lib/strava-oauth-state";
 import type { OAuthStatePayload } from "@/lib/strava-oauth-state";
 
 /**
@@ -19,8 +23,9 @@ import type { OAuthStatePayload } from "@/lib/strava-oauth-state";
  */
 export async function GET(request: Request) {
   const clientId = process.env.STRAVA_CLIENT_ID;
+  const clientSecret = process.env.STRAVA_CLIENT_SECRET;
   const redirectUri = process.env.STRAVA_REDIRECT_URI;
-  if (!(clientId && redirectUri)) {
+  if (!(clientId && clientSecret && redirectUri)) {
     return NextResponse.json(
       { error: "Strava is not configured on this server" },
       { status: 500 }
@@ -36,9 +41,11 @@ export async function GET(request: Request) {
 
   const payload: OAuthStatePayload = { r: nonce };
   // Bounce field: present only when this deploy isn't the registered
-  // callback host. Production reads it to relay the code back to us.
+  // callback host. Production reads it to relay the code back to us, but
+  // only when the signature proves one of our deployments chose it.
   if (currentOrigin !== redirectOrigin) {
     payload.b = currentOrigin;
+    payload.s = signBounce(currentOrigin, nonce, clientSecret);
   }
   // Optional same-origin path the user wanted to land on (e.g. a deep
   // link). Anything cross-origin is dropped here AND re-validated in

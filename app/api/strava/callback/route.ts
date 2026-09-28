@@ -10,6 +10,7 @@ import {
 import {
   decodeOAuthState,
   isAllowedBounceOrigin,
+  verifyBounce,
 } from "@/lib/strava-oauth-state";
 
 export async function GET(request: Request) {
@@ -43,13 +44,20 @@ export async function GET(request: Request) {
 
   // ── Production bounce ──────────────────────────────────────────────
   // If the initiator advertised a bounce origin different from ours,
-  // we're the production callback acting as a relay. Validate the
-  // target host (open-redirect defence) and 302 the user back to the
-  // preview deploy with the original `code` + `state` intact — the
-  // preview will read its own state cookie and do the real exchange.
+  // we're the production callback acting as a relay. Verify that one of
+  // our deployments signed the target (the code must never reach a host
+  // an attacker picked), check the host allowlist (open-redirect defence
+  // in depth) and 302 the user back to the preview deploy with the
+  // original `code` + `state` intact — the preview will read its own
+  // state cookie and do the real exchange.
   if (payload.b && payload.b !== url.origin) {
     const registeredHost = new URL(redirectUri).hostname;
-    if (!isAllowedBounceOrigin(payload.b, registeredHost)) {
+    if (
+      !(
+        verifyBounce(payload.b, payload.r, payload.s, clientSecret) &&
+        isAllowedBounceOrigin(payload.b, registeredHost)
+      )
+    ) {
       return NextResponse.redirect(new URL("/?strava=bounce_rejected", url));
     }
     const bounce = new URL("/api/strava/callback", payload.b);
