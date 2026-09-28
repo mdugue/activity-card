@@ -28,6 +28,7 @@ const INK = "#11151a";
 const PAPER = "#ffffff";
 const DISPLAY = "var(--font-bricolage), sans-serif";
 const MONO = "var(--font-ibm-plex-mono), monospace";
+const SPACE_BETWEEN = "space-between";
 // The leg card's small label rows: full size on a roomy card, shrinking with its
 // height (cqb → the card's size container) on a short square card.
 const LEG_LABEL_SIZE = "clamp(17px, 10cqb, 24px)";
@@ -169,7 +170,7 @@ const Header = ({ data }: { data: TriathlonActivity }) => (
       alignItems: "flex-end",
       borderBottom: `2px solid ${INK}`,
       display: "flex",
-      justifyContent: "space-between",
+      justifyContent: SPACE_BETWEEN,
       paddingBottom: 22,
     }}
   >
@@ -415,7 +416,7 @@ const LEG_BADGE_STYLE = {
 const LEG_MAIN_STYLE = {
   display: "flex",
   flexDirection: "column",
-  justifyContent: "space-between",
+  justifyContent: SPACE_BETWEEN,
   minWidth: 0,
   // Clears the 48px corner badge (card pad 12 + 36 ≈ 48).
   paddingTop: 36,
@@ -569,7 +570,7 @@ const FOOTER_STYLE = {
   display: "flex",
   fontSize: 24,
   fontWeight: 600,
-  justifyContent: "space-between",
+  justifyContent: SPACE_BETWEEN,
   letterSpacing: "0.24em",
   marginTop: 16,
   opacity: 0.75,

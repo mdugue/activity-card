@@ -7,20 +7,19 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 
 import { EffortMark, EffortWordmark } from "@/components/app/effort-wordmark";
+import { IntroReplay, RevealOverlay } from "@/components/app/empty-state-intro";
 import {
   claimStyle,
-  IntroReplay,
   PANEL_REST_CLASS,
   panelFadeStyle,
   panelPartStyle,
-  RevealOverlay,
-  useEmptyStateIntro,
-} from "@/components/app/empty-state-intro";
-import type { IntroStage } from "@/components/app/empty-state-intro";
+} from "@/components/app/empty-state-intro-motion";
+import type { IntroStage } from "@/components/app/empty-state-intro-motion";
 import { IntroVideo } from "@/components/app/intro-video";
 import type { OnboardingResult } from "@/components/app/onboarding-wizard";
 import { StravaCompatLink } from "@/components/app/strava-footer";
 import { Button } from "@/components/ui/button";
+import { useEmptyStateIntro } from "@/hooks/use-empty-state-intro";
 import { cn } from "@/lib/utils";
 
 // The wizard (and the Strava picker inside it) is a separate chunk: it renders

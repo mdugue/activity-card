@@ -1,197 +1,20 @@
 "use client";
 
-// Intro animation for the connect empty state (desktop only). The claim panels
-// slice a seamless photo into story slides and fill them with data, then a
-// single page claim fades + slides up once that reveal has settled.
-//
-// Design contract (important): the *composed* (finished) state is the base.
-// "Hidden" values are only ever applied via JS after mount, so no-JS, SSR,
-// reduced-motion and mobile all render the finished layout directly. The
-// animation is layered on top via CSS transitions driven by a single stage
-// flip, with per-element delays sequencing the reveal.
+// The overlay pieces of the connect empty state's intro animation (desktop
+// only): the seamless photo + guillotine gutters that slice into the claim
+// panels, and the Replay control. Timeline + per-element styles live in
+// `empty-state-intro-motion.ts`; the stage machine in
+// `hooks/use-empty-state-intro.ts`.
 
 import Image from "next/image";
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import type { CSSProperties } from "react";
 
-export type IntroStage = "composed" | "hidden" | "playing";
-type IntroRole = "scrim" | "tint" | "num" | "word" | "content";
+import type { IntroStage } from "./empty-state-intro-motion";
 
-const RISE_PX = 14;
 const CUT_EASE = "cubic-bezier(0.65, 0, 0.35, 1)";
-const RISE_EASE = "cubic-bezier(0.2, 0.7, 0.2, 1)";
 // Timeline constants (seconds).
 const CUT_START = 0.45;
 const CUT_STAGGER = 0.18;
-const FILL_START = 1.15;
-const FILL_STAGGER = 0.16;
-// Right after the slices are cut, the trailing ones recede — softly and slowly,
-// overlapping the data fill — so the eye stays on slide one. Resting opacity
-// drops the farther a panel sits from the first. The delay clears the photo
-// handoff (~1.4s) so the seam stays clean. Desktop only; the mobile rail keeps
-// every slide at full strength.
-const FADE_DELAY = 1.25;
-const FADE_DURATION = 1.5;
-const PANEL_REST_OPACITY = [1, 0.8, 0.6];
-// Tailwind counterparts of PANEL_REST_OPACITY — keep the two in lockstep (and
-// the same length as the panel list in empty-state.tsx). These are the composed
-// (no-JS / reduced-motion) resting values, lg-gated.
-export const PANEL_REST_CLASS = ["", "lg:opacity-80", "lg:opacity-60"];
-
-// The single page claim that fades + slides up once the panel reveal is done.
-const CLAIM = "Make every effort worth sharing.";
-const CLAIM_RISE_PX = 18;
-const CLAIM_DELAY = 1.7;
-const CLAIM_DURATION = 0.7;
-
-// Only animate where the 3-up grid actually exists and motion is welcome.
-const shouldPlayIntro = (): boolean => {
-  if (typeof window === "undefined") {
-    return false;
-  }
-  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-    return false;
-  }
-  return window.innerWidth >= 1024;
-};
-
-// useLayoutEffect on the client (sets the hidden state before paint), a no-op
-// on the server — avoids React's SSR warning without losing the pre-paint set.
-const useIsoLayoutEffect =
-  typeof window === "undefined" ? useEffect : useLayoutEffect;
-
-export const useEmptyStateIntro = () => {
-  const [stage, setStage] = useState<IntroStage>("composed");
-  const [showReplay, setShowReplay] = useState(false);
-  const [runId, setRunId] = useState(0);
-
-  // Re-runs whenever `runId` is bumped (initial mount + each Replay). Sets the
-  // hidden start state before paint, then a double rAF flips to "playing" once
-  // that frame is committed so the CSS transitions actually fire.
-  useIsoLayoutEffect(() => {
-    if (!shouldPlayIntro()) {
-      return;
-    }
-    setStage("hidden");
-    setShowReplay(false);
-    let raf2 = 0;
-    const raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => {
-        setStage("playing");
-      });
-    });
-    const timers = [
-      // Surface the replay control once the claim has finished sliding in.
-      window.setTimeout(() => {
-        setShowReplay(true);
-      }, 2600),
-      // Lock the composed end-state in case a background tab froze the
-      // transition clock mid-flight (after claim + recede have settled).
-      window.setTimeout(() => {
-        setStage("composed");
-      }, 3200),
-    ];
-    return () => {
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
-      for (const t of timers) {
-        window.clearTimeout(t);
-      }
-    };
-  }, [runId]);
-
-  const replay = useCallback(() => {
-    setRunId((r) => r + 1);
-  }, []);
-  return { claim: CLAIM, replay, showReplay, stage };
-};
-
-// Per-element style for the panel overlays (scrim/tint/number/word/graphic).
-// `composed` returns nothing so the element keeps its Tailwind resting look.
-const ROLE: Record<
-  IntroRole,
-  { dur: number; ease: string; offset: number; opacity: number; rises: boolean }
-> = {
-  content: {
-    dur: 0.55,
-    ease: "ease-out",
-    offset: 0.13,
-    opacity: 1,
-    rises: true,
-  },
-  num: { dur: 0.5, ease: "ease-out", offset: 0.05, opacity: 1, rises: true },
-  scrim: { dur: 0.5, ease: "ease-out", offset: 0, opacity: 1, rises: false },
-  tint: { dur: 0.5, ease: "ease-out", offset: 0, opacity: 0.25, rises: false },
-  word: { dur: 0.55, ease: RISE_EASE, offset: 0.09, opacity: 1, rises: true },
-};
-
-export const panelPartStyle = (
-  stage: IntroStage,
-  role: IntroRole,
-  panelIndex: number
-): CSSProperties | undefined => {
-  if (stage === "composed") {
-    return;
-  }
-  const r = ROLE[role];
-  if (stage === "hidden") {
-    return {
-      opacity: 0,
-      transform: r.rises ? `translateY(${RISE_PX}px)` : undefined,
-      transition: "none",
-    };
-  }
-  const delay = FILL_START + panelIndex * FILL_STAGGER + r.offset;
-  const transition = r.rises
-    ? `opacity ${r.dur}s ${r.ease} ${delay}s, transform ${r.dur}s ${r.ease} ${delay}s`
-    : `opacity ${r.dur}s ${r.ease} ${delay}s`;
-  return {
-    opacity: r.opacity,
-    transform: r.rises ? "translateY(0)" : undefined,
-    transition,
-  };
-};
-
-// Whole-panel recede applied to each panel root. Holds full opacity through the
-// fill (the delay) so the photo handoff stays seamless, then eases down to the
-// resting value. `composed` defers to the Tailwind PANEL_REST_CLASS.
-export const panelFadeStyle = (
-  stage: IntroStage,
-  panelIndex: number
-): CSSProperties | undefined => {
-  const rest = PANEL_REST_OPACITY[panelIndex];
-  if (stage === "composed" || rest === 1) {
-    return;
-  }
-  if (stage === "hidden") {
-    return { opacity: 1, transition: "none" };
-  }
-  return {
-    opacity: rest,
-    transition: `opacity ${FADE_DURATION}s ease-in-out ${FADE_DELAY}s`,
-  };
-};
-
-// The single page claim: fades + slides up once the panel reveal has settled.
-// `composed` defers to the element's resting Tailwind look (no-JS / mobile /
-// reduced-motion all show it in place from the start).
-export const claimStyle = (stage: IntroStage): CSSProperties | undefined => {
-  if (stage === "composed") {
-    return;
-  }
-  if (stage === "hidden") {
-    return {
-      opacity: 0,
-      transform: `translateY(${CLAIM_RISE_PX}px)`,
-      transition: "none",
-    };
-  }
-  return {
-    opacity: 1,
-    transform: "translateY(0)",
-    transition: `opacity ${CLAIM_DURATION}s ${RISE_EASE} ${CLAIM_DELAY}s, transform ${CLAIM_DURATION}s ${RISE_EASE} ${CLAIM_DELAY}s`,
-  };
-};
 
 // Gutter bars align to the fluid panel seams: panel width is (100% − 2·16px)/3,
 // so seam j sits j+1 panels plus j gaps in from the left.
@@ -263,7 +86,7 @@ export const RevealOverlay = ({
 
 export const IntroReplay = ({ onReplay }: { onReplay: () => void }) => (
   <button
-    className="border-foreground/30 absolute right-5 bottom-4 z-40 hidden items-center gap-2 rounded-full border px-3 py-2 font-mono text-[11px] font-medium tracking-[0.16em] uppercase opacity-60 transition-opacity hover:opacity-100 lg:inline-flex"
+    className="border-foreground/30 absolute right-5 bottom-4 z-40 hidden items-center gap-2 rounded-full border px-3 py-2 font-mono text-xs font-medium tracking-[0.16em] uppercase opacity-60 transition-opacity hover:opacity-100 lg:inline-flex"
     onClick={onReplay}
     type="button"
   >

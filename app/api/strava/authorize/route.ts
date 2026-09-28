@@ -58,7 +58,10 @@ export const GET = async (request: Request) => {
   }
 
   const authorize = new URL(
-    envOr(process.env.STRAVA_OAUTH_URL, "https://www.strava.com/oauth/authorize")
+    envOr(
+      process.env.STRAVA_OAUTH_URL,
+      "https://www.strava.com/oauth/authorize"
+    )
   );
   authorize.searchParams.set("client_id", clientId);
   authorize.searchParams.set("redirect_uri", redirectUri);

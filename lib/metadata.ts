@@ -23,11 +23,13 @@ const PNG_SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10] as const;
 // --- CRC32 (PNG polynomial) -------------------------------------------------
 const CRC_TABLE: Uint32Array = (() => {
   const table = new Uint32Array(256);
-  for (let n = 0; n < 256; n++) {
+  for (let n = 0; n < 256; n += 1) {
     let c = n;
-    for (let k = 0; k < 8; k++) {
+    for (let k = 0; k < 8; k += 1) {
+      // oxlint-disable-next-line eslint/no-bitwise -- CRC-32 is defined over 32-bit XOR / unsigned shift; there is no arithmetic equivalent.
       c = c & 1 ? 0xed_b8_83_20 ^ (c >>> 1) : c >>> 1;
     }
+    // oxlint-disable-next-line eslint/no-bitwise -- `>>> 0` reinterprets the signed 32-bit XOR result as the unsigned table entry.
     table[n] = c >>> 0;
   }
   return table;
@@ -36,8 +38,10 @@ const CRC_TABLE: Uint32Array = (() => {
 const crc32 = (bytes: Uint8Array): number => {
   let crc = 0xff_ff_ff_ff;
   for (const byte of bytes) {
+    // oxlint-disable-next-line eslint/no-bitwise -- CRC-32 table step: 32-bit XOR, low-byte mask and unsigned shift.
     crc = CRC_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
   }
+  // oxlint-disable-next-line eslint/no-bitwise -- final CRC-32 inversion, read back as an unsigned 32-bit value.
   return (crc ^ 0xff_ff_ff_ff) >>> 0;
 };
 
@@ -45,8 +49,10 @@ const latin1Bytes = (s: string): Uint8Array => {
   // tEXt keyword/value is Latin-1; drop anything outside it (callers keep
   // keywords ASCII, and route UTF-8 content through iTXt instead).
   const out = new Uint8Array(s.length);
-  for (let i = 0; i < s.length; i++) {
-    out[i] = s.charCodeAt(i) & 0xff;
+  for (let i = 0; i < s.length; i += 1) {
+    // Low byte of each UTF-16 code unit (the chunk is sized in code units).
+    // oxlint-disable-next-line unicorn/prefer-code-point -- the packing is per UTF-16 code unit by design; `codePointAt` would merge surrogate pairs and change the bytes written.
+    out[i] = s.charCodeAt(i) % 256;
   }
   return out;
 };
@@ -55,8 +61,9 @@ const buildChunk = (type: string, data: Uint8Array): Uint8Array => {
   const out = new Uint8Array(12 + data.length);
   const dv = new DataView(out.buffer);
   dv.setUint32(0, data.length);
-  for (let i = 0; i < 4; i++) {
-    out[4 + i] = type.charCodeAt(i);
+  // Chunk types are four ASCII letters, so code points are the bytes.
+  for (let i = 0; i < 4; i += 1) {
+    out[4 + i] = type.codePointAt(i) ?? 0;
   }
   out.set(data, 8);
   dv.setUint32(8 + data.length, crc32(out.subarray(4, 8 + data.length)));
@@ -74,25 +81,25 @@ export const textChunk = (keyword: string, text: string): Uint8Array => {
   return buildChunk("tEXt", data);
 };
 
+const ITXT_HEADER_ZEROS = 5;
+
 /** An `iTXt` chunk (uncompressed, UTF-8) — for user text + the XMP packet. */
 export const itxtChunk = (keyword: string, text: string): Uint8Array => {
   const kw = latin1Bytes(keyword);
   const tx = new TextEncoder().encode(text);
   // keyword\0 compFlag compMethod langTag\0 transKeyword\0 text
-  const data = new Uint8Array(kw.length + 5 + tx.length);
-  let o = 0;
-  data.set(kw, o);
-  o += kw.length;
-  data[o++] = 0; // null after keyword
-  data[o++] = 0; // compression flag (uncompressed)
-  data[o++] = 0; // compression method
-  data[o++] = 0; // empty language tag, then null
-  data[o++] = 0; // empty translated keyword, then null
-  data.set(tx, o);
+  // The five bytes between keyword and text are all zero — the keyword's
+  // null terminator, compression flag (uncompressed), compression method,
+  // then the empty language tag's and empty translated keyword's
+  // terminators — which a fresh `Uint8Array` already holds.
+  const data = new Uint8Array(kw.length + ITXT_HEADER_ZEROS + tx.length);
+  data.set(kw, 0);
+  data.set(tx, kw.length + ITXT_HEADER_ZEROS);
   return buildChunk("iTXt", data);
 };
 
 const isPng = (bytes: Uint8Array): boolean =>
+  bytes.length >= PNG_SIGNATURE.length &&
   PNG_SIGNATURE.every((b, i) => bytes[i] === b);
 
 /**
@@ -112,7 +119,7 @@ export const injectPngChunks = (
   const dv = new DataView(png.buffer, png.byteOffset, png.byteLength);
   while (offset + 8 <= png.length) {
     const len = dv.getUint32(offset);
-    const type = String.fromCharCode(
+    const type = String.fromCodePoint(
       png[offset + 4],
       png[offset + 5],
       png[offset + 6],
@@ -167,6 +174,10 @@ export interface MetadataOptions {
 const APP_NAME = "Effort";
 const APP_URL = "https://effort.app";
 
+/** An optional field that is set to something non-empty. */
+const hasText = (value: string | undefined): value is string =>
+  value !== undefined && value !== "";
+
 /** Decimal degrees → XMP exif "deg,min.mmmmREF" form. */
 const toXmpCoord = (
   value: number,
@@ -189,16 +200,18 @@ const xmpEscape = (s: string): string =>
 
 /** Build an XMP packet carrying attribution and (optionally) GPS. */
 export const buildXmp = (input: MetadataInput, withGps: boolean): string => {
-  const tool = `${APP_NAME} — ${input.url || APP_URL}`;
-  const desc = input.title ? xmpEscape(input.title) : "";
-  const creator = input.athleteName ? xmpEscape(input.athleteName) : "";
+  const tool = `${APP_NAME} — ${hasText(input.url) ? input.url : APP_URL}`;
+  const desc = hasText(input.title) ? xmpEscape(input.title) : "";
+  const creator = hasText(input.athleteName)
+    ? xmpEscape(input.athleteName)
+    : "";
   const gps =
     withGps && input.point
       ? `\n   exif:GPSLatitude="${toXmpCoord(input.point.lat, "N", "S")}"` +
         `\n   exif:GPSLongitude="${toXmpCoord(input.point.lng, "E", "W")}"`
       : "";
   const place =
-    withGps && input.location
+    withGps && hasText(input.location)
       ? `\n   photoshop:City="${xmpEscape(input.location)}"`
       : "";
   return `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
@@ -224,26 +237,26 @@ export const buildMetadataChunks = (
   opts: MetadataOptions = {}
 ): Uint8Array[] => {
   const withGps = opts.gps !== false;
-  const url = input.url || APP_URL;
+  const url = hasText(input.url) ? input.url : APP_URL;
   const chunks: Uint8Array[] = [
     textChunk("Software", APP_NAME),
     textChunk("Source", `Created with ${APP_NAME} — ${url}`),
   ];
-  if (input.title) {
+  if (hasText(input.title)) {
     chunks.push(itxtChunk("Title", input.title));
   }
-  if (input.athleteName) {
+  if (hasText(input.athleteName)) {
     chunks.push(
       itxtChunk("Author", input.athleteName),
       textChunk("Copyright", `© ${input.athleteName}`)
     );
   }
-  if (input.date) {
+  if (hasText(input.date)) {
     chunks.push(textChunk("Creation Time", input.date));
   }
   const descBits = [
     input.title,
-    withGps && input.location ? input.location : null,
+    withGps && hasText(input.location) ? input.location : null,
     `Created with ${APP_NAME}`,
   ].filter(Boolean);
   chunks.push(

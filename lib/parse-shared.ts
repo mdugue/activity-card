@@ -339,8 +339,7 @@ export const finalise = (input: FinaliseInput): ParsedActivity => {
   const elevationGainM =
     input.sessionElevationM ?? cumulativeElevationGain(points);
 
-  const avgHr =
-    input.sessionAvgHr ?? mean(finiteSeries(points, "heartRate"));
+  const avgHr = input.sessionAvgHr ?? mean(finiteSeries(points, "heartRate"));
 
   const avgCadence =
     input.sessionAvgCadence ?? mean(finiteSeries(points, "cadence"));

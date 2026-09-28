@@ -23,6 +23,10 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
+/** True when an optional text prop actually holds text. */
+const hasText = (s: string | null | undefined): s is string =>
+  s !== undefined && s !== null && s !== "";
+
 /** One row in a {@link RichSelect}: a glyph, a first-class value, and a calm
  * muted sidenote. `unit` rides next to the value (e.g. "1240" + "m"); `hint`
  * is the metric or discipline name shown under it. */
@@ -46,13 +50,13 @@ const RichOptionContent = ({ option }: { option: RichSelectOption }) => (
         <span className="font-heading truncate text-lg leading-tight tracking-tight">
           {option.primary}
         </span>
-        {option.unit ? (
+        {hasText(option.unit) ? (
           <span className="text-muted-foreground shrink-0 font-mono text-xs font-medium">
             {option.unit}
           </span>
         ) : null}
       </span>
-      {option.hint ? (
+      {hasText(option.hint) ? (
         <span className="caption-micro mt-0.5 truncate">{option.hint}</span>
       ) : null}
     </span>
@@ -76,11 +80,11 @@ export const RichSelect = ({
   options: RichSelectOption[];
   value: string;
 }) => {
-  const selected = options.find((o) => o.value === value) ?? options[0];
+  const selected = options.find((o) => o.value === value) ?? options.at(0);
   return (
     <Select
       onValueChange={(v) => {
-        if (typeof v === "string") {
+        if (v !== null) {
           onValueChange(v);
         }
       }}
@@ -93,7 +97,9 @@ export const RichSelect = ({
           className
         )}
       >
-        {selected ? <RichOptionContent option={selected} /> : null}
+        {selected === undefined ? null : (
+          <RichOptionContent option={selected} />
+        )}
       </SelectTrigger>
       <SelectContent alignItemWithTrigger={false}>
         {options.map((o) => (
@@ -126,7 +132,7 @@ export const DetailField = ({
   onChange,
   placeholder,
   hint,
-  disabled,
+  disabled = false,
   disabledReason,
   toggle,
 }: {
@@ -145,7 +151,7 @@ export const DetailField = ({
 }) => {
   const labelEl = (
     <Label
-      className="font-mono text-[11px] font-medium tracking-[0.22em] uppercase opacity-65"
+      className="font-mono text-xs font-medium tracking-[0.22em] uppercase opacity-65"
       htmlFor={id}
     >
       {label}
@@ -155,7 +161,7 @@ export const DetailField = ({
     <div className={disabled ? "opacity-45" : undefined}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-baseline gap-3">
-          {disabled && disabledReason ? (
+          {disabled && hasText(disabledReason) ? (
             <Tooltip>
               <TooltipTrigger render={<span>{labelEl}</span>} />
               <TooltipContent>{disabledReason}</TooltipContent>
@@ -163,7 +169,7 @@ export const DetailField = ({
           ) : (
             labelEl
           )}
-          {hint ? (
+          {hasText(hint) ? (
             <span className="font-mono text-[9px] font-medium tracking-[0.18em] uppercase opacity-50">
               {hint}
             </span>
@@ -174,7 +180,9 @@ export const DetailField = ({
             aria-label={`Show ${label.toLowerCase()} on card`}
             checked={toggle.checked}
             disabled={disabled}
-            onCheckedChange={toggle.onChange}
+            onCheckedChange={(checked) => {
+              toggle.onChange(checked);
+            }}
           />
         ) : null}
       </div>
@@ -195,8 +203,8 @@ export const DetailField = ({
 export const PhotoControl = ({
   photoUrl,
   onChange,
-  disabled,
-  prominent,
+  disabled = false,
+  prominent = false,
 }: {
   disabled?: boolean;
   onChange: (file: File | null) => void;
@@ -222,8 +230,10 @@ export const PhotoControl = ({
     />
   );
 
+  const hasPhoto = hasText(photoUrl);
+
   // Empty + supported → a large, inviting drop zone; the photo sets the mood.
-  if (!photoUrl && prominent && !disabled) {
+  if (!hasPhoto && prominent && !disabled) {
     return (
       <>
         {fileInput}
@@ -258,15 +268,15 @@ export const PhotoControl = ({
         aria-hidden
         className="size-12"
         style={{
-          background: photoUrl
+          background: hasPhoto
             ? `url(${photoUrl}) center/cover`
             : "linear-gradient(135deg, #d8c5a0, #4a2a18)",
         }}
       />
       <div className="flex-1 font-mono text-xs font-medium opacity-70">
-        {photoUrl ? "Photo loaded" : "NO PHOTO · TAP TO ADD"}
+        {hasPhoto ? "Photo loaded" : "NO PHOTO · TAP TO ADD"}
       </div>
-      {photoUrl ? (
+      {hasPhoto ? (
         <Button
           disabled={disabled}
           onClick={() => {
@@ -282,9 +292,9 @@ export const PhotoControl = ({
         disabled={disabled}
         onClick={pick}
         size="sm"
-        variant={photoUrl ? "ghost" : "default"}
+        variant={hasPhoto ? "ghost" : "default"}
       >
-        {photoUrl ? "Replace" : "Upload"}
+        {hasPhoto ? "Replace" : "Upload"}
       </Button>
     </div>
   );
@@ -294,7 +304,7 @@ export const ToggleRow = ({
   label,
   checked,
   onCheckedChange,
-  disabled,
+  disabled = false,
   disabledReason,
 }: {
   checked: boolean;
@@ -319,7 +329,7 @@ export const ToggleRow = ({
         disabled && "opacity-60"
       )}
     >
-      {disabled && disabledReason ? (
+      {disabled && hasText(disabledReason) ? (
         <Tooltip>
           <TooltipTrigger render={<span>{labelEl}</span>} />
           <TooltipContent>{disabledReason}</TooltipContent>

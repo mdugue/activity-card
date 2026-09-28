@@ -51,7 +51,6 @@ const FitDataSchema = z.object({
   sessions: z.optional(z.array(FitSessionSchema)),
 });
 
-
 /** FIT timestamps arrive as a Date or an ISO string; drop unparseable ones. */
 const timestampMs = (value: string | Date): number | undefined => {
   const t = new Date(value).getTime();
@@ -81,7 +80,9 @@ const recordPoints = (records: FitRecord[]): TrackPoint[] =>
   );
 
 /** Cycling cadence, else running cadence: a `0` means "not recorded". */
-const sessionCadence = (session: FitSession | undefined): number | undefined => {
+const sessionCadence = (
+  session: FitSession | undefined
+): number | undefined => {
   const cadence = session?.avg_cadence;
   return cadence === undefined || cadence === 0
     ? session?.avg_running_cadence
