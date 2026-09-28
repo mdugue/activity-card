@@ -18,12 +18,12 @@ import { carouselArgs } from "./story-support";
 type IdSafetyArgs = ComponentProps<typeof CarouselDeck> & BackgroundArgs;
 
 const meta = preview.type<{ args: IdSafetyArgs }>().meta({
-  component: CarouselDeck,
-  title: "Carousel/Multi-mount id safety",
-  tags: ["ai-generated"],
-  parameters: { layout: "fullscreen" },
   argTypes: { data: activityArgType, ...backgroundArgTypes },
   args: { data: SAMPLE_RIDE, ...carouselArgs("ascent") },
+  component: CarouselDeck,
+  parameters: { layout: "fullscreen" },
+  tags: ["ai-generated"],
+  title: "Carousel/Multi-mount id safety",
 });
 
 export const TwoUp = meta.story({
@@ -32,12 +32,12 @@ export const TwoUp = meta.story({
     const shared = {
       ...base,
       data: args.data,
-      photoUrl: args.photoUrl,
       imageSize: args.imageSize,
       photoEffects: args.photoEffects,
+      photoUrl: args.photoUrl,
     };
     return (
-      <div style={{ display: "flex", gap: 32, alignItems: "flex-start" }}>
+      <div style={{ alignItems: "flex-start", display: "flex", gap: 32 }}>
         <CarouselDeck {...shared} config={{ atmosphere: "dawn" }} />
         <CarouselDeck {...shared} config={{ atmosphere: "dusk" }} />
       </div>

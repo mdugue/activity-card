@@ -7,30 +7,30 @@ import {
 } from "@/lib/strava-token-response";
 
 const VALID = {
-  token_type: "Bearer",
   access_token: "access-placeholder",
-  refresh_token: "refresh-placeholder",
-  expires_at: 1_900_000_000,
-  expires_in: 21_600,
   athlete: {
-    id: 42,
     firstname: "Alex",
+    id: 42,
     lastname: "Tester",
     profile_medium: "https://example.com/a.png",
   },
+  expires_at: 1_900_000_000,
+  expires_in: 21_600,
+  refresh_token: "refresh-placeholder",
+  token_type: "Bearer",
 };
 
 describe("parseStravaTokenResponse", () => {
   test("accepts a full exchange payload and strips unknown fields", () => {
     expect(parseStravaTokenResponse(VALID)).toEqual({
       access_token: "access-placeholder",
-      refresh_token: "refresh-placeholder",
-      expires_at: 1_900_000_000,
       athlete: {
-        id: 42,
         firstname: "Alex",
+        id: 42,
         profile_medium: "https://example.com/a.png",
       },
+      expires_at: 1_900_000_000,
+      refresh_token: "refresh-placeholder",
     });
   });
 
@@ -42,11 +42,11 @@ describe("parseStravaTokenResponse", () => {
   test("normalises null athlete fields to undefined", () => {
     const parsed = parseStravaTokenResponse({
       ...VALID,
-      athlete: { id: 7, firstname: null, profile_medium: null },
+      athlete: { firstname: null, id: 7, profile_medium: null },
     });
     expect(parsed?.athlete).toEqual({
-      id: 7,
       firstname: undefined,
+      id: 7,
       profile_medium: undefined,
     });
   });

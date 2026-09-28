@@ -39,7 +39,9 @@ interface AcceptedPhoto {
 /** Fetch one candidate URL and apply every proxy guard. Redirects are not
  * followed (`redirect: "manual"` turns them into a non-ok response), so the
  * host check on `url` is the host the bytes actually come from. */
-async function fetchPhoto(url: string): Promise<AcceptedPhoto | PhotoFailure> {
+const fetchPhoto = async (
+  url: string
+): Promise<AcceptedPhoto | PhotoFailure> => {
   if (!isAllowedPhotoUrl(url, TRUSTED_PHOTO_ORIGIN)) {
     return "photo_host_rejected";
   }
@@ -63,7 +65,7 @@ async function fetchPhoto(url: string): Promise<AcceptedPhoto | PhotoFailure> {
     return "photo_too_large";
   }
   return { body: limitBody(res.body), contentType };
-}
+};
 
 /**
  * Streams one of an activity's Strava photos through our origin. The image
@@ -74,7 +76,7 @@ async function fetchPhoto(url: string): Promise<AcceptedPhoto | PhotoFailure> {
  * Strava photo CDN host, and only image bodies up to `PHOTO_MAX_BYTES` are
  * relayed (`lib/strava-photo-proxy.ts`).
  */
-export async function GET(request: Request) {
+export const GET = async (request: Request) => {
   const url = new URL(request.url);
   const activity = url.searchParams.get("activity") ?? "";
   if (!NUMERIC_ID.test(activity)) {
@@ -104,10 +106,10 @@ export async function GET(request: Request) {
       if (typeof result !== "string") {
         return new NextResponse(result.body, {
           headers: {
-            "content-type": result.contentType,
-            "content-disposition": "inline",
-            "x-content-type-options": "nosniff",
             "cache-control": "private, max-age=3600",
+            "content-disposition": "inline",
+            "content-type": result.contentType,
+            "x-content-type-options": "nosniff",
           },
         });
       }
@@ -117,4 +119,4 @@ export async function GET(request: Request) {
   } catch (error) {
     return stravaErrorResponse(error);
   }
-}
+};

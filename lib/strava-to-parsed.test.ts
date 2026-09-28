@@ -6,37 +6,33 @@ import type { StravaActivityDetail, StravaStreams } from "@/lib/strava-types";
 
 const START = "2026-05-18T07:00:00Z";
 
-function makeDetail(
+const makeDetail = (
   overrides: Partial<StravaActivityDetail> = {}
-): StravaActivityDetail {
-  return {
-    id: 1234,
-    name: "Morning Ride",
-    sport_type: "Ride",
-    start_date: START,
-    distance: 25_000, // metres
-    moving_time: 3600,
-    total_elevation_gain: 300,
-    ...overrides,
-  };
-}
+): StravaActivityDetail => ({
+  distance: 25_000, // metres
+  id: 1234,
+  moving_time: 3600,
+  name: "Morning Ride",
+  sport_type: "Ride",
+  start_date: START,
+  total_elevation_gain: 300,
+  ...overrides,
+});
 
-function makeStreams(points: number): StravaStreams {
-  return {
-    latlng: {
-      type: "latlng",
-      data: Array.from({ length: points }, (_, i) => [47 + i * 0.001, 11]),
-    },
-    altitude: {
-      type: "altitude",
-      data: Array.from({ length: points }, (_, i) => 500 + i),
-    },
-    time: {
-      type: "time",
-      data: Array.from({ length: points }, (_, i) => i * 60),
-    },
-  };
-}
+const makeStreams = (points: number): StravaStreams => ({
+  altitude: {
+    data: Array.from({ length: points }, (_, i) => 500 + i),
+    type: "altitude",
+  },
+  latlng: {
+    data: Array.from({ length: points }, (_, i) => [47 + i * 0.001, 11]),
+    type: "latlng",
+  },
+  time: {
+    data: Array.from({ length: points }, (_, i) => i * 60),
+    type: "time",
+  },
+});
 
 describe("stravaToParsed", () => {
   test("maps detail + aligned streams to one parsed ride", () => {
@@ -54,7 +50,7 @@ describe("stravaToParsed", () => {
 
   test("truncates to the shortest non-empty stream", () => {
     const streams = makeStreams(5);
-    streams.heartrate = { type: "heartrate", data: [140, 141, 142] };
+    streams.heartrate = { data: [140, 141, 142], type: "heartrate" };
     const [parsed] = stravaToParsed(makeDetail(), streams);
     expect(parsed.routeCoordinates?.length).toBe(3);
   });

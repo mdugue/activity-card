@@ -7,12 +7,11 @@
 const DASH = "—";
 
 /** True for a present, finite number — the guard themes gate optional stats on. */
-export function isNum(n: number | undefined): n is number {
-  return n !== undefined && Number.isFinite(n);
-}
+export const isNum = (n: number | undefined): n is number =>
+  n !== undefined && Number.isFinite(n);
 
 /** Sport → upper-case article label ("A CYCLE" / "A RUN" / …). */
-export function sportArticleLabel(sport: string): string {
+export const sportArticleLabel = (sport: string): string => {
   if (sport === "ride") {
     return "A CYCLE";
   }
@@ -26,9 +25,9 @@ export function sportArticleLabel(sport: string): string {
     return "A TRIATHLON";
   }
   return "AN EFFORT";
-}
+};
 
-export function formatDuration(sec?: number): string {
+export const formatDuration = (sec?: number): string => {
   if (sec === undefined || !Number.isFinite(sec) || sec <= 0) {
     return DASH;
   }
@@ -42,10 +41,10 @@ export function formatDuration(sec?: number): string {
     return `${m}m ${s}s`;
   }
   return `${s}s`;
-}
+};
 
 /** Clock form: "1:23:45" or "5:18". Used for splits and transitions. */
-export function formatClock(sec?: number): string {
+export const formatClock = (sec?: number): string => {
   if (sec === undefined || !Number.isFinite(sec) || sec <= 0) {
     return DASH;
   }
@@ -56,10 +55,10 @@ export function formatClock(sec?: number): string {
     return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   }
   return `${m}:${String(s).padStart(2, "0")}`;
-}
+};
 
 /** Run pace, stored as float minutes (4.95) → "4:57". */
-export function formatPaceMin(minutes?: number): string {
+export const formatPaceMin = (minutes?: number): string => {
   if (minutes === undefined || !Number.isFinite(minutes) || minutes <= 0) {
     return DASH;
   }
@@ -67,10 +66,10 @@ export function formatPaceMin(minutes?: number): string {
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
-}
+};
 
 /** Swim pace, stored as seconds-per-100m (118) → "1:58". */
-export function formatPaceSec(seconds?: number): string {
+export const formatPaceSec = (seconds?: number): string => {
   if (seconds === undefined || !Number.isFinite(seconds) || seconds <= 0) {
     return DASH;
   }
@@ -79,14 +78,14 @@ export function formatPaceSec(seconds?: number): string {
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
-}
+};
 
-export function formatNumber(n?: number, digits = 0): string {
+export const formatNumber = (n?: number, digits = 0): string => {
   if (n === undefined || !Number.isFinite(n)) {
     return DASH;
   }
   return n.toFixed(digits);
-}
+};
 
 /** A bare `YYYY-MM-DD` calendar date (no time, no zone). */
 export const CALENDAR_DATE_RE = /^\d{4}-\d{2}-\d{2}$/u;
@@ -102,10 +101,10 @@ export interface FormatDateOptions {
  * print the same day in every viewer timezone. Full timestamps keep the
  * viewer's local day.
  */
-export function formatDate(
+export const formatDate = (
   iso?: string,
   { month = "long" }: FormatDateOptions = {}
-): string {
+): string => {
   if (!iso) {
     return "";
   }
@@ -114,14 +113,13 @@ export function formatDate(
     return iso;
   }
   return d.toLocaleDateString("en-US", {
-    month,
     day: "numeric",
+    month,
     year: "numeric",
     ...(CALENDAR_DATE_RE.test(iso) && { timeZone: "UTC" }),
   });
-}
+};
 
 /** ISO date → "MAY 18, 2026". */
-export function formatDateUpper(iso?: string): string {
-  return formatDate(iso).toUpperCase();
-}
+export const formatDateUpper = (iso?: string): string =>
+  formatDate(iso).toUpperCase();

@@ -26,11 +26,64 @@ interface ActivitySourceProps {
   onOpenStravaPicker: () => void;
 }
 
-export function ActivitySource({
+/**
+ * "View on Strava" anchors per Strava brand guidelines §3 (weight 700,
+ * underline, brand orange `#FC5200`). Single activity → one link; a combined
+ * triathlon with segment-aligned ids → one labelled link per Strava segment.
+ */
+const ViewOnStravaLinks = ({ data }: { data: ActivityData }) => {
+  const ids = data.stravaActivityIds;
+  if (!ids?.length) {
+    return null;
+  }
+  if (ids.length === 1 && ids[0] !== null) {
+    return (
+      <a
+        className="inline-flex items-center gap-1 font-mono text-[11px] font-bold tracking-[0.14em] text-[#FC5200] uppercase underline-offset-4 hover:underline"
+        href={`https://www.strava.com/activities/${ids[0]}/overview`}
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        View on Strava
+        <ArrowSquareOutIcon aria-hidden className="size-3" weight="duotone" />
+      </a>
+    );
+  }
+  const segments = data.segments ?? [];
+  const links = ids
+    .map((id, i) => ({ id, sport: segments[i]?.sport }))
+    .filter(
+      (x): x is { id: number; sport: NonNullable<typeof x.sport> } =>
+        x.id !== null && x.sport !== undefined
+    );
+  if (links.length === 0) {
+    return null;
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[10px] tracking-[0.14em] uppercase opacity-80">
+      <span>View on Strava:</span>
+      {links.map(({ id, sport }, i) => (
+        <span key={id}>
+          <a
+            className="font-bold text-[#FC5200] underline-offset-4 hover:underline"
+            href={`https://www.strava.com/activities/${id}/overview`}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            {sport.toUpperCase()}
+          </a>
+          {i < links.length - 1 ? <span aria-hidden> ·</span> : null}
+        </span>
+      ))}
+    </div>
+  );
+};
+
+export const ActivitySource = ({
   data,
   onFilesLoaded,
   onOpenStravaPicker,
-}: ActivitySourceProps) {
+}: ActivitySourceProps) => {
   const strava = useStravaConnection();
   const fromStrava = data.source === "strava";
   const segCount = data.segments?.length ?? 0;
@@ -63,9 +116,9 @@ export function ActivitySource({
     setIsSwapping(true);
     try {
       onFilesLoaded(await parseActivityFiles(fileList));
-    } catch (err) {
+    } catch (error) {
       setError(
-        err instanceof Error ? err.message : "Could not read that file."
+        error instanceof Error ? error.message : "Could not read that file."
       );
     } finally {
       setIsSwapping(false);
@@ -141,57 +194,4 @@ export function ActivitySource({
       ) : null}
     </div>
   );
-}
-
-/**
- * "View on Strava" anchors per Strava brand guidelines §3 (weight 700,
- * underline, brand orange `#FC5200`). Single activity → one link; a combined
- * triathlon with segment-aligned ids → one labelled link per Strava segment.
- */
-function ViewOnStravaLinks({ data }: { data: ActivityData }) {
-  const ids = data.stravaActivityIds;
-  if (!ids?.length) {
-    return null;
-  }
-  if (ids.length === 1 && ids[0] !== null) {
-    return (
-      <a
-        className="inline-flex items-center gap-1 font-mono text-[11px] font-bold tracking-[0.14em] text-[#FC5200] uppercase underline-offset-4 hover:underline"
-        href={`https://www.strava.com/activities/${ids[0]}/overview`}
-        rel="noopener noreferrer"
-        target="_blank"
-      >
-        View on Strava
-        <ArrowSquareOutIcon aria-hidden className="size-3" weight="duotone" />
-      </a>
-    );
-  }
-  const segments = data.segments ?? [];
-  const links = ids
-    .map((id, i) => ({ id, sport: segments[i]?.sport }))
-    .filter(
-      (x): x is { id: number; sport: NonNullable<typeof x.sport> } =>
-        x.id !== null && x.sport !== undefined
-    );
-  if (links.length === 0) {
-    return null;
-  }
-  return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[10px] tracking-[0.14em] uppercase opacity-80">
-      <span>View on Strava:</span>
-      {links.map(({ id, sport }, i) => (
-        <span key={id}>
-          <a
-            className="font-bold text-[#FC5200] underline-offset-4 hover:underline"
-            href={`https://www.strava.com/activities/${id}/overview`}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            {sport.toUpperCase()}
-          </a>
-          {i < links.length - 1 ? <span aria-hidden> ·</span> : null}
-        </span>
-      ))}
-    </div>
-  );
-}
+};

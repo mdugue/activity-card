@@ -26,11 +26,11 @@ import { withFormatMatrix } from "../../.storybook/with-format-matrix";
 // toggle to see each format's keep-out guides.
 type FormatMatrixArgs = ComponentProps<typeof RenderTheme> & ThemeStoryExtras;
 
-function FormatMatrixView({
+const FormatMatrixView = ({
   args,
 }: {
   args: ThemeStoryExtras & { data: unknown; theme: ThemeId };
-}) {
+}) => {
   const { colors, config, data, photoUrl } = useStoryThemeProps(
     args,
     SINGLE_CARD_THEMES[args.theme]
@@ -44,13 +44,28 @@ function FormatMatrixView({
       theme={args.theme}
     />
   );
-}
+};
 
 const meta = preview.type<{ args: FormatMatrixArgs }>().meta({
+  argTypes: {
+    data: activityArgType,
+    theme: {
+      name: "Theme",
+      control: { type: "select" },
+      options: THEME_ORDER,
+      // Map ids → the theme's own label (e.g. "altitude" → "ALTITUDE").
+      labels: Object.fromEntries(
+        THEME_ORDER.map((id) => [id, SINGLE_CARD_THEMES[id].label])
+      ),
+    },
+    ...colorArgTypes,
+    ...activityTuningArgTypes,
+    ...backgroundArgTypes,
+  },
+  args: { color: "Theme default", data: SAMPLE_RIDE, theme: "altitude" },
   component: RenderTheme,
-  tags: ["ai-generated"],
+  decorators: [withFormatMatrix],
   parameters: {
-    layout: "fullscreen",
     controls: {
       exclude: [
         "format",
@@ -63,25 +78,10 @@ const meta = preview.type<{ args: FormatMatrixArgs }>().meta({
         "imageSize",
       ],
     },
+    layout: "fullscreen",
   },
-  decorators: [withFormatMatrix],
-  argTypes: {
-    theme: {
-      name: "Theme",
-      control: { type: "select" },
-      options: THEME_ORDER,
-      // Map ids → the theme's own label (e.g. "altitude" → "ALTITUDE").
-      labels: Object.fromEntries(
-        THEME_ORDER.map((id) => [id, SINGLE_CARD_THEMES[id].label])
-      ),
-    },
-    data: activityArgType,
-    ...colorArgTypes,
-    ...activityTuningArgTypes,
-    ...backgroundArgTypes,
-  },
-  args: { color: "Theme default", data: SAMPLE_RIDE, theme: "altitude" },
   render: (args) => <FormatMatrixView args={args} />,
+  tags: ["ai-generated"],
 });
 
 // Flip the Theme control to compare any theme across all platforms at once.

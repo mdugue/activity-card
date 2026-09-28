@@ -19,7 +19,7 @@ export interface SyntheticGpx {
   startIso: string;
 }
 
-export function makeGpx(opts: SyntheticGpx): string {
+export const makeGpx = (opts: SyntheticGpx): string => {
   const {
     sport,
     startIso,
@@ -57,53 +57,53 @@ export function makeGpx(opts: SyntheticGpx): string {
   <metadata><time>${startIso}</time></metadata>
   <trk><name>${sport}-test</name><type>${sport}</type><trkseg>${trkpts.join("")}</trkseg></trk>
 </gpx>`;
-}
+};
 
 export const TRIATHLON_FILES = {
-  swim: makeGpx({
-    sport: "swimming",
-    startIso: "2026-05-18T07:00:00Z",
-    durationSec: 30 * 60,
-    latStart: 54.5,
-    latStep: 0.005,
-    lngStart: 14,
-    lngStep: 0.001,
-    points: 40,
-  }),
   bike: makeGpx({
-    sport: "cycling",
-    startIso: "2026-05-18T07:32:30Z",
     durationSec: 90 * 60,
     latStart: 54.5,
     latStep: 0.05,
     lngStart: 14,
     lngStep: 0.05,
     points: 120,
+    sport: "cycling",
+    startIso: "2026-05-18T07:32:30Z",
   }),
   run: makeGpx({
-    sport: "running",
-    startIso: "2026-05-18T09:04:00Z",
     durationSec: 45 * 60,
     latStart: 54.55,
     latStep: 0.01,
     lngStart: 14.05,
     lngStep: -0.005,
     points: 80,
+    sport: "running",
+    startIso: "2026-05-18T09:04:00Z",
+  }),
+  swim: makeGpx({
+    durationSec: 30 * 60,
+    latStart: 54.5,
+    latStep: 0.005,
+    lngStart: 14,
+    lngStep: 0.001,
+    points: 40,
+    sport: "swimming",
+    startIso: "2026-05-18T07:00:00Z",
   }),
 };
 
 /** Single 5km run for single-file upload tests. HR is constant so the
  * computed mean is stable for assertions. */
 export const SINGLE_RUN_GPX = makeGpx({
-  sport: "running",
-  startIso: "2026-05-18T07:00:00Z",
   durationSec: 30 * 60,
+  hr: 150,
   latStart: 54.5,
   latStep: 0.04,
   lngStart: 14,
   lngStep: 0.04,
   points: 100,
-  hr: 150,
+  sport: "running",
+  startIso: "2026-05-18T07:00:00Z",
 });
 
 /** A 1×1 transparent PNG for photo-upload tests. */
@@ -134,11 +134,11 @@ export const QUADRANT_PNG_BASE64 =
  * oversized photo (Strava serves renditions up to 5000px) without carrying a
  * multi-megapixel fixture in the repo — solid colour deflates to a few KB.
  */
-export function solidPngBuffer(
+export const solidPngBuffer = (
   width: number,
   height: number,
   rgb: [number, number, number]
-): Buffer {
+): Buffer => {
   const row = Buffer.concat([
     Buffer.from([0]),
     Buffer.from(Array.from({ length: width }, () => rgb).flat()),
@@ -163,4 +163,4 @@ export function solidPngBuffer(
     chunk("IDAT", deflateSync(raw)),
     chunk("IEND", Buffer.alloc(0)),
   ]);
-}
+};

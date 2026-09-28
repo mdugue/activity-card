@@ -35,7 +35,7 @@ interface SingleCardPreviewProps {
   theme: ThemeId;
 }
 
-export function SingleCardPreview({
+export const SingleCardPreview = ({
   data,
   theme,
   format,
@@ -47,12 +47,12 @@ export function SingleCardPreview({
   photoEffects,
   imageTransform,
   onImageTransformChange,
-}: SingleCardPreviewProps) {
+}: SingleCardPreviewProps) => {
   // The pan/zoom clamp follows the active format's box, so Adjust works at every
   // target (not just the 4:5 master).
   const adjust = usePhotoAdjust({
-    boxW: format.width,
     boxH: format.height,
+    boxW: format.width,
     enabled: photoBackdropEnabled,
     photoUrl,
     rotate: photoEffects.rotate,
@@ -70,9 +70,9 @@ export function SingleCardPreview({
         <div
           className="absolute inset-0 origin-top-left"
           style={{
-            width: format.width,
             height: format.height,
             transform: `scale(calc(100cqw / ${format.width}px))`,
+            width: format.width,
           }}
         >
           <RenderTheme
@@ -101,4 +101,4 @@ export function SingleCardPreview({
       </div>
     </CardStage>
   );
-}
+};

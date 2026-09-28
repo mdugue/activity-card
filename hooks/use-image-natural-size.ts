@@ -10,9 +10,9 @@ export interface ImageSize {
   w: number;
 }
 
-export function useImageNaturalSize(
+export const useImageNaturalSize = (
   src: string | null | undefined
-): ImageSize | null {
+): ImageSize | null => {
   const [size, setSize] = useState<ImageSize | null>(null);
 
   // Re-measure whenever the photo changes — synchronising state to the `src`
@@ -27,7 +27,7 @@ export function useImageNaturalSize(
     const img = new Image();
     img.addEventListener("load", () => {
       if (!cancelled && img.naturalWidth > 0) {
-        setSize({ w: img.naturalWidth, h: img.naturalHeight });
+        setSize({ h: img.naturalHeight, w: img.naturalWidth });
       }
     });
     img.addEventListener("error", () => {
@@ -43,4 +43,4 @@ export function useImageNaturalSize(
   /* oxlint-enable react/set-state-in-effect */
 
   return size;
-}
+};

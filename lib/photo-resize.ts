@@ -26,14 +26,14 @@ export interface PhotoSize {
  * The size to decode a photo at: unchanged when it already fits, otherwise
  * scaled down (aspect preserved) until both limits hold.
  */
-export function cappedPhotoSize(
+export const cappedPhotoSize = (
   w: number,
   h: number,
   maxEdge = MAX_PHOTO_EDGE,
   maxPixels = MAX_PHOTO_PIXELS
-): PhotoSize {
+): PhotoSize => {
   if (!(w > 0 && h > 0)) {
-    return { w, h };
+    return { h, w };
   }
   const scale = Math.min(
     1,
@@ -41,20 +41,20 @@ export function cappedPhotoSize(
     Math.sqrt(maxPixels / (w * h))
   );
   if (scale >= 1) {
-    return { w, h };
+    return { h, w };
   }
   return {
-    w: Math.max(1, Math.round(w * scale)),
     h: Math.max(1, Math.round(h * scale)),
+    w: Math.max(1, Math.round(w * scale)),
   };
-}
+};
 
 /**
  * Re-encode `file` at the capped size. Returns the original file when it
  * already fits — and when anything goes wrong, since a photo the device can
  * *probably* handle beats no photo at all.
  */
-export async function capPhotoResolution(file: File): Promise<File> {
+export const capPhotoResolution = async (file: File): Promise<File> => {
   if (
     typeof document === "undefined" ||
     typeof createImageBitmap !== "function"
@@ -85,12 +85,12 @@ export async function capPhotoResolution(file: File): Promise<File> {
       return file;
     }
     return new File([blob], `${file.name.replace(/\.[^.]+$/u, "")}.jpg`, {
-      type: "image/jpeg",
       lastModified: file.lastModified,
+      type: "image/jpeg",
     });
   } catch {
     return file;
   } finally {
     bitmap?.close();
   }
-}
+};

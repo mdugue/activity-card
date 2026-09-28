@@ -35,7 +35,7 @@ export const THEMES_DURATION_IN_FRAMES =
   WALK.fade * (STEPS + 1);
 
 // Step 1 — flip through every single-card poster, name pills in sync.
-function PostersStep({ durationInFrames }: { durationInFrames: number }) {
+const PostersStep = ({ durationInFrames }: { durationInFrames: number }) => {
   const frame = useCurrentFrame();
   const { height } = useVideoConfig();
   const step = Math.floor(durationInFrames / THEME_ORDER.length);
@@ -84,12 +84,12 @@ function PostersStep({ durationInFrames }: { durationInFrames: number }) {
       </div>
     </>
   );
-}
+};
 
 // Step 2 — the carousel looks, one deck pan per theme.
 const DECK_TOUR: CarouselThemeId[] = ["trace", "press", "frame"];
 
-function DecksStep({ durationInFrames }: { durationInFrames: number }) {
+const DecksStep = ({ durationInFrames }: { durationInFrames: number }) => {
   const frame = useCurrentFrame();
   const { height, width } = useVideoConfig();
   const step = Math.floor(durationInFrames / DECK_TOUR.length);
@@ -140,7 +140,7 @@ function DecksStep({ durationInFrames }: { durationInFrames: number }) {
       </div>
     </div>
   );
-}
+};
 
 // Step 3 — a per-theme knob: Strata's mood reweaves the field.
 const MOODS: { label: string; mood: StrataMood }[] = [
@@ -151,7 +151,7 @@ const MOODS: { label: string; mood: StrataMood }[] = [
   { label: "Paper", mood: "paper" },
 ];
 
-function MoodStep({ durationInFrames }: { durationInFrames: number }) {
+const MoodStep = ({ durationInFrames }: { durationInFrames: number }) => {
   const frame = useCurrentFrame();
   const { height } = useVideoConfig();
   const step = Math.floor(durationInFrames / MOODS.length);
@@ -181,9 +181,9 @@ function MoodStep({ durationInFrames }: { durationInFrames: number }) {
       </div>
     </div>
   );
-}
+};
 
-export function FeatureThemes() {
+export const FeatureThemes = () => {
   const t = (
     <TransitionSeries.Transition
       presentation={fade()}
@@ -238,4 +238,4 @@ export function FeatureThemes() {
       </TransitionSeries.Sequence>
     </TransitionSeries>
   );
-}
+};

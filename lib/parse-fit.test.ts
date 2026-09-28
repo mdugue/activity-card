@@ -5,42 +5,40 @@ import { fitDataToParsed } from "@/lib/parse-fit";
 
 // Shaped like fit-file-parser's `mode: "list"` output with `lengthUnit: "m"`
 // and `speedUnit: "km/h"`.
-function fitData(session: Record<string, unknown>) {
-  return {
-    // List mode: sessions sit at the top level; `activity` is the bare
-    // activity message (no nested sessions).
-    activity: { num_sessions: 1 },
-    sessions: [session],
-    records: [
-      {
-        position_lat: 47,
-        position_long: 11,
-        altitude: 500,
-        timestamp: "2026-05-18T07:00:00Z",
-      },
-      {
-        position_lat: 47.001,
-        position_long: 11,
-        altitude: 620,
-        timestamp: "2026-05-18T07:30:00Z",
-      },
-      {
-        position_lat: 47.002,
-        position_long: 11,
-        altitude: 950,
-        timestamp: "2026-05-18T08:00:00Z",
-      },
-    ],
-  };
-}
+const fitData = (session: Record<string, unknown>) => ({
+  // List mode: sessions sit at the top level; `activity` is the bare
+  // activity message (no nested sessions).
+  activity: { num_sessions: 1 },
+  sessions: [session],
+  records: [
+    {
+      altitude: 500,
+      position_lat: 47,
+      position_long: 11,
+      timestamp: "2026-05-18T07:00:00Z",
+    },
+    {
+      altitude: 620,
+      position_lat: 47.001,
+      position_long: 11,
+      timestamp: "2026-05-18T07:30:00Z",
+    },
+    {
+      altitude: 950,
+      position_lat: 47.002,
+      position_long: 11,
+      timestamp: "2026-05-18T08:00:00Z",
+    },
+  ],
+});
 
 const SESSION = {
+  avg_speed: 30, // km/h
   sport: "cycling",
   start_time: "2026-05-18T07:00:00Z",
+  total_ascent: 450, // metres
   total_distance: 42_195, // metres
   total_elapsed_time: 3600,
-  total_ascent: 450, // metres
-  avg_speed: 30, // km/h
 };
 
 describe("fitDataToParsed", () => {
@@ -86,21 +84,21 @@ describe("fitDataToParsed", () => {
 
   test("prefers enhanced_altitude when present", () => {
     const data = {
-      sessions: [SESSION],
       records: [
         {
+          enhanced_altitude: 1200,
           position_lat: 47,
           position_long: 11,
-          enhanced_altitude: 1200,
           timestamp: "2026-05-18T07:00:00Z",
         },
         {
+          enhanced_altitude: 1300,
           position_lat: 47.001,
           position_long: 11,
-          enhanced_altitude: 1300,
           timestamp: "2026-05-18T08:00:00Z",
         },
       ],
+      sessions: [SESSION],
     };
     const parsed = fitDataToParsed(data, "ride.fit");
     expect(Math.max(...(parsed.elevationProfile ?? []))).toBe(1300);

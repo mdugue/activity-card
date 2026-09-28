@@ -63,24 +63,24 @@ export interface TileBox {
 // Portrait card box: 150→280 wide, height tracks at the 1.4 ratio of the floor
 // (150×210) so every aspect stays bounded as it scales.
 const SINGLE_TILE: TileBox = {
-  floorW: 150,
-  capW: 280,
   aspect: 210 / 150,
+  capW: 280,
   factor: 0.2,
+  floorW: 150,
 };
 
-function tileMaxForWidth(viewportW: number, box: TileBox): TileMax {
+const tileMaxForWidth = (viewportW: number, box: TileBox): TileMax => {
   const w = Math.round(
     Math.min(box.capW, Math.max(box.floorW, viewportW * box.factor))
   );
-  return { w, h: Math.round(w * box.aspect) };
-}
+  return { h: Math.round(w * box.aspect), w };
+};
 
 // The tile bounding box, recomputed as the window resizes. Read synchronously
 // on first render (these sheets only ever mount client-side, after upload, so
 // there's no SSR markup to mismatch) so desktop opens at full size — no flash.
 // `box` must be a stable reference (a module constant) — it keys the effect.
-export function useTileMax(box: TileBox = SINGLE_TILE): TileMax {
+export const useTileMax = (box: TileBox = SINGLE_TILE): TileMax => {
   const [tileMax, setTileMax] = useState<TileMax>(() =>
     tileMaxForWidth(
       typeof window === "undefined" ? box.floorW : window.innerWidth,
@@ -89,32 +89,36 @@ export function useTileMax(box: TileBox = SINGLE_TILE): TileMax {
   );
 
   useEffect(() => {
-    const onResize = () => setTileMax(tileMaxForWidth(window.innerWidth, box));
+    const onResize = () => {
+      setTileMax(tileMaxForWidth(window.innerWidth, box));
+    };
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+    };
   }, [box]);
 
   return tileMax;
-}
+};
 
 // The export pipeline (snapdom + the PNG metadata writer) only runs on a
 // download tap, so it's loaded on demand rather than with the sheet. The sheet
 // warms it on mount so the first tap never waits on the network.
-const loadExportCard = () => import("@/theme/export/export-card");
+const loadExportCard = async () => await import("@/theme/export/export-card");
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => {
+const delay = async (ms: number): Promise<void> => {
+  await new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
-}
+};
 
 /** Shared download orchestration: a single `busy` id (a format id, or "all"),
  *  `handleOne` (one format) and `handleAll` (every format, throttled — browsers
  *  rate-limit back-to-back programmatic downloads). The per-mode `exportOne`
  *  body is the only thing that differs (a card vs a sliced strip). */
-export function useFormatExports(
+export const useFormatExports = (
   exportOne: (format: ExportFormat) => Promise<void>
-) {
+) => {
   // `busy` drives the UI; the guard is what actually serialises exports. React
   // state only updates on the next render, so a double click could otherwise
   // read a stale `busy === null` twice and start two captures.
@@ -132,19 +136,21 @@ export function useFormatExports(
     });
   };
 
-  const handleOne = (format: ExportFormat) =>
-    runExclusive(format.id, () => exportOne(format));
+  const handleOne = async (format: ExportFormat) => {
+    await runExclusive(format.id, async () => await exportOne(format));
+  };
 
-  const handleAll = () =>
-    runExclusive("all", async () => {
+  const handleAll = async () => {
+    await runExclusive("all", async () => {
       for (const id of FORMAT_ORDER) {
         await exportOne(getFormat(id));
         await delay(350);
       }
     });
+  };
 
-  return { busy, handleOne, handleAll };
-}
+  return { busy, handleAll, handleOne };
+};
 
 interface ExportShellProps {
   busy: string | null;
@@ -161,10 +167,61 @@ interface ExportShellProps {
   subtitle: string;
 }
 
+/** The activity's route draws itself in behind the grid (or a soft colour aura
+ *  when there's no route — e.g. a pool swim). Decorative, never exported. */
+const RouteAura = ({
+  colors,
+  coords,
+}: {
+  colors: ColorScheme;
+  coords?: [number, number][];
+}) => {
+  const accent = colors.primary ?? "#c45a2c";
+  if (coords && coords.length > 1) {
+    return (
+      <svg
+        aria-hidden
+        className="pointer-events-none absolute inset-0 size-full opacity-25"
+        preserveAspectRatio="xMidYMid meet"
+        viewBox="0 0 1200 900"
+      >
+        <title>route</title>
+        <path
+          d={routePath(coords, 1200, 900, 140)}
+          fill="none"
+          pathLength={1}
+          stroke={accent}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={9}
+          style={{
+            animation: "effort-route-draw 2.8s ease-out forwards",
+            strokeDasharray: 1,
+          }}
+        />
+      </svg>
+    );
+  }
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-0 overflow-hidden"
+    >
+      <div
+        className="absolute top-1/2 left-1/2 size-[70vmin] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
+        style={{
+          animation: "effort-aura 6s ease-in-out infinite",
+          background: `radial-gradient(circle, ${accent}55, transparent 70%)`,
+        }}
+      />
+    </div>
+  );
+};
+
 /** The shared export-sheet chrome: the drawing-in route aura, the heading, the
  *  Download all / Edit / New toolbar, and a slot for the mode's tiles (plus any
  *  toggles). Both the single-card and carousel sheets render through it. */
-export function ExportShell({
+export const ExportShell = ({
   busy,
   children,
   colors,
@@ -174,50 +231,44 @@ export function ExportShell({
   onNew,
   routeCoordinates,
   subtitle,
-}: ExportShellProps) {
-  return (
-    <div className="relative flex flex-1 flex-col items-center px-4 py-6 sm:px-6 sm:py-10">
-      <RouteAura colors={colors} coords={routeCoordinates} />
+}: ExportShellProps) => (
+  <div className="relative flex flex-1 flex-col items-center px-4 py-6 sm:px-6 sm:py-10">
+    <RouteAura colors={colors} coords={routeCoordinates} />
 
-      <div className="relative w-full max-w-5xl lg:max-w-6xl">
-        <div className="font-mono text-[11px] font-semibold tracking-[0.32em] opacity-55">
-          READY TO SHARE
-        </div>
-        <h2 className="font-heading mt-1.5 text-3xl leading-[0.92] tracking-tight uppercase sm:mt-3 sm:text-5xl lg:text-6xl">
-          Pick a <span className="text-primary">format.</span>
-        </h2>
-        <p className="mt-2 max-w-xl text-xs leading-relaxed opacity-70 sm:mt-4 sm:text-sm">
-          {subtitle}
-        </p>
-
-        <div className="mt-4 flex flex-nowrap items-center gap-2 sm:mt-6 sm:gap-3">
-          <Button
-            disabled={busy !== null || disabled}
-            onClick={onDownloadAll}
-            size="sm"
-          >
-            <DownloadSimpleIcon
-              aria-hidden
-              className="size-4"
-              weight="duotone"
-            />
-            {busy === "all" ? "Exporting…" : "Download all"}
-          </Button>
-          <Button onClick={onKeepEditing} size="sm" variant="outline">
-            <ArrowLeftIcon aria-hidden className="size-4" weight="duotone" />
-            Edit
-          </Button>
-          <Button onClick={onNew} size="sm" variant="ghost">
-            <PlusIcon aria-hidden className="size-4" weight="duotone" />
-            New
-          </Button>
-        </div>
-
-        {children}
+    <div className="relative w-full max-w-5xl lg:max-w-6xl">
+      <div className="font-mono text-[11px] font-semibold tracking-[0.32em] opacity-55">
+        READY TO SHARE
       </div>
+      <h2 className="font-heading mt-1.5 text-3xl leading-[0.92] tracking-tight uppercase sm:mt-3 sm:text-5xl lg:text-6xl">
+        Pick a <span className="text-primary">format.</span>
+      </h2>
+      <p className="mt-2 max-w-xl text-xs leading-relaxed opacity-70 sm:mt-4 sm:text-sm">
+        {subtitle}
+      </p>
+
+      <div className="mt-4 flex flex-nowrap items-center gap-2 sm:mt-6 sm:gap-3">
+        <Button
+          disabled={busy !== null || disabled}
+          onClick={onDownloadAll}
+          size="sm"
+        >
+          <DownloadSimpleIcon aria-hidden className="size-4" weight="duotone" />
+          {busy === "all" ? "Exporting…" : "Download all"}
+        </Button>
+        <Button onClick={onKeepEditing} size="sm" variant="outline">
+          <ArrowLeftIcon aria-hidden className="size-4" weight="duotone" />
+          Edit
+        </Button>
+        <Button onClick={onNew} size="sm" variant="ghost">
+          <PlusIcon aria-hidden className="size-4" weight="duotone" />
+          New
+        </Button>
+      </div>
+
+      {children}
     </div>
-  );
-}
+  </div>
+);
 
 interface ExportTileProps {
   busy: string | null;
@@ -244,7 +295,7 @@ interface ExportTileProps {
  *  reffed as the export source, plus its label + download button. snapdom keeps a
  *  root element's own `scale()`, so the captured node stays untransformed and the
  *  visual scale lives on the wrapper. */
-export function ExportTile({
+export const ExportTile = ({
   busy,
   busyId,
   children,
@@ -257,7 +308,7 @@ export function ExportTile({
   safe,
   sublabel,
   tileMax,
-}: ExportTileProps) {
+}: ExportTileProps) => {
   const scale = Math.min(tileMax.w / nativeW, tileMax.h / nativeH);
   const tileW = nativeW * scale;
   const tileH = nativeH * scale;
@@ -267,12 +318,12 @@ export function ExportTile({
     <div className="flex flex-col gap-2" style={{ width: tileW }}>
       <div
         className="ring-foreground/10 relative overflow-hidden rounded-md shadow-sm ring-1"
-        style={{ width: tileW, height: tileH }}
+        style={{ height: tileH, width: tileW }}
       >
         <div
           style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}
         >
-          <div ref={registerMount} style={{ width: nativeW, height: nativeH }}>
+          <div ref={registerMount} style={{ height: nativeH, width: nativeW }}>
             {children}
           </div>
         </div>
@@ -303,7 +354,7 @@ export function ExportTile({
       </div>
     </div>
   );
-}
+};
 
 interface ExportSheetProps {
   colors: ColorScheme;
@@ -320,11 +371,10 @@ interface ExportSheetProps {
   theme: ThemeId;
 }
 
-function fileFor(data: ActivityData, format: ExportFormat): string {
-  return `effort_${data.sport}_${effortDateSlug(data.date)}_${format.id}.png`;
-}
+const fileFor = (data: ActivityData, format: ExportFormat): string =>
+  `effort_${data.sport}_${effortDateSlug(data.date)}_${format.id}.png`;
 
-export function ExportSheet(props: ExportSheetProps) {
+export const ExportSheet = (props: ExportSheetProps) => {
   const {
     data,
     onKeepEditing,
@@ -362,10 +412,10 @@ export function ExportSheet(props: ExportSheetProps) {
         const { activityMetadata, exportCard } = await loadExportCard();
         await exportCard(node, {
           filename: fileFor(data, format),
-          width: format.width,
           height: format.height,
           metadata: activityMetadata(data),
           metadataOptions: { gps },
+          width: format.width,
         });
       } catch {
         toast.error("Export failed — please try again.");
@@ -417,7 +467,9 @@ export function ExportSheet(props: ExportSheetProps) {
               label={format.label}
               nativeH={format.height}
               nativeW={format.width}
-              onDownload={() => handleOne(format)}
+              onDownload={async () => {
+                await handleOne(format);
+              }}
               registerMount={(node) => {
                 mounts.current[id] = node;
               }}
@@ -442,55 +494,4 @@ export function ExportSheet(props: ExportSheetProps) {
       </div>
     </ExportShell>
   );
-}
-
-/** The activity's route draws itself in behind the grid (or a soft colour aura
- *  when there's no route — e.g. a pool swim). Decorative, never exported. */
-function RouteAura({
-  colors,
-  coords,
-}: {
-  colors: ColorScheme;
-  coords?: [number, number][];
-}) {
-  const accent = colors.primary ?? "#c45a2c";
-  if (coords && coords.length > 1) {
-    return (
-      <svg
-        aria-hidden
-        className="pointer-events-none absolute inset-0 size-full opacity-25"
-        preserveAspectRatio="xMidYMid meet"
-        viewBox="0 0 1200 900"
-      >
-        <title>route</title>
-        <path
-          d={routePath(coords, 1200, 900, 140)}
-          fill="none"
-          pathLength={1}
-          stroke={accent}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={9}
-          style={{
-            strokeDasharray: 1,
-            animation: "effort-route-draw 2.8s ease-out forwards",
-          }}
-        />
-      </svg>
-    );
-  }
-  return (
-    <div
-      aria-hidden
-      className="pointer-events-none absolute inset-0 overflow-hidden"
-    >
-      <div
-        className="absolute top-1/2 left-1/2 size-[70vmin] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
-        style={{
-          background: `radial-gradient(circle, ${accent}55, transparent 70%)`,
-          animation: "effort-aura 6s ease-in-out infinite",
-        }}
-      />
-    </div>
-  );
-}
+};

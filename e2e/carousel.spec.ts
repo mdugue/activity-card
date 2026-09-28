@@ -63,9 +63,9 @@ test.describe("carousel mode", () => {
     page,
   }) => {
     await page.locator('input[type="file"][accept="image/*"]').setInputFiles({
-      name: "photo.png",
-      mimeType: "image/png",
       buffer: Buffer.from(TINY_PNG_BASE64, "base64"),
+      mimeType: "image/png",
+      name: "photo.png",
     });
     await expect(page.getByText(/Photo loaded/iu)).toBeVisible();
     await expect(
@@ -79,9 +79,9 @@ test.describe("carousel mode", () => {
     await page.getByRole("button", { name: /^FRAME\b/iu }).click();
     await expect(page.getByText(/no room for a photo/iu)).toHaveCount(0);
     await page.locator('input[type="file"][accept="image/*"]').setInputFiles({
-      name: "photo.png",
-      mimeType: "image/png",
       buffer: Buffer.from(TINY_PNG_BASE64, "base64"),
+      mimeType: "image/png",
+      name: "photo.png",
     });
     await expect(page.getByText(/Photo loaded/iu)).toBeVisible();
   });
@@ -115,9 +115,9 @@ test.describe("carousel photo backdrop", () => {
     page,
   }) => {
     await page.locator('input[type="file"][accept="image/*"]').setInputFiles({
-      name: "photo.png",
-      mimeType: "image/png",
       buffer: Buffer.from(TINY_PNG_BASE64, "base64"),
+      mimeType: "image/png",
+      name: "photo.png",
     });
     await expect(page.getByText(/Photo loaded/iu)).toBeVisible();
 

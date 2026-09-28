@@ -8,9 +8,9 @@ import {
 
 describe("cappedPhotoSize", () => {
   test("leaves a photo the export can use alone", () => {
-    expect(cappedPhotoSize(2048, 1536)).toEqual({ w: 2048, h: 1536 });
+    expect(cappedPhotoSize(2048, 1536)).toEqual({ h: 1536, w: 2048 });
     // Exactly the tallest export (1080×1920 at 2×) still passes untouched.
-    expect(cappedPhotoSize(2160, 3840)).toEqual({ w: 2160, h: 3840 });
+    expect(cappedPhotoSize(2160, 3840)).toEqual({ h: 3840, w: 2160 });
   });
 
   test("shrinks the long edge of an oversized Strava rendition", () => {
@@ -36,6 +36,6 @@ describe("cappedPhotoSize", () => {
   });
 
   test("passes degenerate sizes through untouched", () => {
-    expect(cappedPhotoSize(0, 0)).toEqual({ w: 0, h: 0 });
+    expect(cappedPhotoSize(0, 0)).toEqual({ h: 0, w: 0 });
   });
 });

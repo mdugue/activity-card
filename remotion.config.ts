@@ -21,7 +21,7 @@ Config.overrideWebpackConfig((current) => {
       alias: Array.isArray(withTailwind.resolve?.alias)
         ? [
             ...withTailwind.resolve.alias,
-            { name: "@", alias: path.resolve(process.cwd()) },
+            { alias: path.resolve(process.cwd()), name: "@" },
           ]
         : {
             ...withTailwind.resolve?.alias,

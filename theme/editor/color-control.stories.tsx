@@ -10,30 +10,28 @@ import { ColorControl } from "./color-control";
 // when a photo palette is available — the five photo-derived strategies with
 // their real computed swatches under a FROM YOUR PHOTO heading.
 
-function paletteTheme(accent: string, accent2: string): PaletteTheme {
-  return {
-    variant: "vibrant",
-    accent,
-    accent2,
-    background: "#16120e",
-    body: "rgba(243,237,226,0.7)",
-    headline: "#f3ede2",
-    onAccent: "#16120e",
-  };
-}
+const paletteTheme = (accent: string, accent2: string): PaletteTheme => ({
+  accent,
+  accent2,
+  background: "#16120e",
+  body: "rgba(243,237,226,0.7)",
+  headline: "#f3ede2",
+  onAccent: "#16120e",
+  variant: "vibrant",
+});
 
 const MOCK_PALETTE: ExtractedPalette = {
   swatches: [],
   themes: {
-    vibrant: paletteTheme("#e0683a", "#caa46a"),
-    muted: paletteTheme("#a98352", "#8a6f4e"),
     complementary: paletteTheme("#2f6f86", "#c4663a"),
-    spectrum: paletteTheme("#b1281a", "#1d3a2e"),
+    muted: paletteTheme("#a98352", "#8a6f4e"),
     pure: paletteTheme("#ffffff", "#ffffff"),
+    spectrum: paletteTheme("#b1281a", "#1d3a2e"),
+    vibrant: paletteTheme("#e0683a", "#caa46a"),
   },
 };
 
-function Demo({ palette }: { palette: ExtractedPalette | null }) {
+const Demo = ({ palette }: { palette: ExtractedPalette | null }) => {
   const [choice, setChoice] = useState<ColorChoice | null>(null);
   const effective: ColorChoice = choice ?? {
     kind: "preset",
@@ -52,12 +50,12 @@ function Demo({ palette }: { palette: ExtractedPalette | null }) {
       </pre>
     </div>
   );
-}
+};
 
 const meta = preview.meta({
-  title: "app/ColorControl",
-  tags: ["ai-generated"],
   parameters: { layout: "centered" },
+  tags: ["ai-generated"],
+  title: "app/ColorControl",
 });
 
 /** No photo loaded: presets only. */

@@ -8,18 +8,18 @@ import type { ParamDef } from "@/theme/core/params/kinds";
 /** The two universal carousel marks, as MARKS-group toggles. Default off. */
 export const CAROUSEL_MARK_PARAMS: ParamDef[] = [
   {
-    kind: "toggle",
-    id: "showEffort",
-    group: "marks",
-    label: "“Made with Effort” mark",
     default: false,
+    group: "marks",
+    id: "showEffort",
+    kind: "toggle",
+    label: "“Made with Effort” mark",
   },
   {
-    kind: "toggle",
-    id: "showPageNumber",
-    group: "marks",
-    label: "Page numbers",
     default: false,
+    group: "marks",
+    id: "showPageNumber",
+    kind: "toggle",
+    label: "Page numbers",
   },
 ];
 
@@ -29,9 +29,7 @@ export const CAROUSEL_MARK_DEFAULTS = {
 };
 
 /** Read the deck-chrome marks back out of a coerced theme config. */
-export function carouselMarks(config: Record<string, unknown>) {
-  return {
-    showEffort: config.showEffort === true,
-    showPageNumber: config.showPageNumber === true,
-  };
-}
+export const carouselMarks = (config: Record<string, unknown>) => ({
+  showEffort: config.showEffort === true,
+  showPageNumber: config.showPageNumber === true,
+});

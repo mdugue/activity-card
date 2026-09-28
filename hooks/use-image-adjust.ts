@@ -31,21 +31,21 @@ interface UseImageAdjustArgs {
   transform: ImageTransform;
 }
 
-function centroidOf(pts: PointerPos[]): PointerPos {
+const centroidOf = (pts: PointerPos[]): PointerPos => {
   const sum = pts.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), {
     x: 0,
     y: 0,
   });
   return { x: sum.x / pts.length, y: sum.y / pts.length };
-}
+};
 
-function avgDistanceFromCentroid(pts: PointerPos[], c: PointerPos): number {
+const avgDistanceFromCentroid = (pts: PointerPos[], c: PointerPos): number => {
   if (pts.length < 2) {
     return 0;
   }
   const d = pts.reduce((acc, p) => acc + Math.hypot(p.x - c.x, p.y - c.y), 0);
   return d / pts.length;
-}
+};
 
 /**
  * Drag-to-pan, pinch-to-zoom (touch) and scroll-to-zoom (desktop) on a single
@@ -56,13 +56,13 @@ function avgDistanceFromCentroid(pts: PointerPos[], c: PointerPos): number {
  * Reads the live `transform` and `onChange` through refs so the native
  * listeners bind once per `enabled` toggle rather than on every transform tick.
  */
-export function useImageAdjust({
+export const useImageAdjust = ({
   enabled,
   transform,
   onChange,
   clamp,
   contentWidth,
-}: UseImageAdjustArgs) {
+}: UseImageAdjustArgs) => {
   const ref = useRef<HTMLDivElement>(null);
 
   // Mirror the latest props so the native listeners (bound once per `enabled`
@@ -156,7 +156,7 @@ export function useImageAdjust({
       e.preventDefault();
       e.stopPropagation();
       const factor = Math.exp(-e.deltaY * 0.0015);
-      const current = transformRef.current;
+      const { current } = transformRef;
       onChangeRef.current(
         clampRef.current({
           scale: current.scale * factor,
@@ -196,4 +196,4 @@ export function useImageAdjust({
   }, [enabled]);
 
   return { ref };
-}
+};

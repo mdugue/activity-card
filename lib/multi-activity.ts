@@ -15,9 +15,8 @@ import { legSeries, segmentProfileMetric } from "@/lib/profile-signal";
 import type { ActivityView } from "@/theme/core/theme-contract";
 
 /** A project carries two or more segments to combine. */
-export function isMultiActivity(data: ActivityView): boolean {
-  return (data.segments?.length ?? 0) >= 2;
-}
+export const isMultiActivity = (data: ActivityView): boolean =>
+  (data.segments?.length ?? 0) >= 2;
 
 export interface SegmentRoute {
   coords: Coord[];
@@ -26,7 +25,7 @@ export interface SegmentRoute {
 }
 
 /** Segments that have a usable route, in order. */
-export function segmentRoutes(data: ActivityView): SegmentRoute[] {
+export const segmentRoutes = (data: ActivityView): SegmentRoute[] => {
   const out: SegmentRoute[] = [];
   for (const s of data.segments ?? []) {
     if (s.routeCoordinates && s.routeCoordinates.length > 1) {
@@ -38,7 +37,7 @@ export function segmentRoutes(data: ActivityView): SegmentRoute[] {
     }
   }
   return out;
-}
+};
 
 export interface SegmentProfiles {
   /** Per-leg distance (km), index-aligned with `profiles`. */
@@ -56,7 +55,7 @@ export interface SegmentProfiles {
  * metric are included (e.g. a swim leg with no elevation is skipped when
  * biking/running legs do have it).
  */
-export function segmentProfiles(data: ActivityView): SegmentProfiles {
+export const segmentProfiles = (data: ActivityView): SegmentProfiles => {
   const segs = data.segments ?? [];
   const metric = segmentProfileMetric(segs);
   const useElevation = metric === "elevation";
@@ -71,18 +70,18 @@ export function segmentProfiles(data: ActivityView): SegmentProfiles {
       sports.push(s.sport);
     }
   }
-  return { profiles, distances, sports, useElevation };
-}
+  return { distances, profiles, sports, useElevation };
+};
 
 /**
  * Collect one *specific* per-leg series (elevation or pace) with its distances —
  * for callers that need a fixed metric rather than `segmentProfiles`'
  * elevation-preferred pick (e.g. a theme showing a dedicated pace sparkline).
  */
-export function segmentSeries(
+export const segmentSeries = (
   data: ActivityView,
   field: "elevationProfile" | "paceProfile"
-): { distances: number[]; profiles: number[][] } {
+): { distances: number[]; profiles: number[][] } => {
   const profiles: number[][] = [];
   const distances: number[] = [];
   for (const s of data.segments ?? []) {
@@ -92,5 +91,5 @@ export function segmentSeries(
       distances.push(s.distanceKm);
     }
   }
-  return { profiles, distances };
-}
+  return { distances, profiles };
+};

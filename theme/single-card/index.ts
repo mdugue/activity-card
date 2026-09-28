@@ -15,13 +15,13 @@ import { strataTheme } from "./strata";
 import { triathlonTheme } from "./triathlon";
 
 export const SINGLE_CARD_THEMES = {
-  path: pathTheme,
   altitude: altitudeTheme,
-  photo: photoTheme,
   data: dataTheme,
   editorial: editorialTheme,
-  triathlon: triathlonTheme,
+  path: pathTheme,
+  photo: photoTheme,
   strata: strataTheme,
+  triathlon: triathlonTheme,
 } as const satisfies Record<string, SingleCardTheme>;
 
 export type ThemeId = keyof typeof SINGLE_CARD_THEMES;

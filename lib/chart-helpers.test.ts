@@ -14,8 +14,8 @@ describe("projectRoutes", () => {
   test("returns an index-aligned empty result when every route is absent", () => {
     const out = projectRoutes([undefined, []], 100, 100, 0);
     expect(out).toHaveLength(2);
-    expect(out[0]).toEqual({ d: "", points: [], start: null, end: null });
-    expect(out[1]).toEqual({ d: "", points: [], start: null, end: null });
+    expect(out[0]).toEqual({ d: "", end: null, points: [], start: null });
+    expect(out[1]).toEqual({ d: "", end: null, points: [], start: null });
   });
 
   test("projects several routes through ONE shared bounding box", () => {

@@ -20,7 +20,7 @@ interface DetailVizProps {
   w?: number;
 }
 
-export function DetailViz({
+export const DetailViz = ({
   kinds,
   data,
   color,
@@ -28,7 +28,7 @@ export function DetailViz({
   fonts,
   w = 320,
   h = 132,
-}: DetailVizProps) {
+}: DetailVizProps) => {
   const present = kinds.filter((k) => vizHasKind(data, k));
   if (present.length === 0) {
     return null;
@@ -39,20 +39,20 @@ export function DetailViz({
         <div key={kind}>
           <div
             style={{
+              color: muted,
               fontFamily: fonts.mono,
               fontSize: 15,
               letterSpacing: "0.22em",
-              color: muted,
               marginBottom: 8,
             }}
           >
             {kind === "route" ? "ROUTE" : "PROFILE"}
           </div>
-          <div style={{ width: w, height: h }}>
+          <div style={{ height: h, width: w }}>
             <MiniViz color={color} data={data} h={h} kind={kind} w={w} />
           </div>
         </div>
       ))}
     </div>
   );
-}
+};

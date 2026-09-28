@@ -35,21 +35,21 @@ import { cn } from "@/lib/utils";
 export const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const anton = Anton({
-  weight: ["400"],
   subsets: ["latin"],
   variable: "--font-heading",
+  weight: ["400"],
 });
 
 export const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono",
   subsets: ["latin"],
+  variable: "--font-mono",
 });
 
 export const cormorant = Cormorant_Garamond({
-  weight: ["400", "500", "600", "700"],
   style: ["normal", "italic"],
   subsets: ["latin"],
   variable: "--font-cormorant",
+  weight: ["400", "500", "600", "700"],
 });
 
 export const manrope = Manrope({
@@ -63,9 +63,9 @@ export const spaceGrotesk = Space_Grotesk({
 });
 
 export const syne = Syne({
-  weight: ["600", "700", "800"],
   subsets: ["latin"],
   variable: "--font-syne",
+  weight: ["600", "700", "800"],
 });
 
 export const playfair = Playfair_Display({
@@ -80,16 +80,16 @@ export const dmSans = DM_Sans({
 });
 
 export const archivoNarrow = Archivo_Narrow({
-  weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
   variable: "--font-archivo-narrow",
+  weight: ["400", "500", "600", "700"],
 });
 
 export const instrumentSerif = Instrument_Serif({
-  weight: ["400"],
   style: ["normal", "italic"],
   subsets: ["latin"],
   variable: "--font-instrument-serif",
+  weight: ["400"],
 });
 
 export const bricolage = Bricolage_Grotesque({
@@ -98,9 +98,9 @@ export const bricolage = Bricolage_Grotesque({
 });
 
 export const ibmPlexMono = IBM_Plex_Mono({
-  weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
   variable: "--font-ibm-plex-mono",
+  weight: ["400", "500", "600", "700"],
 });
 
 export const geistMono = Geist_Mono({

@@ -11,18 +11,16 @@ import {
 
 const CONTENT_W = 912;
 
-function make(partial: Partial<ActivityData>): ActivityData {
-  return {
-    athleteName: "",
-    date: "2026-05-18",
-    distanceKm: 87.3,
-    durationSec: 12_251,
-    location: "Elbsandstein",
-    sport: "ride",
-    title: "Saturday ride",
-    ...partial,
-  };
-}
+const make = (partial: Partial<ActivityData>): ActivityData => ({
+  athleteName: "",
+  date: "2026-05-18",
+  distanceKm: 87.3,
+  durationSec: 12_251,
+  location: "Elbsandstein",
+  sport: "ride",
+  title: "Saturday ride",
+  ...partial,
+});
 
 describe("resolveClaim", () => {
   test("returns null when no claim is selected", () => {
@@ -31,15 +29,15 @@ describe("resolveClaim", () => {
 
   test("formats the requested metric with its unit", () => {
     const c = resolveClaim("elevation", make({ elevationGainM: 1240 }));
-    expect(c).toMatchObject({ key: "elevation", value: "1240", unit: "m" });
+    expect(c).toMatchObject({ key: "elevation", unit: "m", value: "1240" });
   });
 
   test("renders the activity name as text", () => {
     const c = resolveClaim("name", make({ title: "Föhrer Westwind" }));
     expect(c).toMatchObject({
+      isText: true,
       key: "name",
       value: "Föhrer Westwind",
-      isText: true,
     });
   });
 
@@ -51,7 +49,7 @@ describe("resolveClaim", () => {
   });
 
   test("falls back from an empty name to a real metric", () => {
-    const c = resolveClaim("name", make({ title: "  ", elevationGainM: 980 }));
+    const c = resolveClaim("name", make({ elevationGainM: 980, title: "  " }));
     expect(c?.isText).toBe(false);
     expect(c?.key).toBe("elevation");
   });
@@ -59,9 +57,9 @@ describe("resolveClaim", () => {
   test("uses metres for swim distance", () => {
     const c = resolveClaim(
       "distance",
-      make({ sport: "swim", distanceKm: 2.4 })
+      make({ distanceKm: 2.4, sport: "swim" })
     );
-    expect(c).toMatchObject({ value: "2400", unit: "m" });
+    expect(c).toMatchObject({ unit: "m", value: "2400" });
   });
 });
 
@@ -72,7 +70,7 @@ describe("supportingStats", () => {
   });
 
   test("excludes the claim's own metric", () => {
-    const data = make({ elevationGainM: 1240, avgSpeedKmh: 23.6 });
+    const data = make({ avgSpeedKmh: 23.6, elevationGainM: 1240 });
     const stats = supportingStats(data, "distance");
     expect(stats.some((s) => s.label === "DISTANCE")).toBe(false);
   });
@@ -80,8 +78,8 @@ describe("supportingStats", () => {
   test("skips metrics the activity doesn't have", () => {
     // A ride with only distance present: elevation/speed/vam all absent.
     const data = make({
-      elevationGainM: undefined,
       avgSpeedKmh: undefined,
+      elevationGainM: undefined,
       maxSpeedKmh: undefined,
       vamMph: undefined,
     });
@@ -92,9 +90,9 @@ describe("supportingStats", () => {
 
   test("uses sport-specific priorities for runs", () => {
     const data = make({
-      sport: "run",
-      avgPaceMinPerKm: 4.95,
       avgHeartRate: 152,
+      avgPaceMinPerKm: 4.95,
+      sport: "run",
     });
     const stats = supportingStats(data, "distance");
     expect(stats.map((s) => s.label)).toEqual(["PACE", "TIME"]);
@@ -105,8 +103,8 @@ describe("claimOptions", () => {
   test("offers only metrics the activity has", () => {
     const opts = claimOptions(
       make({
-        elevationGainM: 1240,
         avgSpeedKmh: 23.6,
+        elevationGainM: 1240,
         maxSpeedKmh: 58.2,
       })
     );

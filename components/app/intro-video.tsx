@@ -8,16 +8,19 @@ import { cn } from "@/lib/utils";
 
 // @remotion/player pulls in the Remotion runtime; keep it out of the landing
 // screen's initial bundle and off the server by loading it lazily + client-only.
-const IntroPlayer = dynamic(() => import("@/components/app/intro-player"), {
-  ssr: false,
-});
+const IntroPlayer = dynamic(
+  async () => await import("@/components/app/intro-player"),
+  {
+    ssr: false,
+  }
+);
 
 /**
  * The hero clip — the Hero Remotion composition rendered on-page through the
  * Remotion player. Lazily mounted only once scrolled into view. The
  * surrounding section copy lives at the call site.
  */
-export function IntroVideo({ className }: { className?: string }) {
+export const IntroVideo = ({ className }: { className?: string }) => {
   const frameRef = useRef<HTMLDivElement>(null);
   const inView = useInView(frameRef);
   return (
@@ -31,4 +34,4 @@ export function IntroVideo({ className }: { className?: string }) {
       {inView ? <IntroPlayer /> : null}
     </div>
   );
-}
+};

@@ -13,7 +13,26 @@ import {
 } from "@/lib/strava-oauth-state";
 import { readStravaTokenResponse } from "@/lib/strava-token-response";
 
-export async function GET(request: Request) {
+/** `payload.p` should already be a safe relative path (validated in the
+ * authorize route), but re-validate here so a forged state with an
+ * absolute URL can never escape the origin. */
+const resolveSafeReturnTo = (path: string | undefined, base: URL): string => {
+  if (!path) {
+    return "/?strava=connected";
+  }
+  let resolved: URL;
+  try {
+    resolved = new URL(path, base);
+  } catch {
+    return "/?strava=connected";
+  }
+  if (resolved.origin !== base.origin) {
+    return "/?strava=connected";
+  }
+  return resolved.pathname + resolved.search + resolved.hash;
+};
+
+export const GET = async (request: Request) => {
   const clientId = process.env.STRAVA_CLIENT_ID;
   const clientSecret = process.env.STRAVA_CLIENT_SECRET;
   const redirectUri = process.env.STRAVA_REDIRECT_URI;
@@ -77,14 +96,14 @@ export async function GET(request: Request) {
   const finalReturnTo = resolveSafeReturnTo(payload.p, url);
 
   const res = await fetch(STRAVA_TOKEN_URL, {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       client_id: clientId,
       client_secret: clientSecret,
       code,
       grant_type: "authorization_code",
     }),
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    method: "POST",
   });
   if (!res.ok) {
     return NextResponse.redirect(new URL("/?strava=token_exchange", url));
@@ -103,23 +122,4 @@ export async function GET(request: Request) {
   await clearOAuthState();
 
   return NextResponse.redirect(new URL(finalReturnTo, url));
-}
-
-/** `payload.p` should already be a safe relative path (validated in the
- * authorize route), but re-validate here so a forged state with an
- * absolute URL can never escape the origin. */
-function resolveSafeReturnTo(path: string | undefined, base: URL): string {
-  if (!path) {
-    return "/?strava=connected";
-  }
-  let resolved: URL;
-  try {
-    resolved = new URL(path, base);
-  } catch {
-    return "/?strava=connected";
-  }
-  if (resolved.origin !== base.origin) {
-    return "/?strava=connected";
-  }
-  return resolved.pathname + resolved.search + resolved.hash;
-}
+};

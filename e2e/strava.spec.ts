@@ -17,7 +17,9 @@ const CONNECT_BUTTON = { name: /connect with strava/iu };
 test.describe("strava OAuth + picker", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
-    await page.evaluate(() => localStorage.clear());
+    await page.evaluate(() => {
+      localStorage.clear();
+    });
     await page.reload();
   });
 
@@ -308,8 +310,8 @@ test.describe("strava OAuth + picker", () => {
     // mint), so the callback must redirect to /?strava=bounce_rejected rather
     // than relaying the code to the attacker.
     const payload = JSON.stringify({
-      r: "x".repeat(48),
       b: "https://attacker.example",
+      r: "x".repeat(48),
     });
     const state = Buffer.from(payload).toString("base64url");
     // Assert the redirect target at navigation commit — the home page strips the
@@ -331,13 +333,13 @@ test.describe("strava OAuth + picker", () => {
       page.getByRole("heading", { name: /your recent/iu })
     ).toBeVisible();
 
-    await page.route("**/api/strava/activity/*", (route) =>
-      route.fulfill({
-        status: 502,
-        contentType: "application/json",
+    await page.route("**/api/strava/activity/*", async (route) => {
+      await route.fulfill({
         body: JSON.stringify({ error: "strava_error", status: 502 }),
-      })
-    );
+        contentType: "application/json",
+        status: 502,
+      });
+    });
     await page
       .getByRole("button", { name: /saturday in the elbsandstein/iu })
       .click();
@@ -348,14 +350,14 @@ test.describe("strava OAuth + picker", () => {
   test("429 from /api/strava/activities surfaces a rate-limit alert with countdown", async ({
     page,
   }) => {
-    await page.route("**/api/strava/activities**", (route) =>
-      route.fulfill({
-        status: 429,
+    await page.route("**/api/strava/activities**", async (route) => {
+      await route.fulfill({
+        body: JSON.stringify({ error: "rate_limited", retryAfter: 30 }),
         contentType: "application/json",
         headers: { "retry-after": "30" },
-        body: JSON.stringify({ error: "rate_limited", retryAfter: 30 }),
-      })
-    );
+        status: 429,
+      });
+    });
     await connectStrava(page);
     await page.waitForURL(/\/$/u);
 
@@ -371,9 +373,9 @@ test.describe("strava OAuth + picker", () => {
   test("502 from /api/strava/me surfaces a server-broken alert in the wizard", async ({
     page,
   }) => {
-    await page.route("**/api/strava/me", (route) =>
-      route.fulfill({ status: 502, body: "server down" })
-    );
+    await page.route("**/api/strava/me", async (route) => {
+      await route.fulfill({ body: "server down", status: 502 });
+    });
     await page.reload();
     await openWizard(page);
 
@@ -384,10 +386,10 @@ test.describe("strava OAuth + picker", () => {
 
   test.describe("OAuth callback toasts", () => {
     for (const { flag, copy } of [
-      { flag: "denied", copy: /declined to connect strava/iu },
-      { flag: "state_mismatch", copy: /couldn.?t verify the strava sign-in/iu },
-      { flag: "token_exchange", copy: /strava rejected the sign-in/iu },
-      { flag: "failed", copy: /couldn.?t start the strava sign-in/iu },
+      { copy: /declined to connect strava/iu, flag: "denied" },
+      { copy: /couldn.?t verify the strava sign-in/iu, flag: "state_mismatch" },
+      { copy: /strava rejected the sign-in/iu, flag: "token_exchange" },
+      { copy: /couldn.?t start the strava sign-in/iu, flag: "failed" },
     ]) {
       test(`?strava=${flag} shows the specific toast`, async ({ page }) => {
         await page.goto(`/?strava=${flag}`);

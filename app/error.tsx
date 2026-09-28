@@ -2,6 +2,8 @@
 
 import { RouteError } from "@/components/app/route-error";
 
-export default function Error({ retry }: { retry: () => void }) {
-  return <RouteError retry={retry} />;
-}
+const Error = ({ retry }: { retry: () => void }) => (
+  <RouteError retry={retry} />
+);
+
+export default Error;

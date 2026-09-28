@@ -26,12 +26,12 @@ interface FormatControlProps {
   showSafe?: boolean;
 }
 
-export function FormatControl({
+export const FormatControl = ({
   format,
   onFormatChange,
   showSafe = false,
   onShowSafeChange,
-}: FormatControlProps) {
+}: FormatControlProps) => {
   const [open, setOpen] = useState(false);
 
   return (
@@ -107,4 +107,4 @@ export function FormatControl({
       </PopoverContent>
     </Popover>
   );
-}
+};

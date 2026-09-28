@@ -3,6 +3,48 @@
 // glyph (Ascent / Exposure). Just enough to nod at the other dimension.
 
 import type { ActivityData } from "@/lib/activity";
+
+export const CrossViz = ({
+  kind,
+  data,
+  color,
+  muted,
+  accent,
+  fonts,
+  w = 260,
+  h = 150,
+}: CrossVizProps) => {
+  if (!vizHasKind(data, kind)) {
+    return null;
+  }
+  return (
+    <div style={{ width: w }}>
+      <div
+        style={{
+          color: muted,
+          fontFamily: fonts.mono,
+          fontSize: 15,
+          letterSpacing: "0.2em",
+          marginBottom: 6,
+        }}
+      >
+        {kind === "elevation" ? "PROFILE" : "ROUTE"}
+      </div>
+      <div style={{ height: h, width: w }}>
+        <MiniViz
+          accent={accent}
+          color={color}
+          data={data}
+          exaggeration={1.2}
+          h={h}
+          kind={kind}
+          pad={14}
+          w={w}
+        />
+      </div>
+    </div>
+  );
+};
 import type {
   CrossViz as CrossVizKind,
   FontPair,
@@ -21,46 +63,4 @@ interface CrossVizProps {
   muted: string;
   /** chart width (px) */
   w?: number;
-}
-
-export function CrossViz({
-  kind,
-  data,
-  color,
-  muted,
-  accent,
-  fonts,
-  w = 260,
-  h = 150,
-}: CrossVizProps) {
-  if (!vizHasKind(data, kind)) {
-    return null;
-  }
-  return (
-    <div style={{ width: w }}>
-      <div
-        style={{
-          fontFamily: fonts.mono,
-          fontSize: 15,
-          letterSpacing: "0.2em",
-          color: muted,
-          marginBottom: 6,
-        }}
-      >
-        {kind === "elevation" ? "PROFILE" : "ROUTE"}
-      </div>
-      <div style={{ width: w, height: h }}>
-        <MiniViz
-          accent={accent}
-          color={color}
-          data={data}
-          exaggeration={1.2}
-          h={h}
-          kind={kind}
-          pad={14}
-          w={w}
-        />
-      </div>
-    </div>
-  );
 }

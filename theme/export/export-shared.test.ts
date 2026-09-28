@@ -38,7 +38,7 @@ describe("triggerDownload", () => {
   beforeEach(() => {
     events = [];
     jest.useFakeTimers();
-    spyOn(URL, "createObjectURL").mockImplementation(() => "blob:effort/1");
+    spyOn(URL, "createObjectURL").mockReturnValue("blob:effort/1");
     spyOn(URL, "revokeObjectURL").mockImplementation((url: string) => {
       events.push(`revoke ${url}`);
     });
@@ -78,9 +78,9 @@ describe("createInFlightGuard", () => {
     const guard = createInFlightGuard();
     let release: () => void = () => {};
     let calls = 0;
-    const task = () => {
+    const task = async () => {
       calls += 1;
-      return new Promise<void>((resolve) => {
+      await new Promise<void>((resolve) => {
         release = resolve;
       });
     };
@@ -106,6 +106,6 @@ describe("createInFlightGuard", () => {
       .catch((error: unknown) => (error as Error).message);
     expect(outcome).toBe("capture failed");
     expect(guard.busy).toBe(false);
-    expect(await guard.run(() => Promise.resolve())).toBe(true);
+    expect(await guard.run(async () => {})).toBe(true);
   });
 });

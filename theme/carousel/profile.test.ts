@@ -8,13 +8,16 @@ import { bandModeFor, pickProfile } from "@/theme/carousel/profile";
 // The selection rule itself is covered table-driven in
 // `lib/profile-signal.test.ts`; these assert the carousel adapter's shape.
 
-function withProfiles(
+const withProfiles = (
   elevationProfile?: number[],
   paceProfile?: number[],
   lapPacesPer100m?: number[]
-): ActivityData {
-  return { ...SAMPLE_RIDE, elevationProfile, paceProfile, lapPacesPer100m };
-}
+): ActivityData => ({
+  ...SAMPLE_RIDE,
+  elevationProfile,
+  lapPacesPer100m,
+  paceProfile,
+});
 
 describe("pickProfile", () => {
   test("prefers a usable elevation profile", () => {

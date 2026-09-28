@@ -33,15 +33,15 @@ const CRC_TABLE: Uint32Array = (() => {
   return table;
 })();
 
-function crc32(bytes: Uint8Array): number {
+const crc32 = (bytes: Uint8Array): number => {
   let crc = 0xff_ff_ff_ff;
   for (const byte of bytes) {
     crc = CRC_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
   }
   return (crc ^ 0xff_ff_ff_ff) >>> 0;
-}
+};
 
-function latin1Bytes(s: string): Uint8Array {
+const latin1Bytes = (s: string): Uint8Array => {
   // tEXt keyword/value is Latin-1; drop anything outside it (callers keep
   // keywords ASCII, and route UTF-8 content through iTXt instead).
   const out = new Uint8Array(s.length);
@@ -49,9 +49,9 @@ function latin1Bytes(s: string): Uint8Array {
     out[i] = s.charCodeAt(i) & 0xff;
   }
   return out;
-}
+};
 
-function buildChunk(type: string, data: Uint8Array): Uint8Array {
+const buildChunk = (type: string, data: Uint8Array): Uint8Array => {
   const out = new Uint8Array(12 + data.length);
   const dv = new DataView(out.buffer);
   dv.setUint32(0, data.length);
@@ -61,10 +61,10 @@ function buildChunk(type: string, data: Uint8Array): Uint8Array {
   out.set(data, 8);
   dv.setUint32(8 + data.length, crc32(out.subarray(4, 8 + data.length)));
   return out;
-}
+};
 
 /** A `tEXt` chunk — Latin-1 keyword + value, widely read by viewers. */
-export function textChunk(keyword: string, text: string): Uint8Array {
+export const textChunk = (keyword: string, text: string): Uint8Array => {
   const kw = latin1Bytes(keyword);
   const tx = latin1Bytes(text);
   const data = new Uint8Array(kw.length + 1 + tx.length);
@@ -72,10 +72,10 @@ export function textChunk(keyword: string, text: string): Uint8Array {
   data[kw.length] = 0;
   data.set(tx, kw.length + 1);
   return buildChunk("tEXt", data);
-}
+};
 
 /** An `iTXt` chunk (uncompressed, UTF-8) — for user text + the XMP packet. */
-export function itxtChunk(keyword: string, text: string): Uint8Array {
+export const itxtChunk = (keyword: string, text: string): Uint8Array => {
   const kw = latin1Bytes(keyword);
   const tx = new TextEncoder().encode(text);
   // keyword\0 compFlag compMethod langTag\0 transKeyword\0 text
@@ -90,20 +90,19 @@ export function itxtChunk(keyword: string, text: string): Uint8Array {
   data[o++] = 0; // empty translated keyword, then null
   data.set(tx, o);
   return buildChunk("iTXt", data);
-}
+};
 
-function isPng(bytes: Uint8Array): boolean {
-  return PNG_SIGNATURE.every((b, i) => bytes[i] === b);
-}
+const isPng = (bytes: Uint8Array): boolean =>
+  PNG_SIGNATURE.every((b, i) => bytes[i] === b);
 
 /**
  * Splice extra chunks in just before `IEND`. Returns the original bytes
  * unchanged if the input is not a PNG (defensive — never corrupts an export).
  */
-export function injectPngChunks(
+export const injectPngChunks = (
   png: Uint8Array,
   chunks: Uint8Array[]
-): Uint8Array {
+): Uint8Array => {
   if (!(isPng(png) && chunks.length)) {
     return png;
   }
@@ -138,7 +137,7 @@ export function injectPngChunks(
   }
   out.set(png.subarray(iendStart), o);
   return out;
-}
+};
 
 // --- Effort metadata model --------------------------------------------------
 
@@ -169,24 +168,27 @@ const APP_NAME = "Effort";
 const APP_URL = "https://effort.app";
 
 /** Decimal degrees → XMP exif "deg,min.mmmmREF" form. */
-function toXmpCoord(value: number, positive: string, negative: string): string {
+const toXmpCoord = (
+  value: number,
+  positive: string,
+  negative: string
+): string => {
   const ref = value >= 0 ? positive : negative;
   const abs = Math.abs(value);
   const deg = Math.floor(abs);
   const min = (abs - deg) * 60;
   return `${deg},${min.toFixed(6)}${ref}`;
-}
+};
 
-function xmpEscape(s: string): string {
-  return s
+const xmpEscape = (s: string): string =>
+  s
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
-}
 
 /** Build an XMP packet carrying attribution and (optionally) GPS. */
-export function buildXmp(input: MetadataInput, withGps: boolean): string {
+export const buildXmp = (input: MetadataInput, withGps: boolean): string => {
   const tool = `${APP_NAME} — ${input.url || APP_URL}`;
   const desc = input.title ? xmpEscape(input.title) : "";
   const creator = input.athleteName ? xmpEscape(input.athleteName) : "";
@@ -214,13 +216,13 @@ export function buildXmp(input: MetadataInput, withGps: boolean): string {
  </rdf:RDF>
 </x:xmpmeta>
 <?xpacket end="r"?>`;
-}
+};
 
 /** The textual chunks Effort writes: attribution always, GPS/place opt-out. */
-export function buildMetadataChunks(
+export const buildMetadataChunks = (
   input: MetadataInput,
   opts: MetadataOptions = {}
-): Uint8Array[] {
+): Uint8Array[] => {
   const withGps = opts.gps !== false;
   const url = input.url || APP_URL;
   const chunks: Uint8Array[] = [
@@ -249,16 +251,14 @@ export function buildMetadataChunks(
     itxtChunk("XML:com.adobe.xmp", buildXmp(input, withGps))
   );
   return chunks;
-}
+};
 
 /** Convenience: inject Effort metadata into PNG bytes. */
-export function applyMetadata(
+export const applyMetadata = (
   png: Uint8Array,
   input: MetadataInput,
   opts: MetadataOptions = {}
-): Uint8Array {
-  return injectPngChunks(png, buildMetadataChunks(input, opts));
-}
+): Uint8Array => injectPngChunks(png, buildMetadataChunks(input, opts));
 
 /**
  * Derive a representative GPS point from route coordinates. Effort stores route
@@ -266,9 +266,9 @@ export function applyMetadata(
  * component. Uses the centroid for a stable, less-identifying point than the
  * exact start.
  */
-export function routeCentroid(
+export const routeCentroid = (
   coords?: readonly (readonly [number, number])[]
-): GeoPoint | null {
+): GeoPoint | null => {
   if (!coords || coords.length === 0) {
     return null;
   }
@@ -278,5 +278,5 @@ export function routeCentroid(
     sx += lng;
     sy += -negLat;
   }
-  return { lng: sx / coords.length, lat: sy / coords.length };
-}
+  return { lat: sy / coords.length, lng: sx / coords.length };
+};

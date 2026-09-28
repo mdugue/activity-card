@@ -6,8 +6,8 @@ import type { StatItem } from "@/theme/carousel/stats";
 import type { FontPair } from "@/theme/carousel/theme-tokens";
 
 const TABULAR: React.CSSProperties = {
-  fontVariantNumeric: "tabular-nums",
   fontFeatureSettings: '"tnum" 1',
+  fontVariantNumeric: "tabular-nums",
 };
 
 interface StatProps {
@@ -19,66 +19,64 @@ interface StatProps {
   shadow?: string;
 }
 
-export function Stat({
+export const Stat = ({
   item,
   fonts,
   ink,
   muted,
   numeralSize,
   shadow,
-}: StatProps) {
-  return (
-    <div>
-      <div
+}: StatProps) => (
+  <div>
+    <div
+      style={{
+        color: muted,
+        fontFamily: fonts.mono,
+        fontSize: 17,
+        fontWeight: 500,
+        letterSpacing: "0.18em",
+        textShadow: shadow || undefined,
+        textTransform: "uppercase",
+      }}
+    >
+      {item.label}
+    </div>
+    <div
+      style={{
+        alignItems: "baseline",
+        display: "flex",
+        gap: 8,
+        marginTop: 8,
+      }}
+    >
+      <span
         style={{
-          fontFamily: fonts.mono,
-          fontSize: 17,
-          fontWeight: 500,
-          letterSpacing: "0.18em",
-          color: muted,
-          textTransform: "uppercase",
+          ...TABULAR,
+          color: ink,
+          fontFamily: fonts.numeral,
+          fontSize: numeralSize,
+          fontWeight: fonts.numeralWeight,
+          letterSpacing: "-0.01em",
+          lineHeight: 0.86,
           textShadow: shadow || undefined,
         }}
       >
-        {item.label}
-      </div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "baseline",
-          gap: 8,
-          marginTop: 8,
-        }}
-      >
+        {item.value}
+      </span>
+      {item.unit ? (
         <span
           style={{
-            ...TABULAR,
-            fontFamily: fonts.numeral,
-            fontWeight: fonts.numeralWeight,
-            fontSize: numeralSize,
-            lineHeight: 0.86,
-            letterSpacing: "-0.01em",
-            color: ink,
+            color: muted,
+            fontFamily: fonts.mono,
+            fontSize: Math.round(numeralSize * 0.26),
+            fontWeight: 500,
+            letterSpacing: "0.04em",
             textShadow: shadow || undefined,
           }}
         >
-          {item.value}
+          {item.unit}
         </span>
-        {item.unit ? (
-          <span
-            style={{
-              fontFamily: fonts.mono,
-              fontSize: Math.round(numeralSize * 0.26),
-              fontWeight: 500,
-              letterSpacing: "0.04em",
-              color: muted,
-              textShadow: shadow || undefined,
-            }}
-          >
-            {item.unit}
-          </span>
-        ) : null}
-      </div>
+      ) : null}
     </div>
-  );
-}
+  </div>
+);

@@ -35,7 +35,7 @@ const PROBE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="${PROBE_W}" he
 
 let probe: Promise<boolean> | null = null;
 
-async function runProbe(): Promise<boolean> {
+const runProbe = async (): Promise<boolean> => {
   if (typeof document === "undefined") {
     return true;
   }
@@ -63,15 +63,15 @@ async function runProbe(): Promise<boolean> {
     // straight path can't be trusted — take the compositing fallback.
     return false;
   }
-}
+};
 
 /** Memoised — one probe per document, shared by every export. */
-export function canRasterizeEmbeddedImages(): Promise<boolean> {
+export const canRasterizeEmbeddedImages = async (): Promise<boolean> => {
   probe ??= runProbe();
-  return probe;
-}
+  return await probe;
+};
 
 /** Test seam: forget the memoised result (used by unit tests only). */
-export function resetRasterSupportProbe(): void {
+export const resetRasterSupportProbe = (): void => {
   probe = null;
-}
+};

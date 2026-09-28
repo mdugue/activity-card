@@ -20,29 +20,27 @@ interface StravaConnectButtonProps {
  * route; the brand-required link target is `https://www.strava.com/oauth/authorize`
  * which `/api/strava/authorize` redirects to.
  */
-export function StravaConnectButton({
+export const StravaConnectButton = ({
   className,
   ref,
-}: StravaConnectButtonProps) {
-  return (
-    // The href is a Route Handler that redirects to Strava, not an in-app page.
-    // oxlint-disable-next-line nextjs/no-html-link-for-pages
-    <a
-      aria-label="Connect with Strava"
-      className={cn(
-        "focus-visible:ring-ring focus-visible:ring-offset-background inline-flex items-center justify-center rounded-md transition outline-none hover:opacity-90 focus-visible:ring-2 focus-visible:ring-offset-2",
-        className
-      )}
-      href="/api/strava/authorize"
-      ref={ref}
-    >
-      <Image
-        alt=""
-        height={48}
-        priority
-        src="/strava/btn-connect-with-strava-orange.svg"
-        width={237}
-      />
-    </a>
-  );
-}
+}: StravaConnectButtonProps) => (
+  // The href is a Route Handler that redirects to Strava, not an in-app page.
+  // oxlint-disable-next-line nextjs/no-html-link-for-pages
+  <a
+    aria-label="Connect with Strava"
+    className={cn(
+      "focus-visible:ring-ring focus-visible:ring-offset-background inline-flex items-center justify-center rounded-md transition outline-none hover:opacity-90 focus-visible:ring-2 focus-visible:ring-offset-2",
+      className
+    )}
+    href="/api/strava/authorize"
+    ref={ref}
+  >
+    <Image
+      alt=""
+      height={48}
+      priority
+      src="/strava/btn-connect-with-strava-orange.svg"
+      width={237}
+    />
+  </a>
+);

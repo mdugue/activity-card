@@ -23,7 +23,7 @@ const toOklch = converter("oklch");
 // importing this module stays side-effect free.
 let workerPipelineInstalled = false;
 
-function ensureWorkerPipeline(): void {
+const ensureWorkerPipeline = (): void => {
   if (workerPipelineInstalled || typeof Worker === "undefined") {
     return;
   }
@@ -43,7 +43,7 @@ function ensureWorkerPipeline(): void {
   } catch {
     // Keep the in-thread pipeline registered by the browser entry.
   }
-}
+};
 
 // ----------------------------------------------------------------------------
 // Types
@@ -133,9 +133,9 @@ export const PALETTE_MAX_DIMENSION = 1024;
  * Run node-vibrant on an image source (object URL, data URL, or HTMLImageElement).
  * Returns normalised swatches sorted by prominence (population) descending.
  */
-export async function extractSwatches(
+export const extractSwatches = async (
   src: string
-): Promise<NormalisedSwatch[]> {
+): Promise<NormalisedSwatch[]> => {
   ensureWorkerPipeline();
   const palette = await Vibrant.from(src)
     .maxDimension(PALETTE_MAX_DIMENSION)
@@ -148,8 +148,8 @@ export async function extractSwatches(
         return null;
       }
       return {
-        name,
         hex: sw.hex,
+        name,
         population: sw.population,
       };
     })
@@ -157,43 +157,43 @@ export async function extractSwatches(
     .sort((a, b) => b.population - a.population);
 
   return swatches;
-}
+};
 
 // ----------------------------------------------------------------------------
 // Colour helpers (OKLCH-based)
 // ----------------------------------------------------------------------------
 
-function lightness(hex: string): number {
-  return (toOklch(parse(hex)) as Oklch).l ?? 0;
-}
+const lightness = (hex: string): number =>
+  (toOklch(parse(hex)) as Oklch).l ?? 0;
 
-function chroma(hex: string): number {
-  return (toOklch(parse(hex)) as Oklch).c ?? 0;
-}
+const chroma = (hex: string): number => (toOklch(parse(hex)) as Oklch).c ?? 0;
 
 /** Rotate hue in OKLCH space — perceptually even, unlike HSL rotation. */
-function rotateHue(hex: string, degrees: number): string {
+const rotateHue = (hex: string, degrees: number): string => {
   const c = toOklch(parse(hex)) as Oklch;
   const h = ((c.h ?? 0) + degrees) % 360;
   return formatHex({ ...c, h }) ?? hex;
-}
+};
 
 /** Nudge a colour lighter/darker without changing hue — for deriving body text. */
-function withLightness(hex: string, l: number): string {
+const withLightness = (hex: string, l: number): string => {
   const c = toOklch(parse(hex)) as Oklch;
   return formatHex({ ...c, l }) ?? hex;
-}
+};
 
 /** Pick whichever of black/white reads better on the given background. */
-function autoContrastText(bg: string): string {
-  return wcagContrast(WHITE, bg) >= wcagContrast(BLACK, bg) ? WHITE : BLACK;
-}
+const autoContrastText = (bg: string): string =>
+  wcagContrast(WHITE, bg) >= wcagContrast(BLACK, bg) ? WHITE : BLACK;
 
 /**
  * Find the candidate with the best contrast against bg that clears `min`.
  * Falls back to auto black/white if nothing qualifies — legibility always wins.
  */
-function pickTextColor(bg: string, candidates: string[], min: number): string {
+const pickTextColor = (
+  bg: string,
+  candidates: string[],
+  min: number
+): string => {
   let best: { hex: string; ratio: number } | null = null;
   for (const hex of candidates) {
     const ratio = wcagContrast(hex, bg);
@@ -202,35 +202,27 @@ function pickTextColor(bg: string, candidates: string[], min: number): string {
     }
   }
   return best ? best.hex : autoContrastText(bg);
-}
+};
 
 // ----------------------------------------------------------------------------
 // Role assignment
 // ----------------------------------------------------------------------------
 
-function byName(
+const byName = (
   swatches: NormalisedSwatch[],
   name: SwatchName
-): string | undefined {
-  return swatches.find((s) => s.name === name)?.hex;
-}
+): string | undefined => swatches.find((s) => s.name === name)?.hex;
 
-function darkest(swatches: NormalisedSwatch[]): string {
-  return (
-    [...swatches].sort((a, b) => lightness(a.hex) - lightness(b.hex))[0]?.hex ??
-    BLACK
-  );
-}
+const darkest = (swatches: NormalisedSwatch[]): string =>
+  [...swatches].sort((a, b) => lightness(a.hex) - lightness(b.hex))[0]?.hex ??
+  BLACK;
 
-function mostVibrant(swatches: NormalisedSwatch[]): string {
+const mostVibrant = (swatches: NormalisedSwatch[]): string =>
   // Highest chroma swatch, tie-broken by population.
-  return (
-    [...swatches].sort((a, b) => {
-      const dc = chroma(b.hex) - chroma(a.hex);
-      return dc === 0 ? b.population - a.population : dc;
-    })[0]?.hex ?? "#888888"
-  );
-}
+  [...swatches].sort((a, b) => {
+    const dc = chroma(b.hex) - chroma(a.hex);
+    return dc === 0 ? b.population - a.population : dc;
+  })[0]?.hex ?? "#888888";
 
 /**
  * "Pure" mood — ignore the swatches entirely. The original photo theme's
@@ -254,10 +246,10 @@ export const PURE_THEME: PaletteTheme = {
 };
 
 /** Accent choice for the photo-derived variants (everything except pure). */
-function pickAccent(
+const pickAccent = (
   swatches: NormalisedSwatch[],
   variant: Exclude<PaletteVariant, "pure">
-): string {
+): string => {
   if (variant === "muted") {
     return (
       byName(swatches, "LightMuted") ??
@@ -273,15 +265,15 @@ function pickAccent(
   }
   // vibrant + spectrum both pull the punchy Vibrant swatch.
   return byName(swatches, "Vibrant") ?? mostVibrant(swatches);
-}
+};
 
 /** Body colour for all non-spectrum variants: a dimmed headline that
  *  still clears the lower contrast bar, with a swatch fallback. */
-function dimmedBody(
+const dimmedBody = (
   headline: string,
   background: string,
   candidates: string[]
-): string {
+): string => {
   const dimmed = withLightness(
     headline,
     Math.max(0.55, lightness(headline) - 0.18)
@@ -289,32 +281,32 @@ function dimmedBody(
   return wcagContrast(dimmed, background) >= MIN_BODY_CONTRAST
     ? dimmed
     : pickTextColor(background, candidates, MIN_BODY_CONTRAST);
-}
+};
 
 /** Spectrum body: prefer LightMuted so headline + body carry distinct tints. */
-function spectrumBody(
+const spectrumBody = (
   swatches: NormalisedSwatch[],
   background: string,
   headline: string,
   candidates: string[]
-): string {
+): string => {
   const mutedLight =
     byName(swatches, "LightMuted") ?? byName(swatches, "Muted");
   if (mutedLight && wcagContrast(mutedLight, background) >= MIN_BODY_CONTRAST) {
     return mutedLight;
   }
   return dimmedBody(headline, background, candidates);
-}
+};
 
 /**
  * Build a single theme for a given variant. All text/bg pairings are
  * contrast-guaranteed; the accent is the only "expressive" colour and it
  * never carries text without an auto-contrast onAccent.
  */
-function buildTheme(
+const buildTheme = (
   swatches: NormalisedSwatch[],
   variant: PaletteVariant
-): PaletteTheme {
+): PaletteTheme => {
   if (variant === "pure") {
     return PURE_THEME;
   }
@@ -348,44 +340,44 @@ function buildTheme(
       : dimmedBody(headline, background, candidates);
 
   return {
-    variant,
-    background,
-    accent2,
-    headline,
-    body,
     accent,
+    accent2,
+    background,
+    body,
+    headline,
     onAccent: autoContrastText(accent),
+    variant,
   };
-}
+};
 
 // ----------------------------------------------------------------------------
 // Public entry point
 // ----------------------------------------------------------------------------
 
-export async function buildPaletteFromImage(
+export const buildPaletteFromImage = async (
   src: string
-): Promise<ExtractedPalette> {
+): Promise<ExtractedPalette> => {
   const swatches = await extractSwatches(src);
 
   if (swatches.length === 0) {
     // Pathological image (e.g. fully transparent). Return a safe neutral theme.
     const neutral: PaletteTheme = {
-      variant: "muted",
-      background: BLACK,
-      headline: WHITE,
-      body: "#bbbbbb",
       accent: "#888888",
       accent2: "#888888",
+      background: BLACK,
+      body: "#bbbbbb",
+      headline: WHITE,
       onAccent: BLACK,
+      variant: "muted",
     };
     return {
       swatches: [],
       themes: {
-        vibrant: neutral,
-        muted: neutral,
         complementary: neutral,
-        spectrum: neutral,
+        muted: neutral,
         pure: PURE_THEME,
+        spectrum: neutral,
+        vibrant: neutral,
       },
     };
   }
@@ -393,11 +385,11 @@ export async function buildPaletteFromImage(
   return {
     swatches,
     themes: {
-      vibrant: buildTheme(swatches, "vibrant"),
-      muted: buildTheme(swatches, "muted"),
       complementary: buildTheme(swatches, "complementary"),
-      spectrum: buildTheme(swatches, "spectrum"),
+      muted: buildTheme(swatches, "muted"),
       pure: PURE_THEME,
+      spectrum: buildTheme(swatches, "spectrum"),
+      vibrant: buildTheme(swatches, "vibrant"),
     },
   };
-}
+};

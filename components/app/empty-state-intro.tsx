@@ -45,7 +45,7 @@ const CLAIM_DELAY = 1.7;
 const CLAIM_DURATION = 0.7;
 
 // Only animate where the 3-up grid actually exists and motion is welcome.
-function shouldPlayIntro(): boolean {
+const shouldPlayIntro = (): boolean => {
   if (typeof window === "undefined") {
     return false;
   }
@@ -53,14 +53,14 @@ function shouldPlayIntro(): boolean {
     return false;
   }
   return window.innerWidth >= 1024;
-}
+};
 
 // useLayoutEffect on the client (sets the hidden state before paint), a no-op
 // on the server — avoids React's SSR warning without losing the pre-paint set.
 const useIsoLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
 
-export function useEmptyStateIntro() {
+export const useEmptyStateIntro = () => {
   const [stage, setStage] = useState<IntroStage>("composed");
   const [showReplay, setShowReplay] = useState(false);
   const [runId, setRunId] = useState(0);
@@ -76,14 +76,20 @@ export function useEmptyStateIntro() {
     setShowReplay(false);
     let raf2 = 0;
     const raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => setStage("playing"));
+      raf2 = requestAnimationFrame(() => {
+        setStage("playing");
+      });
     });
     const timers = [
       // Surface the replay control once the claim has finished sliding in.
-      window.setTimeout(() => setShowReplay(true), 2600),
+      window.setTimeout(() => {
+        setShowReplay(true);
+      }, 2600),
       // Lock the composed end-state in case a background tab froze the
       // transition clock mid-flight (after claim + recede have settled).
-      window.setTimeout(() => setStage("composed"), 3200),
+      window.setTimeout(() => {
+        setStage("composed");
+      }, 3200),
     ];
     return () => {
       cancelAnimationFrame(raf1);
@@ -94,9 +100,11 @@ export function useEmptyStateIntro() {
     };
   }, [runId]);
 
-  const replay = useCallback(() => setRunId((r) => r + 1), []);
+  const replay = useCallback(() => {
+    setRunId((r) => r + 1);
+  }, []);
   return { claim: CLAIM, replay, showReplay, stage };
-}
+};
 
 // Per-element style for the panel overlays (scrim/tint/number/word/graphic).
 // `composed` returns nothing so the element keeps its Tailwind resting look.
@@ -104,24 +112,24 @@ const ROLE: Record<
   IntroRole,
   { dur: number; ease: string; offset: number; opacity: number; rises: boolean }
 > = {
-  scrim: { opacity: 1, rises: false, dur: 0.5, offset: 0, ease: "ease-out" },
-  tint: { opacity: 0.25, rises: false, dur: 0.5, offset: 0, ease: "ease-out" },
-  num: { opacity: 1, rises: true, dur: 0.5, offset: 0.05, ease: "ease-out" },
-  word: { opacity: 1, rises: true, dur: 0.55, offset: 0.09, ease: RISE_EASE },
   content: {
+    dur: 0.55,
+    ease: "ease-out",
+    offset: 0.13,
     opacity: 1,
     rises: true,
-    dur: 0.55,
-    offset: 0.13,
-    ease: "ease-out",
   },
+  num: { dur: 0.5, ease: "ease-out", offset: 0.05, opacity: 1, rises: true },
+  scrim: { dur: 0.5, ease: "ease-out", offset: 0, opacity: 1, rises: false },
+  tint: { dur: 0.5, ease: "ease-out", offset: 0, opacity: 0.25, rises: false },
+  word: { dur: 0.55, ease: RISE_EASE, offset: 0.09, opacity: 1, rises: true },
 };
 
-export function panelPartStyle(
+export const panelPartStyle = (
   stage: IntroStage,
   role: IntroRole,
   panelIndex: number
-): CSSProperties | undefined {
+): CSSProperties | undefined => {
   if (stage === "composed") {
     return;
   }
@@ -142,15 +150,15 @@ export function panelPartStyle(
     transform: r.rises ? "translateY(0)" : undefined,
     transition,
   };
-}
+};
 
 // Whole-panel recede applied to each panel root. Holds full opacity through the
 // fill (the delay) so the photo handoff stays seamless, then eases down to the
 // resting value. `composed` defers to the Tailwind PANEL_REST_CLASS.
-export function panelFadeStyle(
+export const panelFadeStyle = (
   stage: IntroStage,
   panelIndex: number
-): CSSProperties | undefined {
+): CSSProperties | undefined => {
   const rest = PANEL_REST_OPACITY[panelIndex];
   if (stage === "composed" || rest === 1) {
     return;
@@ -162,12 +170,12 @@ export function panelFadeStyle(
     opacity: rest,
     transition: `opacity ${FADE_DURATION}s ease-in-out ${FADE_DELAY}s`,
   };
-}
+};
 
 // The single page claim: fades + slides up once the panel reveal has settled.
 // `composed` defers to the element's resting Tailwind look (no-JS / mobile /
 // reduced-motion all show it in place from the start).
-export function claimStyle(stage: IntroStage): CSSProperties | undefined {
+export const claimStyle = (stage: IntroStage): CSSProperties | undefined => {
   if (stage === "composed") {
     return;
   }
@@ -183,7 +191,7 @@ export function claimStyle(stage: IntroStage): CSSProperties | undefined {
     transform: "translateY(0)",
     transition: `opacity ${CLAIM_DURATION}s ${RISE_EASE} ${CLAIM_DELAY}s, transform ${CLAIM_DURATION}s ${RISE_EASE} ${CLAIM_DELAY}s`,
   };
-}
+};
 
 // Gutter bars align to the fluid panel seams: panel width is (100% − 2·16px)/3,
 // so seam j sits j+1 panels plus j gaps in from the left.
@@ -192,7 +200,7 @@ const GUTTER_LEFT = [
   "calc(2 * (100% - 32px) / 3 + 16px)",
 ];
 
-function revealStyle(stage: IntroStage): CSSProperties {
+const revealStyle = (stage: IntroStage): CSSProperties => {
   if (stage === "hidden") {
     return { opacity: 1, transition: "none" };
   }
@@ -203,9 +211,9 @@ function revealStyle(stage: IntroStage): CSSProperties {
     };
   }
   return { opacity: 0 };
-}
+};
 
-function gutterStyle(stage: IntroStage, i: number): CSSProperties {
+const gutterStyle = (stage: IntroStage, i: number): CSSProperties => {
   if (stage === "hidden") {
     return { transform: "scaleY(0)", transition: "none" };
   }
@@ -216,7 +224,7 @@ function gutterStyle(stage: IntroStage, i: number): CSSProperties {
     };
   }
   return { transform: "scaleY(1)" };
-}
+};
 
 /**
  * The seamless "whole photo" overlay + guillotine gutters that sit above the
@@ -224,45 +232,41 @@ function gutterStyle(stage: IntroStage, i: number): CSSProperties {
  * Uses the same source/fit/filter as the panel slices so the handoff is
  * pixel-identical.
  */
-export function RevealOverlay({
+export const RevealOverlay = ({
   photoSrc,
   stage,
 }: {
   photoSrc: string;
   stage: IntroStage;
-}) {
-  return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-0 z-30 hidden overflow-hidden lg:block"
-      style={revealStyle(stage)}
-    >
-      <Image
-        alt=""
-        className="object-cover brightness-[0.8] contrast-[1.05] grayscale-[0.42]"
-        fill
-        sizes="1024px"
-        src={photoSrc}
+}) => (
+  <div
+    aria-hidden="true"
+    className="pointer-events-none absolute inset-0 z-30 hidden overflow-hidden lg:block"
+    style={revealStyle(stage)}
+  >
+    <Image
+      alt=""
+      className="object-cover brightness-[0.8] contrast-[1.05] grayscale-[0.42]"
+      fill
+      sizes="1024px"
+      src={photoSrc}
+    />
+    {GUTTER_LEFT.map((left, i) => (
+      <div
+        className="bg-background absolute inset-y-0 w-4 origin-top"
+        key={left}
+        style={{ left, ...gutterStyle(stage, i) }}
       />
-      {GUTTER_LEFT.map((left, i) => (
-        <div
-          className="bg-background absolute inset-y-0 w-4 origin-top"
-          key={left}
-          style={{ left, ...gutterStyle(stage, i) }}
-        />
-      ))}
-    </div>
-  );
-}
+    ))}
+  </div>
+);
 
-export function IntroReplay({ onReplay }: { onReplay: () => void }) {
-  return (
-    <button
-      className="border-foreground/30 absolute right-5 bottom-4 z-40 hidden items-center gap-2 rounded-full border px-3 py-2 font-mono text-[11px] font-medium tracking-[0.16em] uppercase opacity-60 transition-opacity hover:opacity-100 lg:inline-flex"
-      onClick={onReplay}
-      type="button"
-    >
-      <span aria-hidden="true">↻</span> Replay
-    </button>
-  );
-}
+export const IntroReplay = ({ onReplay }: { onReplay: () => void }) => (
+  <button
+    className="border-foreground/30 absolute right-5 bottom-4 z-40 hidden items-center gap-2 rounded-full border px-3 py-2 font-mono text-[11px] font-medium tracking-[0.16em] uppercase opacity-60 transition-opacity hover:opacity-100 lg:inline-flex"
+    onClick={onReplay}
+    type="button"
+  >
+    <span aria-hidden="true">↻</span> Replay
+  </button>
+);

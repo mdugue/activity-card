@@ -14,14 +14,18 @@ export interface CarouselController {
   selectedIndex: number;
 }
 
-export function useCarousel(count: number): CarouselController {
+export const useCarousel = (count: number): CarouselController => {
   const [selected, setSelected] = useState(0);
   // Switching to a theme with fewer slides clamps the selection, so downstream
   // consumers never see an out-of-range index.
   const selectedIndex = Math.max(0, Math.min(selected, count - 1));
 
-  const select = useCallback((index: number) => setSelected(index), []);
-  const regenerate = useCallback(() => setSelected(0), []);
+  const select = useCallback((index: number) => {
+    setSelected(index);
+  }, []);
+  const regenerate = useCallback(() => {
+    setSelected(0);
+  }, []);
 
-  return { count, selectedIndex, select, regenerate };
-}
+  return { count, regenerate, select, selectedIndex };
+};

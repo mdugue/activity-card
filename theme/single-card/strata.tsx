@@ -65,7 +65,7 @@ const USES = [
 type ThemeStrataProps = ThemeProps<(typeof USES)[number], StrataConfig>;
 
 /** The reusable strata SVG: the woven field plus the two highlighted heroes. */
-function StrataField({
+const StrataField = ({
   data,
   config,
   overPhoto,
@@ -74,7 +74,7 @@ function StrataField({
   data: ActivityView;
   /** Boost halos + outline the captions so the field reads over a photo. */
   overPhoto: boolean;
-}) {
+}) => {
   const tokens = STRATA_MOODS[config.mood];
   const source = resolveStrataSource(data);
   if (!source) {
@@ -82,11 +82,11 @@ function StrataField({
   }
 
   const { curves, routePts, elevPts } = buildStrata({
-    routeCoords: source.routeCoords,
-    profile: source.profile,
-    W: FIELD_W,
     H: FIELD_H,
     K: STRATA_DENSITY_K[config.density],
+    W: FIELD_W,
+    profile: source.profile,
+    routeCoords: source.routeCoords,
   });
   if (curves.length < 2) {
     return null;
@@ -118,10 +118,10 @@ function StrataField({
     <svg
       aria-hidden="true"
       style={{
-        width: "100%",
-        height: "100%",
         display: "block",
+        height: "100%",
         overflow: "visible",
+        width: "100%",
       }}
       viewBox={`0 0 ${FIELD_W} ${FIELD_H}`}
     >
@@ -247,12 +247,12 @@ function StrataField({
       ) : null}
     </svg>
   );
-}
+};
 
 /** Sport-appropriate [label, value, unit] stats for the foot of the card. The
  *  middle metric is omitted when the activity lacks it (or the user toggled it
  *  off — `applyVisibility` strips the field), never shown as a dash. */
-function statRow(data: ActivityView): [string, string, string][] {
+const statRow = (data: ActivityView): [string, string, string][] => {
   const time: [string, string, string] = [
     "TIME",
     formatDuration(data.durationSec),
@@ -278,14 +278,14 @@ function statRow(data: ActivityView): [string, string, string][] {
   }
   row.push(time);
   return row;
-}
+};
 
-export function ThemeStrata({
+export const ThemeStrata = ({
   data,
   photoUrl,
   imageTransform,
   config = DEFAULT_STRATA_CONFIG,
-}: ThemeStrataProps) {
+}: ThemeStrataProps) => {
   const tokens = STRATA_MOODS[config.mood];
   const stats = statRow(data);
   const statText = tokens.inkStat ? tokens.text : "#fff";
@@ -295,7 +295,7 @@ export function ThemeStrata({
   const { width, height } = useFormat();
   // The stat strip bleeds to the canvas edges (negative side margins), so the
   // resolved insets are reused for both the column padding and the strip.
-  const insets = useSafeInsets({ top: 78, right: 80, bottom: 0, left: 80 });
+  const insets = useSafeInsets({ bottom: 0, left: 80, right: 80, top: 78 });
   const metaParts = [
     (data.location || "").toUpperCase(),
     formatDateUpper(data.date),
@@ -326,7 +326,7 @@ export function ThemeStrata({
         <>
           <div
             aria-hidden
-            style={{ position: "absolute", inset: 0, zIndex: -1 }}
+            style={{ inset: 0, position: "absolute", zIndex: -1 }}
           >
             {imageSize ? (
               <CoverPhoto
@@ -349,10 +349,10 @@ export function ThemeStrata({
           <div
             aria-hidden
             style={{
-              position: "absolute",
-              inset: 0,
-              zIndex: -1,
               background: `linear-gradient(180deg, rgba(${tokens.scrim},0.86) 0%, rgba(${tokens.scrim},0.36) 17%, rgba(${tokens.scrim},0) 37%, rgba(${tokens.scrim},0) 58%, rgba(${tokens.scrim},0.5) 84%, rgba(${tokens.scrim},0.85) 100%)`,
+              inset: 0,
+              position: "absolute",
+              zIndex: -1,
             }}
           />
         </>
@@ -361,15 +361,15 @@ export function ThemeStrata({
       {/* Meta band. */}
       <div
         style={{
-          display: "flex",
-          justifyContent: "space-between",
           alignItems: "baseline",
+          display: "flex",
           fontSize: 24,
           fontWeight: 600,
+          justifyContent: "space-between",
           letterSpacing: "0.26em",
-          marginTop: insets.top,
           marginLeft: insets.left,
           marginRight: insets.right,
+          marginTop: insets.top,
         }}
       >
         <span>STRATA · {sportArticleLabel(data.sport)}</span>
@@ -377,10 +377,10 @@ export function ThemeStrata({
       </div>
       <div
         style={{
-          height: 1.5,
           background: "currentColor",
-          opacity: 0.28,
+          height: 1.5,
           marginTop: 22,
+          opacity: 0.28,
         }}
       />
 
@@ -388,19 +388,19 @@ export function ThemeStrata({
       <h1
         style={{
           fontFamily: DISPLAY,
-          fontWeight: 800,
           fontSize: 82,
-          lineHeight: 0.94,
+          fontWeight: 800,
           letterSpacing: "-0.02em",
-          marginTop: "34px",
+          lineHeight: 0.94,
           marginBottom: "14px",
           marginLeft: insets.left,
           marginRight: insets.right,
+          marginTop: "34px",
           maxWidth: "94%",
-          textWrap: "pretty",
           textShadow: overPhoto
             ? `0 2px 30px rgba(${tokens.scrim},0.6)`
             : undefined,
+          textWrap: "pretty",
         }}
       >
         {data.title}
@@ -408,11 +408,11 @@ export function ThemeStrata({
       <div
         style={{
           fontSize: 25,
-          letterSpacing: "0.16em",
-          opacity: 0.7,
           fontWeight: 500,
+          letterSpacing: "0.16em",
           marginLeft: insets.left,
           marginRight: insets.right,
+          opacity: 0.7,
         }}
       >
         {metaParts.join(" · ")}
@@ -422,9 +422,9 @@ export function ThemeStrata({
       <div
         style={{
           flex: 1,
-          position: "relative",
           margin: "20px 0 8px 0",
           minHeight: 0,
+          position: "relative",
         }}
       >
         <StrataField config={config} data={data} overPhoto={overPhoto} />
@@ -455,9 +455,9 @@ export function ThemeStrata({
             <div
               style={{
                 fontSize: 23,
+                fontWeight: 600,
                 letterSpacing: "0.22em",
                 opacity: 0.7,
-                fontWeight: 600,
               }}
             >
               {k}
@@ -481,10 +481,10 @@ export function ThemeStrata({
               {u ? (
                 <span
                   style={{
-                    fontSize: 26,
-                    opacity: 0.65,
-                    marginLeft: 6,
                     fontFamily: MONO,
+                    fontSize: 26,
+                    marginLeft: 6,
+                    opacity: 0.65,
                   }}
                 >
                   {u}
@@ -496,9 +496,9 @@ export function ThemeStrata({
         <div
           style={{
             fontSize: 22,
+            fontWeight: 600,
             letterSpacing: "0.2em",
             opacity: 0.6,
-            fontWeight: 600,
             textAlign: "right",
           }}
         >
@@ -509,7 +509,7 @@ export function ThemeStrata({
       </div>
     </div>
   );
-}
+};
 
 export const strataTheme = defineTheme({
   id: "strata",

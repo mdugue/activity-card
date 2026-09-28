@@ -17,9 +17,9 @@ import type { ExtractedPalette } from "@/lib/palette";
  *          palette is kept during a photo swap so consumers don't flash to
  *          their fallback between photos.
  */
-export function useImagePalette(
+export const useImagePalette = (
   src: string | null | undefined
-): ExtractedPalette | null {
+): ExtractedPalette | null => {
   const [palette, setPalette] = useState<ExtractedPalette | null>(null);
 
   // The synchronous setState below is intentional: it synchronises internal
@@ -33,7 +33,9 @@ export function useImagePalette(
     }
     let cancelled = false;
     import("@/lib/palette")
-      .then(({ buildPaletteFromImage }) => buildPaletteFromImage(src))
+      .then(
+        async ({ buildPaletteFromImage }) => await buildPaletteFromImage(src)
+      )
       .then((next) => {
         if (!cancelled) {
           setPalette(next);
@@ -53,4 +55,4 @@ export function useImagePalette(
   /* oxlint-enable react/set-state-in-effect */
 
   return palette;
-}
+};

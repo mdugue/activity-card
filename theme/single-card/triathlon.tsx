@@ -30,42 +30,40 @@ interface StatProps {
   v: string | number;
 }
 
-function Stat({ label, v }: StatProps) {
-  return (
-    <div>
-      <div
-        style={{
-          fontSize: 22,
-          letterSpacing: "0.22em",
-          opacity: 0.7,
-          fontWeight: 600,
-        }}
-      >
-        {label}
-      </div>
-      <div
-        style={{
-          fontFamily: "var(--font-bricolage), sans-serif",
-          fontWeight: 700,
-          // Fluid against BOTH the stat column's width (cqi → the parent's
-          // container-type:inline-size: shrinks in a narrow 3-up landscape
-          // column so `920 m` stays one line) AND the card's height (cqb → the
-          // card's container-type:size: shrinks in a short square card so the
-          // two-stat swim column doesn't overflow).
-          fontSize: "clamp(20px, min(22cqi, 18cqb), 38px)",
-          lineHeight: 1,
-          marginTop: 6,
-        }}
-      >
-        {v}
-      </div>
+const Stat = ({ label, v }: StatProps) => (
+  <div>
+    <div
+      style={{
+        fontSize: 22,
+        fontWeight: 600,
+        letterSpacing: "0.22em",
+        opacity: 0.7,
+      }}
+    >
+      {label}
     </div>
-  );
-}
+    <div
+      style={{
+        fontFamily: "var(--font-bricolage), sans-serif",
+        fontWeight: 700,
+        // Fluid against BOTH the stat column's width (cqi → the parent's
+        // container-type:inline-size: shrinks in a narrow 3-up landscape
+        // column so `920 m` stays one line) AND the card's height (cqb → the
+        // card's container-type:size: shrinks in a short square card so the
+        // two-stat swim column doesn't overflow).
+        fontSize: "clamp(20px, min(22cqi, 18cqb), 38px)",
+        lineHeight: 1,
+        marginTop: 6,
+      }}
+    >
+      {v}
+    </div>
+  </div>
+);
 
 type TriSport = TriSegment["sport"];
 
-function accentFor(s: TriSport): string {
+const accentFor = (s: TriSport): string => {
   if (s === "swim") {
     return "#1e6fa0";
   }
@@ -73,9 +71,9 @@ function accentFor(s: TriSport): string {
     return "#c2410c";
   }
   return "#15803d";
-}
+};
 
-function labelFor(s: TriSport): string {
+const labelFor = (s: TriSport): string => {
   if (s === "swim") {
     return "SWIM";
   }
@@ -83,9 +81,9 @@ function labelFor(s: TriSport): string {
     return "BIKE";
   }
   return "RUN";
-}
+};
 
-function heroFor(seg: TriSegment): string {
+const heroFor = (seg: TriSegment): string => {
   if (seg.sport === "swim") {
     return `${formatPaceSec(seg.avgPacePer100m)} /100m`;
   }
@@ -93,13 +91,13 @@ function heroFor(seg: TriSegment): string {
     return `${formatNumber(seg.avgSpeedKmh, 1)} km/h`;
   }
   return `${formatPaceMin(seg.avgPaceMinPerKm)} /km`;
-}
+};
 
-export function ThemeTriathlon({
+export const ThemeTriathlon = ({
   data,
   photoUrl,
   imageTransform,
-}: ThemeProps<(typeof USES)[number]>) {
+}: ThemeProps<(typeof USES)[number]>) => {
   const { width, height } = useFormat();
   const sports = data.segments || [];
   const transitions = data.transitions || [];
@@ -108,27 +106,27 @@ export function ThemeTriathlon({
     return (
       <div
         style={{
-          width,
-          height,
           background: PAPER,
           color: INK,
           fontFamily: "var(--font-ibm-plex-mono), monospace",
-          position: "relative",
+          height,
           overflow: "hidden",
+          position: "relative",
+          width,
         }}
       >
         <SafeArea
           anchor="center"
-          pad={{ top: 120, right: 90, bottom: 120, left: 90 }}
+          pad={{ bottom: 120, left: 90, right: 90, top: 120 }}
           style={{ alignItems: "center", textAlign: "center" }}
         >
           <div
             style={{
               fontSize: 26,
-              letterSpacing: "0.3em",
-              opacity: 0.5,
-              marginBottom: 28,
               fontWeight: 600,
+              letterSpacing: "0.3em",
+              marginBottom: 28,
+              opacity: 0.5,
             }}
           >
             TRIATHLON / MULTI-SPORT THEME
@@ -136,8 +134,8 @@ export function ThemeTriathlon({
           <div
             style={{
               fontFamily: "var(--font-bricolage), sans-serif",
-              fontWeight: 600,
               fontSize: 56,
+              fontWeight: 600,
               lineHeight: 1.1,
               maxWidth: 700,
             }}
@@ -194,23 +192,23 @@ export function ThemeTriathlon({
       {photoUrl ? (
         <PhotoUnderlay imageTransform={imageTransform} photoUrl={photoUrl} />
       ) : null}
-      <SafeArea pad={{ top: 70, right: 70, bottom: 50, left: 70 }}>
+      <SafeArea pad={{ bottom: 50, left: 70, right: 70, top: 70 }}>
         <div
           style={{
+            alignItems: "flex-end",
+            borderBottom: `2px solid ${INK}`,
             display: "flex",
             justifyContent: "space-between",
-            alignItems: "flex-end",
             paddingBottom: 22,
-            borderBottom: `2px solid ${INK}`,
           }}
         >
           <div>
             <div
               style={{
                 fontSize: 24,
+                fontWeight: 600,
                 letterSpacing: "0.3em",
                 opacity: 0.75,
-                fontWeight: 600,
               }}
             >
               TRIATHLON · MULTI-SPORT
@@ -219,9 +217,9 @@ export function ThemeTriathlon({
               style={{
                 fontFamily: "var(--font-bricolage), sans-serif",
                 fontSize: 72,
-                lineHeight: 0.95,
                 fontWeight: 700,
                 letterSpacing: "-0.02em",
+                lineHeight: 0.95,
                 margin: "10px 0 0 0",
                 maxWidth: 700,
                 textWrap: "pretty",
@@ -232,22 +230,22 @@ export function ThemeTriathlon({
           </div>
           <div
             style={{
-              textAlign: "right",
               fontSize: 24,
+              fontWeight: 600,
               letterSpacing: "0.18em",
               lineHeight: 1.5,
-              fontWeight: 600,
+              textAlign: "right",
             }}
           >
             <div>{formatDateUpper(data.date)}</div>
             <div style={{ opacity: 0.7 }}>{data.location.toUpperCase()}</div>
             <div
               style={{
-                marginTop: 12,
                 fontFamily: "var(--font-bricolage), sans-serif",
                 fontSize: 36,
                 fontWeight: 700,
                 letterSpacing: "-0.01em",
+                marginTop: 12,
               }}
             >
               {formatDuration(data.durationSec)}
@@ -255,24 +253,24 @@ export function ThemeTriathlon({
           </div>
         </div>
 
-        <div style={{ marginTop: 16, marginBottom: 16 }}>
+        <div style={{ marginBottom: 16, marginTop: 16 }}>
           <div
             style={{
               fontSize: 24,
-              letterSpacing: "0.28em",
-              opacity: 0.7,
-              marginBottom: 12,
               fontWeight: 600,
+              letterSpacing: "0.28em",
+              marginBottom: 12,
+              opacity: 0.7,
             }}
           >
             EFFORT TIMELINE
           </div>
           <div
             style={{
-              display: "flex",
               alignItems: "stretch",
-              height: 56,
               border: `1px solid ${INK}`,
+              display: "flex",
+              height: 56,
             }}
           >
             {items.map((it, i) => {
@@ -286,19 +284,19 @@ export function ThemeTriathlon({
                 <div
                   key={`tl-${i}-${label}`}
                   style={{
-                    flex,
-                    background: bg,
-                    color: "#fff",
-                    display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 22,
-                    letterSpacing: "0.18em",
-                    fontWeight: 700,
+                    background: bg,
                     borderRight:
                       i < items.length - 1
                         ? "1px solid rgba(255,255,255,0.4)"
                         : "none",
+                    color: "#fff",
+                    display: "flex",
+                    flex,
+                    fontSize: 22,
+                    fontWeight: 700,
+                    justifyContent: "center",
+                    letterSpacing: "0.18em",
                   }}
                 >
                   {label}
@@ -340,20 +338,20 @@ export function ThemeTriathlon({
               >
                 <div
                   style={{
-                    position: "absolute",
-                    top: -1,
-                    left: -1,
-                    width: 84,
-                    height: 48,
+                    alignItems: "center",
                     background: accent,
                     color: "#fff",
                     display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
                     fontFamily: "var(--font-bricolage), sans-serif",
-                    fontWeight: 700,
                     fontSize: 26,
+                    fontWeight: 700,
+                    height: 48,
+                    justifyContent: "center",
+                    left: -1,
                     letterSpacing: "0.1em",
+                    position: "absolute",
+                    top: -1,
+                    width: 84,
                   }}
                 >
                   0{idx + 1}
@@ -372,10 +370,10 @@ export function ThemeTriathlon({
                   <div>
                     <div
                       style={{
-                        fontSize: "clamp(17px, 10cqb, 24px)",
-                        letterSpacing: "0.3em",
                         color: accent,
+                        fontSize: "clamp(17px, 10cqb, 24px)",
                         fontWeight: 700,
+                        letterSpacing: "0.3em",
                       }}
                     >
                       {labelFor(seg.sport)}
@@ -396,8 +394,8 @@ export function ThemeTriathlon({
                       <span
                         style={{
                           fontSize: "clamp(18px, min(7cqi, 14cqb), 30px)",
-                          opacity: 0.55,
                           marginLeft: 6,
+                          opacity: 0.55,
                         }}
                       >
                         km
@@ -406,10 +404,10 @@ export function ThemeTriathlon({
                     <div
                       style={{
                         fontSize: "clamp(17px, 10cqb, 24px)",
-                        opacity: 0.8,
-                        marginTop: 10,
-                        letterSpacing: "0.06em",
                         fontWeight: 600,
+                        letterSpacing: "0.06em",
+                        marginTop: 10,
+                        opacity: 0.8,
                       }}
                     >
                       {formatClock(seg.durationSec)}
@@ -418,9 +416,9 @@ export function ThemeTriathlon({
                   <div
                     style={{
                       fontSize: "clamp(15px, 8cqb, 22px)",
+                      fontWeight: 600,
                       letterSpacing: "0.24em",
                       opacity: 0.7,
-                      fontWeight: 600,
                     }}
                   >
                     HERO · {heroFor(seg)}
@@ -431,7 +429,7 @@ export function ThemeTriathlon({
                   <svg
                     aria-hidden="true"
                     preserveAspectRatio="none"
-                    style={{ width: "100%", height: "100%" }}
+                    style={{ height: "100%", width: "100%" }}
                     viewBox="0 0 360 160"
                   >
                     <title>{labelFor(seg.sport)} trace</title>
@@ -540,15 +538,15 @@ export function ThemeTriathlon({
                 {idx < sports.length - 1 && transitions[idx] && (
                   <div
                     style={{
-                      position: "absolute",
-                      bottom: -16,
-                      right: 24,
                       background: INK,
+                      bottom: -16,
                       color: PAPER,
-                      padding: "8px 16px",
                       fontSize: 22,
-                      letterSpacing: "0.2em",
                       fontWeight: 700,
+                      letterSpacing: "0.2em",
+                      padding: "8px 16px",
+                      position: "absolute",
+                      right: 24,
                       zIndex: 2,
                     }}
                   >
@@ -563,16 +561,16 @@ export function ThemeTriathlon({
 
         <div
           style={{
-            marginTop: 16,
-            paddingTop: 14,
+            alignItems: "center",
             borderTop: "1px solid rgba(17,21,26,0.4)",
             display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
             fontSize: 24,
-            letterSpacing: "0.24em",
-            opacity: 0.75,
             fontWeight: 600,
+            justifyContent: "space-between",
+            letterSpacing: "0.24em",
+            marginTop: 16,
+            opacity: 0.75,
+            paddingTop: 14,
           }}
         >
           <span>EFFORT · TRIATHLON CARD</span>
@@ -581,7 +579,7 @@ export function ThemeTriathlon({
       </SafeArea>
     </div>
   );
-}
+};
 
 export const triathlonTheme = defineTheme({
   id: "triathlon",

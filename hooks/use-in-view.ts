@@ -8,7 +8,7 @@ import type { RefObject } from "react";
  * viewport, then stays true. Used to lazy-mount the Remotion players so their
  * chunk isn't fetched (and an autoplay loop isn't started) while offscreen.
  */
-export function useInView(ref: RefObject<Element | null>): boolean {
+export const useInView = (ref: RefObject<Element | null>): boolean => {
   const [inView, setInView] = useState(false);
   useEffect(() => {
     const el = ref.current;
@@ -33,7 +33,9 @@ export function useInView(ref: RefObject<Element | null>): boolean {
       { rootMargin: "200px" }
     );
     io.observe(el);
-    return () => io.disconnect();
+    return () => {
+      io.disconnect();
+    };
   }, [ref, inView]);
   return inView;
-}
+};

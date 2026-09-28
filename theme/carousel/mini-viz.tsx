@@ -18,7 +18,7 @@ import { RouteLine } from "./route-line";
 export type VizKind = "elevation" | "route";
 
 /** Whether a route/elevation mini-viz has data to show, project-aware. */
-export function vizHasKind(data: ActivityData, kind: VizKind): boolean {
+export const vizHasKind = (data: ActivityData, kind: VizKind): boolean => {
   if (isMultiActivity(data)) {
     return kind === "route"
       ? segmentRoutes(data).length > 0
@@ -28,7 +28,7 @@ export function vizHasKind(data: ActivityData, kind: VizKind): boolean {
     return (data.routeCoordinates?.length ?? 0) > 1;
   }
   return pickProfile(data).signal !== "none";
-}
+};
 
 interface MiniVizProps {
   /** tints the route gradient; defaults to `color` */
@@ -46,7 +46,7 @@ interface MiniVizProps {
 }
 
 /** One small route or elevation chart in a theme ink. */
-export function MiniViz({
+export const MiniViz = ({
   kind,
   data,
   w,
@@ -56,7 +56,7 @@ export function MiniViz({
   pad = 10,
   exaggeration,
   showMarkers = false,
-}: MiniVizProps) {
+}: MiniVizProps) => {
   const multi = isMultiActivity(data);
   if (kind === "route") {
     return (
@@ -79,7 +79,7 @@ export function MiniViz({
   const seg = multi ? segmentProfiles(data) : null;
   return (
     <ElevationBand
-      colors={{ line: color, fillFrom: color, fillTo: "transparent" }}
+      colors={{ fillFrom: color, fillTo: "transparent", line: color }}
       exaggeration={exaggeration}
       h={h}
       mode={bandModeFor(seg, mode)}
@@ -89,4 +89,4 @@ export function MiniViz({
       weights={multi ? seg?.distances : undefined}
     />
   );
-}
+};

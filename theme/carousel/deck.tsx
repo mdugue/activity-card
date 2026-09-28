@@ -48,7 +48,7 @@ interface CarouselDeckProps {
   visibility?: Visibility;
 }
 
-export function CarouselDeck({
+export const CarouselDeck = ({
   data,
   theme,
   colors,
@@ -61,7 +61,7 @@ export function CarouselDeck({
   photoEffects = NO_EFFECTS,
   visibility = DEFAULT_VISIBILITY,
   format,
-}: CarouselDeckProps) {
+}: CarouselDeckProps) => {
   const total = theme.panels.length;
   // Explicit prop wins, else inherit the ambient FormatContext (feed by default).
   const ctxFormat = useFormat();
@@ -95,12 +95,12 @@ export function CarouselDeck({
       <PhotoFxProvider value={{ effects: photoEffects, imageSize }}>
         <div
           style={{
-            position: "relative",
-            width: stripW,
-            height: slideH,
-            overflow: "hidden",
             background: style.background,
             color: style.ink,
+            height: slideH,
+            overflow: "hidden",
+            position: "relative",
+            width: stripW,
           }}
         >
           {/* Draw the photo only once its natural size is known — the panorama is
@@ -127,11 +127,11 @@ export function CarouselDeck({
             <div
               aria-hidden
               style={{
-                position: "absolute",
-                inset: 0,
                 background: style.dark
                   ? "rgba(0,0,0,0.34)"
                   : "rgba(255,255,255,0.26)",
+                inset: 0,
+                position: "absolute",
               }}
             />
           ) : null}
@@ -156,11 +156,11 @@ export function CarouselDeck({
             <div
               key={`slide-${i}`}
               style={{
-                position: "absolute",
+                height: slideH,
                 left: i * slideW,
+                position: "absolute",
                 top: 0,
                 width: slideW,
-                height: slideH,
               }}
             >
               {/* per-slide: reset to the SLIDE frame so panels inset via SafeArea */}
@@ -182,4 +182,4 @@ export function CarouselDeck({
       </PhotoFxProvider>
     </FormatProvider>
   );
-}
+};

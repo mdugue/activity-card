@@ -10,18 +10,19 @@
 // and composites the photo onto the canvas itself.
 
 /** Fonts must be ready before rasterisation or fallbacks leak into the export. */
-export async function waitForFonts(): Promise<void> {
+export const waitForFonts = async (): Promise<void> => {
   if (typeof document !== "undefined" && document.fonts) {
     await document.fonts.ready;
   }
-}
+};
 
 /** Numeric date slug for export filenames (`date` is an ISO yyyy-mm-dd). */
-export function effortDateSlug(date: string): string {
-  return date.replaceAll(/[^0-9-]/gu, "") || "undated";
-}
+export const effortDateSlug = (date: string): string =>
+  date.replaceAll(/[^0-9-]/gu, "") || "undated";
 
-export function isDesktopDevice(): boolean {
+const DESKTOP_PLATFORM_REGEX = /Macintosh|Windows|Linux/u;
+
+export const isDesktopDevice = (): boolean => {
   if (typeof window === "undefined" || !navigator) {
     return false;
   }
@@ -33,16 +34,14 @@ export function isDesktopDevice(): boolean {
   const isIPad = navigator.maxTouchPoints && navigator.maxTouchPoints > 1;
 
   return isDesktopPlatform && !isIPad;
-}
-
-const DESKTOP_PLATFORM_REGEX = /Macintosh|Windows|Linux/u;
+};
 
 /** How long a download's object URL outlives its click. `a.click()` only
  *  queues the navigation — revoking in the same task can cancel the download
  *  (seen in Firefox and Safari), so the URL is released a beat later. */
 export const REVOKE_DELAY_MS = 1000;
 
-export function triggerDownload(file: File): void {
+export const triggerDownload = (file: File): void => {
   const url = URL.createObjectURL(file);
   const a = document.createElement("a");
   a.href = url;
@@ -50,8 +49,10 @@ export function triggerDownload(file: File): void {
   document.body.append(a);
   a.click();
   a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), REVOKE_DELAY_MS);
-}
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, REVOKE_DELAY_MS);
+};
 
 /** A single-flight gate for export clicks. It is plain mutable state, not
  *  React state, so a second click in the same frame (before a re-render has
@@ -62,7 +63,7 @@ export interface InFlightGuard {
   run: (task: () => Promise<void>) => Promise<boolean>;
 }
 
-export function createInFlightGuard(): InFlightGuard {
+export const createInFlightGuard = (): InFlightGuard => {
   let busy = false;
   return {
     get busy() {
@@ -81,20 +82,20 @@ export function createInFlightGuard(): InFlightGuard {
       return true;
     },
   };
-}
+};
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => {
+const delay = async (ms: number): Promise<void> => {
+  await new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
-}
+};
 
 /** Share the set on mobile (Web Share API), else download each in order. A
  *  positive `betweenMs` spaces downloads out (browsers throttle back-to-back). */
-export async function deliverFiles(
+export const deliverFiles = async (
   files: File[],
   opts: { title: string; betweenMs?: number }
-): Promise<void> {
+): Promise<void> => {
   if (files.length === 0) {
     return;
   }
@@ -116,4 +117,4 @@ export async function deliverFiles(
       await delay(opts.betweenMs);
     }
   }
-}
+};

@@ -12,10 +12,10 @@ export interface DebouncedWriter<T> {
   schedule: (value: T) => void;
 }
 
-export function createDebouncedWriter<T>(
+export const createDebouncedWriter = <T>(
   write: (value: T) => void,
   delayMs: number
-): DebouncedWriter<T> {
+): DebouncedWriter<T> => {
   let pending: { value: T } | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -47,4 +47,4 @@ export function createDebouncedWriter<T>(
       timer = setTimeout(flush, delayMs);
     },
   };
-}
+};

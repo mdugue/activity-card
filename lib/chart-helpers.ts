@@ -3,143 +3,6 @@
 export type Coord = [number, number];
 
 /**
- * Aspect-preserving route path string fitted into a w×h box. Thin wrapper over
- * `projectRoute` (which also returns the projected points / start / end); use
- * this when only the `d` string is needed.
- */
-export function routePath(
-  coords: Coord[] | undefined,
-  w: number,
-  h: number,
-  pad = 0
-): string {
-  return projectRoute(coords, w, h, pad).d;
-}
-
-export function elevationPath(
-  profile: number[] | undefined,
-  w: number,
-  h: number,
-  pad = 0,
-  close = false
-): string {
-  if (!profile || profile.length === 0) {
-    return "";
-  }
-  const minV = Math.min(...profile);
-  const maxV = Math.max(...profile);
-  const dv = maxV - minV || 1;
-  const innerW = w - pad * 2;
-  const innerH = h - pad * 2;
-  // Single-point profile: anchor at the left edge so stepX division below
-  // can't blow up to Infinity and emit NaN coords.
-  const stepX = profile.length > 1 ? innerW / (profile.length - 1) : 0;
-  const pts: Coord[] = profile.map((v, i) => [
-    pad + i * stepX,
-    pad + innerH - ((v - minV) / dv) * innerH,
-  ]);
-  let d = pts
-    .map(
-      (p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(2)} ${p[1].toFixed(2)}`
-    )
-    .join(" ");
-  if (close) {
-    d += ` L${(pad + innerW).toFixed(2)} ${(pad + innerH).toFixed(2)}`;
-    d += ` L${pad.toFixed(2)} ${(pad + innerH).toFixed(2)} Z`;
-  }
-  return d;
-}
-
-export function pacePath(
-  profile: number[] | undefined,
-  w: number,
-  h: number,
-  pad = 0,
-  close = false
-): string {
-  // pace is "lower = faster" — invert so faster shows up higher
-  if (!profile || profile.length === 0) {
-    return "";
-  }
-  const minV = Math.min(...profile);
-  const maxV = Math.max(...profile);
-  const dv = maxV - minV || 1;
-  const innerW = w - pad * 2;
-  const innerH = h - pad * 2;
-  const stepX = profile.length > 1 ? innerW / (profile.length - 1) : 0;
-  const pts: Coord[] = profile.map((v, i) => [
-    pad + i * stepX,
-    pad + ((v - minV) / dv) * innerH,
-  ]);
-  let d = pts
-    .map(
-      (p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(2)} ${p[1].toFixed(2)}`
-    )
-    .join(" ");
-  if (close) {
-    d += ` L${(pad + innerW).toFixed(2)} ${(pad + innerH).toFixed(2)}`;
-    d += ` L${pad.toFixed(2)} ${(pad + innerH).toFixed(2)} Z`;
-  }
-  return d;
-}
-
-export interface Lane {
-  h: number;
-  w: number;
-  x: number;
-  y: number;
-}
-
-// generate an abstract "pool" or "track" pattern when no real route exists
-export function abstractLanes(
-  w: number,
-  h: number,
-  lanes = 6,
-  pad = 40
-): Lane[] {
-  const stripeH = (h - pad * 2) / lanes;
-  return Array.from({ length: lanes }, (_, i) => ({
-    x: pad,
-    y: pad + i * stripeH,
-    w: w - pad * 2,
-    h: stripeH,
-  }));
-}
-
-export function fmtSec(s: number): string {
-  const m = Math.floor(s / 60);
-  const r = s % 60;
-  return `${m}:${r < 10 ? "0" : ""}${r}`;
-}
-
-export interface ProjectedRoute {
-  d: string;
-  end: Coord | null;
-  /** every coordinate projected into the w×h box, in order */
-  points: Coord[];
-  start: Coord | null;
-}
-
-/**
- * Project a route into a w×h box and return the path string plus the projected
- * points (needed for start/end markers and gradient stops). Always
- * aspect-preserving (same maths as `routePath`): a single uniform scale plus a
- * centring offset, so the silhouette keeps its true proportions and sits in the
- * middle of the box. Routes are never stretched per-axis to fill a container —
- * a smeared silhouette misrepresents the actual route. A wide box (e.g. the
- * seamless carousel strip) therefore shows the route centred at its real
- * proportions, not edge-to-edge.
- */
-export function projectRoute(
-  coords: Coord[] | undefined,
-  w: number,
-  h: number,
-  pad = 0
-): ProjectedRoute {
-  return projectRoutes([coords], w, h, pad)[0];
-}
-
-/**
  * Project several routes into one **shared** w×h box: a single uniform scale and
  * centring offset computed over the combined bounding box of every route, so the
  * silhouettes keep their true proportions *and their real positions relative to
@@ -148,12 +11,12 @@ export function projectRoute(
  * than each rescaled to its own box. Empty/absent routes map to an empty
  * `ProjectedRoute` so the return array stays index-aligned with the input.
  */
-export function projectRoutes(
+export const projectRoutes = (
   routes: (Coord[] | undefined)[],
   w: number,
   h: number,
   pad = 0
-): ProjectedRoute[] {
+): ProjectedRoute[] => {
   const all: Coord[] = [];
   for (const r of routes) {
     if (r) {
@@ -162,7 +25,7 @@ export function projectRoutes(
       }
     }
   }
-  const empty: ProjectedRoute = { d: "", points: [], start: null, end: null };
+  const empty: ProjectedRoute = { d: "", end: null, points: [], start: null };
   if (all.length === 0) {
     return routes.map(() => ({ ...empty }));
   }
@@ -194,8 +57,141 @@ export function projectRoutes(
         (p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(2)} ${p[1].toFixed(2)}`
       )
       .join(" ");
-    return { d, points, start: points[0], end: points.at(-1) ?? null };
+    return { d, end: points.at(-1) ?? null, points, start: points[0] };
   });
+};
+
+/**
+ * Project a route into a w×h box and return the path string plus the projected
+ * points (needed for start/end markers and gradient stops). Always
+ * aspect-preserving (same maths as `routePath`): a single uniform scale plus a
+ * centring offset, so the silhouette keeps its true proportions and sits in the
+ * middle of the box. Routes are never stretched per-axis to fill a container —
+ * a smeared silhouette misrepresents the actual route. A wide box (e.g. the
+ * seamless carousel strip) therefore shows the route centred at its real
+ * proportions, not edge-to-edge.
+ */
+export const projectRoute = (
+  coords: Coord[] | undefined,
+  w: number,
+  h: number,
+  pad = 0
+): ProjectedRoute => projectRoutes([coords], w, h, pad)[0];
+
+/**
+ * Aspect-preserving route path string fitted into a w×h box. Thin wrapper over
+ * `projectRoute` (which also returns the projected points / start / end); use
+ * this when only the `d` string is needed.
+ */
+export const routePath = (
+  coords: Coord[] | undefined,
+  w: number,
+  h: number,
+  pad = 0
+): string => projectRoute(coords, w, h, pad).d;
+
+export const elevationPath = (
+  profile: number[] | undefined,
+  w: number,
+  h: number,
+  pad = 0,
+  close = false
+): string => {
+  if (!profile || profile.length === 0) {
+    return "";
+  }
+  const minV = Math.min(...profile);
+  const maxV = Math.max(...profile);
+  const dv = maxV - minV || 1;
+  const innerW = w - pad * 2;
+  const innerH = h - pad * 2;
+  // Single-point profile: anchor at the left edge so stepX division below
+  // can't blow up to Infinity and emit NaN coords.
+  const stepX = profile.length > 1 ? innerW / (profile.length - 1) : 0;
+  const pts: Coord[] = profile.map((v, i) => [
+    pad + i * stepX,
+    pad + innerH - ((v - minV) / dv) * innerH,
+  ]);
+  let d = pts
+    .map(
+      (p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(2)} ${p[1].toFixed(2)}`
+    )
+    .join(" ");
+  if (close) {
+    d += ` L${(pad + innerW).toFixed(2)} ${(pad + innerH).toFixed(2)}`;
+    d += ` L${pad.toFixed(2)} ${(pad + innerH).toFixed(2)} Z`;
+  }
+  return d;
+};
+
+export const pacePath = (
+  profile: number[] | undefined,
+  w: number,
+  h: number,
+  pad = 0,
+  close = false
+): string => {
+  // pace is "lower = faster" — invert so faster shows up higher
+  if (!profile || profile.length === 0) {
+    return "";
+  }
+  const minV = Math.min(...profile);
+  const maxV = Math.max(...profile);
+  const dv = maxV - minV || 1;
+  const innerW = w - pad * 2;
+  const innerH = h - pad * 2;
+  const stepX = profile.length > 1 ? innerW / (profile.length - 1) : 0;
+  const pts: Coord[] = profile.map((v, i) => [
+    pad + i * stepX,
+    pad + ((v - minV) / dv) * innerH,
+  ]);
+  let d = pts
+    .map(
+      (p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(2)} ${p[1].toFixed(2)}`
+    )
+    .join(" ");
+  if (close) {
+    d += ` L${(pad + innerW).toFixed(2)} ${(pad + innerH).toFixed(2)}`;
+    d += ` L${pad.toFixed(2)} ${(pad + innerH).toFixed(2)} Z`;
+  }
+  return d;
+};
+
+export interface Lane {
+  h: number;
+  w: number;
+  x: number;
+  y: number;
+}
+
+// generate an abstract "pool" or "track" pattern when no real route exists
+export const abstractLanes = (
+  w: number,
+  h: number,
+  lanes = 6,
+  pad = 40
+): Lane[] => {
+  const stripeH = (h - pad * 2) / lanes;
+  return Array.from({ length: lanes }, (_, i) => ({
+    h: stripeH,
+    w: w - pad * 2,
+    x: pad,
+    y: pad + i * stripeH,
+  }));
+};
+
+export const fmtSec = (s: number): string => {
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}:${r < 10 ? "0" : ""}${r}`;
+};
+
+export interface ProjectedRoute {
+  d: string;
+  end: Coord | null;
+  /** every coordinate projected into the w×h box, in order */
+  points: Coord[];
+  start: Coord | null;
 }
 
 export interface NormalizedCurve {
@@ -225,11 +221,11 @@ export interface NormalizedCurve {
  * used as a stand-in. Profiles with fewer than two points are dropped (and so
  * are their weights), keeping the result tight rather than index-aligned.
  */
-export function sequenceProfiles(
+export const sequenceProfiles = (
   profiles: number[][],
   weights: (number | undefined)[],
   useElevation = true
-): NormalizedCurve[] {
+): NormalizedCurve[] => {
   const valid = profiles
     .map((p, i) => ({ p, weight: weights[i] }))
     .filter((e) => e.p.length > 1);
@@ -266,7 +262,7 @@ export function sequenceProfiles(
     });
     return { pts, widthFrac };
   });
-}
+};
 
 export interface OverlayPath {
   /** Filled-area path (line closed down to the baseline within the leg's slice). */
@@ -285,12 +281,12 @@ export interface OverlayPath {
  * to the baseline between the leg's own left and right edges, so adjacent legs
  * abut cleanly (with a vertical step at the seam) rather than smearing fills.
  */
-export function sequencePaths(
+export const sequencePaths = (
   curves: NormalizedCurve[],
   w: number,
   h: number,
   reach = 1
-): OverlayPath[] {
+): OverlayPath[] => {
   const clampReach = Math.min(1, Math.max(0, reach));
   return curves.map((c) => {
     const pts = c.pts.map(
@@ -304,13 +300,13 @@ export function sequencePaths(
     const startX = pts[0]?.[0] ?? 0;
     const endX = pts.at(-1)?.[0] ?? w;
     const area = `${line} L${endX.toFixed(1)} ${h.toFixed(1)} L${startX.toFixed(1)} ${h.toFixed(1)} Z`;
-    return { line, area, endX, widthFrac: c.widthFrac };
+    return { area, endX, line, widthFrac: c.widthFrac };
   });
-}
+};
 
 /* ------------- colour helpers (accent shades for overlaid routes) --------- */
 
-function parseHex(hex: string): [number, number, number] {
+const parseHex = (hex: string): [number, number, number] => {
   const h = hex.replace("#", "");
   const full = h.length === 3 ? h.replaceAll(/(.)/gu, "$1$1") : h;
   return [
@@ -318,7 +314,7 @@ function parseHex(hex: string): [number, number, number] {
     Number.parseInt(full.slice(2, 4), 16),
     Number.parseInt(full.slice(4, 6), 16),
   ];
-}
+};
 
 const toHexByte = (n: number) =>
   Math.max(0, Math.min(255, Math.round(n)))
@@ -326,19 +322,19 @@ const toHexByte = (n: number) =>
     .padStart(2, "0");
 
 /** Linear blend of two hex colours; `t=0` → `a`, `t=1` → `b`. */
-export function mixHex(a: string, b: string, t: number): string {
+export const mixHex = (a: string, b: string, t: number): string => {
   const pa = parseHex(a);
   const pb = parseHex(b);
   const m = (i: number) => toHexByte(pa[i] + (pb[i] - pa[i]) * t);
   return `#${m(0)}${m(1)}${m(2)}`;
-}
+};
 
 /**
  * A coherent ramp of `n` shades in the accent's colour family — a bright tint
  * through to a deep shade — for distinguishing several overlaid routes without
  * leaving the accent hue. `n <= 1` returns the accent itself.
  */
-export function accentShades(accent: string, n: number): string[] {
+export const accentShades = (accent: string, n: number): string[] => {
   if (n <= 0) {
     return [];
   }
@@ -348,15 +344,14 @@ export function accentShades(accent: string, n: number): string[] {
   const light = mixHex(accent, "#ffffff", 0.5);
   const dark = mixHex(accent, "#000000", 0.4);
   return Array.from({ length: n }, (_, i) => mixHex(light, dark, i / (n - 1)));
-}
+};
 
 /**
  * White legs at a gentle opacity ramp — the "over a photo" analogue of
  * `accentShades`, for distinguishing several overlaid routes/curves while staying
  * legible on an arbitrary image. `n <= 1` is solid white.
  */
-export function whiteRamp(n: number): string[] {
-  return Array.from({ length: n }, (_, i) =>
+export const whiteRamp = (n: number): string[] =>
+  Array.from({ length: n }, (_, i) =>
     n <= 1 ? "#ffffff" : `rgba(255,255,255,${Math.max(0.5, 1 - i * 0.25)})`
   );
-}

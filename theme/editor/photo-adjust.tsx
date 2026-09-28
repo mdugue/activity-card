@@ -40,13 +40,13 @@ export interface PhotoAdjust {
   setAdjusting: (v: boolean) => void;
 }
 
-export function usePhotoAdjust({
+export const usePhotoAdjust = ({
   boxW,
   boxH,
   enabled,
   photoUrl,
   rotate,
-}: PhotoAdjustArgs): PhotoAdjust {
+}: PhotoAdjustArgs): PhotoAdjust => {
   const [adjusting, setAdjusting] = useState(false);
 
   // Natural photo size → a pan/zoom clamp that respects the photo's real cover
@@ -75,11 +75,11 @@ export function usePhotoAdjust({
   }, [adjusting, adjustAvailable]);
 
   return { adjustAvailable, adjusting, coverClamp, imageSize, setAdjusting };
-}
+};
 
 /** The in-place Adjust badge + the pan/zoom overlay, positioned against the
  *  preview's `relative` card box. */
-export function AdjustControls({
+export const AdjustControls = ({
   adjust,
   label,
   transform,
@@ -92,7 +92,7 @@ export function AdjustControls({
   label: string;
   onChange: (next: ImageTransform) => void;
   transform: ImageTransform;
-}) {
+}) => {
   const { adjustAvailable, adjusting, coverClamp, setAdjusting } = adjust;
   return (
     <>
@@ -101,7 +101,14 @@ export function AdjustControls({
           className="absolute top-3 right-3 z-10 rounded-full bg-black/55 px-3 py-1.5 font-mono text-[10px] text-white backdrop-blur-sm transition-colors hover:bg-black/75"
           // The Badge children below label this button.
           // oxlint-disable-next-line jsx-a11y/control-has-associated-label
-          render={<button onClick={() => setAdjusting(true)} type="button" />}
+          render={
+            <button
+              onClick={() => {
+                setAdjusting(true);
+              }}
+              type="button"
+            />
+          }
         >
           <ArrowsOutCardinalIcon
             aria-hidden
@@ -116,10 +123,12 @@ export function AdjustControls({
           clamp={coverClamp}
           contentWidth={contentWidth}
           onChange={onChange}
-          onDone={() => setAdjusting(false)}
+          onDone={() => {
+            setAdjusting(false);
+          }}
           transform={transform}
         />
       ) : null}
     </>
   );
-}
+};

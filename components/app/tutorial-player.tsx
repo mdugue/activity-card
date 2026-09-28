@@ -10,7 +10,7 @@ import { FEATURE_VIDEOS } from "@/remotion/videos/catalog";
  * Tutorials don't autoplay: the viewer presses play; until then the player
  * rests on a settled title frame.
  */
-export default function TutorialPlayer({ index }: { index: number }) {
+const TutorialPlayer = ({ index }: { index: number }) => {
   const video = FEATURE_VIDEOS[index];
   if (!video) {
     return null;
@@ -26,4 +26,6 @@ export default function TutorialPlayer({ index }: { index: number }) {
       posterFrame={40}
     />
   );
-}
+};
+
+export default TutorialPlayer;

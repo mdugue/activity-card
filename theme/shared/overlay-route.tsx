@@ -25,7 +25,7 @@ interface OverlayRouteProps {
   w: number;
 }
 
-export function OverlayRoute({
+export const OverlayRoute = ({
   routes,
   w,
   h,
@@ -36,7 +36,7 @@ export function OverlayRoute({
   markers = false,
   markerRadius = 8,
   shadow,
-}: OverlayRouteProps) {
+}: OverlayRouteProps) => {
   if (routes.length === 0) {
     return null;
   }
@@ -78,4 +78,4 @@ export function OverlayRoute({
       )}
     </>
   );
-}
+};

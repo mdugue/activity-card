@@ -33,10 +33,10 @@ const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
 const COOKIE_BASE = {
   httpOnly: true,
-  secure: COOKIE_SECURE,
-  sameSite: "lax",
-  path: "/",
   maxAge: ONE_YEAR_SECONDS,
+  path: "/",
+  sameSite: "lax",
+  secure: COOKIE_SECURE,
 } as const;
 
 export interface StravaAthlete {
@@ -63,7 +63,7 @@ export interface StravaTokenResponse {
   refresh_token: string;
 }
 
-export async function readTokens(): Promise<StoredTokens | null> {
+export const readTokens = async (): Promise<StoredTokens | null> => {
   const store = await cookies();
   const access = store.get(ACCESS)?.value;
   const refresh = store.get(REFRESH)?.value;
@@ -96,8 +96,8 @@ export async function readTokens(): Promise<StoredTokens | null> {
       // Corrupt cookie — ignore, athlete display is non-critical.
     }
   }
-  return { access, refresh, expiresAt, athlete };
-}
+  return { access, athlete, expiresAt, refresh };
+};
 
 /**
  * Persist the four Strava cookies. Pass `athlete` from the freshly stored
@@ -106,10 +106,10 @@ export async function readTokens(): Promise<StoredTokens | null> {
  * omits the athlete entirely, in which case we keep the existing cookie
  * value rather than overwriting with stale stored data.
  */
-export async function writeTokens(
+export const writeTokens = async (
   payload: StravaTokenResponse,
   options?: { athleteOverride?: StravaAthlete }
-): Promise<void> {
+): Promise<void> => {
   const store = await cookies();
   store.set(ACCESS, payload.access_token, COOKIE_BASE);
   store.set(REFRESH, payload.refresh_token, COOKIE_BASE);
@@ -121,9 +121,9 @@ export async function writeTokens(
     // the new value when present, fall back to the previously stored one.
     const fallback = options?.athleteOverride;
     const athlete: StravaAthlete = {
-      id: payload.athlete.id,
-      firstname: payload.athlete.firstname ?? fallback?.firstname,
       avatar: payload.athlete.profile_medium ?? fallback?.avatar,
+      firstname: payload.athlete.firstname ?? fallback?.firstname,
+      id: payload.athlete.id,
     };
     store.set(ATHLETE, JSON.stringify(athlete), COOKIE_BASE);
   } else if (options?.athleteOverride) {
@@ -131,90 +131,67 @@ export async function writeTokens(
     // stored athlete forward unchanged.
     store.set(ATHLETE, JSON.stringify(options.athleteOverride), COOKIE_BASE);
   }
-}
+};
 
-export async function clearTokens(): Promise<void> {
+export const clearTokens = async (): Promise<void> => {
   const store = await cookies();
   for (const name of [ACCESS, REFRESH, EXPIRES, ATHLETE]) {
     store.delete(name);
   }
-}
+};
 
-export async function setOAuthState(state: string): Promise<void> {
+export const setOAuthState = async (state: string): Promise<void> => {
   const store = await cookies();
   store.set(STATE, state, { ...COOKIE_BASE, maxAge: 600 });
-}
+};
 
-export async function consumeOAuthState(): Promise<string | null> {
+export const consumeOAuthState = async (): Promise<string | null> => {
   const store = await cookies();
   const value = store.get(STATE)?.value ?? null;
   if (value) {
     store.delete(STATE);
   }
   return value;
-}
+};
 
 /** Read the OAuth state cookie WITHOUT deleting it. Use this when you
  * need to validate state before a fallible operation (e.g. token
  * exchange) so the cookie survives for a retry attempt if the operation
  * fails. Pair with `clearOAuthState()` on success. */
-export async function peekOAuthState(): Promise<string | null> {
+export const peekOAuthState = async (): Promise<string | null> => {
   const store = await cookies();
   return store.get(STATE)?.value ?? null;
-}
+};
 
 /** Delete the OAuth state cookie. Idempotent; safe to call when the
  * cookie is already absent. */
-export async function clearOAuthState(): Promise<void> {
+export const clearOAuthState = async (): Promise<void> => {
   const store = await cookies();
   store.delete(STATE);
+};
+
+export class StravaNotConnectedError extends Error {
+  constructor() {
+    super("Strava not connected");
+    this.name = "StravaNotConnectedError";
+  }
 }
 
-/**
- * Return a valid access token, refreshing transparently if it expires in the
- * next minute. Throws if no tokens are stored or the refresh fails — callers
- * should treat that as "not connected" and surface a 401.
- */
-export async function ensureFreshToken(): Promise<string> {
-  const tokens = await readTokens();
-  if (!tokens) {
-    throw new StravaNotConnectedError();
-  }
-  const nowSec = Math.floor(Date.now() / 1000);
-  if (tokens.expiresAt - nowSec > 60) {
-    return tokens.access;
-  }
-  return await refreshStoredTokens(tokens);
-}
-
-/**
- * Force a token refresh regardless of the stored expiry. Used when Strava
- * rejects a token we believed was fresh (revoked grant or clock skew) — we
- * mint a new one and let the caller retry once before giving up.
- */
-export async function forceRefreshToken(): Promise<string> {
-  const tokens = await readTokens();
-  if (!tokens) {
-    throw new StravaNotConnectedError();
-  }
-  return await refreshStoredTokens(tokens);
-}
-
-async function refreshStoredTokens(tokens: StoredTokens): Promise<string> {
+const refreshStoredTokens = async (tokens: StoredTokens): Promise<string> => {
   const clientId = process.env.STRAVA_CLIENT_ID;
   const clientSecret = process.env.STRAVA_CLIENT_SECRET;
   if (!(clientId && clientSecret)) {
     throw new Error("STRAVA_CLIENT_ID / STRAVA_CLIENT_SECRET not set");
   }
   const res = await fetch(STRAVA_TOKEN_URL, {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       client_id: clientId,
       client_secret: clientSecret,
       grant_type: "refresh_token",
       refresh_token: tokens.refresh,
     }),
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    method: "POST",
   });
   if (!res.ok) {
     // 4xx means the refresh grant is dead (revoked, expired, invalid) —
@@ -235,11 +212,34 @@ async function refreshStoredTokens(tokens: StoredTokens): Promise<string> {
   }
   await writeTokens(payload, { athleteOverride: tokens.athlete });
   return payload.access_token;
-}
+};
 
-export class StravaNotConnectedError extends Error {
-  constructor() {
-    super("Strava not connected");
-    this.name = "StravaNotConnectedError";
+/**
+ * Return a valid access token, refreshing transparently if it expires in the
+ * next minute. Throws if no tokens are stored or the refresh fails — callers
+ * should treat that as "not connected" and surface a 401.
+ */
+export const ensureFreshToken = async (): Promise<string> => {
+  const tokens = await readTokens();
+  if (!tokens) {
+    throw new StravaNotConnectedError();
   }
-}
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (tokens.expiresAt - nowSec > 60) {
+    return tokens.access;
+  }
+  return await refreshStoredTokens(tokens);
+};
+
+/**
+ * Force a token refresh regardless of the stored expiry. Used when Strava
+ * rejects a token we believed was fresh (revoked grant or clock skew) — we
+ * mint a new one and let the caller retry once before giving up.
+ */
+export const forceRefreshToken = async (): Promise<string> => {
+  const tokens = await readTokens();
+  if (!tokens) {
+    throw new StravaNotConnectedError();
+  }
+  return await refreshStoredTokens(tokens);
+};

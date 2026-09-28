@@ -25,8 +25,8 @@ const meta = preview.type<{ args: TriathlonArgs }>().meta({
   component: ThemeTriathlon,
   tags: ["ai-generated"],
   parameters: {
-    layout: "fullscreen",
     controls: { exclude: THEME_PROP_CONTROLS_EXCLUDE },
+    layout: "fullscreen",
   },
   decorators: [withFormatMatrix],
   // Only the multi-sport fixtures have segments; the others render nothing.

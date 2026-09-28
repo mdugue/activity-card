@@ -8,6 +8,18 @@ import type {
 
 const MPS_TO_KMH = 3.6;
 
+// The type parameter names what the caller expects of an `unknown` upstream
+// stream; there is deliberately no relation to the argument type.
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters
+const pickArray = <T>(
+  stream: StravaStream<unknown> | undefined
+): T[] | null => {
+  if (!(stream && Array.isArray(stream.data))) {
+    return null;
+  }
+  return stream.data as T[];
+};
+
 /**
  * Map a Strava activity detail + streams into one or more `ParsedActivity`
  * objects. Single sports return a length-1 array. Triathlon / Multisport
@@ -15,10 +27,10 @@ const MPS_TO_KMH = 3.6;
  * sub-segments differently per sport and reliable splitting needs the
  * `/activities/{id}/laps` endpoint, which we defer.
  */
-export function stravaToParsed(
+export const stravaToParsed = (
   detail: StravaActivityDetail,
   streams: StravaStreams
-): ParsedActivity[] {
+): ParsedActivity[] => {
   // The generated spec types mark these optional; the live API always sends
   // them, but coalesce so we stay type-safe and never pass `undefined` on.
   const name = detail.name ?? "";
@@ -56,11 +68,11 @@ export function stravaToParsed(
     // Emit raw lat/lng. `finalise()` applies the [lng, -lat] projection in
     // exactly one place — pre-negating here would silently flip the route.
     points.push({
-      lat: ll?.[0],
-      lng: ll?.[1],
+      cadence: cadence?.[i],
       elevation: altitude?.[i],
       heartRate: heartrate?.[i],
-      cadence: cadence?.[i],
+      lat: ll?.[0],
+      lng: ll?.[1],
       time:
         time?.[i] !== undefined && startMs !== undefined
           ? startMs + time[i] * 1000
@@ -73,24 +85,24 @@ export function stravaToParsed(
     .join(", ");
 
   const parsed = finalise({
-    points,
-    sport,
-    name,
     isoDate: detail.start_date,
-    sessionDistanceKm:
-      detail.distance === undefined ? undefined : detail.distance / 1000,
-    sessionDurationSec: detail.moving_time ?? detail.elapsed_time,
-    sessionElevationM: detail.total_elevation_gain,
+    name,
+    points,
+    sessionAvgCadence: detail.average_cadence,
+    sessionAvgHr: detail.average_heartrate,
     sessionAvgSpeedKmh:
       detail.average_speed === undefined
         ? undefined
         : detail.average_speed * MPS_TO_KMH,
+    sessionDistanceKm:
+      detail.distance === undefined ? undefined : detail.distance / 1000,
+    sessionDurationSec: detail.moving_time ?? detail.elapsed_time,
+    sessionElevationM: detail.total_elevation_gain,
     sessionMaxSpeedKmh:
       detail.max_speed === undefined
         ? undefined
         : detail.max_speed * MPS_TO_KMH,
-    sessionAvgHr: detail.average_heartrate,
-    sessionAvgCadence: detail.average_cadence,
+    sport,
   });
 
   // Overlay Strava-provided fields the finalise pipeline can't infer.
@@ -117,14 +129,4 @@ export function stravaToParsed(
   }
 
   return [parsed];
-}
-
-// The type parameter names what the caller expects of an `unknown` upstream
-// stream; there is deliberately no relation to the argument type.
-// oxlint-disable-next-line typescript/no-unnecessary-type-parameters
-function pickArray<T>(stream: StravaStream<unknown> | undefined): T[] | null {
-  if (!(stream && Array.isArray(stream.data))) {
-    return null;
-  }
-  return stream.data as T[];
-}
+};

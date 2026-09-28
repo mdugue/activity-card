@@ -12,16 +12,7 @@ import {
 } from "@/lib/metadata";
 import type { MetadataInput } from "@/lib/metadata";
 
-// Minimal valid-enough PNG: signature + IHDR + IEND (CRCs need not validate for
-// our splice logic, which only walks length/type to locate IEND).
-function fakePng(): Uint8Array {
-  const sig = [137, 80, 78, 71, 13, 10, 26, 10];
-  const ihdr = chunkBytes("IHDR", new Uint8Array(13));
-  const iend = chunkBytes("IEND", new Uint8Array(0));
-  return new Uint8Array([...sig, ...ihdr, ...iend]);
-}
-
-function chunkBytes(type: string, data: Uint8Array): number[] {
+const chunkBytes = (type: string, data: Uint8Array): number[] => {
   const lenBytes = new Uint8Array(4);
   new DataView(lenBytes.buffer).setUint32(0, data.length);
   const out: number[] = [...lenBytes];
@@ -30,9 +21,18 @@ function chunkBytes(type: string, data: Uint8Array): number[] {
   }
   out.push(...data, 0, 0, 0, 0); // crc placeholder — splice doesn't validate it
   return out;
-}
+};
 
-function chunkTypesOf(png: Uint8Array): string[] {
+// Minimal valid-enough PNG: signature + IHDR + IEND (CRCs need not validate for
+// our splice logic, which only walks length/type to locate IEND).
+const fakePng = (): Uint8Array => {
+  const sig = [137, 80, 78, 71, 13, 10, 26, 10];
+  const ihdr = chunkBytes("IHDR", new Uint8Array(13));
+  const iend = chunkBytes("IEND", new Uint8Array(0));
+  return new Uint8Array([...sig, ...ihdr, ...iend]);
+};
+
+const chunkTypesOf = (png: Uint8Array): string[] => {
   const dv = new DataView(png.buffer, png.byteOffset, png.byteLength);
   const types: string[] = [];
   let offset = 8;
@@ -49,7 +49,7 @@ function chunkTypesOf(png: Uint8Array): string[] {
     offset += 12 + len;
   }
   return types;
-}
+};
 
 describe("chunk builders", () => {
   test("tEXt encodes keyword\\0text with a length+crc frame", () => {
@@ -94,11 +94,11 @@ describe("injectPngChunks", () => {
 
 describe("buildMetadataChunks", () => {
   const input: MetadataInput = {
-    title: "Gravel deluxe",
     athleteName: "Manuel Dugué",
     date: "2026-06-14",
     location: "Neustadt, Sachsen",
     point: { lat: 51, lng: 13.9 },
+    title: "Gravel deluxe",
     url: "https://effort.app",
   };
 

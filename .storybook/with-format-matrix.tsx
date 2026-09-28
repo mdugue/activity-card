@@ -26,16 +26,16 @@ export const DEFAULT_SAFE_ZONES = "off";
  *  `globalTypes`; read here from `context.globals`. */
 export const safeZoneGlobalTypes = {
   safeZones: {
-    name: "Safe zones",
     description: "Overlay each format's platform safe-zone guides",
+    name: "Safe zones",
     toolbar: {
-      title: "Safe zones",
-      icon: "ruler",
       dynamicTitle: true,
+      icon: "ruler",
       items: [
-        { value: "off", title: "Safe zones — off" },
-        { value: "on", title: "Safe zones — on" },
+        { title: "Safe zones — off", value: "off" },
+        { title: "Safe zones — on", value: "on" },
       ],
+      title: "Safe zones",
     },
   },
 } satisfies GlobalTypes;
@@ -51,14 +51,14 @@ export const withFormatMatrix: Decorator = (Story, context) => {
           <div className="flex flex-col gap-2" key={id}>
             <div
               className="relative overflow-hidden rounded-lg shadow-lg"
-              style={{ width: f.width * scale, height: f.height * scale }}
+              style={{ height: f.height * scale, width: f.width * scale }}
             >
               <div
                 style={{
-                  width: f.width,
                   height: f.height,
                   transform: `scale(${scale})`,
                   transformOrigin: "top left",
+                  width: f.width,
                 }}
               >
                 <FormatProvider value={f}>

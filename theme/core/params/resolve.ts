@@ -10,7 +10,7 @@ import type { ChoiceParam, ParamDef } from "./kinds";
 
 /** The fixed id space for a choice param, or null when it can't be known
  *  statically (a dynamic option set with no declared `optionIds`). */
-function optionIdSet(p: ChoiceParam): Set<string> | null {
+const optionIdSet = (p: ChoiceParam): Set<string> | null => {
   if (p.optionIds) {
     return new Set(p.optionIds);
   }
@@ -18,11 +18,11 @@ function optionIdSet(p: ChoiceParam): Set<string> | null {
     return new Set(p.options.map((o) => o.id));
   }
   return null;
-}
+};
 
 /** The accepted value for one param, or `undefined` when the raw value is
  *  missing / mistyped / out of range / an unknown option id. */
-function coerceValue(p: ParamDef, v: unknown): unknown {
+const coerceValue = (p: ParamDef, v: unknown): unknown => {
   if (p.kind === "toggle") {
     return typeof v === "boolean" ? v : undefined;
   }
@@ -34,13 +34,13 @@ function coerceValue(p: ParamDef, v: unknown): unknown {
   // choice — accept only a known option id
   const ids = optionIdSet(p);
   return typeof v === "string" && (!ids || ids.has(v)) ? v : undefined;
-}
+};
 
-export function coerceConfig<C extends Record<string, unknown>>(
+export const coerceConfig = <C extends Record<string, unknown>>(
   defaults: C,
   params: ParamDef[],
   raw: unknown
-): C {
+): C => {
   const out: C = { ...defaults };
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     return out;
@@ -56,4 +56,4 @@ export function coerceConfig<C extends Record<string, unknown>>(
     }
   }
   return out;
-}
+};

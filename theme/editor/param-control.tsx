@@ -49,19 +49,25 @@ const ICON_PROPS = {
 } as const;
 
 export const OPTION_GLYPHS: Record<string, React.ReactNode> = {
-  elevation: <MountainsIcon {...ICON_PROPS} />,
-  distance: <PathIcon {...ICON_PROPS} />,
-  name: <TextAaIcon {...ICON_PROPS} />,
-  duration: <ClockIcon {...ICON_PROPS} />,
   avgSpeed: <GaugeIcon {...ICON_PROPS} />,
+  distance: <PathIcon {...ICON_PROPS} />,
+  duration: <ClockIcon {...ICON_PROPS} />,
+  elevation: <MountainsIcon {...ICON_PROPS} />,
   maxSpeed: <LightningIcon {...ICON_PROPS} />,
-  pace: <TimerIcon {...ICON_PROPS} />,
+  name: <TextAaIcon {...ICON_PROPS} />,
   none: <CircleDashedIcon {...ICON_PROPS} />,
+  pace: <TimerIcon {...ICON_PROPS} />,
 };
 
 /** The option's semantic duotone icon, a colour swatch (palette picker), or a
  *  neutral disc — so option rows keep a consistent leading mark. */
-function OptionGlyph({ glyph, swatch }: { glyph?: string; swatch?: string }) {
+const OptionGlyph = ({
+  glyph,
+  swatch,
+}: {
+  glyph?: string;
+  swatch?: string;
+}) => {
   const icon = glyph ? OPTION_GLYPHS[glyph] : undefined;
   if (icon) {
     return icon;
@@ -81,32 +87,36 @@ function OptionGlyph({ glyph, swatch }: { glyph?: string; swatch?: string }) {
       className="border-foreground/30 size-4 rounded-full border"
     />
   );
-}
+};
 
-function toRichOption(o: ParamOption): RichSelectOption {
-  return {
-    value: o.id,
-    icon: <OptionGlyph glyph={o.glyph} swatch={o.swatch} />,
-    primary: o.value ?? o.label,
-    unit: o.unit,
-    hint: o.hint ?? (o.value ? undefined : o.blurb),
-  };
-}
+const toRichOption = (o: ParamOption): RichSelectOption => ({
+  hint: o.hint ?? (o.value ? undefined : o.blurb),
+  icon: <OptionGlyph glyph={o.glyph} swatch={o.swatch} />,
+  primary: o.value ?? o.label,
+  unit: o.unit,
+  value: o.id,
+});
 
-function resolveOptions(
+const resolveOptions = (
   def: Extract<ParamDef, { kind: "segmented" | "select" }>,
   ctx: ParamCtx
-): ParamOption[] {
-  return typeof def.options === "function" ? def.options(ctx) : def.options;
-}
+): ParamOption[] =>
+  typeof def.options === "function" ? def.options(ctx) : def.options;
 
-export function ParamControl({ def, value, onChange, ctx }: ParamControlProps) {
+export const ParamControl = ({
+  def,
+  value,
+  onChange,
+  ctx,
+}: ParamControlProps) => {
   if (def.kind === "toggle") {
     return (
       <ToggleRow
         checked={value === true}
         label={def.label}
-        onCheckedChange={(c) => onChange(c)}
+        onCheckedChange={(c) => {
+          onChange(c);
+        }}
       />
     );
   }
@@ -190,4 +200,4 @@ export function ParamControl({ def, value, onChange, ctx }: ParamControlProps) {
       </ToggleGroup>
     </ControlBlock>
   );
-}
+};

@@ -28,11 +28,10 @@ export interface OAuthStatePayload {
   s?: string;
 }
 
-export function encodeOAuthState(payload: OAuthStatePayload): string {
-  return Buffer.from(JSON.stringify(payload)).toString("base64url");
-}
+export const encodeOAuthState = (payload: OAuthStatePayload): string =>
+  Buffer.from(JSON.stringify(payload)).toString("base64url");
 
-export function decodeOAuthState(raw: string): OAuthStatePayload | null {
+export const decodeOAuthState = (raw: string): OAuthStatePayload | null => {
   let parsed: unknown;
   try {
     parsed = JSON.parse(Buffer.from(raw, "base64url").toString("utf-8"));
@@ -48,12 +47,12 @@ export function decodeOAuthState(raw: string): OAuthStatePayload | null {
   }
   const p = parsed as { b?: unknown; p?: unknown; r: string; s?: unknown };
   return {
-    r: p.r,
     b: typeof p.b === "string" ? p.b : undefined,
     p: typeof p.p === "string" ? p.p : undefined,
+    r: p.r,
     s: typeof p.s === "string" ? p.s : undefined,
   };
-}
+};
 
 /**
  * Sign a bounce target. HMAC-SHA256 over `${b}\n${r}` (base64url), keyed
@@ -61,18 +60,17 @@ export function decodeOAuthState(raw: string): OAuthStatePayload | null {
  * not have. Binding the nonce `r` stops one signature being replayed with
  * a different state.
  */
-export function signBounce(b: string, r: string, secret: string): string {
-  return createHmac("sha256", secret).update(`${b}\n${r}`).digest("base64url");
-}
+export const signBounce = (b: string, r: string, secret: string): string =>
+  createHmac("sha256", secret).update(`${b}\n${r}`).digest("base64url");
 
 /** Constant-time check that `s` is `signBounce(b, r, secret)`. A missing
  * or wrong-length signature is rejected before the comparison. */
-export function verifyBounce(
+export const verifyBounce = (
   b: string,
   r: string,
   s: string | undefined,
   secret: string
-): boolean {
+): boolean => {
   if (!s) {
     return false;
   }
@@ -82,7 +80,7 @@ export function verifyBounce(
     return false;
   }
   return timingSafeEqual(actual, expected);
-}
+};
 
 /**
  * Domains accepted as bounce targets when the production callback relays
@@ -110,10 +108,10 @@ export function verifyBounce(
  * Allows http only when `STRAVA_ALLOW_HTTP_BOUNCE=1` (E2E / dev where
  * preview-style origins run over plain http on `localhost`).
  */
-export function isAllowedBounceOrigin(
+export const isAllowedBounceOrigin = (
   origin: string,
   registeredCallbackHost: string
-): boolean {
+): boolean => {
   let parsed: URL;
   try {
     parsed = new URL(origin);
@@ -150,7 +148,7 @@ export function isAllowedBounceOrigin(
     return true;
   }
   return false;
-}
+};
 
 const DEL_CHARCODE = 0x7f;
 const SPACE_CHARCODE = 0x20;
@@ -161,7 +159,7 @@ const SPACE_CHARCODE = 0x20;
  * (defence-in-depth against `Location:`-header injection on hosts that
  * fail to encode redirect targets). Used by both the authorize route
  * (before stuffing into state) and the callback route. */
-export function safeRelativePath(value: string | null): string | null {
+export const safeRelativePath = (value: string | null): string | null => {
   if (!value?.startsWith("/") || value.startsWith("//")) {
     return null;
   }
@@ -175,4 +173,4 @@ export function safeRelativePath(value: string | null): string | null {
     }
   }
   return value;
-}
+};

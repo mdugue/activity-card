@@ -90,9 +90,9 @@ describe("theme registries", () => {
 
     test(`${id}: a user-picked accent survives the dusk swap`, () => {
       const userStyle = resolveDeckStyle(theme.look, theme.label, {
+        onPrimary: "#fafafa",
         primary: "#123456",
         secondary: "#654321",
-        onPrimary: "#fafafa",
       });
       const dusk = theme.resolveStyle?.(userStyle, { atmosphere: "dusk" });
       expect(dusk?.accent).toBe("#123456");

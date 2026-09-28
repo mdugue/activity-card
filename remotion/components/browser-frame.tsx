@@ -15,7 +15,7 @@ import {
  * mono address pill over the content. Size it from the outside; the content
  * area clips.
  */
-export function BrowserFrame({
+export const BrowserFrame = ({
   children,
   label = "effort",
   style,
@@ -24,65 +24,63 @@ export function BrowserFrame({
   /** text in the address pill */
   label?: string;
   style?: CSSProperties;
-}) {
-  return (
+}) => (
+  <div
+    style={{
+      backgroundColor: INK_RAISED,
+      borderRadius: RADIUS.lg,
+      boxShadow:
+        "0 60px 120px -40px rgba(0,0,0,0.65), 0 0 0 1px rgba(247,243,236,0.12)",
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden",
+      ...style,
+    }}
+  >
     <div
       style={{
-        backgroundColor: INK_RAISED,
-        borderRadius: RADIUS.lg,
-        boxShadow:
-          "0 60px 120px -40px rgba(0,0,0,0.65), 0 0 0 1px rgba(247,243,236,0.12)",
+        alignItems: "center",
         display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        ...style,
+        flex: "none",
+        gap: 10,
+        height: 58,
+        paddingLeft: 24,
+        paddingRight: 24,
+        position: "relative",
       }}
     >
-      <div
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          style={{
+            backgroundColor: PAPER_FAINT,
+            borderRadius: 999,
+            height: 13,
+            width: 13,
+          }}
+        />
+      ))}
+      <span
         style={{
-          alignItems: "center",
-          display: "flex",
-          flex: "none",
-          gap: 10,
-          height: 58,
-          paddingLeft: 24,
-          paddingRight: 24,
-          position: "relative",
+          backgroundColor: INK,
+          borderRadius: 999,
+          color: PAPER_FAINT,
+          fontFamily: FONT.mono,
+          fontSize: TYPE.micro,
+          fontWeight: 500,
+          left: "50%",
+          letterSpacing: TRACKING.micro,
+          padding: "7px 26px",
+          position: "absolute",
+          textTransform: "uppercase",
+          transform: "translateX(-50%)",
         }}
       >
-        {[0, 1, 2].map((i) => (
-          <span
-            key={i}
-            style={{
-              backgroundColor: PAPER_FAINT,
-              borderRadius: 999,
-              height: 13,
-              width: 13,
-            }}
-          />
-        ))}
-        <span
-          style={{
-            backgroundColor: INK,
-            borderRadius: 999,
-            color: PAPER_FAINT,
-            fontFamily: FONT.mono,
-            fontSize: TYPE.micro,
-            fontWeight: 500,
-            left: "50%",
-            letterSpacing: TRACKING.micro,
-            padding: "7px 26px",
-            position: "absolute",
-            textTransform: "uppercase",
-            transform: "translateX(-50%)",
-          }}
-        >
-          {label}
-        </span>
-      </div>
-      <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
-        {children}
-      </div>
+        {label}
+      </span>
     </div>
-  );
-}
+    <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
+      {children}
+    </div>
+  </div>
+);

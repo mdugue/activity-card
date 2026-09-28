@@ -13,14 +13,14 @@ import { themeAvailability } from "@/theme/core/visibility";
 const Noop: (props: ThemeProps<"route" | "elevation">) => null = () => null;
 
 const slim = defineTheme({
+  Component: Noop,
+  colors: { default: { primary: "#c45a2c" }, userAdjustable: false },
   id: "slim",
   label: "SLIM",
+  photo: { defaultOn: true },
   tagline: "test theme",
   uses: ["route", "elevation"],
   usesWhen: { elevation: (d) => d.sport === "ride" },
-  colors: { default: { primary: "#c45a2c" }, userAdjustable: false },
-  photo: { defaultOn: true },
-  Component: Noop,
 });
 
 describe("pickThemeData", () => {

@@ -97,12 +97,12 @@ interface ClaimMetrics {
 
 /** The claim box geometry for a given font size. Every term is linear in
  *  `fontSize`, so `boxH` scales linearly — the height clamp rescales in one step. */
-function claimMetrics(
+const claimMetrics = (
   fontSize: number,
   nLines: number,
   hasCurve: boolean,
   hasDescenders: boolean
-): ClaimMetrics {
+): ClaimMetrics => {
   const cap = fontSize * INK_ASCENT;
   const topPad = fontSize * TOP_PAD;
   const lineH = fontSize * LINE_STEP;
@@ -114,8 +114,8 @@ function claimMetrics(
     );
   const baseline0 = topPad + cap;
   const lastBaseline = baseline0 + (nLines - 1) * lineH;
-  return { baseline0, lineH, lastBaseline, boxH: lastBaseline + descent };
-}
+  return { baseline0, boxH: lastBaseline + descent, lastBaseline, lineH };
+};
 
 // --- Fit-to-width by measure-and-scale --------------------------------------
 // Scaling the font size uniformly fills the width without distorting glyphs
@@ -127,11 +127,11 @@ const MIN_FIT = 40;
 const MAX_FIT = 620;
 let measureProbe: HTMLSpanElement | null = null;
 
-function probeWidth(
+const probeWidth = (
   text: string,
   fontFamily: string,
   fontWeight: number
-): number {
+): number => {
   if (typeof document === "undefined") {
     return 0;
   }
@@ -139,14 +139,14 @@ function probeWidth(
     measureProbe = document.createElement("span");
     measureProbe.setAttribute("aria-hidden", "true");
     Object.assign(measureProbe.style, {
-      position: "absolute",
+      fontSize: `${REF_PX}px`,
       left: "-99999px",
+      letterSpacing: "normal",
+      pointerEvents: "none",
+      position: "absolute",
       top: "0",
       visibility: "hidden",
       whiteSpace: "pre",
-      pointerEvents: "none",
-      letterSpacing: "normal",
-      fontSize: `${REF_PX}px`,
     });
     document.body.append(measureProbe);
   }
@@ -154,16 +154,16 @@ function probeWidth(
   measureProbe.style.fontWeight = String(fontWeight);
   measureProbe.textContent = text;
   return measureProbe.getBoundingClientRect().width;
-}
+};
 
 /** Largest size (clamped) at which the widest line still fits `contentW`. */
-function fitFontSize(
+const fitFontSize = (
   lines: string[],
   fontFamily: string,
   fontWeight: number,
   fallback: number,
   contentW: number
-): number {
+): number => {
   let widest = 0;
   for (const line of lines) {
     widest = Math.max(widest, probeWidth(line, fontFamily, fontWeight));
@@ -172,7 +172,7 @@ function fitFontSize(
     return fallback;
   }
   return Math.min(MAX_FIT, Math.max(MIN_FIT, (contentW / widest) * REF_PX));
-}
+};
 
 /**
  * The fitted claim size, re-measured once the web fonts have loaded — a DOM-probe
@@ -182,13 +182,13 @@ function fitFontSize(
  * `fallback` (deterministic, SSR-safe, never overflows). Sizing the glyphs to the
  * SAFE width is what holds the headline inside the safe zone on tight formats.
  */
-function useFittedFontSize(
+const useFittedFontSize = (
   lines: string[],
   fontFamily: string,
   fontWeight: number,
   fallback: number,
   contentW: number
-): number {
+): number => {
   const linesKey = lines.join("\n");
   const [size, setSize] = useState(fallback);
   useEffect(() => {
@@ -215,7 +215,7 @@ function useFittedFontSize(
     };
   }, [linesKey, fontFamily, fontWeight, fallback, contentW]);
   return size;
-}
+};
 
 const FONT_FAMILY: Record<AltitudeConfig["font"], string> = {
   modern: "var(--font-heading), sans-serif",
@@ -233,7 +233,7 @@ const FOOTER_SCRIM =
   "linear-gradient(0deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 18%)";
 const FLAT_DARKEN = "linear-gradient(0deg, rgba(0,0,0,0.12), rgba(0,0,0,0.12))";
 
-function scrimBackground(position: AltitudePosition): string {
+const scrimBackground = (position: AltitudePosition): string => {
   let pos: string;
   if (position === "top") {
     pos =
@@ -246,22 +246,22 @@ function scrimBackground(position: AltitudePosition): string {
       "linear-gradient(0deg, rgba(0,0,0,0.55) 8%, rgba(0,0,0,0.12) 32%, rgba(0,0,0,0) 55%)";
   }
   return `${pos}, ${FOOTER_SCRIM}, ${FLAT_DARKEN}`;
-}
+};
 
 /** The claim cluster spans the full canvas width (the elevation line bleeds to
  *  the edges); its text rows pad themselves back into the safe box. Only the
  *  block-axis anchor changes with `position`. */
-function clusterPosition(
+const clusterPosition = (
   position: AltitudePosition,
   topInset: number,
   bottomInset: number
-): CSSProperties {
+): CSSProperties => {
   const base: CSSProperties = {
-    position: "absolute",
+    color: "#fff",
     left: 0,
+    position: "absolute",
     right: 0,
     zIndex: 3,
-    color: "#fff",
   };
   if (position === "top") {
     return { ...base, top: topInset };
@@ -270,7 +270,7 @@ function clusterPosition(
     return { ...base, top: "50%", transform: "translateY(-50%)" };
   }
   return { ...base, bottom: bottomInset };
-}
+};
 
 /**
  * Hero claim text + the elevation cutout. Four steps, in order: (1) SIZE the type
@@ -280,7 +280,7 @@ function clusterPosition(
  * the faded base shows below it. `cut` enables the cutout; otherwise the type is
  * solid with a soft dark drop for legibility.
  */
-function ClaimText({
+const ClaimText = ({
   belowOpacity,
   contentW,
   fullW,
@@ -308,7 +308,7 @@ function ClaimText({
   fontWeight: number;
   layout: ClaimLayout;
   uid: string;
-}) {
+}) => {
   const { lines } = layout;
   const hasCurve = cut && curves.length > 0;
   const hasDesc = DESCENDERS.test(lines.join(""));
@@ -420,7 +420,7 @@ function ClaimText({
       )}
     </svg>
   );
-}
+};
 
 /**
  * Decorative elevation band (stacked treatment + the no-claim hero). Renders one
@@ -428,7 +428,7 @@ function ClaimText({
  * side on a shared scale (no gaps, a vertical step where two legs meet). It
  * renders at width:100% of a full-bleed container, so it spans the whole canvas.
  */
-function MultiLineBand({
+const MultiLineBand = ({
   curves,
   strokeWidth = 3.5,
   style,
@@ -436,7 +436,7 @@ function MultiLineBand({
   curves: NormalizedCurve[];
   strokeWidth?: number;
   style?: CSSProperties;
-}) {
+}) => {
   if (curves.length === 0) {
     return null;
   }
@@ -485,13 +485,13 @@ function MultiLineBand({
       })}
     </svg>
   );
-}
+};
 
 /**
  * One condensed row under the claim: supporting stats on the left, the claim's
  * unit (when not already in a kicker) bottom-aligned on the right.
  */
-function FooterRow({
+const FooterRow = ({
   stats,
   unit,
   unitFontFamily,
@@ -503,32 +503,32 @@ function FooterRow({
   unit?: string;
   unitFontFamily: string;
   unitFontSize: number;
-}) {
+}) => {
   if (stats.length === 0 && !unit) {
     return null;
   }
   return (
     <div
       style={{
-        marginTop,
-        display: "flex",
         alignItems: "flex-end",
+        display: "flex",
         gap: 24,
+        marginTop,
         width: "100%",
       }}
     >
       {stats.length > 0 ? (
         <div
           style={{
+            alignItems: "baseline",
+            display: "flex",
+            flexWrap: "wrap",
             fontFamily: "var(--font-mono), monospace",
             fontSize: 31,
+            gap: 14,
             letterSpacing: "0.04em",
             opacity: 0.92,
             textShadow: "0 2px 12px rgba(0,0,0,0.5)",
-            display: "flex",
-            alignItems: "baseline",
-            flexWrap: "wrap",
-            gap: 14,
           }}
         >
           {stats.map((s, i) => (
@@ -550,10 +550,10 @@ function FooterRow({
       {unit ? (
         <div
           style={{
-            marginLeft: "auto",
             fontFamily: unitFontFamily,
             fontSize: unitFontSize,
             lineHeight: 1,
+            marginLeft: "auto",
             opacity: 0.9,
             textShadow: "0 2px 12px rgba(0,0,0,0.5)",
           }}
@@ -563,24 +563,24 @@ function FooterRow({
       ) : null}
     </div>
   );
-}
+};
 
-export function ThemeAltitude({
+export const ThemeAltitude = ({
   data,
   photoUrl,
   imageTransform,
   config = DEFAULT_ALTITUDE_CONFIG,
-}: ThemeAltitudeProps) {
+}: ThemeAltitudeProps) => {
   const { width, height } = useFormat();
   // The photo + scrim bleed the full canvas; the claim GLYPHS + stats + meta keep
   // to the safe content width, while the elevation LINE bleeds to the edges.
   // PAD_X is the natural 4:5 margin, floored by the platform safe inset on taller
   // / cover-cropped formats.
   const insets = useSafeInsets({
-    top: 132,
-    right: PAD_X,
     bottom: 60,
     left: PAD_X,
+    right: PAD_X,
+    top: 132,
   });
   const contentW = width - insets.left - insets.right;
   const claim = resolveClaim(config.claim, data);
@@ -662,12 +662,12 @@ export function ThemeAltitude({
   return (
     <div
       style={{
-        width,
-        height,
-        position: "relative",
-        overflow: "hidden",
         background: NO_PHOTO_BG,
         boxSizing: "border-box",
+        height,
+        overflow: "hidden",
+        position: "relative",
+        width,
       }}
     >
       {photoUrl ? (
@@ -678,10 +678,10 @@ export function ThemeAltitude({
       <div
         aria-hidden
         style={{
-          position: "absolute",
-          inset: 0,
-          zIndex: 1,
           background: scrimBackground(config.position),
+          inset: 0,
+          position: "absolute",
+          zIndex: 1,
         }}
       />
 
@@ -727,8 +727,8 @@ export function ThemeAltitude({
                 fontFamily: "var(--font-mono), monospace",
                 fontSize: 24,
                 letterSpacing: "0.28em",
-                opacity: 0.82,
                 marginBottom: 16,
+                opacity: 0.82,
                 textShadow: "0 2px 12px rgba(0,0,0,0.5)",
               }}
             >
@@ -789,17 +789,17 @@ export function ThemeAltitude({
       {metaBits.length > 0 ? (
         <div
           style={{
-            position: "absolute",
             bottom: insets.bottom,
-            left: insets.left,
-            right: insets.right,
-            zIndex: 3,
+            color: "#fff",
             fontFamily: "var(--font-mono), monospace",
             fontSize: 24,
+            left: insets.left,
             letterSpacing: "0.18em",
-            color: "#fff",
             opacity: 0.85,
+            position: "absolute",
+            right: insets.right,
             textShadow: "0 2px 12px rgba(0,0,0,0.5)",
+            zIndex: 3,
           }}
         >
           {metaBits.join("   ·   ")}
@@ -807,7 +807,7 @@ export function ThemeAltitude({
       ) : null}
     </div>
   );
-}
+};
 
 export const altitudeTheme = defineTheme({
   id: "altitude",

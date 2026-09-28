@@ -41,7 +41,7 @@ interface RenderThemeProps {
  * photo-effects context. No per-theme branches and no Hybrid frame — every theme
  * is format-aware and renders itself at the target dimensions.
  */
-export function RenderTheme({
+export const RenderTheme = ({
   theme,
   data,
   photoUrl,
@@ -51,14 +51,14 @@ export function RenderTheme({
   photoEffects = null,
   imageTransform = null,
   format,
-}: RenderThemeProps) {
+}: RenderThemeProps) => {
   const descriptor = SINGLE_CARD_THEMES[theme];
   const ctxFormat = useFormat();
   const photo = photoBackdropEnabled ? (photoUrl ?? null) : null;
   // Natural size feeds the rotation-correct cover layer (quarter turns swap
   // the photo's width/height); derived here once so themes need no new props.
   const imageSize = useImageNaturalSize(photo);
-  const Component = descriptor.Component;
+  const { Component } = descriptor;
   const resolvedColors = colors ?? descriptor.colors.default;
   const themeData = pickThemeData(descriptor, data);
   // An explicit prop wins; otherwise inherit the ambient FormatContext (which
@@ -79,4 +79,4 @@ export function RenderTheme({
       </PhotoFxProvider>
     </FormatProvider>
   );
-}
+};

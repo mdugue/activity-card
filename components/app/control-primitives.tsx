@@ -36,36 +36,34 @@ export interface RichSelectOption {
 
 /** Shared visual for a rich option — used by both the trigger (the current
  * choice) and every item in the popup, so they read identically. */
-function RichOptionContent({ option }: { option: RichSelectOption }) {
-  return (
-    <span className="flex min-w-0 flex-1 items-center gap-3 text-left">
-      <span className="text-foreground/75 flex shrink-0 items-center">
-        {option.icon}
-      </span>
-      <span className="flex min-w-0 flex-col">
-        <span className="flex items-baseline gap-1">
-          <span className="font-heading truncate text-lg leading-tight tracking-tight">
-            {option.primary}
-          </span>
-          {option.unit ? (
-            <span className="text-muted-foreground shrink-0 font-mono text-xs font-medium">
-              {option.unit}
-            </span>
-          ) : null}
+const RichOptionContent = ({ option }: { option: RichSelectOption }) => (
+  <span className="flex min-w-0 flex-1 items-center gap-3 text-left">
+    <span className="text-foreground/75 flex shrink-0 items-center">
+      {option.icon}
+    </span>
+    <span className="flex min-w-0 flex-col">
+      <span className="flex items-baseline gap-1">
+        <span className="font-heading truncate text-lg leading-tight tracking-tight">
+          {option.primary}
         </span>
-        {option.hint ? (
-          <span className="caption-micro mt-0.5 truncate">{option.hint}</span>
+        {option.unit ? (
+          <span className="text-muted-foreground shrink-0 font-mono text-xs font-medium">
+            {option.unit}
+          </span>
         ) : null}
       </span>
+      {option.hint ? (
+        <span className="caption-micro mt-0.5 truncate">{option.hint}</span>
+      ) : null}
     </span>
-  );
-}
+  </span>
+);
 
 /** A calm, icon-led select where the chosen value is set first-class on the
  * trigger (the actual number + unit, with the metric as a muted sidenote) and
  * every option mirrors it. Built on the base Select so keyboard + a11y come for
  * free; the trigger is a bordered tile to match the editor's toggle pickers. */
-export function RichSelect({
+export const RichSelect = ({
   ariaLabel,
   className,
   onValueChange,
@@ -77,7 +75,7 @@ export function RichSelect({
   onValueChange: (value: string) => void;
   options: RichSelectOption[];
   value: string;
-}) {
+}) => {
   const selected = options.find((o) => o.value === value) ?? options[0];
   return (
     <Select
@@ -106,24 +104,22 @@ export function RichSelect({
       </SelectContent>
     </Select>
   );
-}
+};
 
-export function ControlBlock({
+export const ControlBlock = ({
   label,
   children,
 }: {
   children: React.ReactNode;
   label: string;
-}) {
-  return (
-    <div>
-      <div className="caption-label">{label}</div>
-      {children}
-    </div>
-  );
-}
+}) => (
+  <div>
+    <div className="caption-label">{label}</div>
+    {children}
+  </div>
+);
 
-export function DetailField({
+export const DetailField = ({
   id,
   label,
   value,
@@ -146,7 +142,7 @@ export function DetailField({
     onChange: (checked: boolean) => void;
   };
   value: string;
-}) {
+}) => {
   const labelEl = (
     <Label
       className="font-mono text-[11px] font-medium tracking-[0.22em] uppercase opacity-65"
@@ -186,15 +182,17 @@ export function DetailField({
         className="border-foreground font-heading mt-1 h-auto border-0 border-b-2 px-0 py-1.5 text-lg tracking-tight focus-visible:ring-0"
         disabled={disabled}
         id={id}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          onChange(e.target.value);
+        }}
         placeholder={placeholder}
         value={value}
       />
     </div>
   );
-}
+};
 
-export function PhotoControl({
+export const PhotoControl = ({
   photoUrl,
   onChange,
   disabled,
@@ -205,7 +203,7 @@ export function PhotoControl({
   photoUrl: string | null;
   /** big, inviting drop zone when no photo is set (the photo carries the card) */
   prominent?: boolean;
-}) {
+}) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const pick = () => inputRef.current?.click();
   const fileInput = (
@@ -271,7 +269,9 @@ export function PhotoControl({
       {photoUrl ? (
         <Button
           disabled={disabled}
-          onClick={() => onChange(null)}
+          onClick={() => {
+            onChange(null);
+          }}
           size="sm"
           variant="ghost"
         >
@@ -288,9 +288,9 @@ export function PhotoControl({
       </Button>
     </div>
   );
-}
+};
 
-export function ToggleRow({
+export const ToggleRow = ({
   label,
   checked,
   onCheckedChange,
@@ -302,7 +302,7 @@ export function ToggleRow({
   disabledReason?: string;
   label: string;
   onCheckedChange: (checked: boolean) => void;
-}) {
+}) => {
   const id = useId();
   const labelEl = (
     <Label
@@ -335,4 +335,4 @@ export function ToggleRow({
       />
     </div>
   );
-}
+};

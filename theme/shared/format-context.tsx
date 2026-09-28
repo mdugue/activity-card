@@ -31,18 +31,15 @@ const FormatContext = createContext<ExportFormat>(
 export const FormatProvider = FormatContext.Provider;
 
 /** The active export format — dimensions, safe insets, aspect bucket. */
-export function useFormat(): ExportFormat {
-  return useContext(FormatContext);
-}
+export const useFormat = (): ExportFormat => useContext(FormatContext);
 
 /**
  * The per-side insets a theme should apply: the larger of its own aesthetic
  * margin and the format's platform safe inset (see `mergeSafe`). Pass the
  * theme's natural 4:5 margins so the master renders unchanged.
  */
-export function useSafeInsets(natural?: Partial<SafeInsets>): SafeInsets {
-  return mergeSafe(useContext(FormatContext).safe, natural);
-}
+export const useSafeInsets = (natural?: Partial<SafeInsets>): SafeInsets =>
+  mergeSafe(useContext(FormatContext).safe, natural);
 
 /**
  * A flex column inset by the resolved safe area — the home for legible content.
@@ -58,7 +55,7 @@ const ANCHOR_JUSTIFY: Record<
   upper: "flex-start",
 };
 
-export function SafeArea({
+export const SafeArea = ({
   anchor = "upper",
   children,
   pad,
@@ -68,26 +65,26 @@ export function SafeArea({
   children?: ReactNode;
   pad?: Partial<SafeInsets>;
   style?: CSSProperties;
-}) {
+}) => {
   const i = useSafeInsets(pad);
   const justifyContent = ANCHOR_JUSTIFY[anchor];
   return (
     <div
       style={{
-        position: "absolute",
-        inset: 0,
         boxSizing: "border-box",
-        paddingTop: i.top,
-        paddingRight: i.right,
-        paddingBottom: i.bottom,
-        paddingLeft: i.left,
         display: "flex",
         flexDirection: "column",
+        inset: 0,
         justifyContent,
+        paddingBottom: i.bottom,
+        paddingLeft: i.left,
+        paddingRight: i.right,
+        paddingTop: i.top,
+        position: "absolute",
         ...style,
       }}
     >
       {children}
     </div>
   );
-}
+};

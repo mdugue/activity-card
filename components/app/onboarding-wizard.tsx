@@ -100,68 +100,66 @@ const SAMPLE_PHOTOS = [
   { name: "north-sea-dusk.webp", url: "/images/dunes.webp" },
 ] as const;
 
-function activityMeta(a: {
+const activityMeta = (a: {
   distanceKm: number;
   durationSec: number;
   elevationGainM?: number;
-}): string {
+}): string => {
   const parts = [`${formatNumber(a.distanceKm, 1)} km`];
   if (a.elevationGainM) {
     parts.push(`${formatNumber(a.elevationGainM)} m`);
   }
   parts.push(formatDuration(a.durationSec));
   return parts.join(" · ");
-}
+};
 
 // Sample photos live in /public; fetch one back into a File so it flows through
 // the same File-based photo pipeline the editor already uses for uploads.
-async function urlToFile(url: string, name: string): Promise<File> {
-  const blob = await fetch(url).then((r) => r.blob());
+const urlToFile = async (url: string, name: string): Promise<File> => {
+  const blob = await fetch(url).then(async (r) => await r.blob());
   return new File([blob], name, { type: blob.type });
-}
+};
 
-function footerNote(
+const footerNote = (
   hasActivity: boolean,
   hasPhoto: boolean
-): { hint: string; kicker: string } {
+): { hint: string; kicker: string } => {
   if (!hasActivity) {
     return {
-      kicker: "Start with an activity",
       hint: "Add an activity to continue — the photo is optional.",
+      kicker: "Start with an activity",
     };
   }
   if (hasPhoto) {
     return {
-      kicker: "All set",
       hint: "You can keep refining everything in the editor.",
+      kicker: "All set",
     };
   }
   return {
-    kicker: "Photo is optional",
     hint: "You can still add a photo inside the editor.",
+    kicker: "Photo is optional",
   };
-}
+};
 
-function activityKicker(activity: WizardActivity): string {
+const activityKicker = (activity: WizardActivity): string => {
   if (activity.kind === "sample") {
     return "Sample loaded";
   }
   return activity.source === "strava" ? "From Strava" : "File loaded";
-}
+};
 
-function OrDivider() {
-  return (
-    <div className="my-2.5 flex items-center gap-3">
-      <span className="bg-border h-px flex-1" />
-      <span className="caption-micro">or</span>
-      <span className="bg-border h-px flex-1" />
-    </div>
-  );
-}
+const OrDivider = () => (
+  <div className="my-2.5 flex items-center gap-3">
+    <span className="bg-border h-px flex-1" />
+    <span className="caption-micro">or</span>
+    <span className="bg-border h-px flex-1" />
+  </div>
+);
 
 /** A wizard step rendered as a shadcn Card; the active step gets a primary
  * ring so attention flows from the activity to the (optional) photo. */
-function StepCard({
+const StepCard = ({
   active,
   badge,
   badgeClass,
@@ -175,27 +173,25 @@ function StepCard({
   children: React.ReactNode;
   num: string;
   title: string;
-}) {
-  return (
-    <Card
-      className={cn("shrink-0 gap-4", active && "ring-primary ring-2")}
-      size="sm"
-    >
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <span className="font-heading">{num}</span>
-          {title}
-        </CardTitle>
-        <CardAction>
-          <Badge className={cn("px-2 py-1", badgeClass)}>{badge}</Badge>
-        </CardAction>
-      </CardHeader>
-      <CardContent className="flex flex-col">{children}</CardContent>
-    </Card>
-  );
-}
+}) => (
+  <Card
+    className={cn("shrink-0 gap-4", active && "ring-primary ring-2")}
+    size="sm"
+  >
+    <CardHeader>
+      <CardTitle className="flex items-center gap-2">
+        <span className="font-heading">{num}</span>
+        {title}
+      </CardTitle>
+      <CardAction>
+        <Badge className={cn("px-2 py-1", badgeClass)}>{badge}</Badge>
+      </CardAction>
+    </CardHeader>
+    <CardContent className="flex flex-col">{children}</CardContent>
+  </Card>
+);
 
-function DropZone({
+const DropZone = ({
   cta,
   dragging,
   hint,
@@ -213,43 +209,41 @@ function DropZone({
   onDragStateChange: (dragging: boolean) => void;
   onFiles: (files: FileList) => void;
   parsing?: boolean;
-}) {
-  return (
-    <button
-      className={cn(
-        "border-foreground/30 bg-foreground/[0.015] hover:border-primary hover:bg-primary/5 flex items-center gap-3 border border-dashed px-3 py-2.5 text-left transition-colors sm:flex-col sm:gap-2 sm:px-4 sm:py-4 sm:text-center",
-        dragging && "border-primary bg-primary/5"
-      )}
-      onClick={onBrowse}
-      onDragLeave={(e) => {
-        e.preventDefault();
-        onDragStateChange(false);
-      }}
-      onDragOver={(e) => {
-        e.preventDefault();
-        onDragStateChange(true);
-      }}
-      onDrop={(e) => {
-        e.preventDefault();
-        onDragStateChange(false);
-        if (e.dataTransfer.files.length) {
-          onFiles(e.dataTransfer.files);
-        }
-      }}
-      type="button"
-    >
-      {parsing ? <Spinner className="text-primary size-6 sm:size-9" /> : icon}
-      <span className="text-muted-foreground flex-1 text-sm sm:flex-none">
-        {hint}
-      </span>
-      <span className="bg-foreground font-heading text-background inline-flex h-8 shrink-0 items-center px-3 text-xs tracking-wide uppercase sm:h-9 sm:px-5 sm:text-sm">
-        {cta}
-      </span>
-    </button>
-  );
-}
+}) => (
+  <button
+    className={cn(
+      "border-foreground/30 bg-foreground/[0.015] hover:border-primary hover:bg-primary/5 flex items-center gap-3 border border-dashed px-3 py-2.5 text-left transition-colors sm:flex-col sm:gap-2 sm:px-4 sm:py-4 sm:text-center",
+      dragging && "border-primary bg-primary/5"
+    )}
+    onClick={onBrowse}
+    onDragLeave={(e) => {
+      e.preventDefault();
+      onDragStateChange(false);
+    }}
+    onDragOver={(e) => {
+      e.preventDefault();
+      onDragStateChange(true);
+    }}
+    onDrop={(e) => {
+      e.preventDefault();
+      onDragStateChange(false);
+      if (e.dataTransfer.files.length) {
+        onFiles(e.dataTransfer.files);
+      }
+    }}
+    type="button"
+  >
+    {parsing ? <Spinner className="text-primary size-6 sm:size-9" /> : icon}
+    <span className="text-muted-foreground flex-1 text-sm sm:flex-none">
+      {hint}
+    </span>
+    <span className="bg-foreground font-heading text-background inline-flex h-8 shrink-0 items-center px-3 text-xs tracking-wide uppercase sm:h-9 sm:px-5 sm:text-sm">
+      {cta}
+    </span>
+  </button>
+);
 
-function LoadedRow({
+const LoadedRow = ({
   kicker,
   name,
   onRemove,
@@ -265,44 +259,42 @@ function LoadedRow({
   replaceLabel: string;
   sub?: string;
   thumb?: string;
-}) {
-  return (
-    <>
-      <div className="bg-foreground text-background flex items-stretch overflow-hidden">
-        {thumb ? (
-          <div
-            className="w-24 shrink-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${thumb})` }}
-          />
-        ) : null}
-        <div className="flex min-w-0 flex-1 items-center gap-3 p-4">
-          <span className="bg-primary text-primary-foreground flex size-7 shrink-0 items-center justify-center">
-            <CheckIcon className="size-4" weight="duotone" />
-          </span>
-          <div className="min-w-0">
-            <div className="caption-micro text-background/60">{kicker}</div>
-            <div className="truncate font-mono text-sm">{name}</div>
-            {sub ? (
-              <div className="text-background/70 truncate text-xs">{sub}</div>
-            ) : null}
-          </div>
+}) => (
+  <>
+    <div className="bg-foreground text-background flex items-stretch overflow-hidden">
+      {thumb ? (
+        <div
+          className="w-24 shrink-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${thumb})` }}
+        />
+      ) : null}
+      <div className="flex min-w-0 flex-1 items-center gap-3 p-4">
+        <span className="bg-primary text-primary-foreground flex size-7 shrink-0 items-center justify-center">
+          <CheckIcon className="size-4" weight="duotone" />
+        </span>
+        <div className="min-w-0">
+          <div className="caption-micro text-background/60">{kicker}</div>
+          <div className="truncate font-mono text-sm">{name}</div>
+          {sub ? (
+            <div className="text-background/70 truncate text-xs">{sub}</div>
+          ) : null}
         </div>
       </div>
-      <div className="mt-3 flex gap-4">
-        <Button onClick={onReplace} size="xs" variant="link">
-          {replaceLabel}
-        </Button>
-        <Button onClick={onRemove} size="xs" variant="link">
-          Remove
-        </Button>
-      </div>
-    </>
-  );
-}
+    </div>
+    <div className="mt-3 flex gap-4">
+      <Button onClick={onReplace} size="xs" variant="link">
+        {replaceLabel}
+      </Button>
+      <Button onClick={onRemove} size="xs" variant="link">
+        Remove
+      </Button>
+    </div>
+  </>
+);
 
 // STEP 1 — activity (required): a drop zone, Strava, and samples, or a loaded
 // confirmation once something is chosen.
-function ActivityStep({
+const ActivityStep = ({
   active,
   activity,
   dragging,
@@ -326,7 +318,7 @@ function ActivityStep({
   onRemove: () => void;
   parsing: boolean;
   strava: UseStravaConnection;
-}) {
+}) => {
   const stravaLoaded =
     activity?.kind === "parts" && activity.source === "strava";
   return (
@@ -413,7 +405,9 @@ function ActivityStep({
                 <Button
                   className="px-3"
                   key={sport}
-                  onClick={() => onLoadSample(data)}
+                  onClick={() => {
+                    onLoadSample(data);
+                  }}
                   size="xs"
                   variant="outline"
                 >
@@ -426,11 +420,11 @@ function ActivityStep({
       )}
     </StepCard>
   );
-}
+};
 
 // STEP 2 — photo (recommended, optional): drop zone + sample thumbs + skip, a
 // loaded thumbnail, or a quiet "skipped" notice.
-function PhotoStepBody({
+const PhotoStepBody = ({
   dragging,
   onBrowse,
   onChooseSample,
@@ -456,7 +450,7 @@ function PhotoStepBody({
   photo: WizardPhoto | null;
   photoSkipped: boolean;
   stravaPhotos: StravaPhotoRef[];
-}) {
+}) => {
   if (photo) {
     return (
       <LoadedRow
@@ -519,7 +513,9 @@ function PhotoStepBody({
               <button
                 className="outline-foreground/20 hover:outline-primary relative h-14 w-20 overflow-hidden outline outline-1 transition-all hover:outline-2"
                 key={p.url}
-                onClick={() => onChooseSample(p.url, p.name)}
+                onClick={() => {
+                  onChooseSample(p.url, p.name);
+                }}
                 type="button"
               >
                 <Image
@@ -541,31 +537,29 @@ function PhotoStepBody({
       </div>
     </>
   );
-}
+};
 
-function PhotoStep({
+const PhotoStep = ({
   active,
   ...body
-}: { active: boolean } & React.ComponentProps<typeof PhotoStepBody>) {
-  return (
-    <StepCard
-      active={active}
-      badge="Recommended"
-      badgeClass="bg-primary text-primary-foreground"
-      num="02"
-      title="Add a photo"
-    >
-      <PhotoStepBody {...body} />
-    </StepCard>
-  );
-}
+}: { active: boolean } & React.ComponentProps<typeof PhotoStepBody>) => (
+  <StepCard
+    active={active}
+    badge="Recommended"
+    badgeClass="bg-primary text-primary-foreground"
+    num="02"
+    title="Add a photo"
+  >
+    <PhotoStepBody {...body} />
+  </StepCard>
+);
 
-export function OnboardingWizard({
+export const OnboardingWizard = ({
   initialStravaPickerOpen = false,
   onComplete,
   onOpenChange,
   open,
-}: OnboardingWizardProps) {
+}: OnboardingWizardProps) => {
   const strava = useStravaConnection();
   const [activity, setActivity] = useState<WizardActivity | null>(null);
   const [photo, setPhoto] = useState<WizardPhoto | null>(null);
@@ -597,7 +591,9 @@ export function OnboardingWizard({
       return;
     }
     const { url } = photo;
-    return () => URL.revokeObjectURL(url);
+    return () => {
+      URL.revokeObjectURL(url);
+    };
   }, [photo]);
 
   const loadFiles = async (files: FileList) => {
@@ -612,12 +608,12 @@ export function OnboardingWizard({
       const matched = [...files].filter((f) => ACTIVITY_FILE_RE.test(f.name));
       setActivity({
         kind: "parts",
-        source: "upload",
-        parts,
-        name:
-          matched.length === 1 ? matched[0].name : `${matched.length} files`,
         label: parts[0].title,
         meta: activityMeta(parts[0]),
+        name:
+          matched.length === 1 ? matched[0].name : `${matched.length} files`,
+        parts,
+        source: "upload",
       });
     } catch (error) {
       toast.error(
@@ -630,8 +626,8 @@ export function OnboardingWizard({
 
   const loadSample = (data: ActivityData) => {
     setActivity({
-      kind: "sample",
       data,
+      kind: "sample",
       label: data.title,
       meta: activityMeta(data),
     });
@@ -641,11 +637,11 @@ export function OnboardingWizard({
     const first = parts[0];
     setActivity({
       kind: "parts",
-      source: "strava",
-      parts,
-      name: parts.length === 1 ? first.title : `${parts.length} activities`,
       label: first.title,
       meta: activityMeta(first),
+      name: parts.length === 1 ? first.title : `${parts.length} activities`,
+      parts,
+      source: "strava",
     });
     // A previously staged Strava photo belongs to the previous activity.
     setPhoto((prev) => (prev?.kind === "strava" ? null : prev));
@@ -672,8 +668,8 @@ export function OnboardingWizard({
 
   const choosePhoto = (file: File) => {
     setPhoto({
-      kind: "upload",
       file,
+      kind: "upload",
       name: file.name,
       url: URL.createObjectURL(file),
     });
@@ -706,8 +702,8 @@ export function OnboardingWizard({
     }
     onComplete(
       activity.kind === "sample"
-        ? { sample: activity.data, source: "upload", photo: photoFile }
-        : { parts: activity.parts, source: activity.source, photo: photoFile }
+        ? { photo: photoFile, sample: activity.data, source: "upload" }
+        : { parts: activity.parts, photo: photoFile, source: activity.source }
     );
   };
 
@@ -780,10 +776,14 @@ export function OnboardingWizard({
             activity={activity}
             dragging={dragTarget === "activity"}
             onBrowse={() => activityInputRef.current?.click()}
-            onDragStateChange={(d) => setDragTarget(d ? "activity" : null)}
+            onDragStateChange={(d) => {
+              setDragTarget(d ? "activity" : null);
+            }}
             onFiles={loadFiles}
             onLoadSample={loadSample}
-            onPickFromStrava={() => setStravaPickerOpen(true)}
+            onPickFromStrava={() => {
+              setStravaPickerOpen(true);
+            }}
             onRemove={removeActivity}
             parsing={parsing}
             strava={strava}
@@ -806,15 +806,23 @@ export function OnboardingWizard({
               });
               setPhotoSkipped(false);
             }}
-            onDragStateChange={(d) => setDragTarget(d ? "photo" : null)}
+            onDragStateChange={(d) => {
+              setDragTarget(d ? "photo" : null);
+            }}
             onFiles={(files) => {
               if (files[0]) {
                 choosePhoto(files[0]);
               }
             }}
-            onRemove={() => setPhoto(null)}
-            onSkip={() => setPhotoSkipped(true)}
-            onUnskip={() => setPhotoSkipped(false)}
+            onRemove={() => {
+              setPhoto(null);
+            }}
+            onSkip={() => {
+              setPhotoSkipped(true);
+            }}
+            onUnskip={() => {
+              setPhotoSkipped(false);
+            }}
             photo={photo}
             photoSkipped={photoSkipped}
             stravaPhotos={stravaPhotos}
@@ -861,7 +869,9 @@ export function OnboardingWizard({
               <StravaPicker
                 embedded
                 onActivityLoaded={handleStravaPicked}
-                onCancel={() => setStravaPickerOpen(false)}
+                onCancel={() => {
+                  setStravaPickerOpen(false);
+                }}
                 onReauth={handleReauth}
               />
             </div>
@@ -870,4 +880,4 @@ export function OnboardingWizard({
       </DialogContent>
     </Dialog>
   );
-}
+};

@@ -20,8 +20,8 @@ export const metadata: Metadata = {
   // PWA install metadata for iOS standalone mode in one place.
   appleWebApp: {
     capable: true,
-    title: APP_NAME,
     statusBarStyle: "default",
+    title: APP_NAME,
   },
   formatDetection: {
     telephone: false,
@@ -31,8 +31,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   // Tints the browser/standalone UI to the app's warm near-white background.
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#faf8f5" },
-    { media: "(prefers-color-scheme: dark)", color: "#1a1714" },
+    { color: "#faf8f5", media: "(prefers-color-scheme: light)" },
+    { color: "#1a1714", media: "(prefers-color-scheme: dark)" },
   ],
   // Declare support for both so the browser themes native UI (scrollbars, form
   // controls, the canvas) to the active scheme. Listed light-first so a browser
@@ -40,22 +40,22 @@ export const viewport: Viewport = {
   colorScheme: "light dark",
 };
 
-export default function RootLayout({
+const RootLayout = ({
   children,
 }: Readonly<{
   children: React.ReactNode;
-}>) {
-  return (
-    <html
-      className={cn("h-full", "antialiased", fontVariables, "font-sans")}
-      lang="en"
-    >
-      <body className="flex min-h-full flex-col">
-        <IconDefaults>
-          <TooltipProvider>{children}</TooltipProvider>
-          <Toaster />
-        </IconDefaults>
-      </body>
-    </html>
-  );
-}
+}>) => (
+  <html
+    className={cn("h-full", "antialiased", fontVariables, "font-sans")}
+    lang="en"
+  >
+    <body className="flex min-h-full flex-col">
+      <IconDefaults>
+        <TooltipProvider>{children}</TooltipProvider>
+        <Toaster />
+      </IconDefaults>
+    </body>
+  </html>
+);
+
+export default RootLayout;

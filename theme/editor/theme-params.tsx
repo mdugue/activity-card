@@ -19,13 +19,13 @@ interface ThemeParamGroupProps {
 }
 
 /** The controls for one category, or `null` when the theme has none visible. */
-export function ThemeParamGroup({
+export const ThemeParamGroup = ({
   params,
   config,
   ctx,
   group,
   onChange,
-}: ThemeParamGroupProps) {
+}: ThemeParamGroupProps) => {
   const inGroup = params.filter(
     (p) => p.group === group && (!p.visibleWhen || p.visibleWhen(config))
   );
@@ -39,20 +39,20 @@ export function ThemeParamGroup({
           ctx={ctx}
           def={p}
           key={p.id}
-          onChange={(value) => onChange({ ...config, [p.id]: value })}
+          onChange={(value) => {
+            onChange({ ...config, [p.id]: value });
+          }}
           value={config[p.id]}
         />
       ))}
     </div>
   );
-}
+};
 
 /** Whether a theme *declares* any param in a group — drives whether the builder
  *  creates that category's tab at all (independent of `visibleWhen`, so a tab
  *  doesn't flicker as conditional params toggle). */
-export function themeDeclaresGroup(
+export const themeDeclaresGroup = (
   params: ParamDef[],
   group: ParamGroup
-): boolean {
-  return params.some((p) => p.group === group);
-}
+): boolean => params.some((p) => p.group === group);

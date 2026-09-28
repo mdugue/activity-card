@@ -12,7 +12,7 @@ import { INK, PAPER } from "../design/tokens";
  * `--font-*` variables outside Next (FONT_VARS) and gives scenes one place to
  * inherit the base look from, so all videos share one canvas by construction.
  */
-export function VideoFrame({
+export const VideoFrame = ({
   children,
   className,
   style,
@@ -20,13 +20,11 @@ export function VideoFrame({
   children: ReactNode;
   className?: string;
   style?: CSSProperties;
-}) {
-  return (
-    <AbsoluteFill
-      className={cn("font-sans", className)}
-      style={{ backgroundColor: INK, color: PAPER, ...getFontVars(), ...style }}
-    >
-      {children}
-    </AbsoluteFill>
-  );
-}
+}) => (
+  <AbsoluteFill
+    className={cn("font-sans", className)}
+    style={{ backgroundColor: INK, color: PAPER, ...getFontVars(), ...style }}
+  >
+    {children}
+  </AbsoluteFill>
+);

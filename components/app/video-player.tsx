@@ -31,23 +31,40 @@ interface VideoPlayerProps {
   posterFrame?: number;
 }
 
-function reducedMotion(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
-  );
-}
+const reducedMotion = (): boolean =>
+  typeof window !== "undefined" &&
+  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-function clock(frames: number, fps: number): string {
+const clock = (frames: number, fps: number): string => {
   const total = Math.max(0, Math.round(frames / fps));
   const m = Math.floor(total / 60);
   const s = total % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
-}
+};
 
 const ICON = 22;
 
-export function VideoPlayer({
+const ControlButton = ({
+  children,
+  label,
+  onClick,
+}: {
+  children: React.ReactNode;
+  label: string;
+  onClick: () => void;
+}) => (
+  <button
+    aria-label={label}
+    className="text-background/85 hover:text-background inline-flex size-9 items-center justify-center rounded-full transition-colors hover:bg-white/15"
+    onClick={onClick}
+    title={label}
+    type="button"
+  >
+    {children}
+  </button>
+);
+
+export const VideoPlayer = ({
   autoPlayOnView = false,
   className,
   component,
@@ -57,7 +74,7 @@ export function VideoPlayer({
   fps,
   loop = false,
   posterFrame = 0,
-}: VideoPlayerProps) {
+}: VideoPlayerProps) => {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [player, setPlayer] = useState<PlayerRef | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -74,12 +91,21 @@ export function VideoPlayer({
     if (!player) {
       return;
     }
-    const onPlay = () => setPlaying(true);
-    const onPause = () => setPlaying(false);
-    const onEnded = () => setPlaying(false);
-    const onFrame = (e: { detail: { frame: number } }) =>
+    const onPlay = () => {
+      setPlaying(true);
+    };
+    const onPause = () => {
+      setPlaying(false);
+    };
+    const onEnded = () => {
+      setPlaying(false);
+    };
+    const onFrame = (e: { detail: { frame: number } }) => {
       setFrame(e.detail.frame);
-    const onVolume = () => setMuted(player.isMuted());
+    };
+    const onVolume = () => {
+      setMuted(player.isMuted());
+    };
     player.addEventListener("play", onPlay);
     player.addEventListener("pause", onPause);
     player.addEventListener("ended", onEnded);
@@ -119,15 +145,20 @@ export function VideoPlayer({
       { threshold: [0, 0.15, 0.55, 1] }
     );
     io.observe(el);
-    return () => io.disconnect();
+    return () => {
+      io.disconnect();
+    };
   }, [player, autoPlayOnView]);
 
   // Native fullscreen can flip via the Escape key too — track the document.
   useEffect(() => {
-    const onChange = () =>
+    const onChange = () => {
       setNativeFullscreen(document.fullscreenElement === wrapRef.current);
+    };
     document.addEventListener("fullscreenchange", onChange);
-    return () => document.removeEventListener("fullscreenchange", onChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onChange);
+    };
   }, []);
 
   const restart = useCallback(() => {
@@ -150,7 +181,9 @@ export function VideoPlayer({
     // Native where supported (desktop, Android, iPad); a fixed-overlay fallback
     // everywhere it isn't (notably iPhone Safari), so the button always works.
     if (document.fullscreenEnabled && el.requestFullscreen) {
-      el.requestFullscreen().catch(() => setCssFullscreen(true));
+      el.requestFullscreen().catch(() => {
+        setCssFullscreen(true);
+      });
     } else {
       setCssFullscreen(true);
     }
@@ -233,9 +266,9 @@ export function VideoPlayer({
           </ControlButton>
           <ControlButton
             label={muted ? "Unmute" : "Mute"}
-            onClick={() =>
-              player?.isMuted() ? player.unmute() : player?.mute()
-            }
+            onClick={() => {
+              player?.isMuted() ? player.unmute() : player?.mute();
+            }}
           >
             {muted ? (
               <SpeakerSimpleSlashIcon size={ICON} weight="duotone" />
@@ -261,26 +294,4 @@ export function VideoPlayer({
       </div>
     </div>
   );
-}
-
-function ControlButton({
-  children,
-  label,
-  onClick,
-}: {
-  children: React.ReactNode;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      aria-label={label}
-      className="text-background/85 hover:text-background inline-flex size-9 items-center justify-center rounded-full transition-colors hover:bg-white/15"
-      onClick={onClick}
-      title={label}
-      type="button"
-    >
-      {children}
-    </button>
-  );
-}
+};

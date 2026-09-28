@@ -5,13 +5,13 @@
 import { contentBox } from "@/theme/core/export-formats";
 import type { ExportFormat } from "@/theme/core/export-formats";
 
-export function SafeZoneOverlay({
+export const SafeZoneOverlay = ({
   format,
   scale,
 }: {
   format: ExportFormat;
   scale: number;
-}) {
+}) => {
   const box = contentBox(format);
   const dim = "rgba(0,0,0,0.5)";
   const topH = box.y * scale;
@@ -22,54 +22,54 @@ export function SafeZoneOverlay({
     <div aria-hidden className="pointer-events-none absolute inset-0">
       <div
         style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
+          background: dim,
           height: topH,
-          background: dim,
+          left: 0,
+          position: "absolute",
+          right: 0,
+          top: 0,
         }}
       />
       <div
         style={{
-          position: "absolute",
+          background: dim,
           bottom: 0,
-          left: 0,
-          right: 0,
           height: bottomH,
-          background: dim,
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          top: topH,
           left: 0,
-          width: leftW,
-          bottom: bottomH,
-          background: dim,
+          position: "absolute",
+          right: 0,
         }}
       />
       <div
         style={{
+          background: dim,
+          bottom: bottomH,
+          left: 0,
           position: "absolute",
           top: topH,
-          right: 0,
-          width: rightW,
-          bottom: bottomH,
-          background: dim,
+          width: leftW,
         }}
       />
       <div
         style={{
+          background: dim,
+          bottom: bottomH,
           position: "absolute",
+          right: 0,
+          top: topH,
+          width: rightW,
+        }}
+      />
+      <div
+        style={{
+          border: "1px dashed rgba(255,255,255,0.85)",
+          height: box.h * scale,
           left: leftW,
+          position: "absolute",
           top: topH,
           width: box.w * scale,
-          height: box.h * scale,
-          border: "1px dashed rgba(255,255,255,0.85)",
         }}
       />
     </div>
   );
-}
+};

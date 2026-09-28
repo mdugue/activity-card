@@ -21,7 +21,7 @@ interface PhotoLayerProps {
   photoUrl: string;
 }
 
-export function PhotoLayer({ photoUrl, imageTransform }: PhotoLayerProps) {
+export const PhotoLayer = ({ photoUrl, imageTransform }: PhotoLayerProps) => {
   const t = imageTransform ?? IDENTITY_TRANSFORM;
   const fx = usePhotoEffects();
   const imageSize = usePhotoImageSize();
@@ -46,14 +46,14 @@ export function PhotoLayer({ photoUrl, imageTransform }: PhotoLayerProps) {
     <div
       aria-hidden
       style={{
-        position: "absolute",
         inset: 0,
         overflow: "hidden",
         pointerEvents: "none",
+        position: "absolute",
       }}
     >
       <CssCoverImage imageTransform={t} photoUrl={photoUrl} />
       {fx?.grain ? <GrainOverlay /> : null}
     </div>
   );
-}
+};

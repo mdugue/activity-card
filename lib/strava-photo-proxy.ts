@@ -27,9 +27,8 @@ const ALLOWED_PHOTO_TYPES = new Set([
  * first-party host. */
 const PHOTO_HOST_SUFFIXES = ["cloudfront.net", "strava.com"] as const;
 
-function hostMatches(host: string, suffix: string): boolean {
-  return host === suffix || host.endsWith(`.${suffix}`);
-}
+const hostMatches = (host: string, suffix: string): boolean =>
+  host === suffix || host.endsWith(`.${suffix}`);
 
 /**
  * Is `raw` a URL the proxy may fetch? Accepts https on the default port,
@@ -40,10 +39,10 @@ function hostMatches(host: string, suffix: string): boolean {
  * working. In production the API base is `https://www.strava.com`, which
  * the CDN rule already covers.
  */
-export function isAllowedPhotoUrl(
+export const isAllowedPhotoUrl = (
   raw: string,
   trustedOrigin?: string
-): boolean {
+): boolean => {
   let url: URL;
   try {
     url = new URL(raw);
@@ -61,38 +60,40 @@ export function isAllowedPhotoUrl(
   }
   const host = url.hostname.toLowerCase();
   return PHOTO_HOST_SUFFIXES.some((suffix) => hostMatches(host, suffix));
-}
+};
 
 /** Normalise an upstream `content-type` and return it when it's one of
  * the allowed image types, `null` otherwise (missing, SVG, HTML, …). */
-export function allowedPhotoContentType(header: string | null): string | null {
+export const allowedPhotoContentType = (
+  header: string | null
+): string | null => {
   if (!header) {
     return null;
   }
   const type = header.split(";")[0].trim().toLowerCase();
   return ALLOWED_PHOTO_TYPES.has(type) ? type : null;
-}
+};
 
 /** `true` when a declared `content-length` exceeds `max`. A missing or
  * unparsable header is not "too large" — `limitBody` enforces the cap
  * while streaming in that case. */
-export function exceedsPhotoSizeCap(
+export const exceedsPhotoSizeCap = (
   header: string | null,
   max: number = PHOTO_MAX_BYTES
-): boolean {
+): boolean => {
   if (!header) {
     return false;
   }
   const length = Number(header);
   return Number.isFinite(length) && length > max;
-}
+};
 
 /** Pass `body` through, erroring the stream once more than `max` bytes
  * have flowed — covers upstreams that omit or understate `content-length`. */
-export function limitBody(
+export const limitBody = (
   body: ReadableStream<Uint8Array>,
   max: number = PHOTO_MAX_BYTES
-): ReadableStream<Uint8Array> {
+): ReadableStream<Uint8Array> => {
   let seen = 0;
   return body.pipeThrough(
     new TransformStream<Uint8Array, Uint8Array>({
@@ -106,4 +107,4 @@ export function limitBody(
       },
     })
   );
-}
+};

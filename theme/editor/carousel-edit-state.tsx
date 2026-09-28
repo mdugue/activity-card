@@ -47,7 +47,7 @@ interface CarouselEditStateProps {
   theme: CarouselThemeId;
 }
 
-export function CarouselEditState({
+export const CarouselEditState = ({
   carousel,
   session,
   theme,
@@ -55,7 +55,7 @@ export function CarouselEditState({
   onExport,
   onFormatChange,
   onThemeChange,
-}: CarouselEditStateProps) {
+}: CarouselEditStateProps) => {
   const { data, visibility, color, config, photo } = session;
   const { count, selectedIndex } = carousel;
   const descriptor = CAROUSEL_THEMES[theme];
@@ -81,8 +81,8 @@ export function CarouselEditState({
   // Pan/zoom against the whole strip's box (true-cover panorama). `imageSize`
   // also feeds the deck + slide strip; `adjusting` gates the scroll-snap below.
   const adjust = usePhotoAdjust({
-    boxW: stripW,
     boxH: slideH,
+    boxW: stripW,
     enabled: visibility.photoBackdrop,
     photoUrl: photo.url,
     rotate: photo.effects.rotate,
@@ -105,11 +105,13 @@ export function CarouselEditState({
     }
     programmatic.current = true;
     targetLeft.current = target;
-    vp.scrollTo({ left: target, behavior: "smooth" });
+    vp.scrollTo({ behavior: "smooth", left: target });
     const t = setTimeout(() => {
       programmatic.current = false;
     }, 700);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+    };
   }, [selectedIndex]);
 
   // Keep the selected slide pinned to its snap point when the preview window
@@ -140,7 +142,9 @@ export function CarouselEditState({
       }
     });
     ro.observe(vp);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+    };
   }, []);
 
   // A manual swipe selects the slide it settles on (debounced). Ignored while a
@@ -210,8 +214,8 @@ export function CarouselEditState({
           ref={viewportRef}
           style={{
             aspectRatio: `${slideW} / ${slideH}`,
-            scrollSnapType: adjusting ? "none" : "x mandatory",
             overflowX: adjusting ? "hidden" : "auto",
+            scrollSnapType: adjusting ? "none" : "x mandatory",
           }}
         >
           <div
@@ -221,9 +225,9 @@ export function CarouselEditState({
             <div
               className="absolute top-0 left-0 origin-top-left"
               style={{
-                width: stripW,
                 height: slideH,
                 transform: `scale(calc(100cqw / ${slideW}px))`,
+                width: stripW,
               }}
             >
               <CarouselDeck {...deckProps} />
@@ -236,11 +240,11 @@ export function CarouselEditState({
                       // oxlint-disable-next-line react/no-array-index-key -- slides are positional — the index IS the identity (fixed count, never reordered)
                       key={`safe-${i}`}
                       style={{
+                        height: slideH,
+                        left: i * slideW,
                         position: "absolute",
                         top: 0,
-                        left: i * slideW,
                         width: slideW,
-                        height: slideH,
                       }}
                     >
                       <SafeZoneOverlay format={format} scale={1} />
@@ -256,8 +260,8 @@ export function CarouselEditState({
                   key={`snap-${i}`}
                   style={{
                     flex: "0 0 100cqw",
-                    width: "100cqw",
                     scrollSnapAlign: "start",
+                    width: "100cqw",
                   }}
                 />
               ))}
@@ -327,4 +331,4 @@ export function CarouselEditState({
       />
     </TooltipProvider>
   );
-}
+};

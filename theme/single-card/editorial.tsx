@@ -48,38 +48,34 @@ interface RowProps {
   v: string | number;
 }
 
-function Row({ k, v }: RowProps) {
-  return (
-    <div
-      style={{
-        // Two tracks (key auto · value 1fr, right-aligned) instead of a
-        // space-between flex: in a narrow 2-up landscape column the value wraps
-        // WITHIN its own track instead of colliding with the key.
-        display: "grid",
-        gridTemplateColumns: "auto 1fr",
-        columnGap: 16,
-        alignItems: "baseline",
-        borderBottom: "1px solid rgba(26,24,22,0.18)",
-        // Fluid row height: compresses on a short canvas so the full figures
-        // table clears the foot. cqb resolves to the card (container-type:size).
-        padding: "clamp(2px, 0.7cqb, 7px) 0",
-      }}
-    >
-      <span style={{ opacity: 0.6, letterSpacing: "0.1em" }}>{k}</span>
-      <span
-        style={{ textAlign: "right", minWidth: 0, wordBreak: "break-word" }}
-      >
-        {v}
-      </span>
-    </div>
-  );
-}
+const Row = ({ k, v }: RowProps) => (
+  <div
+    style={{
+      // Two tracks (key auto · value 1fr, right-aligned) instead of a
+      // space-between flex: in a narrow 2-up landscape column the value wraps
+      // WITHIN its own track instead of colliding with the key.
+      display: "grid",
+      gridTemplateColumns: "auto 1fr",
+      columnGap: 16,
+      alignItems: "baseline",
+      borderBottom: "1px solid rgba(26,24,22,0.18)",
+      // Fluid row height: compresses on a short canvas so the full figures
+      // table clears the foot. cqb resolves to the card (container-type:size).
+      padding: "clamp(2px, 0.7cqb, 7px) 0",
+    }}
+  >
+    <span style={{ letterSpacing: "0.1em", opacity: 0.6 }}>{k}</span>
+    <span style={{ minWidth: 0, textAlign: "right", wordBreak: "break-word" }}>
+      {v}
+    </span>
+  </div>
+);
 
 const MORNING_WORDS = ["quiet", "gentle", "steady", "still", "clear"] as const;
 
 // "THE LINE" glyph: pool lanes for a swim, every leg overlaid for a project,
 // otherwise a single silhouette — all in the deep-forest accent.
-function EditorialRoute({
+const EditorialRoute = ({
   accent,
   sport,
   multi,
@@ -91,7 +87,7 @@ function EditorialRoute({
   multi: boolean;
   routes: SegmentRoute[];
   sport: string;
-}) {
+}) => {
   if (sport === "swim") {
     return (
       <>
@@ -133,17 +129,17 @@ function EditorialRoute({
       strokeWidth={2}
     />
   );
-}
+};
 
-export function ThemeEditorial({
+export const ThemeEditorial = ({
   data,
   photoUrl,
   imageTransform,
   colors,
-}: ThemeProps<(typeof USES)[number]>) {
+}: ThemeProps<(typeof USES)[number]>) => {
   const { width, height } = useFormat();
   const accent = colors?.primary ?? DEFAULT_ACCENT;
-  const sport = data.sport;
+  const { sport } = data;
   const multi = isMultiActivity(data);
   const routes = multi ? segmentRoutes(data) : [];
 
@@ -216,7 +212,7 @@ export function ThemeEditorial({
       ) : null}
       {/* Content sits above the backdrop layer, inset by the safe area. */}
       <SafeArea
-        pad={{ top: 110, right: 110, bottom: 90, left: 110 }}
+        pad={{ bottom: 90, left: 110, right: 110, top: 110 }}
         style={{ flex: 1, zIndex: 1 }}
       >
         {/* One self-reflowing grid, ONE markup: region A (numeral block) and
@@ -231,8 +227,8 @@ export function ThemeEditorial({
         <div
           className="grid flex-1 auto-rows-auto grid-cols-1 content-start @min-[1400px]/card:grid-cols-2"
           style={{
-            minHeight: 0,
             gap: "clamp(14px, 3cqi, 64px)",
+            minHeight: 0,
           }}
         >
           {/* Region A — eyebrow + the massive distance numeral + subtitle */}
@@ -283,11 +279,11 @@ export function ThemeEditorial({
               </div>
               <div
                 style={{
+                  color: accent,
                   fontFamily: "var(--font-instrument-serif), serif",
                   fontSize: "clamp(28px, min(6cqi, 7cqb), 52px)",
                   fontStyle: "italic",
                   marginTop: 14,
-                  color: accent,
                 }}
               >
                 {distUnit}, and then —
@@ -313,10 +309,10 @@ export function ThemeEditorial({
               <div
                 style={{
                   fontSize: "clamp(18px, 2.2cqi, 24px)",
-                  letterSpacing: "0.28em",
-                  opacity: 0.7,
-                  marginBottom: 20,
                   fontWeight: 600,
+                  letterSpacing: "0.28em",
+                  marginBottom: 20,
+                  opacity: 0.7,
                 }}
               >
                 THE EFFORT
@@ -325,9 +321,9 @@ export function ThemeEditorial({
                 style={{
                   fontFamily: "var(--font-instrument-serif), serif",
                   fontSize: "clamp(40px, min(8cqi, 12cqb), 76px)",
-                  lineHeight: 1,
-                  letterSpacing: "-0.015em",
                   fontWeight: 400,
+                  letterSpacing: "-0.015em",
+                  lineHeight: 1,
                   margin: 0,
                   textWrap: "pretty",
                 }}
@@ -336,11 +332,11 @@ export function ThemeEditorial({
               </h2>
               <div
                 style={{
-                  marginTop: "clamp(20px, 4cqb, 40px)",
                   fontSize: "clamp(18px, 2.2cqi, 24px)",
                   lineHeight: 1.55,
-                  opacity: 0.8,
+                  marginTop: "clamp(20px, 4cqb, 40px)",
                   maxWidth: 460,
+                  opacity: 0.8,
                 }}
               >
                 {intro}
@@ -353,11 +349,11 @@ export function ThemeEditorial({
 
             <div
               style={{
-                minWidth: 0,
-                minHeight: 0,
                 display: "flex",
                 flexDirection: "column",
                 gap: "clamp(10px, 2.5cqb, 40px)",
+                minHeight: 0,
+                minWidth: 0,
               }}
             >
               {/* Tiny route */}
@@ -365,9 +361,9 @@ export function ThemeEditorial({
                 <div
                   style={{
                     fontSize: "clamp(18px, 2.2cqi, 24px)",
+                    fontWeight: 600,
                     letterSpacing: "0.28em",
                     opacity: 0.7,
-                    fontWeight: 600,
                   }}
                 >
                   THE LINE
@@ -378,10 +374,10 @@ export function ThemeEditorial({
                   // short landscape/square canvas so the figures table below it
                   // still clears the foot.
                   style={{
-                    width: "100%",
+                    display: "block",
                     height: "clamp(50px, 7cqb, 180px)",
                     marginTop: 10,
-                    display: "block",
+                    width: "100%",
                   }}
                   viewBox="0 0 280 200"
                 >
@@ -409,10 +405,10 @@ export function ThemeEditorial({
                 <div
                   style={{
                     fontSize: "clamp(18px, 2.2cqi, 24px)",
-                    letterSpacing: "0.28em",
-                    opacity: 0.7,
-                    marginBottom: "clamp(4px, 1.3cqb, 20px)",
                     fontWeight: 600,
+                    letterSpacing: "0.28em",
+                    marginBottom: "clamp(4px, 1.3cqb, 20px)",
+                    opacity: 0.7,
                   }}
                 >
                   THE FIGURES
@@ -463,16 +459,16 @@ export function ThemeEditorial({
         {/* Foot */}
         <div
           style={{
-            marginTop: "clamp(20px, 3cqb, 50px)",
-            paddingTop: 26,
-            borderTop: `1px solid ${INK}`,
-            opacity: 0.85,
-            display: "flex",
-            justifyContent: "space-between",
             alignItems: "center",
+            borderTop: `1px solid ${INK}`,
+            display: "flex",
             fontSize: 24,
-            letterSpacing: "0.28em",
             fontWeight: 600,
+            justifyContent: "space-between",
+            letterSpacing: "0.28em",
+            marginTop: "clamp(20px, 3cqb, 50px)",
+            opacity: 0.85,
+            paddingTop: 26,
           }}
         >
           <span>— FIN —</span>
@@ -481,11 +477,14 @@ export function ThemeEditorial({
       </SafeArea>
     </div>
   );
-}
+};
 
 export const editorialTheme = defineTheme({
+  Component: ThemeEditorial,
+  colors: { default: { primary: DEFAULT_ACCENT }, userAdjustable: true },
   id: "editorial",
   label: "EDITORIAL",
+  photo: { defaultOn: true },
   tagline: "typography led",
   uses: USES,
   usesWhen: {
@@ -496,7 +495,4 @@ export const editorialTheme = defineTheme({
     pace: (d) => d.sport === "run" || d.sport === "swim",
     speed: (d) => d.sport === "ride",
   },
-  colors: { default: { primary: DEFAULT_ACCENT }, userAdjustable: true },
-  photo: { defaultOn: true },
-  Component: ThemeEditorial,
 });

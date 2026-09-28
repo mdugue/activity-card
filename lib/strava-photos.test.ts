@@ -32,7 +32,7 @@ describe("largestPhotoUrl", () => {
   });
 
   test("non-numeric keys rank below any numeric size", () => {
-    expect(largestPhotoUrl({ default: "weird", "600": "sized" })).toBe("sized");
+    expect(largestPhotoUrl({ "600": "sized", default: "weird" })).toBe("sized");
   });
 });
 

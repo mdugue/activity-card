@@ -27,8 +27,8 @@ import { cn } from "@/lib/utils";
 // nothing until opened, so it stays out of the landing's first load and is
 // fetched right after hydration — in cache before anyone reaches the CTA.
 const OnboardingWizard = dynamic(
-  () =>
-    import("@/components/app/onboarding-wizard").then(
+  async () =>
+    await import("@/components/app/onboarding-wizard").then(
       (m) => m.OnboardingWizard
     ),
   { ssr: false }
@@ -50,73 +50,67 @@ interface EmptyStateProps {
 }
 
 /** Abstract route squiggle — the "drop" slide's footer glyph. */
-function RouteGlyph() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="text-primary block size-full"
-      preserveAspectRatio="none"
-      viewBox="0 0 100 70"
-    >
-      <title>Route</title>
-      <path
-        d="M6 56 C18 26 30 64 41 42 S62 20 72 48 S90 26 95 38"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="3.4"
-      />
-      <circle className="fill-background" cx="6" cy="56" r="3.6" />
-      <rect fill="currentColor" height="6" width="6" x="92" y="35" />
-    </svg>
-  );
-}
+const RouteGlyph = () => (
+  <svg
+    aria-hidden="true"
+    className="text-primary block size-full"
+    preserveAspectRatio="none"
+    viewBox="0 0 100 70"
+  >
+    <title>Route</title>
+    <path
+      d="M6 56 C18 26 30 64 41 42 S62 20 72 48 S90 26 95 38"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="3.4"
+    />
+    <circle className="fill-background" cx="6" cy="56" r="3.6" />
+    <rect fill="currentColor" height="6" width="6" x="92" y="35" />
+  </svg>
+);
 
 /** Abstract elevation profile — the "your" slide's footer glyph. */
-function ElevationGlyph() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="text-primary block size-full"
-      preserveAspectRatio="none"
-      viewBox="0 0 100 56"
-    >
-      <title>Elevation</title>
-      <polygon
-        className="opacity-90"
-        fill="currentColor"
-        points="0,56 0,42 13,38 27,28 39,33 52,16 65,23 78,9 90,17 100,12 100,56"
-      />
-    </svg>
-  );
-}
+const ElevationGlyph = () => (
+  <svg
+    aria-hidden="true"
+    className="text-primary block size-full"
+    preserveAspectRatio="none"
+    viewBox="0 0 100 56"
+  >
+    <title>Elevation</title>
+    <polygon
+      className="opacity-90"
+      fill="currentColor"
+      points="0,56 0,42 13,38 27,28 39,33 52,16 65,23 78,9 90,17 100,12 100,56"
+    />
+  </svg>
+);
 
 // The card claim "DROP YOUR EFFORT" spelled one word per slide, fading back so
 // the eye reads left-to-right, with a sample of what each slide becomes
 // underneath. Three panels mirror the usual three-slide carousel output.
 const PANELS: { glyph: React.ReactNode; word: string; wordClass: string }[] = [
   {
-    word: "DROP",
-    wordClass: "text-[3.5rem] leading-[0.86] text-background lg:text-[4rem]",
     glyph: (
       <div className="h-16 lg:h-20">
         <RouteGlyph />
       </div>
     ),
+    word: "DROP",
+    wordClass: "text-[3.5rem] leading-[0.86] text-background lg:text-[4rem]",
   },
   {
-    word: "YOUR",
-    wordClass: "text-[3.5rem] leading-[0.86] text-background/60 lg:text-[4rem]",
     glyph: (
       <div className="h-16 lg:h-20">
         <ElevationGlyph />
       </div>
     ),
+    word: "YOUR",
+    wordClass: "text-[3.5rem] leading-[0.86] text-background/60 lg:text-[4rem]",
   },
   {
-    word: "EFFORT",
-    wordClass: "text-[2.75rem] leading-[0.86] text-primary lg:text-[3.125rem]",
     glyph: (
       <div className="font-heading text-background grid grid-cols-2 gap-x-3 gap-y-1.5 text-xl lg:text-2xl">
         {["82.4KM", "3:14", "1240M", "148"].map((v) => (
@@ -124,10 +118,12 @@ const PANELS: { glyph: React.ReactNode; word: string; wordClass: string }[] = [
         ))}
       </div>
     ),
+    word: "EFFORT",
+    wordClass: "text-[2.75rem] leading-[0.86] text-primary lg:text-[3.125rem]",
   },
 ];
 
-function ClaimPanel({
+const ClaimPanel = ({
   glyph,
   index,
   stage,
@@ -139,73 +135,71 @@ function ClaimPanel({
   stage: IntroStage;
   word: string;
   wordClass: string;
-}) {
-  return (
+}) => (
+  <div
+    className={cn(
+      "bg-foreground text-background relative flex h-80 w-64 shrink-0 snap-center flex-col overflow-hidden p-5 lg:h-[26rem] lg:w-auto lg:flex-1 lg:basis-0 lg:p-6",
+      PANEL_REST_CLASS[index]
+    )}
+    style={panelFadeStyle(stage, index)}
+  >
+    {/* One panorama, sliced across all panels — the carousel made literal. */}
     <div
-      className={cn(
-        "bg-foreground text-background relative flex h-80 w-64 shrink-0 snap-center flex-col overflow-hidden p-5 lg:h-[26rem] lg:w-auto lg:flex-1 lg:basis-0 lg:p-6",
-        PANEL_REST_CLASS[index]
-      )}
-      style={panelFadeStyle(stage, index)}
+      aria-hidden
+      className="absolute inset-y-0 z-0"
+      style={{
+        left: `calc(${-index} * (100% + ${PANEL_GAP}))`,
+        width: `calc(${PANEL_COUNT} * 100% + ${PANEL_COUNT - 1} * ${PANEL_GAP})`,
+      }}
     >
-      {/* One panorama, sliced across all panels — the carousel made literal. */}
-      <div
-        aria-hidden
-        className="absolute inset-y-0 z-0"
-        style={{
-          width: `calc(${PANEL_COUNT} * 100% + ${PANEL_COUNT - 1} * ${PANEL_GAP})`,
-          left: `calc(${-index} * (100% + ${PANEL_GAP}))`,
-        }}
-      >
-        <Image
-          alt=""
-          className="object-cover brightness-[0.8] contrast-[1.05] grayscale-[0.42]"
-          fill
-          priority={index === 0}
-          sizes="1024px"
-          src="/images/dunes.webp"
-        />
-      </div>
-      <div
-        aria-hidden
-        className="from-foreground/60 via-foreground/10 to-foreground/90 absolute inset-0 z-10 bg-linear-to-b"
-        style={panelPartStyle(stage, "scrim", index)}
+      <Image
+        alt=""
+        className="object-cover brightness-[0.8] contrast-[1.05] grayscale-[0.42]"
+        fill
+        priority={index === 0}
+        sizes="1024px"
+        src="/images/dunes.webp"
       />
-      <div
-        aria-hidden
-        className="bg-foreground absolute inset-0 z-10 opacity-25 mix-blend-color"
-        style={panelPartStyle(stage, "tint", index)}
-      />
-
-      <div
-        className="text-background/55 relative z-20 flex justify-between font-mono text-[11px] tracking-[0.18em]"
-        style={panelPartStyle(stage, "num", index)}
-      >
-        <span>{String(index + 1).padStart(2, "0")}</span>
-        <span>/ 0{PANEL_COUNT}</span>
-      </div>
-      <p
-        className={cn("font-heading relative z-20 mt-5 uppercase", wordClass)}
-        style={panelPartStyle(stage, "word", index)}
-      >
-        {word}
-      </p>
-      <div
-        aria-hidden
-        className="relative z-20 mt-auto"
-        style={panelPartStyle(stage, "content", index)}
-      >
-        {glyph}
-      </div>
     </div>
-  );
-}
+    <div
+      aria-hidden
+      className="from-foreground/60 via-foreground/10 to-foreground/90 absolute inset-0 z-10 bg-linear-to-b"
+      style={panelPartStyle(stage, "scrim", index)}
+    />
+    <div
+      aria-hidden
+      className="bg-foreground absolute inset-0 z-10 opacity-25 mix-blend-color"
+      style={panelPartStyle(stage, "tint", index)}
+    />
 
-export function EmptyState({
+    <div
+      className="text-background/55 relative z-20 flex justify-between font-mono text-[11px] tracking-[0.18em]"
+      style={panelPartStyle(stage, "num", index)}
+    >
+      <span>{String(index + 1).padStart(2, "0")}</span>
+      <span>/ 0{PANEL_COUNT}</span>
+    </div>
+    <p
+      className={cn("font-heading relative z-20 mt-5 uppercase", wordClass)}
+      style={panelPartStyle(stage, "word", index)}
+    >
+      {word}
+    </p>
+    <div
+      aria-hidden
+      className="relative z-20 mt-auto"
+      style={panelPartStyle(stage, "content", index)}
+    >
+      {glyph}
+    </div>
+  </div>
+);
+
+export const EmptyState = ({
   autoStravaPicker = false,
   onComplete,
   onIntent,
-}: EmptyStateProps) {
+}: EmptyStateProps) => {
   const intro = useEmptyStateIntro();
   const railRef = useRef<HTMLDivElement>(null);
   const [activeSlide, setActiveSlide] = useState(0);
@@ -311,7 +305,9 @@ export function EmptyState({
 
             <Button
               className="font-heading shadow-primary/50 h-auto justify-center px-8 py-4 text-2xl tracking-wide uppercase shadow-xl hover:-translate-y-0.5"
-              onClick={() => setWizardOpen(true)}
+              onClick={() => {
+                setWizardOpen(true);
+              }}
               size="lg"
             >
               Get started
@@ -381,7 +377,9 @@ export function EmptyState({
           </p>
           <Button
             className="font-heading shadow-primary/50 h-auto justify-center px-8 py-4 text-2xl tracking-wide uppercase shadow-xl hover:-translate-y-0.5"
-            onClick={() => setWizardOpen(true)}
+            onClick={() => {
+              setWizardOpen(true);
+            }}
             size="lg"
           >
             Get started
@@ -433,4 +431,4 @@ export function EmptyState({
       />
     </div>
   );
-}
+};

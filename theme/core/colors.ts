@@ -61,29 +61,29 @@ export const PALETTE_VARIANTS: PaletteVariant[] = [
 ];
 
 export const VARIANT_LABELS: Record<PaletteVariant, string> = {
-  vibrant: "Vibrant",
-  muted: "Muted",
   complementary: "Complement",
-  spectrum: "Spectrum",
+  muted: "Muted",
   pure: "Pure",
+  spectrum: "Spectrum",
+  vibrant: "Vibrant",
 };
 
 /** The scheme a photo-derived variant produces from an extracted palette —
  *  drives the live swatches in the colour control. The "no palette yet" case
  *  is handled by callers (`resolveColors` falls back to the theme default), so
  *  this always returns a scheme. */
-export function schemeFromPalette(
+export const schemeFromPalette = (
   palette: ExtractedPalette,
   variant: PaletteVariant
-): ColorScheme {
+): ColorScheme => {
   const t = palette.themes[variant];
   return {
-    primary: t.accent,
-    secondary: t.accent2,
     onPrimary: t.onAccent,
+    primary: t.accent,
     roles: { background: t.background, body: t.body, headline: t.headline },
+    secondary: t.accent2,
   };
-}
+};
 
 /**
  * Resolve the user's choice to the scheme a theme renders with. A photo-kind
@@ -91,33 +91,30 @@ export function schemeFromPalette(
  * falls back to the theme's own default — the choice itself persists, so
  * re-adding a photo restores the dynamic colours.
  */
-export function resolveColors(
+export const resolveColors = (
   choice: ColorChoice,
   themeDefault: ColorScheme,
   palette: ExtractedPalette | null
-): ColorScheme {
+): ColorScheme => {
   if (choice.kind === "photo") {
     return palette ? schemeFromPalette(palette, choice.variant) : themeDefault;
   }
   return choice.scheme;
-}
+};
 
 const HEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/u;
 
-function isHex(v: unknown): v is string {
-  return typeof v === "string" && HEX.test(v);
-}
+const isHex = (v: unknown): v is string => typeof v === "string" && HEX.test(v);
 
-function isVariant(v: unknown): v is PaletteVariant {
-  return typeof v === "string" && (PALETTE_VARIANTS as string[]).includes(v);
-}
+const isVariant = (v: unknown): v is PaletteVariant =>
+  typeof v === "string" && (PALETTE_VARIANTS as string[]).includes(v);
 
 /**
  * Coerce a raw (persisted / hand-edited) value to a valid `ColorChoice`, or
  * `null` (= "use the theme's default") when it isn't one. CSS-injection-safe:
  * preset colours must be hex literals.
  */
-export function coerceColorChoice(raw: unknown): ColorChoice | null {
+export const coerceColorChoice = (raw: unknown): ColorChoice | null => {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     return null;
   }
@@ -131,21 +128,21 @@ export function coerceColorChoice(raw: unknown): ColorChoice | null {
       return {
         kind: "preset",
         scheme: {
+          onPrimary: isHex(s.onPrimary) ? s.onPrimary : undefined,
           primary: s.primary,
           secondary: isHex(s.secondary) ? s.secondary : undefined,
-          onPrimary: isHex(s.onPrimary) ? s.onPrimary : undefined,
         },
       };
     }
   }
   return null;
-}
+};
 
 /** Stable identity for selection state in the colour control. */
-export function colorChoiceId(choice: ColorChoice): string {
+export const colorChoiceId = (choice: ColorChoice): string => {
   if (choice.kind === "photo") {
     return `photo:${choice.variant}`;
   }
   const s = choice.scheme;
   return `preset:${s.primary}:${s.secondary ?? ""}`;
-}
+};

@@ -21,10 +21,10 @@ const NUMERIC_ID = /^\d+$/u;
 // through /api/strava/photo.
 const PHOTO_PREVIEW_SIZE = 600;
 
-export async function GET(
+export const GET = async (
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const { id } = await params;
   if (!NUMERIC_ID.test(id)) {
     return NextResponse.json({ error: "invalid_id" }, { status: 400 });
@@ -62,4 +62,4 @@ export async function GET(
   } catch (error) {
     return stravaErrorResponse(error);
   }
-}
+};

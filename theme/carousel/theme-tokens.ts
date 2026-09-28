@@ -27,41 +27,41 @@ export const FONT_PAIRS: Record<FontPairId, FontPair> = {
   serif: {
     display: "var(--font-cormorant), serif",
     displayWeight: 600,
+    mono: "var(--font-ibm-plex-mono), monospace",
     numeral: "var(--font-cormorant), serif",
     numeralWeight: 600,
-    mono: "var(--font-ibm-plex-mono), monospace",
   },
   // Dark & bold — the Dusk pairs. Anton slab of condensed weight.
   bold: {
     display: "var(--font-heading), sans-serif",
     displayWeight: 400,
+    mono: "var(--font-ibm-plex-mono), monospace",
     numeral: "var(--font-heading), sans-serif",
     numeralWeight: 400,
-    mono: "var(--font-ibm-plex-mono), monospace",
   },
   // Magazine — Playfair display + numerals for Exposure / Press.
   magazine: {
     display: "var(--font-playfair), serif",
     displayWeight: 700,
+    mono: "var(--font-ibm-plex-mono), monospace",
     numeral: "var(--font-playfair), serif",
     numeralWeight: 600,
-    mono: "var(--font-ibm-plex-mono), monospace",
   },
   // Grotesk — Space Grotesk, the Frame system face.
   grotesk: {
     display: "var(--font-space-grotesk), sans-serif",
     displayWeight: 600,
+    mono: "var(--font-geist-mono), monospace",
     numeral: "var(--font-space-grotesk), sans-serif",
     numeralWeight: 600,
-    mono: "var(--font-geist-mono), monospace",
   },
   // Syne — the STRATA face: geometric display + JetBrains Mono cartography.
   syne: {
     display: "var(--font-syne), sans-serif",
     displayWeight: 800,
+    mono: "var(--font-mono), monospace",
     numeral: "var(--font-syne), sans-serif",
     numeralWeight: 700,
-    mono: "var(--font-mono), monospace",
   },
 };
 

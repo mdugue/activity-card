@@ -9,7 +9,7 @@ import { clearTokens } from "@/lib/strava-cookies";
  * Same-origin fetches send `Sec-Fetch-Site: same-origin` in all evergreen
  * browsers; the Origin fallback covers clients that omit fetch metadata.
  */
-export async function POST(request: Request) {
+export const POST = async (request: Request) => {
   const site = request.headers.get("sec-fetch-site");
   if (site && site !== "same-origin") {
     return NextResponse.json({ error: "cross_origin" }, { status: 403 });
@@ -20,4 +20,4 @@ export async function POST(request: Request) {
   }
   await clearTokens();
   return new NextResponse(null, { status: 204 });
-}
+};

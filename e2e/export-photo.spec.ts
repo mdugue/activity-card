@@ -32,15 +32,15 @@ import {
  */
 
 const MAGENTA_PHOTO = {
-  name: "bg.png",
-  mimeType: "image/png",
   buffer: Buffer.from(SOLID_MAGENTA_PNG_BASE64, "base64"),
+  mimeType: "image/png",
+  name: "bg.png",
 };
 
 const QUADRANT_PHOTO = {
-  name: "quadrants.png",
-  mimeType: "image/png",
   buffer: Buffer.from(QUADRANT_PNG_BASE64, "base64"),
+  mimeType: "image/png",
+  name: "quadrants.png",
 };
 
 const PHOTO_INPUT = 'input[type="file"][accept="image/*"]';
@@ -51,7 +51,10 @@ const PHOTO_INPUT = 'input[type="file"][accept="image/*"]';
  * skipped and the majority hue wins — enough to tell "the photo landed the
  * right way round" from "it is mirrored, offset or missing".
  */
-async function quadrantHues(page: Page, download: Download): Promise<string[]> {
+const quadrantHues = async (
+  page: Page,
+  download: Download
+): Promise<string[]> => {
   const path = await download.path();
   const bytes = await fs.readFile(path);
   return await page.evaluate(async (dataB64: string) => {
@@ -119,7 +122,7 @@ async function quadrantHues(page: Page, download: Download): Promise<string[]> {
       return best;
     });
   }, bytes.toString("base64"));
-}
+};
 
 /**
  * Decode a downloaded PNG in-page and return the fraction of sampled pixels
@@ -127,10 +130,10 @@ async function quadrantHues(page: Page, download: Download): Promise<string[]> {
  * uploaded background is solid magenta, so a healthy export reads mostly
  * magenta; an export that dropped the photo reads ~none.
  */
-async function magentaFraction(
+const magentaFraction = async (
   page: Page,
   download: Download
-): Promise<number> {
+): Promise<number> => {
   const path = await download.path();
   const bytes = await fs.readFile(path);
   const base64 = bytes.toString("base64");
@@ -171,14 +174,14 @@ async function magentaFraction(
     }
     return total === 0 ? 0 : magenta / total;
   }, base64);
-}
+};
 
 /** Upload the magenta photo onto `theme` and download its 4:5 feed export. */
-async function exportSingleCardWithPhoto(
+const exportSingleCardWithPhoto = async (
   page: Page,
   theme: string,
   query = ""
-): Promise<number> {
+): Promise<number> => {
   await enterEditViaUpload(page, query);
   await selectSingleCard(page);
   await selectTheme(page, theme);
@@ -189,7 +192,7 @@ async function exportSingleCardWithPhoto(
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: /download instagram feed/iu }).click();
   return await magentaFraction(page, await downloadPromise);
-}
+};
 
 test("single-card Photo export embeds the uploaded background", async ({
   page,
@@ -233,7 +236,10 @@ test("single-card Photo export embeds the background via the photo composite", a
 });
 
 /** Export Altitude over the four-quadrant photo and read back its quadrants. */
-async function exportQuadrantCard(page: Page, query = ""): Promise<string[]> {
+const exportQuadrantCard = async (
+  page: Page,
+  query = ""
+): Promise<string[]> => {
   await enterEditViaUpload(page, query);
   await selectSingleCard(page);
   await selectTheme(page, "ALTITUDE");
@@ -244,7 +250,7 @@ async function exportQuadrantCard(page: Page, query = ""): Promise<string[]> {
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: /download instagram feed/iu }).click();
   return await quadrantHues(page, await downloadPromise);
-}
+};
 
 // A square photo cover-fits a 4:5 card by cropping its sides, so each quadrant
 // of the photo still owns the matching quadrant of the card.
@@ -258,9 +264,9 @@ test("an oversized photo still reaches the export", async ({ page }) => {
   await selectSingleCard(page);
   await selectTheme(page, "ALTITUDE");
   await page.locator(PHOTO_INPUT).setInputFiles({
-    name: "huge.png",
-    mimeType: "image/png",
     buffer: solidPngBuffer(5000, 3750, [255, 0, 255]),
+    mimeType: "image/png",
+    name: "huge.png",
   });
   await expect(page.getByText(/Photo loaded/iu)).toBeVisible();
 
@@ -314,10 +320,10 @@ test("photo upload yields FROM YOUR PHOTO colour schemes (worker palette extract
   });
 });
 
-async function exportCarouselWithPhoto(
+const exportCarouselWithPhoto = async (
   page: Page,
   query = ""
-): Promise<number> {
+): Promise<number> => {
   await enterEditViaUpload(page, query);
   // Switch to carousel explicitly so the test is independent of the default mode.
   await selectCarousel(page);
@@ -340,7 +346,7 @@ async function exportCarouselWithPhoto(
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: /download instagram feed/iu }).click();
   return await magentaFraction(page, await downloadPromise);
-}
+};
 
 test("carousel Exposure export embeds the uploaded background", async ({
   page,

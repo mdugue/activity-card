@@ -25,19 +25,19 @@ interface ImageAdjustOverlayProps {
  * never swipes underneath it. Controls sit above the surface so their clicks
  * land normally.
  */
-export function ImageAdjustOverlay({
+export const ImageAdjustOverlay = ({
   transform,
   onChange,
   onDone,
   clamp,
   contentWidth,
-}: ImageAdjustOverlayProps) {
+}: ImageAdjustOverlayProps) => {
   const { ref } = useImageAdjust({
-    enabled: true,
-    transform,
-    onChange,
     clamp,
     contentWidth,
+    enabled: true,
+    onChange,
+    transform,
   });
   const canReset = !isIdentityTransform(transform);
 
@@ -89,7 +89,9 @@ export function ImageAdjustOverlay({
         <Button
           className="bg-white/90 text-black hover:bg-white"
           disabled={!canReset}
-          onClick={() => onChange(IDENTITY_TRANSFORM)}
+          onClick={() => {
+            onChange(IDENTITY_TRANSFORM);
+          }}
           size="sm"
         >
           <ArrowCounterClockwiseIcon
@@ -106,4 +108,4 @@ export function ImageAdjustOverlay({
       </div>
     </div>
   );
-}
+};

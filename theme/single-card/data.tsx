@@ -65,89 +65,87 @@ interface CellProps {
   value?: string | number;
 }
 
-function Cell({ children, dense, label, span = 1, unit, value }: CellProps) {
-  return (
+const Cell = ({ children, dense, label, span = 1, unit, value }: CellProps) => (
+  <div
+    style={{
+      gridColumn: `span ${span}`,
+      // Each cell is its own query container so its value numeral sizes to the
+      // cell box — narrow cells (landscape, many columns) and short cells
+      // (square) both shrink the numeral instead of overflowing.
+      containerType: "size",
+      border: `1.5px solid ${INK}`,
+      padding: dense
+        ? "clamp(8px, 3cqb, 16px) 18px"
+        : "clamp(8px, 3cqb, 18px) 22px",
+      background: PANEL,
+      // No fixed minHeight: cells compress to share the body's vertical budget.
+      minHeight: 0,
+      minWidth: 0,
+      display: "flex",
+      flexDirection: "column",
+      // Label pinned at top, value beneath it: the label is always visible;
+      // a too-tall value clips at the bottom (the lesser evil) rather than
+      // pushing the label off the top of the cell.
+      justifyContent: "flex-start",
+      gap: "clamp(4px, 4cqb, 12px)",
+      position: "relative",
+      overflow: "hidden",
+    }}
+  >
     <div
       style={{
-        gridColumn: `span ${span}`,
-        // Each cell is its own query container so its value numeral sizes to the
-        // cell box — narrow cells (landscape, many columns) and short cells
-        // (square) both shrink the numeral instead of overflowing.
-        containerType: "size",
-        border: `1.5px solid ${INK}`,
-        padding: dense
-          ? "clamp(8px, 3cqb, 16px) 18px"
-          : "clamp(8px, 3cqb, 18px) 22px",
-        background: PANEL,
-        // No fixed minHeight: cells compress to share the body's vertical budget.
-        minHeight: 0,
-        minWidth: 0,
-        display: "flex",
-        flexDirection: "column",
-        // Label pinned at top, value beneath it: the label is always visible;
-        // a too-tall value clips at the bottom (the lesser evil) rather than
-        // pushing the label off the top of the cell.
-        justifyContent: "flex-start",
-        gap: "clamp(4px, 4cqb, 12px)",
-        position: "relative",
-        overflow: "hidden",
+        flex: "0 0 auto",
+        fontSize: "clamp(16px, min(7cqi, 22cqb), 24px)",
+        fontWeight: 600,
+        letterSpacing: "0.16em",
+        lineHeight: 1.1,
+        opacity: 0.7,
+        textTransform: "uppercase",
+        whiteSpace: "nowrap",
       }}
     >
+      {label}
+    </div>
+    {value !== undefined && (
       <div
         style={{
-          fontSize: "clamp(16px, min(7cqi, 22cqb), 24px)",
-          lineHeight: 1.1,
-          letterSpacing: "0.16em",
-          opacity: 0.7,
-          textTransform: "uppercase",
-          fontWeight: 600,
+          fontFamily: "var(--font-archivo-narrow), sans-serif",
+          fontWeight: 700,
+          // Big numeral shrinks with cell width (cqi) and height (cqb); the cqb
+          // term stays modest so label + value both clear the cell's padding.
+          fontSize: "clamp(26px, min(26cqi, 30cqb), 64px)",
+          lineHeight: 1,
           whiteSpace: "nowrap",
-          flex: "0 0 auto",
         }}
       >
-        {label}
+        {value}
+        {unit && (
+          <span
+            style={{
+              fontFamily: "var(--font-mono), monospace",
+              fontSize: "clamp(15px, min(11cqi, 20cqb), 26px)",
+              marginLeft: 8,
+              opacity: 0.6,
+            }}
+          >
+            {unit}
+          </span>
+        )}
       </div>
-      {value !== undefined && (
-        <div
-          style={{
-            fontFamily: "var(--font-archivo-narrow), sans-serif",
-            fontWeight: 700,
-            // Big numeral shrinks with cell width (cqi) and height (cqb); the cqb
-            // term stays modest so label + value both clear the cell's padding.
-            fontSize: "clamp(26px, min(26cqi, 30cqb), 64px)",
-            lineHeight: 1,
-            whiteSpace: "nowrap",
-          }}
-        >
-          {value}
-          {unit && (
-            <span
-              style={{
-                fontSize: "clamp(15px, min(11cqi, 20cqb), 26px)",
-                opacity: 0.6,
-                marginLeft: 8,
-                fontFamily: "var(--font-mono), monospace",
-              }}
-            >
-              {unit}
-            </span>
-          )}
-        </div>
-      )}
-      {children}
-    </div>
-  );
-}
+    )}
+    {children}
+  </div>
+);
 
 const DEFAULT_ZONES = [
-  { zone: "EASY", pct: 55 },
-  { zone: "STDY", pct: 30 },
-  { zone: "HARD", pct: 15 },
+  { pct: 55, zone: "EASY" },
+  { pct: 30, zone: "STDY" },
+  { pct: 15, zone: "HARD" },
 ];
 
 // Route glyph: pool lanes for a swim, every leg overlaid (accent shades) for a
 // project, otherwise the single ink silhouette.
-function DataRoute({
+const DataRoute = ({
   accent,
   sport,
   multi,
@@ -159,7 +157,7 @@ function DataRoute({
   multi: boolean;
   routes: SegmentRoute[];
   sport: string;
-}) {
+}) => {
   if (sport === "swim") {
     return (
       <g>
@@ -197,17 +195,17 @@ function DataRoute({
       strokeWidth={2.2}
     />
   );
-}
+};
 
-export function ThemeData({
+export const ThemeData = ({
   data,
   photoUrl,
   imageTransform,
   colors,
-}: ThemeProps<(typeof USES)[number]>) {
+}: ThemeProps<(typeof USES)[number]>) => {
   const { width, height } = useFormat();
   const accent = colors?.primary ?? DEFAULT_ACCENT;
-  const sport = data.sport;
+  const { sport } = data;
   const multi = isMultiActivity(data);
   const routes = multi ? segmentRoutes(data) : [];
   const segProf = multi ? segmentProfiles(data) : null;
@@ -371,21 +369,21 @@ export function ThemeData({
       {photoUrl ? (
         <PhotoUnderlay imageTransform={imageTransform} photoUrl={photoUrl} />
       ) : null}
-      <SafeArea pad={{ top: 60, right: 56, bottom: 52, left: 56 }}>
+      <SafeArea pad={{ bottom: 52, left: 56, right: 56, top: 60 }}>
         <div
           style={{
-            display: "flex",
-            justifyContent: "space-between",
             alignItems: "flex-end",
             borderBottom: `3px solid ${INK}`,
-            paddingBottom: "clamp(10px, 2cqb, 20px)",
-            marginBottom: "clamp(10px, 2cqb, 22px)",
+            display: "flex",
             flex: "0 0 auto",
+            justifyContent: "space-between",
+            marginBottom: "clamp(10px, 2cqb, 22px)",
+            paddingBottom: "clamp(10px, 2cqb, 20px)",
           }}
         >
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
-              style={{ fontSize: 24, letterSpacing: "0.3em", fontWeight: 600 }}
+              style={{ fontSize: 24, fontWeight: 600, letterSpacing: "0.3em" }}
             >
               EFFORT · {sport.toUpperCase()}
             </div>
@@ -408,13 +406,13 @@ export function ThemeData({
           </div>
           <div
             style={{
-              textAlign: "right",
+              flex: "0 0 auto",
               fontSize: 22,
+              fontWeight: 600,
               letterSpacing: "0.16em",
               lineHeight: 1.45,
-              fontWeight: 600,
-              flex: "0 0 auto",
               marginLeft: 24,
+              textAlign: "right",
             }}
           >
             <div>{formatDateUpper(data.date)}</div>
@@ -435,31 +433,31 @@ export function ThemeData({
         <div
           className="grid grid-cols-2"
           style={{
+            flex: "1 1 0",
             gap: 14,
             marginBottom: 14,
-            flex: "1 1 0",
             minHeight: 0,
           }}
         >
           <div
             style={{
-              border: `1.5px solid ${INK}`,
-              padding: "clamp(12px, 2.4cqb, 22px)",
               background: PANEL,
-              position: "relative",
-              minWidth: 0,
-              minHeight: 0,
+              border: `1.5px solid ${INK}`,
               display: "flex",
               flexDirection: "column",
+              minHeight: 0,
+              minWidth: 0,
+              padding: "clamp(12px, 2.4cqb, 22px)",
+              position: "relative",
             }}
           >
             <div
               style={{
+                flex: "0 0 auto",
                 fontSize: 24,
+                fontWeight: 600,
                 letterSpacing: "0.18em",
                 opacity: 0.7,
-                fontWeight: 600,
-                flex: "0 0 auto",
               }}
             >
               ROUTE
@@ -468,10 +466,10 @@ export function ThemeData({
               aria-hidden="true"
               preserveAspectRatio="xMidYMid meet"
               style={{
-                width: "100%",
                 flex: "1 1 0",
-                minHeight: 0,
                 marginTop: 8,
+                minHeight: 0,
+                width: "100%",
               }}
               viewBox="0 0 460 200"
             >
@@ -509,22 +507,22 @@ export function ThemeData({
           </div>
           <div
             style={{
-              border: `1.5px solid ${INK}`,
-              padding: "clamp(12px, 2.4cqb, 22px)",
               background: PANEL,
-              minWidth: 0,
-              minHeight: 0,
+              border: `1.5px solid ${INK}`,
               display: "flex",
               flexDirection: "column",
+              minHeight: 0,
+              minWidth: 0,
+              padding: "clamp(12px, 2.4cqb, 22px)",
             }}
           >
             <div
               style={{
+                flex: "0 0 auto",
                 fontSize: 24,
+                fontWeight: 600,
                 letterSpacing: "0.18em",
                 opacity: 0.7,
-                fontWeight: 600,
-                flex: "0 0 auto",
               }}
             >
               {chartLabel}
@@ -533,10 +531,10 @@ export function ThemeData({
               aria-hidden="true"
               preserveAspectRatio="xMidYMid meet"
               style={{
-                width: "100%",
                 flex: "1 1 0",
-                minHeight: 0,
                 marginTop: 8,
+                minHeight: 0,
+                width: "100%",
               }}
               viewBox="0 0 460 200"
             >
@@ -635,9 +633,9 @@ export function ThemeData({
         <div
           className="grid auto-rows-fr grid-cols-3 @min-[1400px]/card:grid-cols-5"
           style={{
+            flex: "1.6 1 0",
             gap: 14,
             marginBottom: 14,
-            flex: "1.6 1 0",
             minHeight: 0,
           }}
         >
@@ -650,8 +648,8 @@ export function ThemeData({
         <div
           className="grid grid-cols-2"
           style={{
-            gap: 14,
             flex: "1.2 1 0",
+            gap: 14,
             minHeight: 0,
           }}
         >
@@ -685,24 +683,24 @@ export function ThemeData({
             >
               <div
                 style={{
+                  flex: "0 0 auto",
                   fontSize: 24,
+                  fontWeight: 600,
                   letterSpacing: "0.18em",
                   opacity: 0.7,
-                  fontWeight: 600,
-                  flex: "0 0 auto",
                 }}
               >
                 {zonesLabel}
               </div>
               <div
                 style={{
-                  flex: 1,
-                  display: "flex",
                   alignItems: "flex-end",
+                  display: "flex",
+                  flex: 1,
                   gap: 10,
                   marginTop: "clamp(8px, 7cqb, 22px)",
-                  paddingBottom: 6,
                   minHeight: 0,
+                  paddingBottom: 6,
                 }}
               >
                 {(() => {
@@ -711,13 +709,13 @@ export function ThemeData({
                     <div
                       key={`zone-${z.zone}-${i}`}
                       style={{
-                        flex: 1,
-                        height: "100%",
-                        textAlign: "center",
-                        display: "flex",
-                        flexDirection: "column",
                         alignItems: "center",
+                        display: "flex",
+                        flex: 1,
+                        flexDirection: "column",
+                        height: "100%",
                         minHeight: 0,
+                        textAlign: "center",
                       }}
                     >
                       <div
@@ -741,29 +739,29 @@ export function ThemeData({
                           band, so it still scales fluidly to the panel height. */}
                       <div
                         style={{
-                          flex: "1 1 0",
-                          width: "100%",
-                          minHeight: 0,
-                          display: "flex",
                           alignItems: "flex-end",
+                          display: "flex",
+                          flex: "1 1 0",
+                          minHeight: 0,
+                          width: "100%",
                         }}
                       >
                         <div
                           style={{
                             background: i % 2 === 0 ? INK : accent,
                             height: `${(z.pct / maxPct) * 100}%`,
-                            width: "100%",
                             minHeight: 6,
+                            width: "100%",
                           }}
                         />
                       </div>
                       <div
                         style={{
-                          fontSize: "clamp(13px, 9cqb, 20px)",
-                          marginTop: 6,
-                          letterSpacing: "0.1em",
-                          fontWeight: 700,
                           flex: "0 0 auto",
+                          fontSize: "clamp(13px, 9cqb, 20px)",
+                          fontWeight: 700,
+                          letterSpacing: "0.1em",
+                          marginTop: 6,
                         }}
                       >
                         {z.zone}
@@ -776,23 +774,23 @@ export function ThemeData({
           </div>
           <div
             style={{
-              border: `1.5px solid ${INK}`,
-              padding: "clamp(12px, 2.4cqb, 22px)",
               background: PANEL,
+              border: `1.5px solid ${INK}`,
               display: "flex",
               flexDirection: "column",
-              minWidth: 0,
               minHeight: 0,
+              minWidth: 0,
               overflow: "hidden",
+              padding: "clamp(12px, 2.4cqb, 22px)",
             }}
           >
             <div
               style={{
+                flex: "0 0 auto",
                 fontSize: 24,
+                fontWeight: 600,
                 letterSpacing: "0.18em",
                 opacity: 0.7,
-                fontWeight: 600,
-                flex: "0 0 auto",
               }}
             >
               {sport === "swim" ? "LAP LEDGER" : "KEY SPLITS"}
@@ -806,12 +804,12 @@ export function ThemeData({
             <div
               className="grid auto-rows-fr grid-cols-3 @min-[1400px]/card:grid-cols-6"
               style={{
-                marginTop: "clamp(8px, 2cqb, 18px)",
-                gap: "clamp(6px, 1.6cqb, 14px) 14px",
-                fontFamily: "var(--font-mono), monospace",
-                flex: 1,
-                minHeight: 0,
                 containerType: "size",
+                flex: 1,
+                fontFamily: "var(--font-mono), monospace",
+                gap: "clamp(6px, 1.6cqb, 14px) 14px",
+                marginTop: "clamp(8px, 2cqb, 18px)",
+                minHeight: 0,
               }}
             >
               {splitSample.slice(0, 6).map((s, i) => (
@@ -829,10 +827,10 @@ export function ThemeData({
                 >
                   <div
                     style={{
-                      opacity: 0.65,
                       fontSize: "clamp(13px, 9cqb, 22px)",
                       fontWeight: 500,
                       letterSpacing: "0.06em",
+                      opacity: 0.65,
                       whiteSpace: "nowrap",
                     }}
                   >
@@ -840,9 +838,9 @@ export function ThemeData({
                   </div>
                   <div
                     style={{
-                      fontWeight: 700,
-                      fontSize: "clamp(20px, 13cqb, 32px)",
                       fontFamily: "var(--font-archivo-narrow), sans-serif",
+                      fontSize: "clamp(20px, 13cqb, 32px)",
+                      fontWeight: 700,
                       lineHeight: 1,
                       marginTop: "clamp(2px, 1.6cqb, 4px)",
                       whiteSpace: "nowrap",
@@ -853,10 +851,10 @@ export function ThemeData({
                   {s.avgSpeedKmh && (
                     <div
                       style={{
-                        opacity: 0.65,
                         fontSize: "clamp(12px, 7cqb, 18px)",
-                        marginTop: "clamp(2px, 1.6cqb, 4px)",
                         fontWeight: 500,
+                        marginTop: "clamp(2px, 1.6cqb, 4px)",
+                        opacity: 0.65,
                         whiteSpace: "nowrap",
                       }}
                     >
@@ -871,15 +869,15 @@ export function ThemeData({
 
         <div
           style={{
-            marginTop: "clamp(10px, 2cqb, 20px)",
-            fontSize: 22,
-            letterSpacing: "0.22em",
-            opacity: 0.7,
-            display: "flex",
-            justifyContent: "space-between",
             alignItems: "center",
-            fontWeight: 600,
+            display: "flex",
             flex: "0 0 auto",
+            fontSize: 22,
+            fontWeight: 600,
+            justifyContent: "space-between",
+            letterSpacing: "0.22em",
+            marginTop: "clamp(10px, 2cqb, 20px)",
+            opacity: 0.7,
           }}
         >
           <span>EFF/2026/{sport.toUpperCase().slice(0, 3)}-04</span>
@@ -888,14 +886,14 @@ export function ThemeData({
       </SafeArea>
     </div>
   );
-}
+};
 
 export const dataTheme = defineTheme({
+  Component: ThemeData,
+  colors: { default: { primary: DEFAULT_ACCENT }, userAdjustable: true },
   id: "data",
   label: "DATA",
+  photo: { defaultOn: false },
   tagline: "dashboard poster",
   uses: USES,
-  colors: { default: { primary: DEFAULT_ACCENT }, userAdjustable: true },
-  photo: { defaultOn: false },
-  Component: ThemeData,
 });

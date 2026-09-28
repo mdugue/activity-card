@@ -11,7 +11,13 @@ import { heroInk } from "@/theme/carousel/resolve";
 
 import { ElevationBand } from "../elevation-band";
 
-export function ElevationCanvas({ data, style, w, h, overPhoto }: CanvasProps) {
+export const ElevationCanvas = ({
+  data,
+  style,
+  w,
+  h,
+  overPhoto,
+}: CanvasProps) => {
   const multi = isMultiActivity(data);
   const segProf = multi ? segmentProfiles(data) : null;
   const { profile, mode } = pickProfile(data);
@@ -28,11 +34,11 @@ export function ElevationCanvas({ data, style, w, h, overPhoto }: CanvasProps) {
   return (
     <div
       style={{
-        position: "absolute",
-        left: 0,
-        right: 0,
         bottom: 0,
         height: "62%",
+        left: 0,
+        position: "absolute",
+        right: 0,
       }}
     >
       <ElevationBand
@@ -49,4 +55,4 @@ export function ElevationCanvas({ data, style, w, h, overPhoto }: CanvasProps) {
       />
     </div>
   );
-}
+};

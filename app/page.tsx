@@ -57,22 +57,23 @@ type AppState = "empty" | "picking-strava" | "edit" | "download";
 // time on user intent (see `preloadEditor` / `preloadExport`) so the chunk is
 // normally in cache before the state flips; the fallback only holds the
 // layout slot for the rare case it isn't.
-const loadEditState = () => import("@/theme/editor/edit-state");
-const loadCarouselEditState = () =>
-  import("@/theme/editor/carousel-edit-state");
-const loadExportSheet = () => import("@/components/app/export-sheet");
-const loadCarouselExportSheet = () =>
-  import("@/components/app/carousel-export-sheet");
+const loadEditState = async () => await import("@/theme/editor/edit-state");
+const loadCarouselEditState = async () =>
+  await import("@/theme/editor/carousel-edit-state");
+const loadExportSheet = async () =>
+  await import("@/components/app/export-sheet");
+const loadCarouselExportSheet = async () =>
+  await import("@/components/app/carousel-export-sheet");
 
-function preloadEditor(): void {
+const preloadEditor = (): void => {
   void loadEditState();
   void loadCarouselEditState();
-}
+};
 
-function preloadExport(): void {
+const preloadExport = (): void => {
   void loadExportSheet();
   void loadCarouselExportSheet();
-}
+};
 
 // UI prefs are written at most once per quiet period (and flushed when the
 // page is hidden — see the effects in `Home`). One writer for the one page.
@@ -80,47 +81,161 @@ const PERSIST_DEBOUNCE_MS = 300;
 const persistUi = createDebouncedWriter(savePersistedUi, PERSIST_DEBOUNCE_MS);
 
 /** Holds the state's flex slot while its chunk loads — no collapse/jump. */
-function StateFallback() {
-  return <div aria-busy className="flex flex-1 flex-col" />;
-}
+const StateFallback = () => <div aria-busy className="flex flex-1 flex-col" />;
 
-const EditState = dynamic(() => loadEditState().then((m) => m.EditState), {
-  loading: StateFallback,
-  ssr: false,
-});
+const EditState = dynamic(
+  async () => await loadEditState().then((m) => m.EditState),
+  {
+    loading: StateFallback,
+    ssr: false,
+  }
+);
 const CarouselEditState = dynamic(
-  () => loadCarouselEditState().then((m) => m.CarouselEditState),
+  async () => await loadCarouselEditState().then((m) => m.CarouselEditState),
   { loading: StateFallback, ssr: false }
 );
 const ExportSheet = dynamic(
-  () => loadExportSheet().then((m) => m.ExportSheet),
+  async () => await loadExportSheet().then((m) => m.ExportSheet),
   { loading: StateFallback, ssr: false }
 );
 const CarouselExportSheet = dynamic(
-  () => loadCarouselExportSheet().then((m) => m.CarouselExportSheet),
+  async () =>
+    await loadCarouselExportSheet().then((m) => m.CarouselExportSheet),
   { loading: StateFallback, ssr: false }
 );
 const StravaPicker = dynamic(
-  () => import("@/components/app/strava-picker").then((m) => m.StravaPicker),
+  async () =>
+    await import("@/components/app/strava-picker").then((m) => m.StravaPicker),
   { loading: StateFallback, ssr: false }
 );
 
-function adoptParsed(
+const adoptParsed = (
   parsed: ParsedActivity,
   persistedAthleteName?: string,
   source: ActivitySource = "upload"
-): ActivityData {
+): ActivityData =>
   // A real activity carries ONLY what its file contains — never sample
   // fixtures. Themes render conditionally on optional fields, so anything the
   // parser couldn't compute (splits, zones, streams) simply doesn't appear.
-  return {
+  ({
     ...parsed,
     athleteName: parsed.athleteName || persistedAthleteName || "",
     source,
-  };
-}
+  });
 
-export default function Home() {
+/**
+ * The export overview, picked by mode. Both modes are reached the same way (the
+ * editor's Export action → the `download` state) and share the same sheet chrome;
+ * the carousel slices its strip per format, the single card exports one card.
+ */
+const ExportView = ({
+  mode,
+  colors,
+  config,
+  count,
+  data,
+  photo,
+  visibility,
+  theme,
+  carouselTheme,
+  routeCoordinates,
+  onKeepEditing,
+  onNew,
+}: {
+  carouselTheme: CarouselThemeId;
+  colors: ColorScheme;
+  config: Record<string, unknown>;
+  count: number;
+  data: ActivityData;
+  mode: CardMode;
+  onKeepEditing: () => void;
+  onNew: () => void;
+  photo: ReturnType<typeof useCardPhoto>;
+  routeCoordinates?: [number, number][];
+  theme: ThemeId;
+  visibility: Visibility;
+}) => {
+  if (mode === "carousel") {
+    return (
+      <CarouselExportSheet
+        colors={colors}
+        config={config}
+        count={count}
+        data={data}
+        imageTransform={photo.transform}
+        onKeepEditing={onKeepEditing}
+        onNew={onNew}
+        photoEffects={photo.effects}
+        photoUrl={photo.url}
+        routeCoordinates={routeCoordinates}
+        theme={CAROUSEL_THEMES[carouselTheme]}
+        visibility={visibility}
+      />
+    );
+  }
+  return (
+    <ExportSheet
+      colors={colors}
+      config={config}
+      data={data}
+      imageTransform={photo.transform}
+      onKeepEditing={onKeepEditing}
+      onNew={onNew}
+      photoBackdropEnabled={visibility.photoBackdrop}
+      photoEffects={photo.effects}
+      photoUrl={photo.url}
+      routeCoordinates={routeCoordinates}
+      theme={theme}
+    />
+  );
+};
+
+/**
+ * The editor's top bar: the wordmark and the compact Carousel/Single Card
+ * toggle on one line, with the activity control (name + source + swap, in a
+ * popover) directly below. Replaces the standalone header + mode-toggle row so
+ * the top stays tight on mobile and reads cleanly on desktop.
+ */
+const EditTopBar = ({
+  mode,
+  onModeChange,
+}: {
+  mode: CardMode;
+  onModeChange: (mode: CardMode) => void;
+}) => (
+  <div className="mx-auto flex w-full max-w-[1180px] items-center justify-between gap-3 px-6 pt-7 md:px-10">
+    <EffortWordmark labelClassName="hidden sm:inline" size="sm" />
+    <div className="flex items-center gap-5">
+      <Link
+        className="hidden font-mono text-[11px] font-medium tracking-[0.16em] uppercase opacity-55 transition-opacity hover:opacity-100 md:inline"
+        href="/tutorials"
+      >
+        Tutorials
+      </Link>
+      <ModeToggle mode={mode} onModeChange={onModeChange} />
+    </div>
+  </div>
+);
+
+const Header = ({ date, status }: { date?: string; status?: string }) => {
+  const upper = date ? formatDateUpper(date) : "";
+  return (
+    <header className="absolute top-0 right-0 left-0 z-10 flex items-start justify-between px-6 pt-7 md:px-10">
+      <EffortWordmark />
+      {status ? (
+        <div className="font-mono text-[10px] font-medium tracking-[0.22em] opacity-55 sm:text-[11px]">
+          {status}
+        </div>
+      ) : (
+        <div className="hidden font-mono text-[11px] font-medium tracking-[0.22em] opacity-55 sm:block">
+          ACTIVITY CARD{upper ? ` · ${upper}` : ""}
+        </div>
+      )}
+    </header>
+  );
+};
+
+const Home = () => {
   const [state, setState] = useState<AppState>("empty");
   // Set after the Strava OAuth round-trip so the empty state opens the wizard
   // with the Strava picker showing (instead of a separate full-screen state).
@@ -176,12 +291,13 @@ export default function Home() {
   // MARKS keys the single card doesn't declare). A bare replace with the active
   // theme's coerced config would drop the sibling family's keys; merging keeps
   // them (each family's read coerces away what it doesn't use).
-  const setActiveConfig = (next: Record<string, unknown>) =>
+  const setActiveConfig = (next: Record<string, unknown>) => {
     setThemeConfigs((prev) => {
       const slot = prev[activeTheme.id];
       const base = slot && typeof slot === "object" ? slot : {};
       return { ...prev, [activeTheme.id]: { ...base, ...next } };
     });
+  };
 
   // Colour resolution: the active theme's policy supplies the default scheme
   // and (for photo-first themes like Exposure) a default photo-derived choice;
@@ -240,13 +356,13 @@ export default function Home() {
   // it shares this effect rather than getting its own.
   useEffect(() => {
     persistUi.schedule({
-      theme,
+      athleteName: data?.athleteName || persistedAthleteNameRef.current,
       carouselTheme,
       colorChoice: colorChoice ?? undefined,
-      visibility,
-      themeConfigs,
       mode,
-      athleteName: data?.athleteName || persistedAthleteNameRef.current,
+      theme,
+      themeConfigs,
+      visibility,
     });
   }, [
     theme,
@@ -262,7 +378,9 @@ export default function Home() {
   // then discarded) inside the quiet period, so write the pending prefs out
   // as soon as the page is hidden — the last change is never lost.
   useEffect(() => {
-    const flush = () => persistUi.flush();
+    const flush = () => {
+      persistUi.flush();
+    };
     const onVisibilityChange = () => {
       if (document.visibilityState === "hidden") {
         flush();
@@ -287,7 +405,9 @@ export default function Home() {
 
   // After the Strava OAuth round-trip we land on `/?strava=...` — toast the
   // outcome and, on success, open the wizard with the Strava picker showing.
-  useStravaReturnToast(() => setAutoStravaPicker(true));
+  useStravaReturnToast(() => {
+    setAutoStravaPicker(true);
+  });
 
   const adoptParts = (
     parts: ParsedActivity[],
@@ -429,22 +549,11 @@ export default function Home() {
   const session: EditorSession | null =
     visibleData && data
       ? {
-          data: visibleData,
-          title: data.title,
-          location: data.location,
           athleteName: data.athleteName,
           available:
             mode === "carousel"
               ? themeAvailability(data, CAROUSEL_THEMES[carouselTheme])
               : themeAvailability(data, SINGLE_CARD_THEMES[theme]),
-          visibility,
-          onVisibilityChange: setVisibility,
-          onTitleChange: handleTitleChange,
-          onLocationChange: handleLocationChange,
-          onAthleteNameChange: handleAthleteNameChange,
-          onSportChange: handleSportChange,
-          onFilesLoaded: handleFilesLoaded,
-          onOpenStravaPicker: handleOpenStravaPicker,
           color: {
             adjustable: activeTheme.colors.userAdjustable,
             choice: effectiveColorChoice,
@@ -458,6 +567,15 @@ export default function Home() {
             params: activeTheme.params,
             value: activeConfig,
           },
+          data: visibleData,
+          location: data.location,
+          onAthleteNameChange: handleAthleteNameChange,
+          onFilesLoaded: handleFilesLoaded,
+          onLocationChange: handleLocationChange,
+          onOpenStravaPicker: handleOpenStravaPicker,
+          onSportChange: handleSportChange,
+          onTitleChange: handleTitleChange,
+          onVisibilityChange: setVisibility,
           photo: {
             effects: photo.effects,
             onChange: handlePhotoChange,
@@ -466,6 +584,8 @@ export default function Home() {
             transform: photo.transform,
             url: photo.url,
           },
+          title: data.title,
+          visibility,
         }
       : null;
 
@@ -557,118 +677,6 @@ export default function Home() {
       {state === "picking-strava" ? <StravaFooter /> : null}
     </div>
   );
-}
+};
 
-/**
- * The export overview, picked by mode. Both modes are reached the same way (the
- * editor's Export action → the `download` state) and share the same sheet chrome;
- * the carousel slices its strip per format, the single card exports one card.
- */
-function ExportView({
-  mode,
-  colors,
-  config,
-  count,
-  data,
-  photo,
-  visibility,
-  theme,
-  carouselTheme,
-  routeCoordinates,
-  onKeepEditing,
-  onNew,
-}: {
-  carouselTheme: CarouselThemeId;
-  colors: ColorScheme;
-  config: Record<string, unknown>;
-  count: number;
-  data: ActivityData;
-  mode: CardMode;
-  onKeepEditing: () => void;
-  onNew: () => void;
-  photo: ReturnType<typeof useCardPhoto>;
-  routeCoordinates?: [number, number][];
-  theme: ThemeId;
-  visibility: Visibility;
-}) {
-  if (mode === "carousel") {
-    return (
-      <CarouselExportSheet
-        colors={colors}
-        config={config}
-        count={count}
-        data={data}
-        imageTransform={photo.transform}
-        onKeepEditing={onKeepEditing}
-        onNew={onNew}
-        photoEffects={photo.effects}
-        photoUrl={photo.url}
-        routeCoordinates={routeCoordinates}
-        theme={CAROUSEL_THEMES[carouselTheme]}
-        visibility={visibility}
-      />
-    );
-  }
-  return (
-    <ExportSheet
-      colors={colors}
-      config={config}
-      data={data}
-      imageTransform={photo.transform}
-      onKeepEditing={onKeepEditing}
-      onNew={onNew}
-      photoBackdropEnabled={visibility.photoBackdrop}
-      photoEffects={photo.effects}
-      photoUrl={photo.url}
-      routeCoordinates={routeCoordinates}
-      theme={theme}
-    />
-  );
-}
-
-/**
- * The editor's top bar: the wordmark and the compact Carousel/Single Card
- * toggle on one line, with the activity control (name + source + swap, in a
- * popover) directly below. Replaces the standalone header + mode-toggle row so
- * the top stays tight on mobile and reads cleanly on desktop.
- */
-function EditTopBar({
-  mode,
-  onModeChange,
-}: {
-  mode: CardMode;
-  onModeChange: (mode: CardMode) => void;
-}) {
-  return (
-    <div className="mx-auto flex w-full max-w-[1180px] items-center justify-between gap-3 px-6 pt-7 md:px-10">
-      <EffortWordmark labelClassName="hidden sm:inline" size="sm" />
-      <div className="flex items-center gap-5">
-        <Link
-          className="hidden font-mono text-[11px] font-medium tracking-[0.16em] uppercase opacity-55 transition-opacity hover:opacity-100 md:inline"
-          href="/tutorials"
-        >
-          Tutorials
-        </Link>
-        <ModeToggle mode={mode} onModeChange={onModeChange} />
-      </div>
-    </div>
-  );
-}
-
-function Header({ date, status }: { date?: string; status?: string }) {
-  const upper = date ? formatDateUpper(date) : "";
-  return (
-    <header className="absolute top-0 right-0 left-0 z-10 flex items-start justify-between px-6 pt-7 md:px-10">
-      <EffortWordmark />
-      {status ? (
-        <div className="font-mono text-[10px] font-medium tracking-[0.22em] opacity-55 sm:text-[11px]">
-          {status}
-        </div>
-      ) : (
-        <div className="hidden font-mono text-[11px] font-medium tracking-[0.22em] opacity-55 sm:block">
-          ACTIVITY CARD{upper ? ` · ${upper}` : ""}
-        </div>
-      )}
-    </header>
-  );
-}
+export default Home;

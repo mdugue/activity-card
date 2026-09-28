@@ -3,15 +3,15 @@
  * missing input falls back; out-of-range input clamps. Keeps user-supplied
  * strings out of upstream Strava URLs.
  */
-export function clampedIntParam(
+export const clampedIntParam = (
   raw: string | null,
   fallback: number,
   min: number,
   max: number
-): number {
+): number => {
   const n = Number.parseInt(raw ?? "", 10);
   if (!Number.isFinite(n)) {
     return fallback;
   }
   return Math.min(max, Math.max(min, n));
-}
+};

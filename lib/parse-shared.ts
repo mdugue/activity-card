@@ -74,7 +74,221 @@ export interface FinaliseInput {
   sport: ParsedSport;
 }
 
-export function finalise(input: FinaliseInput): ParsedActivity {
+const round = (n: number, digits: number): number => {
+  const f = 10 ** digits;
+  return Math.round(n * f) / f;
+};
+
+const sportSpecificStats = (
+  sport: ParsedSport,
+  avgSpeedKmh: number | undefined,
+  maxSpeedKmh: number | undefined
+): Pick<
+  ParsedActivity,
+  "avgSpeedKmh" | "maxSpeedKmh" | "avgPaceMinPerKm" | "avgPacePer100m"
+> => {
+  if (sport === "ride") {
+    return {
+      avgSpeedKmh: avgSpeedKmh ? round(avgSpeedKmh, 1) : undefined,
+      maxSpeedKmh: maxSpeedKmh ? round(maxSpeedKmh, 1) : undefined,
+    };
+  }
+  if (sport === "run" && avgSpeedKmh && avgSpeedKmh > 0) {
+    return { avgPaceMinPerKm: 60 / avgSpeedKmh };
+  }
+  if (sport === "swim" && avgSpeedKmh && avgSpeedKmh > 0) {
+    return { avgPacePer100m: Math.round(360 / avgSpeedKmh) };
+  }
+  return {};
+};
+
+const haversineMeters = (
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+): number => {
+  const R = 6_371_000;
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+
+const cumulativeDistanceKm = (points: TrackPoint[]): number => {
+  let m = 0;
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1];
+    const b = points[i];
+    if (
+      a.lat === undefined ||
+      a.lng === undefined ||
+      b.lat === undefined ||
+      b.lng === undefined
+    ) {
+      continue;
+    }
+    m += haversineMeters(a.lat, a.lng, b.lat, b.lng);
+  }
+  return m / 1000;
+};
+
+const isNum = (x: unknown): x is number =>
+  typeof x === "number" && Number.isFinite(x);
+
+const totalDurationSec = (points: TrackPoint[]): number => {
+  const times = points.map((p) => p.time).filter(isNum);
+  if (times.length < 2) {
+    return 0;
+  }
+  const last = times.at(-1) as number;
+  return (last - times[0]) / 1000;
+};
+
+const cumulativeElevationGain = (points: TrackPoint[]): number => {
+  let gain = 0;
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1].elevation;
+    const b = points[i].elevation;
+    if (a !== undefined && b !== undefined && b > a) {
+      gain += b - a;
+    }
+  }
+  return gain;
+};
+
+/**
+ * Per-km splits via cumulative-distance crossings. Uses linear interpolation
+ * of timestamps between the two points that straddle each km boundary.
+ */
+const derivePerKmSplits = (
+  points: TrackPoint[],
+  totalDistanceKm: number
+): Split[] | undefined => {
+  if (totalDistanceKm < 1.5) {
+    return;
+  }
+  const stamped: { time: number; cumM: number }[] = [];
+  let cumM = 0;
+  // Track the last *stamped* coords, not `points[i - 1]`: when the previous
+  // raw point is missing lat/lng/time we'd otherwise skip the haversine and
+  // undercount distance, pushing every following split boundary off.
+  let lastLat: number | undefined;
+  let lastLng: number | undefined;
+  for (const p of points) {
+    if (p.lat === undefined || p.lng === undefined || p.time === undefined) {
+      continue;
+    }
+    if (lastLat !== undefined && lastLng !== undefined) {
+      cumM += haversineMeters(lastLat, lastLng, p.lat, p.lng);
+    }
+    stamped.push({ cumM, time: p.time });
+    lastLat = p.lat;
+    lastLng = p.lng;
+  }
+  if (stamped.length < 2) {
+    return;
+  }
+
+  const splits: Split[] = [];
+  let nextKm = 1;
+  let prevTime = stamped[0].time;
+  for (let i = 1; i < stamped.length; i++) {
+    while (stamped[i].cumM >= nextKm * 1000) {
+      const a = stamped[i - 1];
+      const b = stamped[i];
+      const span = b.cumM - a.cumM || 1;
+      const f = (nextKm * 1000 - a.cumM) / span;
+      const tBoundary = a.time + (b.time - a.time) * f;
+      const durSec = Math.round((tBoundary - prevTime) / 1000);
+      if (durSec > 0) {
+        splits.push({ durationSec: durSec, km: nextKm });
+      }
+      prevTime = tBoundary;
+      nextKm += 1;
+    }
+  }
+  return splits.length ? splits : undefined;
+};
+
+/**
+ * Smoothed pace profile (sec/km) for runs. Derived from rolling distance and
+ * time deltas, then resampled to a fixed length so themes don't have to
+ * re-bucket per render.
+ */
+const derivePaceProfile = (points: TrackPoint[]): number[] | undefined => {
+  const stamped: { time: number; lat: number; lng: number }[] = [];
+  for (const p of points) {
+    if (p.lat !== undefined && p.lng !== undefined && p.time !== undefined) {
+      stamped.push({ lat: p.lat, lng: p.lng, time: p.time });
+    }
+  }
+  if (stamped.length < 4) {
+    return;
+  }
+  const paces: number[] = [];
+  // Window in points — at typical 1Hz this is ~10s of running.
+  const win = Math.max(4, Math.floor(stamped.length / 60));
+  for (let i = win; i < stamped.length; i++) {
+    const a = stamped[i - win];
+    const b = stamped[i];
+    const meters = haversineMeters(a.lat, a.lng, b.lat, b.lng);
+    const secs = (b.time - a.time) / 1000;
+    if (meters > 1 && secs > 0) {
+      const secPerKm = (secs * 1000) / meters;
+      // Clamp absurd values (GPS jumps, stops at lights, …)
+      if (secPerKm > 60 && secPerKm < 1800) {
+        paces.push(secPerKm);
+      }
+    }
+  }
+  if (paces.length < 8) {
+    return;
+  }
+  const smoothed = smooth(paces, PACE_SMOOTH_WINDOW);
+  return resampleTo(
+    smoothed,
+    Math.min(PACE_TARGET_POINTS, smoothed.length)
+  ).map((v) => Math.round(v));
+};
+
+const mean = (xs: number[]): number | undefined => {
+  if (!xs.length) {
+    return;
+  }
+  return xs.reduce((a, b) => a + b, 0) / xs.length;
+};
+
+const localCalendarDate = (d: Date): string => {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+/**
+ * The activity's calendar date as `YYYY-MM-DD`. A bare calendar date passes
+ * through unchanged; an instant (GPX/FIT timestamps) is read in the local
+ * timezone — the athlete's device timezone is the best client-side proxy for
+ * where the activity happened. Never the UTC day.
+ */
+const toIsoDate = (input?: string | number | Date): string => {
+  if (typeof input === "string" && CALENDAR_DATE_RE.test(input)) {
+    return input;
+  }
+  const d = input ? new Date(input) : new Date();
+  return localCalendarDate(Number.isNaN(d.getTime()) ? new Date() : d);
+};
+
+const prettifyName = (name: string): string =>
+  name
+    .replaceAll(/[_-]+/gu, " ")
+    .replaceAll(/\s+/gu, " ")
+    .trim()
+    .replaceAll(/\b\w/gu, (c) => c.toUpperCase());
+
+export const finalise = (input: FinaliseInput): ParsedActivity => {
   const { points, sport, name, isoDate } = input;
 
   const distanceKm = input.sessionDistanceKm ?? cumulativeDistanceKm(points);
@@ -150,30 +364,7 @@ export function finalise(input: FinaliseInput): ParsedActivity {
     startTimeMs,
     endTimeMs,
   };
-}
-
-function sportSpecificStats(
-  sport: ParsedSport,
-  avgSpeedKmh: number | undefined,
-  maxSpeedKmh: number | undefined
-): Pick<
-  ParsedActivity,
-  "avgSpeedKmh" | "maxSpeedKmh" | "avgPaceMinPerKm" | "avgPacePer100m"
-> {
-  if (sport === "ride") {
-    return {
-      avgSpeedKmh: avgSpeedKmh ? round(avgSpeedKmh, 1) : undefined,
-      maxSpeedKmh: maxSpeedKmh ? round(maxSpeedKmh, 1) : undefined,
-    };
-  }
-  if (sport === "run" && avgSpeedKmh && avgSpeedKmh > 0) {
-    return { avgPaceMinPerKm: 60 / avgSpeedKmh };
-  }
-  if (sport === "swim" && avgSpeedKmh && avgSpeedKmh > 0) {
-    return { avgPacePer100m: Math.round(360 / avgSpeedKmh) };
-  }
-  return {};
-}
+};
 
 /**
  * Filename / activity-name hints, matched as whole words and checked in this
@@ -186,6 +377,22 @@ const NAME_SPORT_WORDS: readonly [ParsedSport, readonly string[]][] = [
   ["triathlon", ["triathlon"]],
 ];
 
+const sportFromDeclaredType = (s: string): ParsedSport | undefined => {
+  if (s.includes("cycl") || s.includes("bike") || s.includes("ride")) {
+    return "ride";
+  }
+  if (s.includes("run")) {
+    return "run";
+  }
+  if (s.includes("swim")) {
+    return "swim";
+  }
+  if (s.includes("triathlon") || s.includes("multisport")) {
+    return "triathlon";
+  }
+  return undefined;
+};
+
 /**
  * Map a declared sport type (GPX `<type>`, FIT `sport`, Strava `sport_type`)
  * to our sport. The declared type always wins; the filename (for Strava, the
@@ -193,10 +400,10 @@ const NAME_SPORT_WORDS: readonly [ParsedSport, readonly string[]][] = [
  * and then by whole words so "brunch" is not a run and "strides" not a ride.
  * Defaults to ride.
  */
-export function detectSport(
+export const detectSport = (
   raw: string | undefined,
   filename: string
-): ParsedSport {
+): ParsedSport => {
   const declared = sportFromDeclaredType((raw || "").toLowerCase());
   if (declared) {
     return declared;
@@ -214,213 +421,4 @@ export function detectSport(
     }
   }
   return "ride";
-}
-
-function sportFromDeclaredType(s: string): ParsedSport | undefined {
-  if (s.includes("cycl") || s.includes("bike") || s.includes("ride")) {
-    return "ride";
-  }
-  if (s.includes("run")) {
-    return "run";
-  }
-  if (s.includes("swim")) {
-    return "swim";
-  }
-  if (s.includes("triathlon") || s.includes("multisport")) {
-    return "triathlon";
-  }
-  return undefined;
-}
-
-function cumulativeDistanceKm(points: TrackPoint[]): number {
-  let m = 0;
-  for (let i = 1; i < points.length; i++) {
-    const a = points[i - 1];
-    const b = points[i];
-    if (
-      a.lat === undefined ||
-      a.lng === undefined ||
-      b.lat === undefined ||
-      b.lng === undefined
-    ) {
-      continue;
-    }
-    m += haversineMeters(a.lat, a.lng, b.lat, b.lng);
-  }
-  return m / 1000;
-}
-
-function haversineMeters(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
-): number {
-  const R = 6_371_000;
-  const φ1 = (lat1 * Math.PI) / 180;
-  const φ2 = (lat2 * Math.PI) / 180;
-  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-  const Δλ = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
-  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function totalDurationSec(points: TrackPoint[]): number {
-  const times = points.map((p) => p.time).filter(isNum);
-  if (times.length < 2) {
-    return 0;
-  }
-  const last = times.at(-1) as number;
-  return (last - times[0]) / 1000;
-}
-
-function cumulativeElevationGain(points: TrackPoint[]): number {
-  let gain = 0;
-  for (let i = 1; i < points.length; i++) {
-    const a = points[i - 1].elevation;
-    const b = points[i].elevation;
-    if (a !== undefined && b !== undefined && b > a) {
-      gain += b - a;
-    }
-  }
-  return gain;
-}
-
-/**
- * Per-km splits via cumulative-distance crossings. Uses linear interpolation
- * of timestamps between the two points that straddle each km boundary.
- */
-function derivePerKmSplits(
-  points: TrackPoint[],
-  totalDistanceKm: number
-): Split[] | undefined {
-  if (totalDistanceKm < 1.5) {
-    return;
-  }
-  const stamped: { time: number; cumM: number }[] = [];
-  let cumM = 0;
-  // Track the last *stamped* coords, not `points[i - 1]`: when the previous
-  // raw point is missing lat/lng/time we'd otherwise skip the haversine and
-  // undercount distance, pushing every following split boundary off.
-  let lastLat: number | undefined;
-  let lastLng: number | undefined;
-  for (const p of points) {
-    if (p.lat === undefined || p.lng === undefined || p.time === undefined) {
-      continue;
-    }
-    if (lastLat !== undefined && lastLng !== undefined) {
-      cumM += haversineMeters(lastLat, lastLng, p.lat, p.lng);
-    }
-    stamped.push({ time: p.time, cumM });
-    lastLat = p.lat;
-    lastLng = p.lng;
-  }
-  if (stamped.length < 2) {
-    return;
-  }
-
-  const splits: Split[] = [];
-  let nextKm = 1;
-  let prevTime = stamped[0].time;
-  for (let i = 1; i < stamped.length; i++) {
-    while (stamped[i].cumM >= nextKm * 1000) {
-      const a = stamped[i - 1];
-      const b = stamped[i];
-      const span = b.cumM - a.cumM || 1;
-      const f = (nextKm * 1000 - a.cumM) / span;
-      const tBoundary = a.time + (b.time - a.time) * f;
-      const durSec = Math.round((tBoundary - prevTime) / 1000);
-      if (durSec > 0) {
-        splits.push({ km: nextKm, durationSec: durSec });
-      }
-      prevTime = tBoundary;
-      nextKm += 1;
-    }
-  }
-  return splits.length ? splits : undefined;
-}
-
-/**
- * Smoothed pace profile (sec/km) for runs. Derived from rolling distance and
- * time deltas, then resampled to a fixed length so themes don't have to
- * re-bucket per render.
- */
-function derivePaceProfile(points: TrackPoint[]): number[] | undefined {
-  const stamped: { time: number; lat: number; lng: number }[] = [];
-  for (const p of points) {
-    if (p.lat !== undefined && p.lng !== undefined && p.time !== undefined) {
-      stamped.push({ time: p.time, lat: p.lat, lng: p.lng });
-    }
-  }
-  if (stamped.length < 4) {
-    return;
-  }
-  const paces: number[] = [];
-  // Window in points — at typical 1Hz this is ~10s of running.
-  const win = Math.max(4, Math.floor(stamped.length / 60));
-  for (let i = win; i < stamped.length; i++) {
-    const a = stamped[i - win];
-    const b = stamped[i];
-    const meters = haversineMeters(a.lat, a.lng, b.lat, b.lng);
-    const secs = (b.time - a.time) / 1000;
-    if (meters > 1 && secs > 0) {
-      const secPerKm = (secs * 1000) / meters;
-      // Clamp absurd values (GPS jumps, stops at lights, …)
-      if (secPerKm > 60 && secPerKm < 1800) {
-        paces.push(secPerKm);
-      }
-    }
-  }
-  if (paces.length < 8) {
-    return;
-  }
-  const smoothed = smooth(paces, PACE_SMOOTH_WINDOW);
-  return resampleTo(
-    smoothed,
-    Math.min(PACE_TARGET_POINTS, smoothed.length)
-  ).map((v) => Math.round(v));
-}
-
-function mean(xs: number[]): number | undefined {
-  if (!xs.length) {
-    return;
-  }
-  return xs.reduce((a, b) => a + b, 0) / xs.length;
-}
-
-function isNum(x: unknown): x is number {
-  return typeof x === "number" && Number.isFinite(x);
-}
-
-function round(n: number, digits: number): number {
-  const f = 10 ** digits;
-  return Math.round(n * f) / f;
-}
-
-/**
- * The activity's calendar date as `YYYY-MM-DD`. A bare calendar date passes
- * through unchanged; an instant (GPX/FIT timestamps) is read in the local
- * timezone — the athlete's device timezone is the best client-side proxy for
- * where the activity happened. Never the UTC day.
- */
-function toIsoDate(input?: string | number | Date): string {
-  if (typeof input === "string" && CALENDAR_DATE_RE.test(input)) {
-    return input;
-  }
-  const d = input ? new Date(input) : new Date();
-  return localCalendarDate(Number.isNaN(d.getTime()) ? new Date() : d);
-}
-
-function localCalendarDate(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-function prettifyName(name: string): string {
-  return name
-    .replaceAll(/[_-]+/gu, " ")
-    .replaceAll(/\s+/gu, " ")
-    .trim()
-    .replaceAll(/\b\w/gu, (c) => c.toUpperCase());
-}
+};

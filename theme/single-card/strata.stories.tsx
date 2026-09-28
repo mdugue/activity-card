@@ -36,13 +36,6 @@ type StrataArgs = ComponentProps<typeof ThemeStrata> &
   StrataConfig;
 
 const meta = preview.type<{ args: StrataArgs }>().meta({
-  component: ThemeStrata,
-  tags: ["ai-generated"],
-  parameters: {
-    layout: "fullscreen",
-    controls: { exclude: THEME_PROP_CONTROLS_EXCLUDE },
-  },
-  decorators: [withFormatMatrix],
   argTypes: {
     data: activityArgType,
     ...colorArgTypes,
@@ -51,7 +44,14 @@ const meta = preview.type<{ args: StrataArgs }>().meta({
     ...backgroundArgTypes,
   },
   args: { color: "Theme default", data: SAMPLE_RIDE, ...DEFAULT_STRATA_CONFIG },
+  component: ThemeStrata,
+  decorators: [withFormatMatrix],
+  parameters: {
+    controls: { exclude: THEME_PROP_CONTROLS_EXCLUDE },
+    layout: "fullscreen",
+  },
   render: (args) => <ThemeStoryView args={args} theme={THEME} />,
+  tags: ["ai-generated"],
 });
 
 const RIDE_TITLE = /Elbsandstein/u;

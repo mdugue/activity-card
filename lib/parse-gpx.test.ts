@@ -3,13 +3,11 @@ import { describe, expect, test } from "bun:test";
 
 import { parseGpx } from "@/lib/parse-gpx";
 
-function gpx(body: string): string {
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1">${body}</gpx>`;
-}
+const gpx = (body: string): string =>
+  `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1">${body}</gpx>`;
 
-function trkpt(lat: string, lon: string, ele: number, time: string): string {
-  return `<trkpt lat="${lat}" lon="${lon}"><ele>${ele}</ele><time>${time}</time></trkpt>`;
-}
+const trkpt = (lat: string, lon: string, ele: number, time: string): string =>
+  `<trkpt lat="${lat}" lon="${lon}"><ele>${ele}</ele><time>${time}</time></trkpt>`;
 
 const THREE_POINT_RIDE = gpx(
   `<trk><name>Morning Ride</name><type>cycling</type><trkseg>${[

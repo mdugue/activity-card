@@ -8,34 +8,34 @@ import { SafeZoneOverlay } from "./safe-zone-overlay";
 // a fixed preview — the same overlay the editor preview and export sheet use.
 const PREVIEW_W = 280;
 
-function OverlayDemo({ formatId }: { formatId: ExportFormatId }) {
+const OverlayDemo = ({ formatId }: { formatId: ExportFormatId }) => {
   const f = getFormat(formatId);
   const scale = PREVIEW_W / f.width;
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 28, padding: 28 }}>
       <div
         style={{
-          position: "relative",
-          width: f.width * scale,
+          background: "linear-gradient(135deg, #c45a2c 0%, #1d3a2e 100%)",
           height: f.height * scale,
           overflow: "hidden",
-          background: "linear-gradient(135deg, #c45a2c 0%, #1d3a2e 100%)",
+          position: "relative",
+          width: f.width * scale,
         }}
       >
         <SafeZoneOverlay format={f} scale={scale} />
       </div>
     </div>
   );
-}
+};
 
 const meta = preview.meta({
-  component: OverlayDemo,
-  tags: ["ai-generated"],
-  parameters: { layout: "centered" },
   argTypes: {
     formatId: { control: "select", options: FORMAT_ORDER },
   },
   args: { formatId: "instagram-story" },
+  component: OverlayDemo,
+  parameters: { layout: "centered" },
+  tags: ["ai-generated"],
 });
 
 export const Story9x16 = meta.story({ args: { formatId: "instagram-story" } });

@@ -91,8 +91,8 @@ describe("exceedsPhotoSizeCap", () => {
 });
 
 describe("limitBody", () => {
-  function streamOf(...chunks: number[]): ReadableStream<Uint8Array> {
-    return new ReadableStream({
+  const streamOf = (...chunks: number[]): ReadableStream<Uint8Array> =>
+    new ReadableStream({
       start(controller) {
         for (const size of chunks) {
           controller.enqueue(new Uint8Array(size));
@@ -100,7 +100,6 @@ describe("limitBody", () => {
         controller.close();
       },
     });
-  }
 
   test("passes a body within the cap through unchanged", async () => {
     const out = await new Response(limitBody(streamOf(4, 6), 10)).arrayBuffer();

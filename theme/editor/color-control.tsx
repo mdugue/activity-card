@@ -23,7 +23,7 @@ import {
 import type { ColorChoice, ColorScheme } from "@/theme/core/colors";
 
 /** A round swatch; pairs render as a two-hue split disc. */
-function Swatch({ scheme }: { scheme: ColorScheme }) {
+const Swatch = ({ scheme }: { scheme: ColorScheme }) => {
   const background = scheme.secondary
     ? `linear-gradient(135deg, ${scheme.primary} 0 50%, ${scheme.secondary} 50% 100%)`
     : scheme.primary;
@@ -34,7 +34,7 @@ function Swatch({ scheme }: { scheme: ColorScheme }) {
       style={{ background }}
     />
   );
-}
+};
 
 const SWATCH_ITEM_CLASSES = cn(
   "size-9 rounded-full border-2 border-transparent p-0 transition-transform outline-none",
@@ -53,12 +53,12 @@ interface ColorControlProps {
   palette: ExtractedPalette | null;
 }
 
-export function ColorControl({
+export const ColorControl = ({
   choice,
   isDefault,
   onChange,
   palette,
-}: ColorControlProps) {
+}: ColorControlProps) => {
   const selectedId = colorChoiceId(choice);
 
   const pick = (choices: ColorChoice[]) => (values: string[]) => {
@@ -136,7 +136,9 @@ export function ColorControl({
         <Button
           className="ml-auto"
           disabled={isDefault}
-          onClick={() => onChange(null)}
+          onClick={() => {
+            onChange(null);
+          }}
           size="sm"
           type="button"
           variant="ghost"
@@ -147,4 +149,4 @@ export function ColorControl({
       </div>
     </div>
   );
-}
+};

@@ -11,7 +11,7 @@ import { MetaBand, Signature } from "./parts";
 import { SlideScaffold } from "./scaffold";
 import { slideText } from "./shared";
 
-export function EditorialSlide({
+export const EditorialSlide = ({
   data,
   style,
   hasPhoto,
@@ -20,7 +20,7 @@ export function EditorialSlide({
   showEffort,
   showPageNumber,
   statOpts,
-}: PanelProps) {
+}: PanelProps) => {
   const colors = slideText(style, hasPhoto);
   const summary = buildStats(data, statOpts)
     .slice(0, 3)
@@ -45,45 +45,45 @@ export function EditorialSlide({
           right at the same height. */}
       <div
         style={{
-          display: "flex",
           alignItems: "flex-end",
-          justifyContent: "space-between",
+          display: "flex",
           gap: 40,
+          justifyContent: "space-between",
         }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             aria-hidden
             style={{
-              width: 110,
-              height: 4,
               background: style.accent,
+              height: 4,
               marginBottom: 26,
+              width: 110,
             }}
           />
           <h1
             style={{
-              fontFamily: style.fonts.display,
-              fontWeight: style.fonts.displayWeight,
-              fontStyle: "italic",
-              fontSize: 80,
-              lineHeight: 0.94,
-              letterSpacing: "-0.015em",
-              margin: 0,
               color: colors.fg,
-              textWrap: "balance",
+              fontFamily: style.fonts.display,
+              fontSize: 80,
+              fontStyle: "italic",
+              fontWeight: style.fonts.displayWeight,
+              letterSpacing: "-0.015em",
+              lineHeight: 0.94,
+              margin: 0,
               textShadow: colors.shadow || undefined,
+              textWrap: "balance",
             }}
           >
             {data.title || "The effort"}
           </h1>
           <div
             style={{
-              marginTop: 24,
+              color: colors.muted,
               fontFamily: style.fonts.mono,
               fontSize: 26,
               letterSpacing: "0.12em",
-              color: colors.muted,
+              marginTop: 24,
               textShadow: colors.shadow || undefined,
             }}
           >
@@ -116,4 +116,4 @@ export function EditorialSlide({
       </div>
     </SlideScaffold>
   );
-}
+};

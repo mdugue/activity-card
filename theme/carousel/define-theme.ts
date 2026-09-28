@@ -100,7 +100,7 @@ export interface CarouselTheme extends ThemeBase {
  * and components, plus params/`resolveStyle` only when it has knobs. `uses` also
  * narrows the canvas/panel `data` type (see the file header).
  */
-export function defineCarouselTheme<
+export const defineCarouselTheme = <
   const Caps extends readonly CapabilityKey[] = readonly CapabilityKey[],
 >(d: {
   canvas?: CanvasComponent<Caps[number]>;
@@ -113,7 +113,7 @@ export function defineCarouselTheme<
   resolveStyle?: ResolveStyle;
   tagline: string;
   uses?: Caps;
-}): CarouselTheme {
+}): CarouselTheme => {
   const { look } = d;
   return {
     id: d.id,
@@ -122,17 +122,17 @@ export function defineCarouselTheme<
     uses: d.uses ?? CAROUSEL_CAPABILITIES,
     colors: {
       default: {
+        onPrimary: look.onAccent,
         primary: look.accent,
         secondary: look.accent2,
-        onPrimary: look.onAccent,
       },
       defaultChoice: look.defaultColorChoice,
       userAdjustable: true,
     },
     photo: {
-      defaultOn: true,
       defaultFilter: look.defaultFilter,
       defaultGrain: look.defaultGrain,
+      defaultOn: true,
     },
     // The two universal carousel marks (effort / page numbers) are appended to
     // every theme as MARKS params, so the editor renders them generically and
@@ -148,4 +148,4 @@ export function defineCarouselTheme<
     panels: d.panels as PanelComponent[],
     resolveStyle: d.resolveStyle,
   };
-}
+};

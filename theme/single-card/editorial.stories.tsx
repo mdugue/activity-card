@@ -26,13 +26,6 @@ const THEME = SINGLE_CARD_THEMES.editorial;
 type EditorialArgs = ComponentProps<typeof ThemeEditorial> & ThemeStoryExtras;
 
 const meta = preview.type<{ args: EditorialArgs }>().meta({
-  component: ThemeEditorial,
-  tags: ["ai-generated"],
-  parameters: {
-    layout: "fullscreen",
-    controls: { exclude: THEME_PROP_CONTROLS_EXCLUDE },
-  },
-  decorators: [withFormatMatrix],
   argTypes: {
     data: activityArgType,
     ...colorArgTypes,
@@ -40,7 +33,14 @@ const meta = preview.type<{ args: EditorialArgs }>().meta({
     ...backgroundArgTypes,
   },
   args: { color: "Theme default", data: SAMPLE_RUN },
+  component: ThemeEditorial,
+  decorators: [withFormatMatrix],
+  parameters: {
+    controls: { exclude: THEME_PROP_CONTROLS_EXCLUDE },
+    layout: "fullscreen",
+  },
   render: (args) => <ThemeStoryView args={args} theme={THEME} />,
+  tags: ["ai-generated"],
 });
 
 const RUN_TITLE = /Westwind/u;

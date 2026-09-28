@@ -14,20 +14,32 @@ export type Coord = [number, number];
 
 const SQ_TOL_FLOOR = 1e-12;
 
-export function simplifyRDP(points: Coord[], tolerance: number): Coord[] {
-  if (points.length < 3) {
-    return [...points];
+const sqSegDist = (p: Coord, a: Coord, b: Coord): number => {
+  let x = a[0];
+  let y = a[1];
+  let dx = b[0] - x;
+  let dy = b[1] - y;
+  if (dx !== 0 || dy !== 0) {
+    const t = ((p[0] - x) * dx + (p[1] - y) * dy) / (dx * dx + dy * dy);
+    if (t > 1) {
+      x = b[0];
+      y = b[1];
+    } else if (t > 0) {
+      x += dx * t;
+      y += dy * t;
+    }
   }
-  const sqTol = Math.max(tolerance * tolerance, SQ_TOL_FLOOR);
-  return rdpRange(points, 0, points.length - 1, sqTol);
-}
+  dx = p[0] - x;
+  dy = p[1] - y;
+  return dx * dx + dy * dy;
+};
 
-function rdpRange(
+const rdpRange = (
   points: Coord[],
   i: number,
   j: number,
   sqTol: number
-): Coord[] {
+): Coord[] => {
   if (j - i < 2) {
     return j === i ? [points[i]] : [points[i], points[j]];
   }
@@ -46,50 +58,17 @@ function rdpRange(
   const left = rdpRange(points, i, index, sqTol);
   const right = rdpRange(points, index, j, sqTol);
   return [...left, ...right.slice(1)];
-}
+};
 
-function sqSegDist(p: Coord, a: Coord, b: Coord): number {
-  let x = a[0];
-  let y = a[1];
-  let dx = b[0] - x;
-  let dy = b[1] - y;
-  if (dx !== 0 || dy !== 0) {
-    const t = ((p[0] - x) * dx + (p[1] - y) * dy) / (dx * dx + dy * dy);
-    if (t > 1) {
-      x = b[0];
-      y = b[1];
-    } else if (t > 0) {
-      x += dx * t;
-      y += dy * t;
-    }
-  }
-  dx = p[0] - x;
-  dy = p[1] - y;
-  return dx * dx + dy * dy;
-}
-
-/**
- * Iteratively shrink a polyline until its point count is at or below the
- * target. Tolerance starts proportional to the bounding-box diagonal and
- * doubles each round — empirically fast on tracks up to ~100k points.
- */
-export function simplifyToCount(points: Coord[], target: number): Coord[] {
-  if (points.length <= target) {
+export const simplifyRDP = (points: Coord[], tolerance: number): Coord[] => {
+  if (points.length < 3) {
     return [...points];
   }
-  const { dx, dy } = bbox(points);
-  const diag = Math.hypot(dx, dy) || 1;
-  let tol = diag * 1e-4;
-  let out = simplifyRDP(points, tol);
-  let guard = 0;
-  while (out.length > target && guard++ < 40) {
-    tol *= 2;
-    out = simplifyRDP(points, tol);
-  }
-  return out;
-}
+  const sqTol = Math.max(tolerance * tolerance, SQ_TOL_FLOOR);
+  return rdpRange(points, 0, points.length - 1, sqTol);
+};
 
-function bbox(points: Coord[]) {
+const bbox = (points: Coord[]) => {
   let minX = Number.POSITIVE_INFINITY;
   let maxX = Number.NEGATIVE_INFINITY;
   let minY = Number.POSITIVE_INFINITY;
@@ -109,10 +88,31 @@ function bbox(points: Coord[]) {
     }
   }
   return { dx: maxX - minX, dy: maxY - minY };
-}
+};
+
+/**
+ * Iteratively shrink a polyline until its point count is at or below the
+ * target. Tolerance starts proportional to the bounding-box diagonal and
+ * doubles each round — empirically fast on tracks up to ~100k points.
+ */
+export const simplifyToCount = (points: Coord[], target: number): Coord[] => {
+  if (points.length <= target) {
+    return [...points];
+  }
+  const { dx, dy } = bbox(points);
+  const diag = Math.hypot(dx, dy) || 1;
+  let tol = diag * 1e-4;
+  let out = simplifyRDP(points, tol);
+  let guard = 0;
+  while (out.length > target && guard++ < 40) {
+    tol *= 2;
+    out = simplifyRDP(points, tol);
+  }
+  return out;
+};
 
 /** Linear resampling of a numeric series to exactly `count` points. */
-export function resampleTo(values: number[], count: number): number[] {
+export const resampleTo = (values: number[], count: number): number[] => {
   if (values.length === 0 || count <= 0) {
     return [];
   }
@@ -132,10 +132,10 @@ export function resampleTo(values: number[], count: number): number[] {
     out[i] = values[lo] * (1 - f) + values[hi] * f;
   }
   return out;
-}
+};
 
 /** Centered rolling-mean smoothing. Window should be odd; clamps at edges. */
-export function smooth(values: number[], window = 5): number[] {
+export const smooth = (values: number[], window = 5): number[] => {
   if (window < 2 || values.length < 2) {
     return [...values];
   }
@@ -153,4 +153,4 @@ export function smooth(values: number[], window = 5): number[] {
     out[i] = n > 0 ? sum / n : values[i];
   }
   return out;
-}
+};

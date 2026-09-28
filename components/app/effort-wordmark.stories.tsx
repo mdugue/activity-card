@@ -5,8 +5,8 @@ import { EffortWordmark } from "./effort-wordmark";
 
 const meta = preview.meta({
   component: EffortWordmark,
-  tags: ["ai-generated"],
   parameters: { layout: "centered" },
+  tags: ["ai-generated"],
 });
 
 export const Default = meta.story({ args: { size: "default" } });

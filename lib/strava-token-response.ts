@@ -10,17 +10,17 @@ import type { StravaTokenResponse } from "./strava-cookies";
  */
 const TokenResponseSchema = z.object({
   access_token: z.string().check(z.minLength(1)),
-  refresh_token: z.string().check(z.minLength(1)),
-  expires_at: z.int().check(z.positive()),
   athlete: z.optional(
     z.nullable(
       z.object({
-        id: z.optional(z.nullable(z.int())),
         firstname: z.optional(z.nullable(z.string())),
+        id: z.optional(z.nullable(z.int())),
         profile_medium: z.optional(z.nullable(z.string())),
       })
     )
   ),
+  expires_at: z.int().check(z.positive()),
+  refresh_token: z.string().check(z.minLength(1)),
 });
 
 /**
@@ -29,9 +29,9 @@ const TokenResponseSchema = z.object({
  * (non-empty tokens, an integer expiry). Nulls in the optional athlete
  * fields are normalised to `undefined`.
  */
-export function parseStravaTokenResponse(
+export const parseStravaTokenResponse = (
   json: unknown
-): StravaTokenResponse | null {
+): StravaTokenResponse | null => {
   const result = TokenResponseSchema.safeParse(json);
   if (!result.success) {
     return null;
@@ -39,23 +39,23 @@ export function parseStravaTokenResponse(
   const { access_token, refresh_token, expires_at, athlete } = result.data;
   return {
     access_token,
-    refresh_token,
-    expires_at,
     athlete: athlete
       ? {
-          id: athlete.id ?? undefined,
           firstname: athlete.firstname ?? undefined,
+          id: athlete.id ?? undefined,
           profile_medium: athlete.profile_medium ?? undefined,
         }
       : undefined,
+    expires_at,
+    refresh_token,
   };
-}
+};
 
 /** Read a token endpoint response body and validate it. Returns `null`
  * for malformed JSON as well as for a well-formed body of the wrong shape. */
-export async function readStravaTokenResponse(
+export const readStravaTokenResponse = async (
   res: Response
-): Promise<StravaTokenResponse | null> {
+): Promise<StravaTokenResponse | null> => {
   let json: unknown;
   try {
     json = await res.json();
@@ -63,4 +63,4 @@ export async function readStravaTokenResponse(
     return null;
   }
   return parseStravaTokenResponse(json);
-}
+};

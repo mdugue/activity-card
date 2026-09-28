@@ -17,26 +17,25 @@ const STRAVA_MOCK_BASE = `http://localhost:${STRAVA_MOCK_PORT}`;
  *   at without re-running locally.
  */
 export default defineConfig({
-  testDir: "./e2e",
-  fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 2 : undefined,
-  reporter: process.env.CI
-    ? [["github"], ["html", { open: "never" }]]
-    : [["list"], ["html", { open: "never" }]],
-  use: {
-    baseURL: `http://localhost:${PORT}`,
-    trace: "retain-on-failure",
-    screenshot: "only-on-failure",
-    video: "retain-on-failure",
-  },
+  fullyParallel: true,
   projects: [
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
   ],
+  reporter: process.env.CI
+    ? [["github"], ["html", { open: "never" }]]
+    : [["list"], ["html", { open: "never" }]],
+  retries: process.env.CI ? 2 : 0,
+  testDir: "./e2e",
+  use: {
+    baseURL: `http://localhost:${PORT}`,
+    screenshot: "only-on-failure",
+    trace: "retain-on-failure",
+    video: "retain-on-failure",
+  },
   webServer: [
     {
       // Strava API mock. Boots first so the Next.js server can talk to it
@@ -54,11 +53,6 @@ export default defineConfig({
     },
     {
       command: `bun run build && bun run start -- --port ${PORT}`,
-      url: `http://localhost:${PORT}`,
-      reuseExistingServer: !process.env.CI,
-      timeout: 180_000,
-      stdout: "pipe",
-      stderr: "pipe",
       env: {
         // Fake creds — the mock doesn't validate them, but the route
         // handlers refuse to start the flow without them set.
@@ -72,6 +66,12 @@ export default defineConfig({
         // cookie flag would prevent any Strava cookie from being set.
         STRAVA_INSECURE_COOKIES: "1",
       },
+      reuseExistingServer: !process.env.CI,
+      stderr: "pipe",
+      stdout: "pipe",
+      timeout: 180_000,
+      url: `http://localhost:${PORT}`,
     },
   ],
+  workers: process.env.CI ? 2 : undefined,
 });

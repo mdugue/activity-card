@@ -132,18 +132,15 @@ export interface ThemeBase {
 
 /** The user's effective colour choice for a theme: their pick, else the
  *  theme's default choice (photo-first themes), else its own preset scheme. */
-export function effectiveChoiceFor(
+export const effectiveChoiceFor = (
   theme: ThemeBase,
   choice: ColorChoice | null
-): ColorChoice {
-  return (
-    choice ??
-    theme.colors.defaultChoice ?? {
-      kind: "preset",
-      scheme: theme.colors.default,
-    }
-  );
-}
+): ColorChoice =>
+  choice ??
+  theme.colors.defaultChoice ?? {
+    kind: "preset",
+    scheme: theme.colors.default,
+  };
 
 /** The erased registry-facing single-card descriptor. The single card uniquely
  *  uses its `uses` to narrow the component's `data` type (see `defineTheme`). */
@@ -157,7 +154,7 @@ export interface SingleCardTheme extends ThemeBase {
  * component actually reads. `usesWhen` refines a declared capability per
  * activity (sport-aware), driving only the editor's availability.
  */
-export function defineTheme<
+export const defineTheme = <
   const K extends readonly CapabilityKey[],
   C extends Record<string, unknown> = Record<string, never>,
 >(d: {
@@ -171,32 +168,30 @@ export function defineTheme<
   tagline: string;
   uses: K;
   usesWhen?: Partial<Record<K[number], (data: ActivityView) => boolean>>;
-}): SingleCardTheme {
-  return {
-    id: d.id,
-    label: d.label,
-    tagline: d.tagline,
-    uses: d.uses,
-    usesWhen: d.usesWhen,
-    colors: d.colors,
-    photo: d.photo,
-    params: d.params ?? [],
-    defaults: d.defaults ?? {},
-    // reason: the registry stores all themes under one widened signature; the
-    // narrow K/C generics are fully checked above, at the definition site.
-    Component: d.Component as FC<ThemeProps>,
-  };
-}
+}): SingleCardTheme => ({
+  id: d.id,
+  label: d.label,
+  tagline: d.tagline,
+  uses: d.uses,
+  usesWhen: d.usesWhen,
+  colors: d.colors,
+  photo: d.photo,
+  params: d.params ?? [],
+  defaults: d.defaults ?? {},
+  // reason: the registry stores all themes under one widened signature; the
+  // narrow K/C generics are fully checked above, at the definition site.
+  Component: d.Component as FC<ThemeProps>,
+});
 
 /**
  * Strip the governed fields a theme did NOT declare, so the runtime data
  * matches the narrowed `ThemeData` type. Required text fields blank to ""
  * (mirroring `applyVisibility`); optional fields drop to undefined.
  */
-export function pickThemeData(
+export const pickThemeData = (
   theme: Pick<ThemeBase, "uses">,
   data: ActivityData
-): ActivityData {
+): ActivityData => {
   const declared = new Set(theme.uses);
   const out = { ...data };
   for (const cap of Object.keys(GOVERNED_FIELDS) as CapabilityKey[]) {
@@ -213,4 +208,4 @@ export function pickThemeData(
     }
   }
   return out;
-}
+};

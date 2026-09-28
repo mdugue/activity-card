@@ -23,7 +23,7 @@ import type { OAuthStatePayload } from "@/lib/strava-oauth-state";
  * (`state.s`, keyed with `STRAVA_CLIENT_SECRET` and bound to the nonce) so
  * production only relays codes to origins one of our deployments vouched for.
  */
-export async function GET(request: Request) {
+export const GET = async (request: Request) => {
   const clientId = process.env.STRAVA_CLIENT_ID;
   const clientSecret = process.env.STRAVA_CLIENT_SECRET;
   const redirectUri = process.env.STRAVA_REDIRECT_URI;
@@ -68,4 +68,4 @@ export async function GET(request: Request) {
   authorize.searchParams.set("state", encodeOAuthState(payload));
 
   return NextResponse.redirect(authorize);
-}
+};

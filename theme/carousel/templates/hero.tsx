@@ -10,7 +10,7 @@ import { MetaBand } from "./parts";
 import { SlideScaffold } from "./scaffold";
 import { slideText } from "./shared";
 
-export function HeroSlide({
+export const HeroSlide = ({
   data,
   style,
   hasPhoto,
@@ -18,7 +18,7 @@ export function HeroSlide({
   total,
   statOpts,
   showPageNumber,
-}: PanelProps) {
+}: PanelProps) => {
   const colors = slideText(style, hasPhoto);
   const anchor = style.contentAnchor;
   const hero = heroStat(data, style.heroMetric, statOpts);
@@ -28,16 +28,16 @@ export function HeroSlide({
       {data.title ? (
         <h1
           style={{
-            fontFamily: style.fonts.display,
-            fontWeight: style.fonts.displayWeight,
-            fontSize: 92,
-            lineHeight: 0.96,
-            letterSpacing: "-0.01em",
-            margin: 0,
             color: colors.fg,
-            textWrap: "pretty",
+            fontFamily: style.fonts.display,
+            fontSize: 92,
+            fontWeight: style.fonts.displayWeight,
+            letterSpacing: "-0.01em",
+            lineHeight: 0.96,
+            margin: 0,
             maxWidth: "92%",
             textShadow: colors.shadow || undefined,
+            textWrap: "pretty",
           }}
         >
           {data.title}
@@ -46,11 +46,11 @@ export function HeroSlide({
       {data.location ? (
         <div
           style={{
-            marginTop: 20,
+            color: colors.muted,
             fontFamily: style.fonts.mono,
             fontSize: 24,
             letterSpacing: "0.18em",
-            color: colors.muted,
+            marginTop: 20,
             textShadow: colors.shadow || undefined,
           }}
         >
@@ -61,21 +61,21 @@ export function HeroSlide({
       {hero.value ? (
         <div
           style={{
-            marginTop: 28,
-            display: "flex",
             alignItems: "baseline",
+            display: "flex",
             gap: 16,
+            marginTop: 28,
           }}
         >
           <span
             style={{
-              fontFamily: style.fonts.numeral,
-              fontWeight: style.fonts.numeralWeight,
-              fontSize: 348,
-              lineHeight: 0.78,
-              letterSpacing: "-0.02em",
               color: style.accent,
+              fontFamily: style.fonts.numeral,
+              fontSize: 348,
               fontVariantNumeric: "tabular-nums",
+              fontWeight: style.fonts.numeralWeight,
+              letterSpacing: "-0.02em",
+              lineHeight: 0.78,
               textShadow: colors.shadow || undefined,
             }}
           >
@@ -83,10 +83,10 @@ export function HeroSlide({
           </span>
           <span
             style={{
+              color: colors.fg,
               fontFamily: style.fonts.mono,
               fontSize: 58,
               fontWeight: 500,
-              color: colors.fg,
               textShadow: colors.shadow || undefined,
             }}
           >
@@ -114,4 +114,4 @@ export function HeroSlide({
       {block}
     </SlideScaffold>
   );
-}
+};

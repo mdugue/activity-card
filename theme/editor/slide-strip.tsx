@@ -39,7 +39,7 @@ interface SlideStripProps {
   visibility?: Visibility;
 }
 
-export function SlideStrip(props: SlideStripProps) {
+export const SlideStrip = (props: SlideStripProps) => {
   const { selectedIndex, onSelect, theme, format } = props;
   const total = theme.panels.length;
   // Thumbnail aspect + slice scale follow the active format, fit-to-box so the
@@ -87,16 +87,18 @@ export function SlideStrip(props: SlideStripProps) {
                   ? "border-foreground shadow-md"
                   : "border-foreground/15 opacity-80 hover:opacity-100"
               )}
-              onClick={() => onSelect(i)}
-              style={{ width: thumbW, height: thumbH }}
+              onClick={() => {
+                onSelect(i);
+              }}
+              style={{ height: thumbH, width: thumbW }}
               type="button"
             >
               <div
                 className="origin-top-left"
                 style={{
-                  width: format.width * total,
                   height: format.height,
                   transform: `translateX(${-(i * thumbW)}px) scale(${scale})`,
+                  width: format.width * total,
                 }}
               >
                 {canvas}
@@ -110,4 +112,4 @@ export function SlideStrip(props: SlideStripProps) {
       })}
     </div>
   );
-}
+};

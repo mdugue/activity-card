@@ -56,18 +56,16 @@ const DUNES_SIZE = { h: 2400, w: 1600 };
 // Stable keys for the carousel seam ticks (indexing this, not the loop index).
 const SEAM_KEYS = ["seam-a", "seam-b", "seam-c", "seam-d", "seam-e"];
 
-function usePortrait(): boolean {
+const usePortrait = (): boolean => {
   const { height, width } = useVideoConfig();
   return height > width;
-}
+};
 
-function clamp01(v: number): number {
-  return Math.min(1, Math.max(0, v));
-}
+const clamp01 = (v: number): number => Math.min(1, Math.max(0, v));
 
 // The deliberately dull "any stats app" panel — cold greys, system font. The
 // thing the bold claim is set against on the left of the opening's second beat.
-function BoringStats({ width }: { width: number }) {
+const BoringStats = ({ width }: { width: number }) => {
   const rows = [
     ["Distance", "18.43 km"],
     ["Moving time", "1:32:04"],
@@ -116,7 +114,7 @@ function BoringStats({ width }: { width: number }) {
       ))}
     </div>
   );
-}
+};
 
 /* ───────────────────────── shared bold-text layout ───────────────────────── */
 
@@ -126,7 +124,7 @@ interface HeadlineLine {
 }
 
 // Big Anton lines, optionally rising one after another. The video's voice.
-function BoldHeadline({
+const BoldHeadline = ({
   align = "left",
   frame,
   lines,
@@ -136,16 +134,16 @@ function BoldHeadline({
   frame: number;
   lines: HeadlineLine[];
   size: number;
-}) {
+}) => {
   const items = { center: "center", left: "flex-start", right: "flex-end" }[
     align
   ];
   return (
     <div
       style={{
+        alignItems: items,
         display: "flex",
         flexDirection: "column",
-        alignItems: items,
         textAlign: align,
       }}
     >
@@ -180,14 +178,30 @@ function BoldHeadline({
       })}
     </div>
   );
-}
+};
+
+const Overline = ({ label }: { label: string }) => (
+  <div
+    style={{
+      color: RUST_BRIGHT,
+      fontFamily: FONT.mono,
+      fontSize: 24,
+      fontWeight: 600,
+      letterSpacing: TRACKING.label,
+      marginBottom: 22,
+      textTransform: "uppercase",
+    }}
+  >
+    {label}
+  </div>
+);
 
 /**
  * The editorial split every middle beat shares: a bold headline block angled in
  * 3D on one side, the visual it describes on the other. `side` flips which is
  * which so successive beats trade sides. Portrait stacks them (text up top).
  */
-function SplitScene({
+const SplitScene = ({
   label,
   lines,
   side,
@@ -202,7 +216,7 @@ function SplitScene({
    *  like the sports fan so the text never sits under a card */
   spread?: number;
   visual: React.ReactNode;
-}) {
+}) => {
   const frame = useCurrentFrame();
   const { height, width } = useVideoConfig();
   const portrait = usePortrait();
@@ -266,32 +280,14 @@ function SplitScene({
       </Stage3D>
     </VideoFrame>
   );
-}
-
-function Overline({ label }: { label: string }) {
-  return (
-    <div
-      style={{
-        color: RUST_BRIGHT,
-        fontFamily: FONT.mono,
-        fontSize: 24,
-        fontWeight: 600,
-        letterSpacing: TRACKING.label,
-        marginBottom: 22,
-        textTransform: "uppercase",
-      }}
-    >
-      {label}
-    </div>
-  );
-}
+};
 
 /* ════════════════ 1 · Opening — "you put in the EFFORT" ════════════════ */
 // One scene, two claims. EFFORT is a single object that travels from the first
 // claim into the second, swinging face-on and taking the rust accent as it
 // lands — "your EFFORT deserves more than just plain statistics".
 
-export function OpeningScene() {
+export const OpeningScene = () => {
   const frame = useCurrentFrame();
   const { fps, height, width } = useVideoConfig();
   const portrait = usePortrait();
@@ -496,17 +492,17 @@ export function OpeningScene() {
       </Stage3D>
     </VideoFrame>
   );
-}
+};
 
 /* ════════════ 2 · Ingest → reveal — an input morphs into the card ════════════ */
 // GPX, .fit and Strava sit in the 3D room next to a bold claim; then the file
 // grows and morphs into the first card — an icon opening into the app.
 
-export function IngestRevealScene({
+export const IngestRevealScene = ({
   durationInFrames,
 }: {
   durationInFrames: number;
-}) {
+}) => {
   const frame = useCurrentFrame();
   const { fps, height, width } = useVideoConfig();
   const portrait = usePortrait();
@@ -688,7 +684,7 @@ export function IngestRevealScene({
       </Stage3D>
     </VideoFrame>
   );
-}
+};
 
 /* ════════════════ 3 · Themes — flying in from behind you ════════════════ */
 
@@ -699,11 +695,11 @@ const THEME_TOUR: { id: ThemeId; label: string; photo?: boolean }[] = [
   { id: "data", label: "Data" },
 ];
 
-export function ThemesScene({
+export const ThemesScene = ({
   durationInFrames,
 }: {
   durationInFrames: number;
-}) {
+}) => {
   const frame = useCurrentFrame();
   const { height, width } = useVideoConfig();
   const portrait = usePortrait();
@@ -771,12 +767,12 @@ export function ThemesScene({
   return (
     <SplitScene
       label="Pick your look"
-      lines={[{ text: entry.label }, { text: "look.", accent: true }]}
+      lines={[{ text: entry.label }, { accent: true, text: "look." }]}
       side="text-left"
       visual={visual}
     />
   );
-}
+};
 
 /* ════════════════ 4 · Colour — the whole card, recoloured ════════════════ */
 
@@ -787,7 +783,11 @@ const MOOD_BEATS: { label: string; mood: string }[] = [
   { label: "Dawn", mood: "dawn" },
 ];
 
-export function ColorScene({ durationInFrames }: { durationInFrames: number }) {
+export const ColorScene = ({
+  durationInFrames,
+}: {
+  durationInFrames: number;
+}) => {
   const frame = useCurrentFrame();
   const { height, width } = useVideoConfig();
   const portrait = usePortrait();
@@ -852,22 +852,22 @@ export function ColorScene({ durationInFrames }: { durationInFrames: number }) {
   return (
     <SplitScene
       label="Your colours"
-      lines={[{ text: beat.label }, { text: "in a tap.", accent: true }]}
+      lines={[{ text: beat.label }, { accent: true, text: "in a tap." }]}
       side="text-right"
       visual={visual}
     />
   );
-}
+};
 
 /* ═══════════ 5 · Carousel — uncrop the image into a whole strip ═══════════ */
 // Open on what looks like a single beautiful photo card, then literally uncrop
 // the same image — the frame widens to reveal it was a seamless carousel.
 
-export function CarouselScene({
+export const CarouselScene = ({
   durationInFrames,
 }: {
   durationInFrames: number;
-}) {
+}) => {
   const frame = useCurrentFrame();
   const { height, width } = useVideoConfig();
   const portrait = usePortrait();
@@ -1025,7 +1025,7 @@ export function CarouselScene({
       </div>
     </VideoFrame>
   );
-}
+};
 
 /* ════════════════════════ 6 · Every sport ════════════════════════ */
 
@@ -1036,7 +1036,7 @@ const SPORT_CARDS: { data: typeof SAMPLE_RIDE; id: ThemeId; label: string }[] =
     { data: SAMPLE_SWIM, id: "data", label: "Swim" },
   ];
 
-export function SportsScene() {
+export const SportsScene = () => {
   const frame = useCurrentFrame();
   const { height } = useVideoConfig();
   const portrait = usePortrait();
@@ -1085,23 +1085,21 @@ export function SportsScene() {
   return (
     <SplitScene
       label="Ride · Run · Swim · Tri"
-      lines={[{ text: "Every" }, { text: "sport.", accent: true }]}
+      lines={[{ text: "Every" }, { accent: true, text: "sport." }]}
       side="text-left"
       spread={portrait ? 0 : 0.07}
       visual={visual}
     />
   );
-}
+};
 
 /* ════════════════════════ 7 · CTA ════════════════════════ */
 
-export function CtaScene() {
-  return (
-    <VideoFrame>
-      <Backdrop grain variant="ink" />
-      <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
-        <LogoSting sub="Free · No account · In your browser" />
-      </AbsoluteFill>
-    </VideoFrame>
-  );
-}
+export const CtaScene = () => (
+  <VideoFrame>
+    <Backdrop grain variant="ink" />
+    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
+      <LogoSting sub="Free · No account · In your browser" />
+    </AbsoluteFill>
+  </VideoFrame>
+);

@@ -45,14 +45,14 @@ const SECONDS = 60;
 const QUARTER_HOUR_MIN = 15;
 
 /** Strava's short-window limit resets on the quarter hour. */
-function secondsToNextWindow(): number {
+const secondsToNextWindow = (): number => {
   const now = new Date();
   const elapsed =
     (now.getMinutes() % QUARTER_HOUR_MIN) * SECONDS + now.getSeconds();
   return QUARTER_HOUR_MIN * SECONDS - elapsed;
-}
+};
 
-function parsePair(header: string | null): [number, number] | undefined {
+const parsePair = (header: string | null): [number, number] | undefined => {
   if (!header) {
     return;
   }
@@ -60,25 +60,22 @@ function parsePair(header: string | null): [number, number] | undefined {
   if (Number.isFinite(a) && Number.isFinite(b)) {
     return [a, b];
   }
-}
+};
 
-function rateLimitFrom(res: Response): StravaRateLimit {
-  return {
-    retryAfter: secondsToNextWindow(),
-    limit: parsePair(res.headers.get("x-ratelimit-limit")),
-    usage: parsePair(res.headers.get("x-ratelimit-usage")),
-  };
-}
+const rateLimitFrom = (res: Response): StravaRateLimit => ({
+  limit: parsePair(res.headers.get("x-ratelimit-limit")),
+  retryAfter: secondsToNextWindow(),
+  usage: parsePair(res.headers.get("x-ratelimit-usage")),
+});
 
 const UNAUTHORIZED = 401;
 const TOO_MANY_REQUESTS = 429;
 
-function rawFetch(path: string, token: string): Promise<Response> {
-  return fetch(`${STRAVA_API_BASE}${path}`, {
-    headers: { authorization: `Bearer ${token}` },
+const rawFetch = async (path: string, token: string): Promise<Response> =>
+  await fetch(`${STRAVA_API_BASE}${path}`, {
     cache: "no-store",
+    headers: { authorization: `Bearer ${token}` },
   });
-}
 
 /**
  * GET a Strava endpoint with a valid access token and return its JSON body.
@@ -93,10 +90,10 @@ function rawFetch(path: string, token: string): Promise<Response> {
  *
  * Map these to HTTP responses with `stravaErrorResponse()`.
  */
-export async function stravaFetch<T>(
+export const stravaFetch = async <T>(
   path: string,
   opts?: { token?: string }
-): Promise<T> {
+): Promise<T> => {
   let token = opts?.token ?? (await ensureFreshToken());
   let res = await rawFetch(path, token);
 
@@ -117,7 +114,7 @@ export async function stravaFetch<T>(
     throw new StravaUpstreamError(res.status);
   }
   return (await res.json()) as T;
-}
+};
 
 /**
  * Like `stravaFetch`, but returns `null` instead of throwing when Strava
@@ -127,10 +124,10 @@ export async function stravaFetch<T>(
  * "successful" but data-poor response; dropping a 429 would burn the next
  * call against the limit anyway.
  */
-export async function stravaFetchOptional<T>(
+export const stravaFetchOptional = async <T>(
   path: string,
   opts?: { token?: string }
-): Promise<T | null> {
+): Promise<T | null> => {
   try {
     return await stravaFetch<T>(path, opts);
   } catch (error) {
@@ -139,20 +136,20 @@ export async function stravaFetchOptional<T>(
     }
     throw error;
   }
-}
+};
 
 /**
  * Translate a thrown Strava error into the JSON response shape the client
  * expects. Re-throws anything unrecognised so Next surfaces a real 500.
  */
-export function stravaErrorResponse(err: unknown): NextResponse {
+export const stravaErrorResponse = (err: unknown): NextResponse => {
   if (err instanceof StravaNotConnectedError) {
     return NextResponse.json({ error: "not_connected" }, { status: 401 });
   }
   if (err instanceof StravaRateLimitError) {
     return NextResponse.json(
       { error: "rate_limited", retryAfter: err.info.retryAfter },
-      { status: 429, headers: { "retry-after": String(err.info.retryAfter) } }
+      { headers: { "retry-after": String(err.info.retryAfter) }, status: 429 }
     );
   }
   if (err instanceof StravaUpstreamError) {
@@ -162,4 +159,4 @@ export function stravaErrorResponse(err: unknown): NextResponse {
     );
   }
   throw err;
-}
+};

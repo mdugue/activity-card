@@ -39,8 +39,8 @@ describe("buildStats", () => {
     // "NaN" for a non-finite distance (heroStat then headlines "NaN"/"N").
     const stats = buildStats({
       ...SAMPLE_RUN,
-      sport: "swim",
       distanceKm: Number.NaN,
+      sport: "swim",
     });
     const distance = stats.find((s) => s.key === "distance");
     expect(distance?.value).toBe("—");

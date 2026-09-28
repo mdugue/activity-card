@@ -104,11 +104,11 @@ export const PARAM_GROUP_ORDER: ParamGroup[] = [
 ];
 
 export const PARAM_GROUP_LABEL: Record<ParamGroup, string> = {
-  style: "STYLE",
-  layout: "LAYOUT",
-  photo: "PHOTO",
-  text: "TEXT",
-  stats: "STATS",
-  marks: "MARKS",
   activity: "ACTIVITY",
+  layout: "LAYOUT",
+  marks: "MARKS",
+  photo: "PHOTO",
+  stats: "STATS",
+  style: "STYLE",
+  text: "TEXT",
 };

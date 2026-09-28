@@ -16,13 +16,13 @@ const CLICK_FRAMES = 16;
  * A cursor dot for faked UI beats — glides between keyframes on the app's
  * panel curve and pulses a ring on clicks. Coordinates are canvas pixels.
  */
-export function Cursor({
+export const Cursor = ({
   keyframes,
   size = 30,
 }: {
   keyframes: CursorKeyframe[];
   size?: number;
-}) {
+}) => {
   const frame = useCurrentFrame();
   const frames = keyframes.map((k) => k.frame);
   const single = keyframes.length === 1;
@@ -100,4 +100,4 @@ export function Cursor({
       />
     </div>
   );
-}
+};

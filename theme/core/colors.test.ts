@@ -10,26 +10,24 @@ import {
 } from "@/theme/core/colors";
 import type { ColorChoice } from "@/theme/core/colors";
 
-function paletteTheme(accent: string): PaletteTheme {
-  return {
-    variant: "vibrant",
-    accent,
-    accent2: "#222222",
-    background: "#101010",
-    body: "#cccccc",
-    headline: "#ffffff",
-    onAccent: "#000000",
-  };
-}
+const paletteTheme = (accent: string): PaletteTheme => ({
+  accent,
+  accent2: "#222222",
+  background: "#101010",
+  body: "#cccccc",
+  headline: "#ffffff",
+  onAccent: "#000000",
+  variant: "vibrant",
+});
 
 const PALETTE: ExtractedPalette = {
   swatches: [],
   themes: {
-    vibrant: paletteTheme("#ff0000"),
-    muted: paletteTheme("#884444"),
     complementary: paletteTheme("#00ff00"),
-    spectrum: paletteTheme("#0000ff"),
+    muted: paletteTheme("#884444"),
     pure: paletteTheme("#ffffff"),
+    spectrum: paletteTheme("#0000ff"),
+    vibrant: paletteTheme("#ff0000"),
   },
 };
 
@@ -86,14 +84,14 @@ describe("coerceColorChoice", () => {
     const out = coerceColorChoice({
       kind: "preset",
       scheme: {
+        onPrimary: "#ffffff",
         primary: "#abc",
         secondary: "javascript:alert(1)",
-        onPrimary: "#ffffff",
       },
     });
     expect(out).toEqual({
       kind: "preset",
-      scheme: { primary: "#abc", secondary: undefined, onPrimary: "#ffffff" },
+      scheme: { onPrimary: "#ffffff", primary: "#abc", secondary: undefined },
     });
   });
 

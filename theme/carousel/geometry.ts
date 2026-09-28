@@ -13,16 +13,14 @@ export interface StripGeometry {
 }
 
 /** Pure strip geometry for a format + slide count (the non-React callers). */
-export function stripGeometry(
+export const stripGeometry = (
   format: ExportFormat,
   count: number
-): StripGeometry {
-  return {
-    slideW: format.width,
-    slideH: format.height,
-    stripW: count * format.width,
-  };
-}
+): StripGeometry => ({
+  slideH: format.height,
+  slideW: format.width,
+  stripW: count * format.width,
+});
 
 /** The panel's natural margin, per side (was the flat `SLIDE_PAD`). `SafeArea`
  *  floors content to max(this, platform safe inset), so feed is unchanged
@@ -30,6 +28,7 @@ export function stripGeometry(
 export const CAROUSEL_NATURAL_MARGIN = 90;
 
 /** The full-width STRIP frame the canvas reads — count slides across, one tall. */
-export function stripFormat(format: ExportFormat, count: number): ExportFormat {
-  return { ...format, width: count * format.width };
-}
+export const stripFormat = (
+  format: ExportFormat,
+  count: number
+): ExportFormat => ({ ...format, width: count * format.width });

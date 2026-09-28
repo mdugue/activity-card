@@ -10,14 +10,14 @@ import type { CanvasProps } from "@/theme/carousel/define-theme";
 
 import { StrataHero } from "../strata-canvas";
 
-export function StrataCanvas({
+export const StrataCanvas = ({
   data,
   style,
   w,
   h,
   overPhoto,
   config,
-}: CanvasProps) {
+}: CanvasProps) => {
   const cfg = (config ?? DEFAULT_STRATA_CONFIG) as StrataConfig;
   return (
     <StrataHero
@@ -29,4 +29,4 @@ export function StrataCanvas({
       w={w}
     />
   );
-}
+};

@@ -31,7 +31,7 @@ export const SPORTS_DURATION_IN_FRAMES =
   WALK.fade * (STEPS + 1);
 
 // One sport beat: the real card plus the metrics that sport surfaces.
-function SportStep({
+const SportStep = ({
   data,
   id,
   metrics,
@@ -39,7 +39,7 @@ function SportStep({
   data: ActivityData;
   id: ThemeId;
   metrics: string[];
-}) {
+}) => {
   const { height } = useVideoConfig();
   return (
     <div
@@ -64,9 +64,9 @@ function SportStep({
       </div>
     </div>
   );
-}
+};
 
-export function FeatureSports() {
+export const FeatureSports = () => {
   const t = (
     <TransitionSeries.Transition
       presentation={fade()}
@@ -148,4 +148,4 @@ export function FeatureSports() {
       </TransitionSeries.Sequence>
     </TransitionSeries>
   );
-}
+};

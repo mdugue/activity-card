@@ -26,24 +26,22 @@ interface CardStageProps {
  * bounded-height ancestor: it's a `container-type:size` container, so `100cqh`
  * resolves to 0 unless an ancestor supplies a definite block-size.
  */
-export function CardStage({
+export const CardStage = ({
   children,
   maxWidthClassName,
   aspectRatio = 1080 / 1350,
-}: CardStageProps) {
-  return (
+}: CardStageProps) => (
+  <div
+    className="max-lg:[container-type:size] max-lg:grid max-lg:min-h-0 max-lg:flex-1 max-lg:place-items-center lg:block"
+    style={{ "--card-aspect": aspectRatio } as CSSProperties}
+  >
     <div
-      className="max-lg:[container-type:size] max-lg:grid max-lg:min-h-0 max-lg:flex-1 max-lg:place-items-center lg:block"
-      style={{ "--card-aspect": aspectRatio } as CSSProperties}
+      className={cn(
+        "relative mx-auto max-lg:w-[min(100cqw,calc(100cqh*var(--card-aspect)))] lg:w-full",
+        maxWidthClassName
+      )}
     >
-      <div
-        className={cn(
-          "relative mx-auto max-lg:w-[min(100cqw,calc(100cqh*var(--card-aspect)))] lg:w-full",
-          maxWidthClassName
-        )}
-      >
-        {children}
-      </div>
+      {children}
     </div>
-  );
-}
+  </div>
+);

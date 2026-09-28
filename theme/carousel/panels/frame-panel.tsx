@@ -31,19 +31,19 @@ const SPARK_W = 900;
 const SPARK_H = 132;
 
 const bandColors = (color: string) => ({
-  line: color,
   fillFrom: color,
   fillTo: "transparent",
+  line: color,
 });
 
 /** Route silhouette spark — every leg for a project, the single route otherwise. */
-function FrameRouteSpark({
+const FrameRouteSpark = ({
   data,
   color,
 }: {
   color: string;
   data: ActivityData;
-}) {
+}) => {
   const multi = isMultiActivity(data);
   const routes = multi ? segmentRoutes(data).map((r) => r.coords) : [];
   const coords = multi ? undefined : routeSeries(data);
@@ -65,13 +65,13 @@ function FrameRouteSpark({
       w={SPARK_W}
     />
   );
-}
+};
 
 /** Pick the single-activity series for a non-route datum. */
-function frameSeries(
+const frameSeries = (
   data: ActivityData,
   statKey: string
-): number[] | undefined {
+): number[] | undefined => {
   if (statKey === "elevation") {
     return elevationSeries(data);
   }
@@ -84,10 +84,10 @@ function frameSeries(
   if (statKey === "pace") {
     return paceSeries(data);
   }
-}
+};
 
 /** Band spark (elevation / pace / speed / power) — legs side by side for a project. */
-function FrameBandSpark({
+const FrameBandSpark = ({
   data,
   color,
   statKey,
@@ -95,7 +95,7 @@ function FrameBandSpark({
   color: string;
   data: ActivityData;
   statKey: string;
-}) {
+}) => {
   const mode: "elevation" | "pace" = statKey === "pace" ? "pace" : "elevation";
   const multi = isMultiActivity(data);
 
@@ -131,11 +131,11 @@ function FrameBandSpark({
       w={SPARK_W}
     />
   );
-}
+};
 
 /** The matching sparkline for a Frame datum, or null when the metric has no
  *  series. Route renders as the silhouette; everything else as a band. */
-function FrameSpark({
+const FrameSpark = ({
   statKey,
   data,
   color,
@@ -143,23 +143,21 @@ function FrameSpark({
   color: string;
   data: ActivityData;
   statKey: string;
-}) {
+}) => {
   if (statKey === "distance") {
     return <FrameRouteSpark color={color} data={data} />;
   }
   return <FrameBandSpark color={color} data={data} statKey={statKey} />;
-}
+};
 
-function Rule({ color }: { color: string }) {
-  return (
-    <div
-      aria-hidden
-      style={{ height: 1, background: color, opacity: 0.22, width: "100%" }}
-    />
-  );
-}
+const Rule = ({ color }: { color: string }) => (
+  <div
+    aria-hidden
+    style={{ background: color, height: 1, opacity: 0.22, width: "100%" }}
+  />
+);
 
-function FrameDatum({
+const FrameDatum = ({
   data,
   style,
   c,
@@ -169,18 +167,18 @@ function FrameDatum({
   data: ActivityData;
   stat: StatItem;
   style: PanelProps["style"];
-}) {
+}) => {
   const sparkColor = c.shadow && style.dark ? "#ffffff" : style.accent;
   return (
-    <div style={{ marginTop: "auto", marginBottom: "auto" }}>
+    <div style={{ marginBottom: "auto", marginTop: "auto" }}>
       <Rule color={c.fg} />
       <div style={{ padding: "54px 0 44px" }}>
         <div
           style={{
+            color: c.muted,
             fontFamily: style.fonts.mono,
             fontSize: 24,
             letterSpacing: "0.24em",
-            color: c.muted,
             textShadow: c.shadow || undefined,
           }}
         >
@@ -188,21 +186,21 @@ function FrameDatum({
         </div>
         <div
           style={{
-            marginTop: 16,
-            display: "flex",
             alignItems: "baseline",
+            display: "flex",
             gap: 18,
+            marginTop: 16,
           }}
         >
           <span
             style={{
-              fontFamily: style.fonts.numeral,
-              fontWeight: style.fonts.numeralWeight,
-              fontSize: 236,
-              lineHeight: 0.8,
-              letterSpacing: "-0.03em",
               color: c.fg,
+              fontFamily: style.fonts.numeral,
+              fontSize: 236,
               fontVariantNumeric: "tabular-nums",
+              fontWeight: style.fonts.numeralWeight,
+              letterSpacing: "-0.03em",
+              lineHeight: 0.8,
               textShadow: c.shadow || undefined,
             }}
           >
@@ -211,9 +209,9 @@ function FrameDatum({
           {stat.unit ? (
             <span
               style={{
+                color: style.accent,
                 fontFamily: style.fonts.mono,
                 fontSize: 48,
-                color: style.accent,
                 textShadow: c.shadow || undefined,
               }}
             >
@@ -221,16 +219,16 @@ function FrameDatum({
             </span>
           ) : null}
         </div>
-        <div style={{ marginTop: 26, width: SPARK_W, height: SPARK_H }}>
+        <div style={{ height: SPARK_H, marginTop: 26, width: SPARK_W }}>
           <FrameSpark color={sparkColor} data={data} statKey={stat.key} />
         </div>
       </div>
       <Rule color={c.fg} />
     </div>
   );
-}
+};
 
-function FrameSignature({
+const FrameSignature = ({
   data,
   style,
   c,
@@ -240,52 +238,50 @@ function FrameSignature({
   data: ActivityData;
   showEffort: boolean;
   style: PanelProps["style"];
-}) {
-  return (
-    <div style={{ marginTop: "auto", marginBottom: "auto" }}>
-      <Rule color={c.fg} />
-      <h1
+}) => (
+  <div style={{ marginBottom: "auto", marginTop: "auto" }}>
+    <Rule color={c.fg} />
+    <h1
+      style={{
+        color: c.fg,
+        fontFamily: style.fonts.display,
+        fontSize: 92,
+        fontWeight: style.fonts.displayWeight,
+        letterSpacing: "-0.02em",
+        lineHeight: 0.95,
+        margin: "44px 0",
+        textShadow: c.shadow || undefined,
+        textWrap: "balance",
+      }}
+    >
+      {data.title || style.label}
+    </h1>
+    <Rule color={c.fg} />
+    {showEffort || data.athleteName ? (
+      <div
         style={{
-          fontFamily: style.fonts.display,
-          fontWeight: style.fonts.displayWeight,
-          fontSize: 92,
-          lineHeight: 0.95,
-          letterSpacing: "-0.02em",
-          margin: "44px 0",
-          color: c.fg,
-          textWrap: "balance",
+          color: c.muted,
+          display: "flex",
+          fontFamily: style.fonts.mono,
+          fontSize: 20,
+          justifyContent: "space-between",
+          letterSpacing: "0.2em",
+          marginTop: 28,
           textShadow: c.shadow || undefined,
         }}
       >
-        {data.title || style.label}
-      </h1>
-      <Rule color={c.fg} />
-      {showEffort || data.athleteName ? (
-        <div
-          style={{
-            marginTop: 28,
-            fontFamily: style.fonts.mono,
-            fontSize: 20,
-            letterSpacing: "0.2em",
-            color: c.muted,
-            display: "flex",
-            justifyContent: "space-between",
-            textShadow: c.shadow || undefined,
-          }}
-        >
-          <span>{showEffort ? "MADE WITH EFFORT" : ""}</span>
-          {data.athleteName ? (
-            <span>{data.athleteName.toUpperCase()}</span>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
-  );
-}
+        <span>{showEffort ? "MADE WITH EFFORT" : ""}</span>
+        {data.athleteName ? (
+          <span>{data.athleteName.toUpperCase()}</span>
+        ) : null}
+      </div>
+    ) : null}
+  </div>
+);
 
 /** Shared Frame chrome: location header + slide index, the per-slide body, and
  *  the theme nameplate footer. */
-function FrameChrome({
+const FrameChrome = ({
   data,
   style,
   hasPhoto,
@@ -293,7 +289,7 @@ function FrameChrome({
   total,
   showPageNumber,
   children,
-}: PanelProps & { children: React.ReactNode }) {
+}: PanelProps & { children: React.ReactNode }) => {
   const c = slideText(style, hasPhoto);
   return (
     <SafeArea
@@ -302,12 +298,12 @@ function FrameChrome({
     >
       <div
         style={{
+          color: c.muted,
           display: "flex",
-          justifyContent: "space-between",
           fontFamily: style.fonts.mono,
           fontSize: 20,
+          justifyContent: "space-between",
           letterSpacing: "0.24em",
-          color: c.muted,
           textShadow: c.shadow || undefined,
         }}
       >
@@ -320,10 +316,10 @@ function FrameChrome({
       <div
         aria-hidden
         style={{
+          color: c.muted,
           fontFamily: style.fonts.mono,
           fontSize: 18,
           letterSpacing: "0.24em",
-          color: c.muted,
           textShadow: c.shadow || undefined,
         }}
       >
@@ -331,12 +327,12 @@ function FrameChrome({
       </div>
     </SafeArea>
   );
-}
+};
 
 /** A Frame datum slide: one curated stat + its sparkline (route / elevation /
  *  speed / power), chosen by slide index from Frame's priority order. A sparse
  *  activity with fewer data than slots leaves the slide blank. */
-export function FrameDatumPanel(props: PanelProps) {
+export const FrameDatumPanel = (props: PanelProps) => {
   const { data, style, hasPhoto, index, statOpts } = props;
   const c = slideText(style, hasPhoto);
   const stat: StatItem | undefined = frameStats(data, statOpts)[index];
@@ -349,10 +345,10 @@ export function FrameDatumPanel(props: PanelProps) {
       )}
     </FrameChrome>
   );
-}
+};
 
 /** The Frame wrap-up slide: title + the "made with effort" mark. */
-export function FrameSignaturePanel(props: PanelProps) {
+export const FrameSignaturePanel = (props: PanelProps) => {
   const { data, style, hasPhoto, showEffort } = props;
   const c = slideText(style, hasPhoto);
   return (
@@ -360,4 +356,4 @@ export function FrameSignaturePanel(props: PanelProps) {
       <FrameSignature c={c} data={data} showEffort={showEffort} style={style} />
     </FrameChrome>
   );
-}
+};

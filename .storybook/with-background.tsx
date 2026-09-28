@@ -15,10 +15,10 @@ import type { ImageSize } from "@/hooks/use-image-natural-size";
 
 import { BACKGROUND_PRESETS } from "./backgrounds";
 
-function resolveUrl(
+const resolveUrl = (
   globals: Record<string, unknown>,
   args: Record<string, unknown>
-): string | null {
+): string | null => {
   // Storybook's `file` control yields an array of object URLs for the upload.
   const uploaded = args.bgUpload;
   if (
@@ -32,11 +32,11 @@ function resolveUrl(
   return typeof preset === "string"
     ? (BACKGROUND_PRESETS[preset]?.url ?? null)
     : null;
-}
+};
 
 /** Measures the photo asynchronously (as the app does) then renders the story
  *  with the resolved `photoUrl` + `imageSize`. A component so the hook is legal. */
-function WithBackgroundPhoto({
+const WithBackgroundPhoto = ({
   url,
   render,
 }: {
@@ -45,10 +45,10 @@ function WithBackgroundPhoto({
     photoUrl?: string;
     imageSize: ImageSize | null;
   }) => ReactNode;
-}) {
+}) => {
   const imageSize = useImageNaturalSize(url);
-  return <>{render({ photoUrl: url ?? undefined, imageSize })}</>;
-}
+  return <>{render({ imageSize, photoUrl: url ?? undefined })}</>;
+};
 
 export const withBackground: Decorator = (Story, context) => {
   const url = resolveUrl(context.globals, context.args);

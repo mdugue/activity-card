@@ -13,7 +13,7 @@ const PER_PAGE = 30;
  * The picker treats this as a hint and still trusts canGoNext (current
  * page === full) for the actual edge of the list.
  */
-export async function GET() {
+export const GET = async () => {
   try {
     const token = await ensureFreshToken();
     const tokens = await readTokens();
@@ -35,4 +35,4 @@ export async function GET() {
   } catch (error) {
     return stravaErrorResponse(error);
   }
-}
+};

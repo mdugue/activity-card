@@ -32,10 +32,14 @@ const unsplash = (id: string): string =>
 
 /** Keyed by the value stored in the `background` global. */
 export const BACKGROUND_PRESETS: Record<string, BackgroundPreset> = {
+  mountainTrail: {
+    label: "Trail · mountains",
+    url: unsplash("1551632811-561732d1e306"),
+  },
   none: { label: "None", url: null },
-  trackRunners: {
-    label: "Running · track",
-    url: unsplash("1502904550040-7534597429ae"),
+  openRoad: {
+    label: "Road · open",
+    url: unsplash("1500530855697-b586d89ba3ee"),
   },
   peloton: {
     label: "Cycling · peloton",
@@ -49,13 +53,9 @@ export const BACKGROUND_PRESETS: Record<string, BackgroundPreset> = {
     label: "Swimming · pool",
     url: unsplash("1530549387789-4c1017266635"),
   },
-  mountainTrail: {
-    label: "Trail · mountains",
-    url: unsplash("1551632811-561732d1e306"),
-  },
-  openRoad: {
-    label: "Road · open",
-    url: unsplash("1500530855697-b586d89ba3ee"),
+  trackRunners: {
+    label: "Running · track",
+    url: unsplash("1502904550040-7534597429ae"),
   },
 };
 
@@ -64,16 +64,16 @@ export const DEFAULT_BACKGROUND = "none";
 /** Toolbar dropdown of preset backgrounds — applies across every theme story. */
 export const backgroundGlobalTypes = {
   background: {
-    name: "Background",
     description: "Background photo applied to theme stories",
+    name: "Background",
     toolbar: {
-      title: "Background",
-      icon: "photo",
       dynamicTitle: true,
+      icon: "photo",
       items: Object.entries(BACKGROUND_PRESETS).map(([value, preset]) => ({
-        value,
         title: preset.label,
+        value,
       })),
+      title: "Background",
     },
   },
 } satisfies GlobalTypes;
@@ -86,10 +86,10 @@ export const backgroundGlobalTypes = {
  */
 export const backgroundArgTypes = {
   bgUpload: {
-    name: "Background upload",
+    control: { accept: "image/*", type: "file" },
     description:
       "Upload a local image to preview as the background. Overrides the toolbar Background.",
-    control: { type: "file", accept: "image/*" },
+    name: "Background upload",
     table: { category: "Background" },
   },
 } as const;

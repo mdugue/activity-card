@@ -26,14 +26,14 @@ interface EditStateProps {
   theme: ThemeId;
 }
 
-export function EditState({
+export const EditState = ({
   session,
   theme,
   format,
   onFormatChange,
   onThemeChange,
   onExport,
-}: EditStateProps) {
+}: EditStateProps) => {
   const { data, visibility, color, config, photo } = session;
   // The safe-zone guide is an editor-only preview overlay; the FORMAT control
   // toggles it and the preview reads it.
@@ -90,4 +90,4 @@ export function EditState({
       />
     </TooltipProvider>
   );
-}
+};

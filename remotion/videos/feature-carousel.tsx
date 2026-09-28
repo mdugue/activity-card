@@ -32,7 +32,7 @@ export const CAROUSEL_DURATION_IN_FRAMES =
   WALK.outro -
   WALK.fade * (STEPS + 1);
 
-function DeckPan({
+const DeckPan = ({
   config,
   durationInFrames,
   id,
@@ -44,7 +44,7 @@ function DeckPan({
   id: CarouselThemeId;
   photo?: boolean;
   showSeams?: boolean;
-}) {
+}) => {
   const frame = useCurrentFrame();
   const { height, width } = useVideoConfig();
   const theme = CAROUSEL_THEMES[id];
@@ -82,11 +82,11 @@ function DeckPan({
       </StripPan>
     </>
   );
-}
+};
 
 // The atmosphere knob: the same Trace deck, Dawn for the first half, Dusk for
 // the second — with the pills calling the switch.
-function AtmosphereStep({ durationInFrames }: { durationInFrames: number }) {
+const AtmosphereStep = ({ durationInFrames }: { durationInFrames: number }) => {
   const frame = useCurrentFrame();
   const { height, width } = useVideoConfig();
   const flipAt = Math.floor(durationInFrames / 2);
@@ -128,9 +128,9 @@ function AtmosphereStep({ durationInFrames }: { durationInFrames: number }) {
       </div>
     </div>
   );
-}
+};
 
-export function FeatureCarousel() {
+export const FeatureCarousel = () => {
   const t = (
     <TransitionSeries.Transition
       presentation={fade()}
@@ -190,4 +190,4 @@ export function FeatureCarousel() {
       </TransitionSeries.Sequence>
     </TransitionSeries>
   );
-}
+};

@@ -10,13 +10,13 @@ import {
 } from "@/lib/multi-activity";
 
 const base: ActivityData = {
-  sport: "triathlon",
-  title: "Tri",
-  date: "2026-01-01",
-  location: "",
   athleteName: "",
+  date: "2026-01-01",
   distanceKm: 10,
   durationSec: 1000,
+  location: "",
+  sport: "triathlon",
+  title: "Tri",
 };
 
 describe("isMultiActivity", () => {
@@ -25,15 +25,15 @@ describe("isMultiActivity", () => {
     expect(
       isMultiActivity({
         ...base,
-        segments: [{ sport: "run", distanceKm: 1, durationSec: 1 }],
+        segments: [{ distanceKm: 1, durationSec: 1, sport: "run" }],
       })
     ).toBe(false);
     expect(
       isMultiActivity({
         ...base,
         segments: [
-          { sport: "swim", distanceKm: 1, durationSec: 1 },
-          { sport: "run", distanceKm: 2, durationSec: 2 },
+          { distanceKm: 1, durationSec: 1, sport: "swim" },
+          { distanceKm: 2, durationSec: 2, sport: "run" },
         ],
       })
     ).toBe(true);
@@ -45,21 +45,21 @@ describe("segmentRoutes", () => {
     const routes = segmentRoutes({
       ...base,
       segments: [
-        { sport: "swim", distanceKm: 1, durationSec: 1 },
+        { distanceKm: 1, durationSec: 1, sport: "swim" },
         {
-          sport: "bike",
           distanceKm: 5,
           durationSec: 5,
           routeCoordinates: [
             [0, 0],
             [1, 1],
           ],
+          sport: "bike",
         },
         {
-          sport: "run",
           distanceKm: 2,
           durationSec: 2,
           routeCoordinates: [[0, 0]],
+          sport: "run",
         },
       ],
     });
@@ -74,19 +74,19 @@ describe("segmentProfiles", () => {
     const out = segmentProfiles({
       ...base,
       segments: [
-        { sport: "swim", distanceKm: 1, durationSec: 1 },
+        { distanceKm: 1, durationSec: 1, sport: "swim" },
         {
-          sport: "bike",
           distanceKm: 5,
           durationSec: 5,
           elevationProfile: [0, 10, 20],
           paceProfile: [300, 290, 280],
+          sport: "bike",
         },
         {
-          sport: "run",
           distanceKm: 2,
           durationSec: 2,
           elevationProfile: [1, 2, 3],
+          sport: "run",
         },
       ],
     });
@@ -101,16 +101,16 @@ describe("segmentProfiles", () => {
       ...base,
       segments: [
         {
-          sport: "run",
           distanceKm: 2,
           durationSec: 2,
           paceProfile: [300, 290, 280],
+          sport: "run",
         },
         {
-          sport: "bike",
           distanceKm: 5,
           durationSec: 5,
           paceProfile: [200, 210],
+          sport: "bike",
         },
       ],
     });
@@ -124,17 +124,17 @@ describe("segmentSeries", () => {
     ...base,
     segments: [
       {
-        sport: "bike",
         distanceKm: 5,
         durationSec: 5,
         elevationProfile: [0, 10, 20],
+        sport: "bike",
       },
       {
-        sport: "run",
         distanceKm: 2,
         durationSec: 2,
         elevationProfile: [1, 2, 3],
         paceProfile: [300, 290, 280],
+        sport: "run",
       },
     ],
   };

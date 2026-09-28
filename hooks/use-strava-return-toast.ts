@@ -9,7 +9,7 @@ import { toast } from "sonner";
  * success (the caller opens the wizard's Strava picker), then strip the
  * param so a reload doesn't re-fire. Re-runs are no-ops once stripped.
  */
-export function useStravaReturnToast(onConnected: () => void): void {
+export const useStravaReturnToast = (onConnected: () => void): void => {
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -58,4 +58,4 @@ export function useStravaReturnToast(onConnected: () => void): void {
     url.searchParams.delete("reason");
     window.history.replaceState({}, "", url.toString());
   }, [onConnected]);
-}
+};

@@ -22,10 +22,10 @@ const LIGHT_SHADOW =
   "0 0 2px rgba(255,255,255,1), 0 0 6px rgba(255,255,255,0.98), 0 0 14px rgba(255,255,255,0.9), 0 0 26px rgba(255,255,255,0.72), 0 0 46px rgba(255,255,255,0.5), 0 1px 2px rgba(0,0,0,0.2)";
 
 /** Foreground colours + an optional text-shadow for the slide's text. */
-export function slideText(
+export const slideText = (
   style: EffectiveStyle,
   hasPhoto: boolean
-): SlideTextColors {
+): SlideTextColors => {
   if (hasPhoto && style.dark) {
     return {
       fg: "#ffffff",
@@ -48,10 +48,10 @@ export function slideText(
     muted: style.mutedInk,
     shadow: "",
   };
-}
+};
 
 /** "01 / 05" slide index, zero-padded. */
-export function slideNumber(index: number, total: number): string {
+export const slideNumber = (index: number, total: number): string => {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${pad(index + 1)} / ${pad(total)}`;
-}
+};

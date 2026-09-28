@@ -68,12 +68,12 @@ describe("mergeSafe", () => {
     // this is what keeps the 4:5 master pixel-identical to the legacy output.
     const feed = getFormat(DEFAULT_FORMAT_ID);
     const i = mergeSafe(feed.safe, {
-      top: 110,
-      right: 90,
       bottom: 80,
       left: 90,
+      right: 90,
+      top: 110,
     });
-    expect(i).toEqual({ top: 110, right: 90, bottom: 80, left: 90 });
+    expect(i).toEqual({ bottom: 80, left: 90, right: 90, top: 110 });
   });
 
   test("the platform safe inset floors a smaller theme margin", () => {
@@ -81,12 +81,12 @@ describe("mergeSafe", () => {
     // margin, while the wider side margin (80 > 64) still wins per-side.
     const story = getFormat("instagram-story"); // t220 r64 b220 l64
     const i = mergeSafe(story.safe, {
-      top: 70,
-      right: 80,
       bottom: 70,
       left: 80,
+      right: 80,
+      top: 70,
     });
-    expect(i).toEqual({ top: 220, right: 80, bottom: 220, left: 80 });
+    expect(i).toEqual({ bottom: 220, left: 80, right: 80, top: 220 });
   });
 
   test("missing natural sides default to 0 (safe inset wins)", () => {

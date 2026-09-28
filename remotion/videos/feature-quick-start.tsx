@@ -37,43 +37,41 @@ export const QUICK_START_DURATION_IN_FRAMES =
   WALK.outro -
   WALK.fade * (STEPS + 1);
 
-function DropStep() {
-  return (
-    <div
-      style={{
-        alignItems: "center",
-        display: "flex",
-        flexDirection: "row",
-        gap: SPACE.md,
-      }}
-    >
-      <RiseIn delay={10}>
-        <FileChip label="sunday-ride.gpx" scale={1.2} />
-      </RiseIn>
-      <RiseIn delay={18}>
-        <span
-          style={{
-            color: PAPER_DIM,
-            fontFamily: FONT.mono,
-            fontSize: TYPE.caption,
-            letterSpacing: "0.18em",
-            textTransform: "uppercase",
-          }}
-        >
-          or
-        </span>
-      </RiseIn>
-      <RiseIn delay={26}>
-        <Img
-          src={staticFile("strava/btn-connect-with-strava-orange.svg")}
-          style={{ display: "block", height: 84 }}
-        />
-      </RiseIn>
-    </div>
-  );
-}
+const DropStep = () => (
+  <div
+    style={{
+      alignItems: "center",
+      display: "flex",
+      flexDirection: "row",
+      gap: SPACE.md,
+    }}
+  >
+    <RiseIn delay={10}>
+      <FileChip label="sunday-ride.gpx" scale={1.2} />
+    </RiseIn>
+    <RiseIn delay={18}>
+      <span
+        style={{
+          color: PAPER_DIM,
+          fontFamily: FONT.mono,
+          fontSize: TYPE.caption,
+          letterSpacing: "0.18em",
+          textTransform: "uppercase",
+        }}
+      >
+        or
+      </span>
+    </RiseIn>
+    <RiseIn delay={26}>
+      <Img
+        src={staticFile("strava/btn-connect-with-strava-orange.svg")}
+        style={{ display: "block", height: 84 }}
+      />
+    </RiseIn>
+  </div>
+);
 
-function PhotoStep() {
+const PhotoStep = () => {
   const frame = useCurrentFrame();
   const tilt = interpolate(frame, [10, 40], [-6, -2], {
     easing: EASE_PANEL,
@@ -104,9 +102,9 @@ function PhotoStep() {
       </div>
     </RiseIn>
   );
-}
+};
 
-function PreviewStep({ durationInFrames }: { durationInFrames: number }) {
+const PreviewStep = ({ durationInFrames }: { durationInFrames: number }) => {
   const frame = useCurrentFrame();
   const { height } = useVideoConfig();
   // One calm theme flip halfway through — the "live" in live preview.
@@ -137,9 +135,9 @@ function PreviewStep({ durationInFrames }: { durationInFrames: number }) {
       </div>
     </div>
   );
-}
+};
 
-function ExportStep() {
+const ExportStep = () => {
   const { height } = useVideoConfig();
   return (
     <div
@@ -160,9 +158,9 @@ function ExportStep() {
       </RiseIn>
     </div>
   );
-}
+};
 
-export function FeatureQuickStart() {
+export const FeatureQuickStart = () => {
   const t = (
     <TransitionSeries.Transition
       presentation={fade()}
@@ -228,4 +226,4 @@ export function FeatureQuickStart() {
       </TransitionSeries.Sequence>
     </TransitionSeries>
   );
-}
+};

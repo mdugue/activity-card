@@ -9,7 +9,7 @@ import { cameraDrift } from "../design/motion";
  * yaw/pitch drift) so the whole scene breathes. Compose with `Plane3D` for the
  * pieces that face the centre from the left / right thirds.
  */
-export function Stage3D({
+export const Stage3D = ({
   children,
   perspective = 1700,
   camera = true,
@@ -19,7 +19,7 @@ export function Stage3D({
   children: ReactNode;
   perspective?: number;
   style?: CSSProperties;
-}) {
+}) => {
   const frame = useCurrentFrame();
   const cam = cameraDrift(frame);
   return (
@@ -28,17 +28,17 @@ export function Stage3D({
         style={{
           alignItems: "center",
           justifyContent: "center",
-          transformStyle: "preserve-3d",
           transform: camera
             ? `rotateX(${cam.rotateX}deg) rotateY(${cam.rotateY}deg) scale(${cam.scale})`
             : undefined,
+          transformStyle: "preserve-3d",
         }}
       >
         {children}
       </AbsoluteFill>
     </AbsoluteFill>
   );
-}
+};
 
 /**
  * One plane in the 3D stage — a block angled toward the centre. Positive
@@ -46,7 +46,7 @@ export function Stage3D({
  * inward. `z` pushes it nearer (positive) or deeper (negative). Children keep
  * `preserve-3d` so nested planes still compose.
  */
-export function Plane3D({
+export const Plane3D = ({
   children,
   rotateX = 0,
   rotateY = 0,
@@ -68,19 +68,17 @@ export function Plane3D({
   x?: number;
   y?: number;
   z?: number;
-}) {
-  return (
-    <div
-      style={{
-        opacity,
-        position: "absolute",
-        transformStyle: "preserve-3d",
-        transformOrigin: origin,
-        transform: `translate3d(${x}px, ${y}px, ${z}px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) rotateZ(${rotateZ}deg)`,
-        ...style,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
+}) => (
+  <div
+    style={{
+      opacity,
+      position: "absolute",
+      transform: `translate3d(${x}px, ${y}px, ${z}px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) rotateZ(${rotateZ}deg)`,
+      transformOrigin: origin,
+      transformStyle: "preserve-3d",
+      ...style,
+    }}
+  >
+    {children}
+  </div>
+);

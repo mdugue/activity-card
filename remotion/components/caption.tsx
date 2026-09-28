@@ -15,7 +15,7 @@ import { RiseIn } from "./rise-in";
  * recipe) over a sentence of Inter. Pinned inside the safe area; every scene
  * that needs words uses this so type placement stays consistent across videos.
  */
-export function Caption({
+export const Caption = ({
   delay = 0,
   label,
   maxWidth = 760,
@@ -31,7 +31,7 @@ export function Caption({
   /** numbered walkthrough chip, e.g. { index: 2, total: 4 } → "STEP 2/4" */
   step?: { index: number; total: number };
   text: ReactNode;
-}) {
+}) => {
   const centered = position === "bottom-center";
   return (
     <div
@@ -106,4 +106,4 @@ export function Caption({
       </RiseIn>
     </div>
   );
-}
+};

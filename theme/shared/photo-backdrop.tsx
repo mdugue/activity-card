@@ -22,11 +22,11 @@ interface PhotoBackdropProps {
   treatment: BackdropTreatment;
 }
 
-export function PhotoBackdrop({
+export const PhotoBackdrop = ({
   photoUrl,
   treatment,
   imageTransform,
-}: PhotoBackdropProps) {
+}: PhotoBackdropProps) => {
   if (treatment === "path") {
     // Paper-tone overlay multiplies down the photo so the route ink stays the
     // hero. 14px blur softens any detail the eye might catch.
@@ -34,11 +34,11 @@ export function PhotoBackdrop({
       <div
         aria-hidden
         style={{
-          position: "absolute",
           inset: 0,
-          zIndex: 0,
           overflow: "hidden",
           pointerEvents: "none",
+          position: "absolute",
+          zIndex: 0,
         }}
       >
         <CssCoverImage
@@ -50,19 +50,19 @@ export function PhotoBackdrop({
         />
         <div
           style={{
-            position: "absolute",
-            inset: 0,
             background: "#f3ede2",
+            inset: 0,
             mixBlendMode: "multiply",
             opacity: 0.7,
+            position: "absolute",
           }}
         />
         <div
           style={{
-            position: "absolute",
-            inset: 0,
             background:
               "radial-gradient(ellipse at 50% 50%, rgba(243,237,226,0) 0%, rgba(243,237,226,0.55) 80%)",
+            inset: 0,
+            position: "absolute",
           }}
         />
       </div>
@@ -76,11 +76,11 @@ export function PhotoBackdrop({
     <div
       aria-hidden
       style={{
-        position: "absolute",
         inset: 0,
-        zIndex: 0,
         overflow: "hidden",
         pointerEvents: "none",
+        position: "absolute",
+        zIndex: 0,
       }}
     >
       <CssCoverImage
@@ -92,12 +92,12 @@ export function PhotoBackdrop({
       />
       <div
         style={{
-          position: "absolute",
-          inset: 0,
           background:
             "linear-gradient(180deg, #efe9dc 0%, rgba(239,233,220,0.6) 18%, rgba(239,233,220,0.45) 50%, rgba(239,233,220,0.7) 82%, #efe9dc 100%)",
+          inset: 0,
+          position: "absolute",
         }}
       />
     </div>
   );
-}
+};

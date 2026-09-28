@@ -56,12 +56,12 @@ interface ControlDeckProps {
 export const PANEL_MOTION =
   "max-lg:transition-[max-height,max-width,opacity,visibility] max-lg:duration-300 max-lg:ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none";
 
-export function ControlDeck({
+export const ControlDeck = ({
   tools,
   preview,
   previewControl,
   action,
-}: ControlDeckProps) {
+}: ControlDeckProps) => {
   // Lead with the first tool (THEME) open, so the theme rail is on screen the
   // moment the editor mounts. `active` is kept even while closed so its content
   // is still mounted to animate the collapse; `open` drives the size.
@@ -83,8 +83,9 @@ export function ControlDeck({
     if (!(content && panel)) {
       return;
     }
-    const setVar = (h: number) =>
+    const setVar = (h: number) => {
       panel.style.setProperty("--panel-content-h", `${h}px`);
+    };
     setVar(content.offsetHeight); // initial measure, before first paint
     const ro = new ResizeObserver(([entry]) => {
       // Use the box the observer already computed (off the main thread) rather
@@ -93,7 +94,9 @@ export function ControlDeck({
       setVar(box ? box.blockSize : content.offsetHeight);
     });
     ro.observe(content);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+    };
   }, []);
 
   // Tapping the active tab deselects it (value === null) → collapse. Tapping any
@@ -205,7 +208,9 @@ export function ControlDeck({
         <ToggleGroup
           aria-label="Edit categories"
           className="no-scrollbar flex w-auto min-w-0 flex-1 items-stretch gap-1 overflow-x-auto lg:hidden"
-          onValueChange={(vals) => handleTab(vals[0] ?? null)}
+          onValueChange={(vals) => {
+            handleTab(vals[0] ?? null);
+          }}
           spacing={1}
           value={open && active ? [active] : []}
         >
@@ -254,4 +259,4 @@ export function ControlDeck({
       </div>
     </div>
   );
-}
+};

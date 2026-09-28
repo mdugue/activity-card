@@ -49,7 +49,7 @@ interface Collected {
 }
 
 /** Collect the photo layers inside `node`, already mapped to output pixels. */
-function collectLayers(node: HTMLElement, size: RasterSize): Collected {
+const collectLayers = (node: HTMLElement, size: RasterSize): Collected => {
   const root = node.getBoundingClientRect();
   // The export mount is shown scaled-to-fit inside its tile, so measured client
   // rects are not card pixels — rebase through the node's own rect, and take
@@ -77,36 +77,37 @@ function collectLayers(node: HTMLElement, size: RasterSize): Collected {
       el,
       paint: el.querySelector<HTMLElement>(`[${PHOTO_PAINT_ATTR}]`),
       rect: {
+        h: box.height * sy,
+        w: box.width * sx,
         x: (box.left - root.left) * sx,
         y: (box.top - root.top) * sy,
-        w: box.width * sx,
-        h: box.height * sy,
       },
     });
   }
   return { layers, scale };
-}
+};
 
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
+const loadImage = async (src: string): Promise<HTMLImageElement> =>
+  await new Promise((resolve, reject) => {
     const img = new Image();
-    img.addEventListener("load", () => resolve(img));
-    img.addEventListener("error", () =>
-      reject(new Error(`photo failed to load: ${src}`))
-    );
+    img.addEventListener("load", () => {
+      resolve(img);
+    });
+    img.addEventListener("error", () => {
+      reject(new Error(`photo failed to load: ${src}`));
+    });
     img.src = src;
   });
-}
 
 /** Repaint one layer onto the photo plane, mirroring what the DOM would show:
  *  cover-fit inside the painting box, clipped to it, transformed about its
  *  centre, with the element's own filter and opacity. */
-function paintLayer(
+const paintLayer = (
   ctx: CanvasRenderingContext2D,
   layer: Layer,
   image: HTMLImageElement,
   scale: number
-): void {
+): void => {
   const { draw, rect } = layer;
   // The descriptor's box is in card pixels relative to the container; the
   // container's measured rect is already in output pixels.
@@ -138,7 +139,7 @@ function paintLayer(
   ctx.clip();
   ctx.drawImage(image, cover.x, cover.y, cover.w, cover.h);
   ctx.restore();
-}
+};
 
 /**
  * Reconstruct the real pixels from the two probes and the photo plane:
@@ -146,11 +147,11 @@ function paintLayer(
  * photo doesn't reach keeps the black-probe value it already had.
  * Mutates and returns `a`.
  */
-export function mergeProbes(
+export const mergeProbes = (
   a: ImageData,
   b: ImageData,
   p: ImageData
-): ImageData {
+): ImageData => {
   const av = a.data;
   const bv = b.data;
   const pv = p.data;
@@ -166,28 +167,28 @@ export function mergeProbes(
     }
   }
   return a;
-}
+};
 
 /** Pixels per merge band — a few megapixels at a time keeps the intermediate
  *  buffers small without making the loop chatty. */
 const BAND_PIXELS = 4_000_000;
 
 /** Release a canvas's backing store — iOS is strict about live canvas memory. */
-function release(canvas: HTMLCanvasElement): void {
+const release = (canvas: HTMLCanvasElement): void => {
   canvas.width = 0;
   canvas.height = 0;
-}
+};
 
 /**
  * Rasterise `node` with its photo layers composited in. Returns null when there
  * is nothing to composite (no photo, or the photo can't be read) so the caller
  * can fall back to the straight capture.
  */
-export async function rasterizeWithPhotoComposite(
+export const rasterizeWithPhotoComposite = async (
   node: HTMLElement,
   size: RasterSize,
   rasterize: Rasterize
-): Promise<HTMLCanvasElement | null> {
+): Promise<HTMLCanvasElement | null> => {
   const { layers, scale } = collectLayers(node, size);
   if (layers.length === 0) {
     return null;
@@ -202,8 +203,8 @@ export async function rasterizeWithPhotoComposite(
   // Probe passes: blank the photo paint (so the result is identical on every
   // engine, not only the ones that drop it) and fill the layer solid.
   const saved = layers.map((layer) => ({
-    layer,
     background: layer.el.style.background,
+    layer,
     paintImage: layer.paint?.style.backgroundImage ?? "",
   }));
   const setProbe = (fill: string) => {
@@ -281,4 +282,4 @@ export async function rasterizeWithPhotoComposite(
   release(white);
   release(plane);
   return black;
-}
+};

@@ -20,12 +20,12 @@ import { carouselArgs } from "./story-support";
 type AscentArgs = ComponentProps<typeof CarouselDeck> & BackgroundArgs;
 
 const meta = preview.type<{ args: AscentArgs }>().meta({
-  component: CarouselDeck,
-  title: "Carousel/Ascent",
-  tags: ["ai-generated"],
-  parameters: { layout: "fullscreen" },
   argTypes: { data: activityArgType, ...backgroundArgTypes },
   args: { data: SAMPLE_RIDE, ...carouselArgs("ascent") },
+  component: CarouselDeck,
+  parameters: { layout: "fullscreen" },
+  tags: ["ai-generated"],
+  title: "Carousel/Ascent",
 });
 
 export const Dawn = meta.story({ args: { data: SAMPLE_RIDE } });

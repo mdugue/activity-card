@@ -33,8 +33,8 @@ const TrkSegSchema = z.object({
 
 const TrkSchema = z.object({
   name: z.optional(Numeric),
-  type: z.optional(Numeric),
   trkseg: z.optional(z.union([TrkSegSchema, z.array(TrkSegSchema)])),
+  type: z.optional(Numeric),
 });
 
 const GpxSchema = z.object({
@@ -62,23 +62,22 @@ type GpxTrkPt = z.infer<typeof TrkPtSchema>;
  * — letting that through poisons haversine, splits, and route projection
  * downstream because `lat === undefined` is false for NaN.
  */
-function toFiniteNumber(v: unknown): number | undefined {
+const toFiniteNumber = (v: unknown): number | undefined => {
   if (v === undefined || v === null || v === "") {
     return;
   }
   const n = typeof v === "number" ? v : Number(v);
   return Number.isFinite(n) ? n : undefined;
-}
+};
 
 /** A string/number XML text value as a string, or `undefined` if empty. */
-function toText(v: string | number | undefined): string | undefined {
-  return v === undefined || v === "" ? undefined : String(v);
-}
+const toText = (v: string | number | undefined): string | undefined =>
+  v === undefined || v === "" ? undefined : String(v);
 
 /** The value of the first key in `obj` named `local`, whatever its namespace
  *  prefix (`gpxtpx:hr`, `ns3:hr`) — or unprefixed, when the exporter declares
  *  the extension namespace as the default (`<TrackPointExtension xmlns=…>`). */
-function pickByLocalName(obj: unknown, local: string): unknown {
+const pickByLocalName = (obj: unknown, local: string): unknown => {
   if (typeof obj !== "object" || obj === null) {
     return;
   }
@@ -86,19 +85,19 @@ function pickByLocalName(obj: unknown, local: string): unknown {
     (k) => k === local || k.endsWith(`:${local}`)
   );
   return key === undefined ? undefined : (obj as Record<string, unknown>)[key];
-}
+};
 
-function asArray<T>(v: T | T[] | undefined): T[] {
+const asArray = <T>(v: T | T[] | undefined): T[] => {
   if (v === undefined) {
     return [];
   }
   return Array.isArray(v) ? v : [v];
-}
+};
 
-export function parseGpx(text: string, filename: string): ParsedActivity {
+export const parseGpx = (text: string, filename: string): ParsedActivity => {
   const parser = new XMLParser({
-    ignoreAttributes: false,
     attributeNamePrefix: "@_",
+    ignoreAttributes: false,
   });
 
   let raw: unknown;
@@ -125,23 +124,23 @@ export function parseGpx(text: string, filename: string): ParsedActivity {
   const points: TrackPoint[] = flatPts.map((p) => {
     const ext = pickByLocalName(p.extensions, "TrackPointExtension");
     return {
+      cadence: toFiniteNumber(pickByLocalName(ext, "cad")),
+      elevation: toFiniteNumber(p.ele),
+      heartRate: toFiniteNumber(pickByLocalName(ext, "hr")),
       lat: toFiniteNumber(p["@_lat"]),
       lng: toFiniteNumber(p["@_lon"]),
-      elevation: toFiniteNumber(p.ele),
       time: p.time ? toFiniteNumber(Date.parse(p.time)) : undefined,
-      heartRate: toFiniteNumber(pickByLocalName(ext, "hr")),
-      cadence: toFiniteNumber(pickByLocalName(ext, "cad")),
     };
   });
 
   const sport = detectSport(trkType, filename);
   return finalise({
-    points,
-    sport,
+    isoDate: xml.gpx?.metadata?.time || points[0]?.time,
     name:
       trkName ||
       toText(xml.gpx?.metadata?.name) ||
       filename.replace(GPX_EXT_RE, ""),
-    isoDate: xml.gpx?.metadata?.time || points[0]?.time,
+    points,
+    sport,
   });
-}
+};

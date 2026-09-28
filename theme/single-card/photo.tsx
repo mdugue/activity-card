@@ -36,33 +36,33 @@ interface StaticPalette {
   onAccent: string;
 }
 
-function fallbackPalette(sport: string): StaticPalette {
+const fallbackPalette = (sport: string): StaticPalette => {
   if (sport === "swim") {
     return {
-      background: "#2d5a78",
-      headline: "#ffffff",
-      body: "rgba(255,255,255,0.78)",
       accent: "#6ba8c5",
+      background: "#2d5a78",
+      body: "rgba(255,255,255,0.78)",
+      headline: "#ffffff",
       onAccent: "#0a0a0a",
     };
   }
   if (sport === "run") {
     return {
-      background: "#4a2a18",
-      headline: "#ffffff",
-      body: "rgba(255,255,255,0.78)",
       accent: "#d8c5a0",
+      background: "#4a2a18",
+      body: "rgba(255,255,255,0.78)",
+      headline: "#ffffff",
       onAccent: "#0a0a0a",
     };
   }
   return {
-    background: "#5a6a7e",
-    headline: "#ffffff",
-    body: "rgba(255,255,255,0.78)",
     accent: "#c89d6e",
+    background: "#5a6a7e",
+    body: "rgba(255,255,255,0.78)",
+    headline: "#ffffff",
     onAccent: "#0a0a0a",
   };
-}
+};
 
 /**
  * Map the resolved colour scheme onto the theme's CSS variables. A
@@ -70,10 +70,10 @@ function fallbackPalette(sport: string): StaticPalette {
  * preset only re-colours the accents, with the sport fallback keeping the
  * background/type roles legible.
  */
-function colorsToVars(
+const colorsToVars = (
   colors: ColorScheme | undefined,
   sport: string
-): React.CSSProperties {
+): React.CSSProperties => {
   const fb = fallbackPalette(sport);
   return {
     ["--bg" as string]: colors?.roles?.background ?? fb.background,
@@ -83,18 +83,18 @@ function colorsToVars(
     ["--accent-2" as string]: colors?.secondary ?? colors?.primary ?? fb.accent,
     ["--on-accent" as string]: colors?.onPrimary ?? fb.onAccent,
   };
-}
+};
 
-export function ThemePhoto({
+export const ThemePhoto = ({
   data,
   photoUrl,
   colors,
   imageTransform,
-}: ThemePhotoProps) {
+}: ThemePhotoProps) => {
   const { width, height, safe } = useFormat();
   // Masthead / title / hero keep to the safe area; the photo + vignette bleed.
-  const insets = useSafeInsets({ top: 70, right: 80, bottom: 70, left: 80 });
-  const sport = data.sport;
+  const insets = useSafeInsets({ bottom: 70, left: 80, right: 80, top: 70 });
+  const { sport } = data;
   const isPool = sport === "swim";
   const multi = isMultiActivity(data);
   const routes = multi ? segmentRoutes(data) : [];
@@ -119,8 +119,8 @@ export function ThemePhoto({
       sport === "swim"
         ? (data.distanceKm * 1000).toFixed(0)
         : data.distanceKm.toFixed(1),
-    unit: sport === "swim" ? "m" : "km",
     sub: subParts.join(" · "),
+    unit: sport === "swim" ? "m" : "km",
   };
 
   let placeholderBg =
@@ -148,13 +148,13 @@ export function ThemePhoto({
     <div
       style={{
         ...cssVars,
-        width,
-        height,
         background: placeholderBg,
-        fontFamily: "var(--font-dm-sans), sans-serif",
         color: "var(--headline)",
-        position: "relative",
+        fontFamily: "var(--font-dm-sans), sans-serif",
+        height,
         overflow: "hidden",
+        position: "relative",
+        width,
       }}
     >
       {photoUrl ? (
@@ -165,10 +165,10 @@ export function ThemePhoto({
           aria-hidden="true"
           height="100%"
           style={{
-            position: "absolute",
             inset: 0,
-            opacity: 0.45,
             mixBlendMode: "overlay",
+            opacity: 0.45,
+            position: "absolute",
           }}
           width="100%"
         >
@@ -191,43 +191,43 @@ export function ThemePhoto({
       {/* Neutral vignette — pure black to read consistently across any photo. */}
       <div
         style={{
-          position: "absolute",
-          inset: 0,
           background:
             "linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.7) 100%)",
+          inset: 0,
+          position: "absolute",
         }}
       />
       {/* Top masthead */}
       <div
         style={{
-          position: "absolute",
-          top: insets.top,
-          left: insets.left,
-          right: insets.right,
+          alignItems: "flex-start",
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "flex-start",
+          left: insets.left,
+          position: "absolute",
+          right: insets.right,
+          top: insets.top,
         }}
       >
         <div>
           <div
             style={{
+              color: "var(--accent-2)",
               fontFamily: "var(--font-playfair), serif",
               fontSize: 52,
               fontStyle: "italic",
               letterSpacing: "-0.01em",
-              color: "var(--accent-2)",
             }}
           >
             Effort
           </div>
           <div
             style={{
+              color: "var(--body)",
               fontSize: 26,
+              fontWeight: 700,
               letterSpacing: "0.28em",
               marginTop: 12,
-              color: "var(--body)",
-              fontWeight: 700,
             }}
           >
             {["VOL. 01", formatDateUpper(data.date)]
@@ -237,12 +237,12 @@ export function ThemePhoto({
         </div>
         <div
           style={{
-            textAlign: "right",
-            fontSize: 26,
-            letterSpacing: "0.2em",
             color: "var(--headline)",
+            fontSize: 26,
             fontWeight: 700,
+            letterSpacing: "0.2em",
             lineHeight: 1.45,
+            textAlign: "right",
           }}
         >
           {storyLabel}
@@ -261,12 +261,12 @@ export function ThemePhoto({
         <svg
           aria-hidden="true"
           style={{
-            position: "absolute",
-            top: Math.max(200, safe.top),
-            right: Math.max(60, safe.right),
-            width: 320,
             height: 240,
             opacity: 0.9,
+            position: "absolute",
+            right: Math.max(60, safe.right),
+            top: Math.max(200, safe.top),
+            width: 320,
           }}
           viewBox="0 0 400 300"
         >
@@ -296,36 +296,36 @@ export function ThemePhoto({
       )}
       <div
         style={{
-          position: "absolute",
           bottom: insets.bottom + 150,
           left: insets.left,
+          position: "absolute",
           right: insets.right,
         }}
       >
         <div
           aria-hidden
           style={{
-            width: 120,
-            height: 4,
             background:
               "linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%)",
-            marginBottom: 28,
             boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
+            height: 4,
+            marginBottom: 28,
+            width: 120,
           }}
         />
         <h1
           style={{
-            fontFamily: "var(--font-playfair), serif",
-            fontWeight: 400,
-            fontStyle: "italic",
-            fontSize: 92,
-            lineHeight: 0.95,
-            letterSpacing: "-0.015em",
-            margin: 0,
             color: "var(--headline)",
+            fontFamily: "var(--font-playfair), serif",
+            fontSize: 92,
+            fontStyle: "italic",
+            fontWeight: 400,
+            letterSpacing: "-0.015em",
+            lineHeight: 0.95,
+            margin: 0,
+            maxWidth: 800,
             textShadow: "0 4px 24px rgba(0,0,0,0.4)",
             textWrap: "pretty",
-            maxWidth: 800,
           }}
         >
           {data.title}
@@ -334,35 +334,35 @@ export function ThemePhoto({
       {/* Hero stat block + small stats — bottom strip */}
       <div
         style={{
-          position: "absolute",
+          alignItems: "flex-end",
           bottom: insets.bottom,
-          left: insets.left,
-          right: insets.right,
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "flex-end",
+          left: insets.left,
+          position: "absolute",
+          right: insets.right,
         }}
       >
         <div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+          <div style={{ alignItems: "baseline", display: "flex", gap: 12 }}>
             <span
               style={{
+                color: "var(--accent)",
                 fontFamily: "var(--font-playfair), serif",
                 fontSize: 130,
                 fontWeight: 400,
-                lineHeight: 1,
                 letterSpacing: "-0.04em",
-                color: "var(--accent)",
+                lineHeight: 1,
               }}
             >
               {hero.big}
             </span>
             <span
               style={{
-                fontSize: 40,
                 color: "var(--accent-2)",
-                fontStyle: "italic",
                 fontFamily: "var(--font-playfair), serif",
+                fontSize: 40,
+                fontStyle: "italic",
               }}
             >
               {hero.unit}
@@ -370,11 +370,11 @@ export function ThemePhoto({
           </div>
           <div
             style={{
-              fontSize: 26,
-              letterSpacing: "0.16em",
               color: "var(--body)",
-              marginTop: 14,
+              fontSize: 26,
               fontWeight: 700,
+              letterSpacing: "0.16em",
+              marginTop: 14,
             }}
           >
             {hero.sub.toUpperCase()}
@@ -383,24 +383,24 @@ export function ThemePhoto({
         {data.athleteName && (
           <div
             style={{
-              textAlign: "right",
-              fontSize: 24,
-              letterSpacing: "0.22em",
               color: "var(--body)",
-              paddingBottom: 18,
+              fontSize: 24,
               fontWeight: 700,
+              letterSpacing: "0.22em",
+              paddingBottom: 18,
+              textAlign: "right",
             }}
           >
             BY
             <br />
             <span
               style={{
-                fontFamily: "var(--font-playfair), serif",
-                fontStyle: "italic",
-                fontSize: 42,
-                letterSpacing: "0",
-                fontWeight: 400,
                 color: "var(--accent-2)",
+                fontFamily: "var(--font-playfair), serif",
+                fontSize: 42,
+                fontStyle: "italic",
+                fontWeight: 400,
+                letterSpacing: "0",
               }}
             >
               {data.athleteName}
@@ -410,7 +410,7 @@ export function ThemePhoto({
       </div>
     </div>
   );
-}
+};
 
 export const photoTheme = defineTheme({
   id: "photo",
@@ -420,7 +420,7 @@ export const photoTheme = defineTheme({
   // Adjustable, and photo-first: until the user picks, the colours come from
   // the photo (the old PhotoMood, now the shared photo-derived colour source).
   colors: {
-    default: { primary: "#c89d6e", onPrimary: "#0a0a0a" },
+    default: { onPrimary: "#0a0a0a", primary: "#c89d6e" },
     defaultChoice: { kind: "photo", variant: "vibrant" },
     userAdjustable: true,
   },

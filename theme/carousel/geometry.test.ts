@@ -10,22 +10,22 @@ import {
 } from "./geometry";
 
 const PAD = {
-  top: CAROUSEL_NATURAL_MARGIN,
-  right: CAROUSEL_NATURAL_MARGIN,
   bottom: CAROUSEL_NATURAL_MARGIN,
   left: CAROUSEL_NATURAL_MARGIN,
+  right: CAROUSEL_NATURAL_MARGIN,
+  top: CAROUSEL_NATURAL_MARGIN,
 };
 
 describe("stripGeometry", () => {
   test("slide dims = the format; strip = count × slideW", () => {
     expect(stripGeometry(EXPORT_FORMATS["instagram-feed"], 3)).toEqual({
-      slideW: 1080,
       slideH: 1350,
+      slideW: 1080,
       stripW: 3240,
     });
     expect(stripGeometry(EXPORT_FORMATS["x-landscape"], 3)).toEqual({
-      slideW: 1600,
       slideH: 900,
+      slideW: 1600,
       stripW: 4800,
     });
   });
@@ -38,10 +38,10 @@ describe("stripGeometry", () => {
 describe("panel safe-floor (mergeSafe with the natural margin)", () => {
   test("feed floors to 90 — its 48 platform inset loses", () => {
     expect(mergeSafe(EXPORT_FORMATS["instagram-feed"].safe, PAD)).toEqual({
-      top: 90,
-      right: 90,
       bottom: 90,
       left: 90,
+      right: 90,
+      top: 90,
     });
   });
 

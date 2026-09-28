@@ -49,7 +49,7 @@ interface StrataFieldProps {
   w: number;
 }
 
-export function StrataField({
+export const StrataField = ({
   data,
   w,
   h,
@@ -61,17 +61,17 @@ export function StrataField({
   scrim,
   overPhoto = false,
   lineAlpha = 0.4,
-}: StrataFieldProps) {
+}: StrataFieldProps) => {
   const source = resolveStrataSource(data);
   if (!source) {
     return null;
   }
   const { curves, routePts, elevPts } = buildStrata({
-    routeCoords: source.routeCoords,
-    profile: source.profile,
-    W: w,
     H: h,
     K: densityK,
+    W: w,
+    profile: source.profile,
+    routeCoords: source.routeCoords,
     stretch: true,
   });
   if (curves.length < 2) {
@@ -101,10 +101,10 @@ export function StrataField({
     <svg
       aria-hidden="true"
       style={{
-        width: "100%",
-        height: "100%",
         display: "block",
+        height: "100%",
         overflow: "visible",
+        width: "100%",
       }}
       viewBox={`0 0 ${w} ${h}`}
     >
@@ -227,7 +227,7 @@ export function StrataField({
       ) : null}
     </svg>
   );
-}
+};
 
 /**
  * The full STRATA carousel hero: the spanning field plus — over the mood
@@ -237,7 +237,7 @@ export function StrataField({
  * for any non-STRATA deck (so the renderer can drop it in unconditionally).
  * `style` is the mood-resolved deck style (route = accent, elevation = accent2).
  */
-export function StrataHero({
+export const StrataHero = ({
   cfg,
   data,
   w,
@@ -252,14 +252,14 @@ export function StrataHero({
   overPhoto?: boolean;
   style: EffectiveStyle;
   w: number;
-}) {
+}) => {
   if (!cfg) {
     return null;
   }
   const mood = STRATA_MOODS[cfg.mood];
   return (
     <>
-      <div style={{ position: "absolute", inset: 0 }}>
+      <div style={{ inset: 0, position: "absolute" }}>
         <StrataField
           data={data}
           densityK={STRATA_DENSITY_K[cfg.density]}
@@ -277,12 +277,12 @@ export function StrataHero({
         <div
           aria-hidden
           style={{
-            position: "absolute",
-            inset: 0,
             background: `linear-gradient(180deg, rgba(${mood.scrim},0.6) 0%, rgba(${mood.scrim},0.12) 24%, rgba(${mood.scrim},0) 46%, rgba(${mood.scrim},0.1) 66%, rgba(${mood.scrim},0.56) 100%)`,
+            inset: 0,
+            position: "absolute",
           }}
         />
       )}
     </>
   );
-}
+};

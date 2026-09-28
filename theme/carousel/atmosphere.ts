@@ -36,15 +36,15 @@ const ATMOSPHERE_ORDER: CarouselAtmosphere[] = ["dawn", "dusk"];
 
 export const ATMOSPHERE_PARAMS: ParamDef[] = [
   {
-    id: "atmosphere",
-    group: "style",
-    label: "ATMOSPHERE",
-    kind: "segmented",
     default: DEFAULT_ATMOSPHERE_CONFIG.atmosphere,
+    group: "style",
+    id: "atmosphere",
+    kind: "segmented",
+    label: "ATMOSPHERE",
     options: ATMOSPHERE_ORDER.map((a) => ({
+      blurb: ATMOSPHERE_BLURBS[a],
       id: a,
       label: ATMOSPHERE_LABELS[a],
-      blurb: ATMOSPHERE_BLURBS[a],
     })),
   },
 ];

@@ -12,7 +12,7 @@ import { ParamControl } from "./param-control";
 
 const ctx: ParamCtx = { data: SAMPLE_RIDE, palette: null };
 
-function Demo({ def, initial }: { def: ParamDef; initial: unknown }) {
+const Demo = ({ def, initial }: { def: ParamDef; initial: unknown }) => {
   const [value, setValue] = useState<unknown>(initial);
   return (
     <div className="w-80 p-4">
@@ -22,22 +22,22 @@ function Demo({ def, initial }: { def: ParamDef; initial: unknown }) {
       </pre>
     </div>
   );
-}
+};
 
 const meta = preview.meta({
-  title: "app/ParamControl",
-  tags: ["ai-generated"],
   parameters: { layout: "centered" },
+  tags: ["ai-generated"],
+  title: "app/ParamControl",
 });
 
 export const Toggle = meta.story(() => (
   <Demo
     def={{
-      id: "legend",
-      group: "marks",
-      label: "Show legend",
-      kind: "toggle",
       default: true,
+      group: "marks",
+      id: "legend",
+      kind: "toggle",
+      label: "Show legend",
     }}
     initial={true}
   />
@@ -46,15 +46,15 @@ export const Toggle = meta.story(() => (
 export const Segmented = meta.story(() => (
   <Demo
     def={{
-      id: "density",
-      group: "layout",
-      label: "DENSITY",
-      kind: "segmented",
       default: "woven",
+      group: "layout",
+      id: "density",
+      kind: "segmented",
+      label: "DENSITY",
       options: [
-        { id: "fine", label: "Fine", blurb: "many layers" },
-        { id: "woven", label: "Woven", blurb: "balanced" },
-        { id: "bold", label: "Bold", blurb: "few ridges" },
+        { blurb: "many layers", id: "fine", label: "Fine" },
+        { blurb: "balanced", id: "woven", label: "Woven" },
+        { blurb: "few ridges", id: "bold", label: "Bold" },
       ],
     }}
     initial="woven"
@@ -64,13 +64,13 @@ export const Segmented = meta.story(() => (
 export const Slider = meta.story(() => (
   <Demo
     def={{
-      id: "opacity",
-      group: "layout",
-      label: "CUTOUT OPACITY",
-      kind: "slider",
       default: 20,
-      min: 0,
+      group: "layout",
+      id: "opacity",
+      kind: "slider",
+      label: "CUTOUT OPACITY",
       max: 100,
+      min: 0,
       step: 1,
       unit: "%",
     }}
@@ -94,15 +94,15 @@ export const SelectWithGlyphs = meta.story(() => (
 export const SelectWithSwatches = meta.story(() => (
   <Demo
     def={{
-      id: "palette",
-      group: "style",
-      label: "COLOUR",
-      kind: "select",
       default: "amber",
+      group: "style",
+      id: "palette",
+      kind: "select",
+      label: "COLOUR",
       options: [
-        { id: "amber", label: "Amber", hint: "warm", swatch: "#e0823a" },
-        { id: "teal", label: "Teal", hint: "cool", swatch: "#2f6f86" },
-        { id: "crimson", label: "Crimson", hint: "bold", swatch: "#b1281a" },
+        { hint: "warm", id: "amber", label: "Amber", swatch: "#e0823a" },
+        { hint: "cool", id: "teal", label: "Teal", swatch: "#2f6f86" },
+        { hint: "bold", id: "crimson", label: "Crimson", swatch: "#b1281a" },
       ],
     }}
     initial="amber"

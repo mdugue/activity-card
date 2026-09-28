@@ -64,7 +64,7 @@ const PER_PAGE = 30;
 /** Connection status + the central Disconnect control, shown in the picker
  * header. This is the single home for "Connected as … / Disconnect" now that
  * the app chrome no longer carries it. */
-function PickerConnection() {
+const PickerConnection = () => {
   const strava = useStravaConnection();
   if (!strava.connected) {
     return null;
@@ -95,7 +95,7 @@ function PickerConnection() {
       </button>
     </div>
   );
-}
+};
 
 /** Discriminated error shape mirrored from `stravaErrorResponse` on the
  * server. Lets the picker show actionable per-kind copy instead of a
@@ -117,29 +117,31 @@ interface ServerErrorEnvelope {
   status?: number;
 }
 
-async function readErrorEnvelope(res: Response): Promise<ServerErrorEnvelope> {
+const readErrorEnvelope = async (
+  res: Response
+): Promise<ServerErrorEnvelope> => {
   try {
     return (await res.json()) as ServerErrorEnvelope;
   } catch {
     return {};
   }
-}
+};
 
 /** `Retry-After` in seconds, or undefined when the header is absent or junk —
  *  `Number(null)` is 0, which would otherwise read as a valid delay. */
-function retryAfterHeader(headers: Headers): number | undefined {
+const retryAfterHeader = (headers: Headers): number | undefined => {
   const raw = headers.get("retry-after");
   if (!raw) {
     return undefined;
   }
   const seconds = Number(raw);
   return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
-}
+};
 
-function toFetchError(
+const toFetchError = (
   res: Response,
   envelope: ServerErrorEnvelope
-): StravaFetchError {
+): StravaFetchError => {
   if (res.status === 401 || envelope.error === "not_connected") {
     return { kind: "reauth" };
   }
@@ -155,9 +157,9 @@ function toFetchError(
     kind: "upstream",
     status: envelope.status ?? res.status,
   };
-}
+};
 
-async function fetchActivities(page: number): Promise<LoadResult> {
+const fetchActivities = async (page: number): Promise<LoadResult> => {
   try {
     const res = await fetch(
       `/api/strava/activities?page=${page}&per_page=${PER_PAGE}`,
@@ -165,57 +167,57 @@ async function fetchActivities(page: number): Promise<LoadResult> {
     );
     if (!res.ok) {
       return {
-        kind: "err",
         error: toFetchError(res, await readErrorEnvelope(res)),
+        kind: "err",
       };
     }
     const data = (await res.json()) as {
       activities: StravaSummaryActivity[];
     };
-    return { kind: "ok", activities: data.activities };
+    return { activities: data.activities, kind: "ok" };
   } catch (error) {
     return {
-      kind: "err",
       error: {
         kind: "network",
         message: error instanceof Error ? error.message : "Network error.",
       },
+      kind: "err",
     };
   }
-}
+};
 
 type DetailResult =
   | { kind: "ok"; parts: ParsedActivity[] }
   | { kind: "err"; error: StravaFetchError };
 
-async function fetchDetail(id: number): Promise<DetailResult> {
+const fetchDetail = async (id: number): Promise<DetailResult> => {
   try {
     const res = await fetch(`/api/strava/activity/${id}`, {
       cache: "no-store",
     });
     if (!res.ok) {
       return {
-        kind: "err",
         error: toFetchError(res, await readErrorEnvelope(res)),
+        kind: "err",
       };
     }
     const data = (await res.json()) as { parts: ParsedActivity[] };
     if (!data.parts?.length) {
-      return { kind: "err", error: { kind: "empty_activity" } };
+      return { error: { kind: "empty_activity" }, kind: "err" };
     }
     return { kind: "ok", parts: data.parts };
   } catch (error) {
     return {
-      kind: "err",
       error: {
         kind: "network",
         message: error instanceof Error ? error.message : "Network error.",
       },
+      kind: "err",
     };
   }
-}
+};
 
-async function fetchTotalPages(): Promise<number | null> {
+const fetchTotalPages = async (): Promise<number | null> => {
   // Stats is a hint, not load-bearing — silently fall back to the
   // page-is-full heuristic when it fails (rate-limit or upstream).
   try {
@@ -228,7 +230,7 @@ async function fetchTotalPages(): Promise<number | null> {
   } catch {
     return null;
   }
-}
+};
 
 type LoadState =
   | { kind: "loading" }
@@ -238,12 +240,445 @@ type LoadState =
 
 const SKELETON_KEYS = ["a", "b", "c", "d", "e", "f"] as const;
 
-export function StravaPicker({
+/**
+ * Build the page-number sequence following the shadcn pattern: always pin
+ * page 1 and the last page, show three numbers around the current page,
+ * and collapse anything else into ellipses. Short ranges (≤ 7 pages)
+ * render every number so the UI doesn't show useless ellipses.
+ */
+const paginationRange = (page: number, total: number): RangeItem[] => {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => ({
+      kind: "page" as const,
+      n: i + 1,
+    }));
+  }
+  const items: RangeItem[] = [{ kind: "page", n: 1 }];
+  let start: number;
+  let end: number;
+  if (page <= 3) {
+    start = 2;
+    end = 4;
+  } else if (page >= total - 2) {
+    start = total - 3;
+    end = total - 1;
+  } else {
+    start = page - 1;
+    end = page + 1;
+  }
+  if (start > 2) {
+    items.push({ kind: "ellipsis", side: "left" });
+  }
+  for (let p = start; p <= end; p++) {
+    items.push({ kind: "page", n: p });
+  }
+  if (end < total - 1) {
+    items.push({ kind: "ellipsis", side: "right" });
+  }
+  items.push({ kind: "page", n: total });
+  return items;
+};
+
+const PickerPagination = ({
+  canGoNext,
+  canGoPrev,
+  onPageChange,
+  page,
+  show,
+  totalPages,
+}: PickerPaginationProps) => {
+  if (!show) {
+    return null;
+  }
+  // Until we know the total page count we can't render a meaningful list —
+  // fall back to Prev / current / Next so the user can still page forward.
+  const range: RangeItem[] | null =
+    totalPages === null ? null : paginationRange(page, totalPages);
+  return (
+    <Pagination className="mt-8 font-mono text-[11px] tracking-[0.18em] uppercase">
+      <PaginationContent>
+        <PaginationItem>
+          <PaginationPrevious
+            aria-disabled={!canGoPrev}
+            className={canGoPrev ? "" : "pointer-events-none opacity-40"}
+            onClick={() => canGoPrev && onPageChange((p) => p - 1)}
+          />
+        </PaginationItem>
+        {range ? (
+          range.map((item) =>
+            item.kind === "ellipsis" ? (
+              <PaginationItem key={`ellipsis-${item.side}`}>
+                <PaginationEllipsis />
+              </PaginationItem>
+            ) : (
+              <PaginationItem key={`page-${item.n}`}>
+                <PaginationLink
+                  isActive={item.n === page}
+                  onClick={() => {
+                    onPageChange(() => item.n);
+                  }}
+                >
+                  {item.n}
+                </PaginationLink>
+              </PaginationItem>
+            )
+          )
+        ) : (
+          <PaginationItem>
+            <PaginationLink isActive>{page}</PaginationLink>
+          </PaginationItem>
+        )}
+        <PaginationItem>
+          <PaginationNext
+            aria-disabled={!canGoNext}
+            className={canGoNext ? "" : "pointer-events-none opacity-40"}
+            onClick={() => canGoNext && onPageChange((p) => p + 1)}
+          />
+        </PaginationItem>
+      </PaginationContent>
+    </Pagination>
+  );
+};
+
+const PickAffordance = ({
+  isPicking,
+  multiSelect,
+}: {
+  isPicking: boolean;
+  multiSelect: boolean;
+}) => {
+  if (isPicking) {
+    return (
+      <CircleNotchIcon
+        aria-label="Loading"
+        className="size-4 animate-spin opacity-60"
+        weight="duotone"
+      />
+    );
+  }
+  if (multiSelect) {
+    return null;
+  }
+  return (
+    <span className="flex items-center gap-1 font-mono text-[10px] tracking-[0.18em] opacity-50">
+      PICK
+      <ArrowRightIcon aria-hidden className="size-3" weight="duotone" />
+    </span>
+  );
+};
+
+const SportIcon = ({ sportType }: { sportType: string }) => {
+  const s = sportType.toLowerCase();
+  const cls = "size-5 shrink-0 opacity-70";
+  if (s.includes("swim")) {
+    return (
+      <PersonSimpleSwimIcon
+        aria-hidden
+        className={cls}
+        data-sport="swim"
+        weight="duotone"
+      />
+    );
+  }
+  if (s.includes("ride") || s.includes("bike") || s.includes("cycl")) {
+    return (
+      <PersonSimpleBikeIcon
+        aria-hidden
+        className={cls}
+        data-sport="ride"
+        weight="duotone"
+      />
+    );
+  }
+  if (s.includes("run")) {
+    return (
+      <PersonSimpleRunIcon
+        aria-hidden
+        className={cls}
+        data-sport="run"
+        weight="duotone"
+      />
+    );
+  }
+  return (
+    <MapPinIcon
+      aria-hidden
+      className={cls}
+      data-sport="other"
+      weight="duotone"
+    />
+  );
+};
+
+const ActivityItem = ({
+  activity,
+  disabled,
+  isPicking,
+  isSelected,
+  multiSelect,
+  onPick,
+  onToggleSelect,
+}: ActivityItemProps) => {
+  const distanceKm = (activity.distance / 1000).toFixed(1);
+  const duration = formatDuration(activity.moving_time);
+  const startLabel = formatDate(activity.start_date, { month: "short" });
+  const elevation = activity.total_elevation_gain
+    ? `${Math.round(activity.total_elevation_gain)} m`
+    : null;
+
+  const handleClick = () => {
+    if (disabled) {
+      return;
+    }
+    if (multiSelect) {
+      onToggleSelect();
+    } else {
+      onPick();
+    }
+  };
+
+  return (
+    <Item
+      aria-label={activity.name}
+      data-selected={isSelected ? "true" : undefined}
+      onClick={handleClick}
+      render={
+        // The label is the Item's aria-label above, which base-ui renders onto
+        // this button.
+        // oxlint-disable-next-line jsx-a11y/control-has-associated-label
+        <button
+          className="data-[selected=true]:border-primary data-[selected=true]:bg-primary/5 cursor-pointer text-left disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={disabled}
+          type="button"
+        />
+      }
+      variant="outline"
+    >
+      <ItemMedia>
+        <div className="flex items-center gap-3">
+          {multiSelect ? (
+            // Click on the checkbox bubbles to the outer <button> which
+            // toggles the row — make the checkbox itself non-interactive
+            // so we don't double-fire and so focus stays on the row.
+            <Checkbox
+              aria-hidden
+              checked={isSelected}
+              className="pointer-events-none"
+              tabIndex={-1}
+            />
+          ) : null}
+          <SportIcon sportType={activity.sport_type} />
+        </div>
+      </ItemMedia>
+      <ItemContent>
+        <ItemTitle>{activity.name}</ItemTitle>
+        <ItemDescription>
+          <span className="font-mono text-[11px] tracking-wide">
+            {startLabel} · {distanceKm} km · {duration}
+            {elevation ? ` · ${elevation}` : ""}
+          </span>
+        </ItemDescription>
+      </ItemContent>
+      <ItemActions>
+        <PickAffordance isPicking={isPicking} multiSelect={multiSelect} />
+      </ItemActions>
+    </Item>
+  );
+};
+
+const RateLimitAlert = ({
+  className,
+  retryAfter,
+}: {
+  className?: string;
+  retryAfter: number;
+}) => {
+  const [seconds, setSeconds] = useState(retryAfter);
+  // Reset + tick the countdown whenever the parent hands us a fresh
+  // retryAfter (legit external-prop sync).
+  useEffect(() => {
+    /* oxlint-disable-next-line react/set-state-in-effect */
+    setSeconds(retryAfter);
+    const id = window.setInterval(() => {
+      setSeconds((s) => (s > 0 ? s - 1 : 0));
+    }, 1000);
+    return () => {
+      window.clearInterval(id);
+    };
+  }, [retryAfter]);
+  return (
+    <Alert className={className} variant="destructive">
+      <AlertTitle>Strava is rate-limiting us</AlertTitle>
+      <AlertDescription>
+        <p>
+          We hit Strava&apos;s 15-minute request quota. Try again in{" "}
+          <span className="font-mono">{seconds}s</span>.
+        </p>
+        <Button
+          className="mt-3"
+          disabled={seconds > 0}
+          onClick={() => {
+            window.location.reload();
+          }}
+          size="sm"
+          variant="outline"
+        >
+          Retry
+        </Button>
+      </AlertDescription>
+    </Alert>
+  );
+};
+
+/**
+ * One Alert component for every Strava failure mode. Each kind gets
+ * specific copy + an actionable next step (Retry / Reconnect / Wait)
+ * instead of a generic "couldn't reach Strava (NNN)". Rate-limit shows
+ * a live countdown so the user knows when Retry will work.
+ */
+const StravaErrorAlert = ({
+  className,
+  error,
+  onReauth,
+}: StravaErrorAlertProps) => {
+  if (error.kind === "reauth") {
+    return (
+      <Alert className={className} variant="destructive">
+        <AlertTitle>Your Strava sign-in expired</AlertTitle>
+        <AlertDescription>
+          <p>Reconnect to keep browsing your activities.</p>
+          <Button
+            className="mt-3"
+            onClick={onReauth}
+            size="sm"
+            variant="outline"
+          >
+            Reconnect Strava
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+  if (error.kind === "rate_limited") {
+    return (
+      <RateLimitAlert className={className} retryAfter={error.retryAfter} />
+    );
+  }
+  if (error.kind === "upstream") {
+    return (
+      <Alert className={className} variant="destructive">
+        <AlertTitle>Strava had a hiccup</AlertTitle>
+        <AlertDescription>
+          <p>HTTP {error.status} from Strava. Try again in a moment.</p>
+          <Button
+            className="mt-3"
+            onClick={() => {
+              window.location.reload();
+            }}
+            size="sm"
+            variant="outline"
+          >
+            Retry
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+  if (error.kind === "empty_activity") {
+    return (
+      <Alert className={className} variant="destructive">
+        <AlertTitle>Nothing to render here</AlertTitle>
+        <AlertDescription>
+          This Strava activity has no data we can turn into a card (no GPS and
+          no session summary).
+        </AlertDescription>
+      </Alert>
+    );
+  }
+  return (
+    <Alert className={className} variant="destructive">
+      <AlertTitle>Can&apos;t reach the server</AlertTitle>
+      <AlertDescription>
+        <p>{error.message}</p>
+        <Button
+          className="mt-3"
+          onClick={() => {
+            window.location.reload();
+          }}
+          size="sm"
+          variant="outline"
+        >
+          Retry
+        </Button>
+      </AlertDescription>
+    </Alert>
+  );
+};
+
+const ActivityList = ({
+  activities,
+  isCombining,
+  multiSelect,
+  onPick,
+  onReauth,
+  onToggleSelect,
+  page,
+  pickingId,
+  selected,
+  state,
+}: ActivityListProps) => {
+  if (state.kind === "loading") {
+    return (
+      <ItemGroup>
+        {SKELETON_KEYS.map((k) => (
+          <Skeleton className="h-[72px] w-full" key={`strava-skel-${k}`} />
+        ))}
+      </ItemGroup>
+    );
+  }
+  if (state.kind === "empty") {
+    return (
+      <Alert>
+        <AlertTitle>No activities on this page.</AlertTitle>
+        <AlertDescription>
+          {page > 1
+            ? "You've reached the end of your activity history."
+            : "Record an activity in Strava, then come back."}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+  if (state.kind === "error") {
+    return <StravaErrorAlert error={state.error} onReauth={onReauth} />;
+  }
+  return (
+    <ItemGroup>
+      {activities.map((a) => (
+        <ActivityItem
+          activity={a}
+          disabled={pickingId !== null || isCombining}
+          isPicking={pickingId === a.id}
+          isSelected={selected.has(a.id)}
+          key={a.id}
+          multiSelect={multiSelect}
+          onPick={() => {
+            onPick(a.id);
+          }}
+          onToggleSelect={() => {
+            onToggleSelect(a.id);
+          }}
+        />
+      ))}
+    </ItemGroup>
+  );
+};
+
+export const StravaPicker = ({
   embedded = false,
   onActivityLoaded,
   onCancel,
   onReauth,
-}: StravaPickerProps) {
+}: StravaPickerProps) => {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState<number | null>(null);
@@ -284,13 +719,13 @@ export function StravaPicker({
           onReauth();
           return;
         }
-        setState({ kind: "error", error: result.error });
+        setState({ error: result.error, kind: "error" });
         return;
       }
       setState(
         result.activities.length === 0
           ? { kind: "empty" }
-          : { kind: "ready", activities: result.activities }
+          : { activities: result.activities, kind: "ready" }
       );
     });
     /* oxlint-enable react/set-state-in-effect */
@@ -340,7 +775,9 @@ export function StravaPicker({
     }
     setIsCombining(true);
     setPickError(null);
-    const results = await Promise.all(ids.map((id) => fetchDetail(id)));
+    const results = await Promise.all(
+      ids.map(async (id) => await fetchDetail(id))
+    );
     setIsCombining(false);
     // If any of the parallel fetches expired the grant, jump to reauth so
     // the user doesn't see a confusing per-error message.
@@ -482,7 +919,7 @@ export function StravaPicker({
       ) : null}
     </div>
   );
-}
+};
 
 interface PickerPaginationProps {
   canGoNext: boolean;
@@ -497,104 +934,6 @@ type RangeItem =
   | { kind: "page"; n: number }
   | { kind: "ellipsis"; side: "left" | "right" };
 
-/**
- * Build the page-number sequence following the shadcn pattern: always pin
- * page 1 and the last page, show three numbers around the current page,
- * and collapse anything else into ellipses. Short ranges (≤ 7 pages)
- * render every number so the UI doesn't show useless ellipses.
- */
-function paginationRange(page: number, total: number): RangeItem[] {
-  if (total <= 7) {
-    return Array.from({ length: total }, (_, i) => ({
-      kind: "page" as const,
-      n: i + 1,
-    }));
-  }
-  const items: RangeItem[] = [{ kind: "page", n: 1 }];
-  let start: number;
-  let end: number;
-  if (page <= 3) {
-    start = 2;
-    end = 4;
-  } else if (page >= total - 2) {
-    start = total - 3;
-    end = total - 1;
-  } else {
-    start = page - 1;
-    end = page + 1;
-  }
-  if (start > 2) {
-    items.push({ kind: "ellipsis", side: "left" });
-  }
-  for (let p = start; p <= end; p++) {
-    items.push({ kind: "page", n: p });
-  }
-  if (end < total - 1) {
-    items.push({ kind: "ellipsis", side: "right" });
-  }
-  items.push({ kind: "page", n: total });
-  return items;
-}
-
-function PickerPagination({
-  canGoNext,
-  canGoPrev,
-  onPageChange,
-  page,
-  show,
-  totalPages,
-}: PickerPaginationProps) {
-  if (!show) {
-    return null;
-  }
-  // Until we know the total page count we can't render a meaningful list —
-  // fall back to Prev / current / Next so the user can still page forward.
-  const range: RangeItem[] | null =
-    totalPages === null ? null : paginationRange(page, totalPages);
-  return (
-    <Pagination className="mt-8 font-mono text-[11px] tracking-[0.18em] uppercase">
-      <PaginationContent>
-        <PaginationItem>
-          <PaginationPrevious
-            aria-disabled={!canGoPrev}
-            className={canGoPrev ? "" : "pointer-events-none opacity-40"}
-            onClick={() => canGoPrev && onPageChange((p) => p - 1)}
-          />
-        </PaginationItem>
-        {range ? (
-          range.map((item) =>
-            item.kind === "ellipsis" ? (
-              <PaginationItem key={`ellipsis-${item.side}`}>
-                <PaginationEllipsis />
-              </PaginationItem>
-            ) : (
-              <PaginationItem key={`page-${item.n}`}>
-                <PaginationLink
-                  isActive={item.n === page}
-                  onClick={() => onPageChange(() => item.n)}
-                >
-                  {item.n}
-                </PaginationLink>
-              </PaginationItem>
-            )
-          )
-        ) : (
-          <PaginationItem>
-            <PaginationLink isActive>{page}</PaginationLink>
-          </PaginationItem>
-        )}
-        <PaginationItem>
-          <PaginationNext
-            aria-disabled={!canGoNext}
-            className={canGoNext ? "" : "pointer-events-none opacity-40"}
-            onClick={() => canGoNext && onPageChange((p) => p + 1)}
-          />
-        </PaginationItem>
-      </PaginationContent>
-    </Pagination>
-  );
-}
-
 interface ActivityListProps {
   activities: StravaSummaryActivity[];
   isCombining: boolean;
@@ -608,60 +947,6 @@ interface ActivityListProps {
   state: LoadState;
 }
 
-function ActivityList({
-  activities,
-  isCombining,
-  multiSelect,
-  onPick,
-  onReauth,
-  onToggleSelect,
-  page,
-  pickingId,
-  selected,
-  state,
-}: ActivityListProps) {
-  if (state.kind === "loading") {
-    return (
-      <ItemGroup>
-        {SKELETON_KEYS.map((k) => (
-          <Skeleton className="h-[72px] w-full" key={`strava-skel-${k}`} />
-        ))}
-      </ItemGroup>
-    );
-  }
-  if (state.kind === "empty") {
-    return (
-      <Alert>
-        <AlertTitle>No activities on this page.</AlertTitle>
-        <AlertDescription>
-          {page > 1
-            ? "You've reached the end of your activity history."
-            : "Record an activity in Strava, then come back."}
-        </AlertDescription>
-      </Alert>
-    );
-  }
-  if (state.kind === "error") {
-    return <StravaErrorAlert error={state.error} onReauth={onReauth} />;
-  }
-  return (
-    <ItemGroup>
-      {activities.map((a) => (
-        <ActivityItem
-          activity={a}
-          disabled={pickingId !== null || isCombining}
-          isPicking={pickingId === a.id}
-          isSelected={selected.has(a.id)}
-          key={a.id}
-          multiSelect={multiSelect}
-          onPick={() => onPick(a.id)}
-          onToggleSelect={() => onToggleSelect(a.id)}
-        />
-      ))}
-    </ItemGroup>
-  );
-}
-
 interface ActivityItemProps {
   activity: StravaSummaryActivity;
   disabled: boolean;
@@ -672,275 +957,8 @@ interface ActivityItemProps {
   onToggleSelect: () => void;
 }
 
-function ActivityItem({
-  activity,
-  disabled,
-  isPicking,
-  isSelected,
-  multiSelect,
-  onPick,
-  onToggleSelect,
-}: ActivityItemProps) {
-  const distanceKm = (activity.distance / 1000).toFixed(1);
-  const duration = formatDuration(activity.moving_time);
-  const startLabel = formatDate(activity.start_date, { month: "short" });
-  const elevation = activity.total_elevation_gain
-    ? `${Math.round(activity.total_elevation_gain)} m`
-    : null;
-
-  const handleClick = () => {
-    if (disabled) {
-      return;
-    }
-    if (multiSelect) {
-      onToggleSelect();
-    } else {
-      onPick();
-    }
-  };
-
-  return (
-    <Item
-      aria-label={activity.name}
-      data-selected={isSelected ? "true" : undefined}
-      onClick={handleClick}
-      render={
-        // The label is the Item's aria-label above, which base-ui renders onto
-        // this button.
-        // oxlint-disable-next-line jsx-a11y/control-has-associated-label
-        <button
-          className="data-[selected=true]:border-primary data-[selected=true]:bg-primary/5 cursor-pointer text-left disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={disabled}
-          type="button"
-        />
-      }
-      variant="outline"
-    >
-      <ItemMedia>
-        <div className="flex items-center gap-3">
-          {multiSelect ? (
-            // Click on the checkbox bubbles to the outer <button> which
-            // toggles the row — make the checkbox itself non-interactive
-            // so we don't double-fire and so focus stays on the row.
-            <Checkbox
-              aria-hidden
-              checked={isSelected}
-              className="pointer-events-none"
-              tabIndex={-1}
-            />
-          ) : null}
-          <SportIcon sportType={activity.sport_type} />
-        </div>
-      </ItemMedia>
-      <ItemContent>
-        <ItemTitle>{activity.name}</ItemTitle>
-        <ItemDescription>
-          <span className="font-mono text-[11px] tracking-wide">
-            {startLabel} · {distanceKm} km · {duration}
-            {elevation ? ` · ${elevation}` : ""}
-          </span>
-        </ItemDescription>
-      </ItemContent>
-      <ItemActions>
-        <PickAffordance isPicking={isPicking} multiSelect={multiSelect} />
-      </ItemActions>
-    </Item>
-  );
-}
-
-function PickAffordance({
-  isPicking,
-  multiSelect,
-}: {
-  isPicking: boolean;
-  multiSelect: boolean;
-}) {
-  if (isPicking) {
-    return (
-      <CircleNotchIcon
-        aria-label="Loading"
-        className="size-4 animate-spin opacity-60"
-        weight="duotone"
-      />
-    );
-  }
-  if (multiSelect) {
-    return null;
-  }
-  return (
-    <span className="flex items-center gap-1 font-mono text-[10px] tracking-[0.18em] opacity-50">
-      PICK
-      <ArrowRightIcon aria-hidden className="size-3" weight="duotone" />
-    </span>
-  );
-}
-
-function SportIcon({ sportType }: { sportType: string }) {
-  const s = sportType.toLowerCase();
-  const cls = "size-5 shrink-0 opacity-70";
-  if (s.includes("swim")) {
-    return (
-      <PersonSimpleSwimIcon
-        aria-hidden
-        className={cls}
-        data-sport="swim"
-        weight="duotone"
-      />
-    );
-  }
-  if (s.includes("ride") || s.includes("bike") || s.includes("cycl")) {
-    return (
-      <PersonSimpleBikeIcon
-        aria-hidden
-        className={cls}
-        data-sport="ride"
-        weight="duotone"
-      />
-    );
-  }
-  if (s.includes("run")) {
-    return (
-      <PersonSimpleRunIcon
-        aria-hidden
-        className={cls}
-        data-sport="run"
-        weight="duotone"
-      />
-    );
-  }
-  return (
-    <MapPinIcon
-      aria-hidden
-      className={cls}
-      data-sport="other"
-      weight="duotone"
-    />
-  );
-}
-
 interface StravaErrorAlertProps {
   className?: string;
   error: StravaFetchError;
   onReauth: () => void;
-}
-
-/**
- * One Alert component for every Strava failure mode. Each kind gets
- * specific copy + an actionable next step (Retry / Reconnect / Wait)
- * instead of a generic "couldn't reach Strava (NNN)". Rate-limit shows
- * a live countdown so the user knows when Retry will work.
- */
-function StravaErrorAlert({
-  className,
-  error,
-  onReauth,
-}: StravaErrorAlertProps) {
-  if (error.kind === "reauth") {
-    return (
-      <Alert className={className} variant="destructive">
-        <AlertTitle>Your Strava sign-in expired</AlertTitle>
-        <AlertDescription>
-          <p>Reconnect to keep browsing your activities.</p>
-          <Button
-            className="mt-3"
-            onClick={onReauth}
-            size="sm"
-            variant="outline"
-          >
-            Reconnect Strava
-          </Button>
-        </AlertDescription>
-      </Alert>
-    );
-  }
-  if (error.kind === "rate_limited") {
-    return (
-      <RateLimitAlert className={className} retryAfter={error.retryAfter} />
-    );
-  }
-  if (error.kind === "upstream") {
-    return (
-      <Alert className={className} variant="destructive">
-        <AlertTitle>Strava had a hiccup</AlertTitle>
-        <AlertDescription>
-          <p>HTTP {error.status} from Strava. Try again in a moment.</p>
-          <Button
-            className="mt-3"
-            onClick={() => window.location.reload()}
-            size="sm"
-            variant="outline"
-          >
-            Retry
-          </Button>
-        </AlertDescription>
-      </Alert>
-    );
-  }
-  if (error.kind === "empty_activity") {
-    return (
-      <Alert className={className} variant="destructive">
-        <AlertTitle>Nothing to render here</AlertTitle>
-        <AlertDescription>
-          This Strava activity has no data we can turn into a card (no GPS and
-          no session summary).
-        </AlertDescription>
-      </Alert>
-    );
-  }
-  return (
-    <Alert className={className} variant="destructive">
-      <AlertTitle>Can&apos;t reach the server</AlertTitle>
-      <AlertDescription>
-        <p>{error.message}</p>
-        <Button
-          className="mt-3"
-          onClick={() => window.location.reload()}
-          size="sm"
-          variant="outline"
-        >
-          Retry
-        </Button>
-      </AlertDescription>
-    </Alert>
-  );
-}
-
-function RateLimitAlert({
-  className,
-  retryAfter,
-}: {
-  className?: string;
-  retryAfter: number;
-}) {
-  const [seconds, setSeconds] = useState(retryAfter);
-  // Reset + tick the countdown whenever the parent hands us a fresh
-  // retryAfter (legit external-prop sync).
-  useEffect(() => {
-    /* oxlint-disable-next-line react/set-state-in-effect */
-    setSeconds(retryAfter);
-    const id = window.setInterval(() => {
-      setSeconds((s) => (s > 0 ? s - 1 : 0));
-    }, 1000);
-    return () => window.clearInterval(id);
-  }, [retryAfter]);
-  return (
-    <Alert className={className} variant="destructive">
-      <AlertTitle>Strava is rate-limiting us</AlertTitle>
-      <AlertDescription>
-        <p>
-          We hit Strava&apos;s 15-minute request quota. Try again in{" "}
-          <span className="font-mono">{seconds}s</span>.
-        </p>
-        <Button
-          className="mt-3"
-          disabled={seconds > 0}
-          onClick={() => window.location.reload()}
-          size="sm"
-          variant="outline"
-        >
-          Retry
-        </Button>
-      </AlertDescription>
-    </Alert>
-  );
 }

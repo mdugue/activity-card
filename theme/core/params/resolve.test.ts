@@ -10,35 +10,35 @@ interface Cfg extends Record<string, unknown> {
   mood: string;
 }
 
-const DEFAULTS: Cfg = { mood: "dusk", density: 24, legend: true };
+const DEFAULTS: Cfg = { density: 24, legend: true, mood: "dusk" };
 
 const PARAMS: ParamDef[] = [
   {
-    id: "mood",
-    group: "style",
-    label: "Atmosphere",
-    kind: "segmented",
     default: "dusk",
+    group: "style",
+    id: "mood",
+    kind: "segmented",
+    label: "Atmosphere",
     options: [
       { id: "dawn", label: "Dawn" },
       { id: "dusk", label: "Dusk" },
     ],
   },
   {
-    id: "density",
-    group: "layout",
-    label: "Density",
-    kind: "slider",
     default: 24,
-    min: 10,
+    group: "layout",
+    id: "density",
+    kind: "slider",
+    label: "Density",
     max: 40,
+    min: 10,
   },
   {
-    id: "legend",
-    group: "marks",
-    label: "Legend",
-    kind: "toggle",
     default: true,
+    group: "marks",
+    id: "legend",
+    kind: "toggle",
+    label: "Legend",
   },
 ];
 
@@ -51,15 +51,15 @@ describe("coerceConfig", () => {
 
   test("accepts a valid partial and merges over defaults", () => {
     expect(coerceConfig(DEFAULTS, PARAMS, { mood: "dawn" })).toEqual({
-      mood: "dawn",
       density: 24,
       legend: true,
+      mood: "dawn",
     });
   });
 
   test("drops unknown keys", () => {
-    const out = coerceConfig(DEFAULTS, PARAMS, { mood: "dawn", bogus: 1 });
-    expect(out).toEqual({ mood: "dawn", density: 24, legend: true });
+    const out = coerceConfig(DEFAULTS, PARAMS, { bogus: 1, mood: "dawn" });
+    expect(out).toEqual({ density: 24, legend: true, mood: "dawn" });
     expect("bogus" in out).toBe(false);
   });
 
@@ -85,11 +85,11 @@ describe("coerceConfig", () => {
   test("accepts any string for a dynamic choice with no optionIds", () => {
     const dyn: ParamDef[] = [
       {
-        id: "mood",
-        group: "style",
-        label: "Atmosphere",
-        kind: "select",
         default: "dusk",
+        group: "style",
+        id: "mood",
+        kind: "select",
+        label: "Atmosphere",
         options: () => [{ id: "dusk", label: "Dusk" }],
       },
     ];

@@ -11,7 +11,7 @@ const CARD_SHADOW =
  * data) down to `height` and frames it with the brand shadow. The card keeps
  * its exact export proportions — never stretch it.
  */
-export function CardScaled({
+export const CardScaled = ({
   children,
   height,
   shadow = true,
@@ -21,7 +21,7 @@ export function CardScaled({
   height: number;
   shadow?: boolean;
   style?: CSSProperties;
-}) {
+}) => {
   const scale = height / CARD.height;
   return (
     <div
@@ -51,7 +51,7 @@ export function CardScaled({
       </div>
     </div>
   );
-}
+};
 
 /**
  * Pans across a seamless carousel strip (a `CarouselDeck`, n×1080 wide) scaled
@@ -59,7 +59,7 @@ export function CardScaled({
  * `progress` from the scene's frame. `showSeams` overlays hairlines on the
  * slide boundaries to demonstrate how the strip slices into slides.
  */
-export function StripPan({
+export const StripPan = ({
   children,
   height,
   panFrom,
@@ -77,7 +77,7 @@ export function StripPan({
   showSeams?: boolean;
   slideCount: number;
   style?: CSSProperties;
-}) {
+}) => {
   const scale = height / CARD.height;
   const x = interpolate(progress, [0, 1], [panFrom, panTo]);
   const seams: number[] = [];
@@ -123,4 +123,4 @@ export function StripPan({
       ))}
     </div>
   );
-}
+};

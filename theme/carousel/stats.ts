@@ -27,43 +27,39 @@ export interface StatItem {
   value: string;
 }
 
-function distance(data: ActivityData): StatItem {
+const distance = (data: ActivityData): StatItem => {
   if (data.sport === "swim") {
     return {
       key: "distance",
       label: "DISTANCE",
-      value: formatNumber(data.distanceKm * 1000, 0),
       unit: "m",
+      value: formatNumber(data.distanceKm * 1000, 0),
     };
   }
   return {
     key: "distance",
     label: "DISTANCE",
-    value: formatNumber(data.distanceKm, 1),
     unit: "km",
+    value: formatNumber(data.distanceKm, 1),
   };
-}
+};
 
-function duration(data: ActivityData): StatItem {
-  return {
-    key: "duration",
-    label: "TIME",
-    value: formatDuration(data.durationSec),
-    unit: "",
-  };
-}
+const duration = (data: ActivityData): StatItem => ({
+  key: "duration",
+  label: "TIME",
+  unit: "",
+  value: formatDuration(data.durationSec),
+});
 
-function elevation(data: ActivityData): StatItem | null {
-  return data.elevationGainM === undefined ||
-    !Number.isFinite(data.elevationGainM)
+const elevation = (data: ActivityData): StatItem | null =>
+  data.elevationGainM === undefined || !Number.isFinite(data.elevationGainM)
     ? null
     : {
         key: "elevation",
         label: "ELEVATION",
-        value: formatNumber(data.elevationGainM, 0),
         unit: "m",
+        value: formatNumber(data.elevationGainM, 0),
       };
-}
 
 /** Distance and time are the irreducible core of a card, so they're never
  *  stripped from the data; the carousel honours their visibility here instead. */
@@ -75,7 +71,7 @@ export interface StatOpts {
 /** Build the full ordered set of stats available for this activity. Items
  *  with no underlying data are omitted so templates never render a dash. The
  *  order is the storyboard priority — distance always leads. */
-export function buildStats(data: ActivityData, opts?: StatOpts): StatItem[] {
+export const buildStats = (data: ActivityData, opts?: StatOpts): StatItem[] => {
   const items: StatItem[] = [];
   if (opts?.distance ?? true) {
     items.push(distance(data));
@@ -95,7 +91,7 @@ export function buildStats(data: ActivityData, opts?: StatOpts): StatItem[] {
   ): StatItem | null =>
     n === undefined || !Number.isFinite(n)
       ? null
-      : { key, label, value: formatNumber(n, digits), unit };
+      : { key, label, unit, value: formatNumber(n, digits) };
 
   if (data.sport === "ride") {
     push(dur);
@@ -112,8 +108,8 @@ export function buildStats(data: ActivityData, opts?: StatOpts): StatItem[] {
         ? {
             key: "pace",
             label: "AVG PACE",
-            value: formatPaceMin(data.avgPaceMinPerKm),
             unit: "/km",
+            value: formatPaceMin(data.avgPaceMinPerKm),
           }
         : null
     );
@@ -127,8 +123,8 @@ export function buildStats(data: ActivityData, opts?: StatOpts): StatItem[] {
         ? {
             key: "pace",
             label: "PACE",
-            value: formatPaceSec(data.avgPacePer100m),
             unit: "/100m",
+            value: formatPaceSec(data.avgPacePer100m),
           }
         : null
     );
@@ -144,7 +140,7 @@ export function buildStats(data: ActivityData, opts?: StatOpts): StatItem[] {
   }
 
   return items;
-}
+};
 
 /** The single most expressive stat for a Hero slide. Distance for most themes;
  *  total elevation when the theme headlines the climb (Ascent). Falls back to
@@ -152,13 +148,13 @@ export function buildStats(data: ActivityData, opts?: StatOpts): StatItem[] {
 /** A blank headline used when every stat (including distance + time) is hidden,
  *  so the hero slide shows the title alone instead of resurrecting a hidden
  *  number. */
-const EMPTY_HERO: StatItem = { key: "", label: "", value: "", unit: "" };
+const EMPTY_HERO: StatItem = { key: "", label: "", unit: "", value: "" };
 
-export function heroStat(
+export const heroStat = (
   data: ActivityData,
   metric: HeroMetric = "distance",
   opts?: StatOpts
-): StatItem {
+): StatItem => {
   if (metric === "elevation") {
     const el = elevation(data);
     if (el) {
@@ -170,37 +166,35 @@ export function heroStat(
   // hidden Distance *and* Time (and nothing else remains) it is empty — return a
   // blank hero rather than re-injecting the distance the user just turned off.
   return buildStats(data, opts)[0] ?? EMPTY_HERO;
-}
+};
 
 /** The distance/time visibility a stat panel honours, read from the deck-wide
  *  visibility flags it already receives. */
-export function statOptsFor(vis: {
+export const statOptsFor = (vis: {
   distance: boolean;
   time: boolean;
-}): StatOpts {
-  return { distance: vis.distance, time: vis.time };
-}
+}): StatOpts => ({ distance: vis.distance, time: vis.time });
 
 /** A standard stat detail slide shows every stat EXCEPT the one the hero slide
  *  headlines (so the deck doesn't repeat its big number). */
-export function detailStats(
+export const detailStats = (
   data: ActivityData,
   metric: HeroMetric,
   opts?: StatOpts
-): StatItem[] {
+): StatItem[] => {
   const heroKey = heroStat(data, metric, opts).key;
   return buildStats(data, opts).filter((s) => s.key !== heroKey);
-}
+};
 
 /** The stats a Press slide shows, by position: the front page leads with the
  *  headline + lede (first 3); the first spread carries one pull-quote, the next
  *  a small row; the byline shows none. */
-export function pressSlideStats(
+export const pressSlideStats = (
   data: ActivityData,
   index: number,
   total: number,
   opts?: StatOpts
-): StatItem[] {
+): StatItem[] => {
   if (index === 0) {
     return buildStats(data, opts).slice(0, 3); // headline + lede
   }
@@ -210,7 +204,7 @@ export function pressSlideStats(
   const rest = buildStats(data, opts).slice(3);
   // First spread leads with one pull-quote; later spreads carry a small row.
   return index === 1 ? rest.slice(0, 1) : rest.slice(1, 4);
-}
+};
 
 /**
  * Curated, sport-aware order for the Frame theme (one datum per slide). Leads
@@ -224,7 +218,7 @@ const FRAME_PRIORITY: Record<ActivityData["sport"], string[]> = {
   triathlon: ["distance", "duration", "elevation", "avgHr"],
 };
 
-export function frameStats(data: ActivityData, opts?: StatOpts): StatItem[] {
+export const frameStats = (data: ActivityData, opts?: StatOpts): StatItem[] => {
   const all = buildStats(data, opts);
   const byKey = new Map(all.map((s) => [s.key, s]));
   const order = FRAME_PRIORITY[data.sport];
@@ -242,21 +236,21 @@ export function frameStats(data: ActivityData, opts?: StatOpts): StatItem[] {
     }
   }
   return ordered;
-}
+};
 
 /* ---- sparkline series (Frame) ---- */
 
-export function routeSeries(data: ActivityData): Coord[] | undefined {
+export const routeSeries = (data: ActivityData): Coord[] | undefined => {
   const c = data.routeCoordinates;
   return c && c.length > 1 ? c : undefined;
-}
+};
 
-export function elevationSeries(data: ActivityData): number[] | undefined {
+export const elevationSeries = (data: ActivityData): number[] | undefined => {
   const p = data.elevationProfile;
   return p && p.length > 1 ? p : undefined;
-}
+};
 
-export function speedSeries(data: ActivityData): number[] | undefined {
+export const speedSeries = (data: ActivityData): number[] | undefined => {
   if (data.speedProfile && data.speedProfile.length > 1) {
     return data.speedProfile;
   }
@@ -266,14 +260,14 @@ export function speedSeries(data: ActivityData): number[] | undefined {
     .map((s) => s.avgSpeedKmh)
     .filter((v): v is number => v !== undefined && Number.isFinite(v));
   return fromSplits.length > 1 ? fromSplits : undefined;
-}
+};
 
-export function powerSeries(data: ActivityData): number[] | undefined {
+export const powerSeries = (data: ActivityData): number[] | undefined => {
   const p = data.powerProfile;
   return p && p.length > 1 ? p : undefined;
-}
+};
 
-export function paceSeries(data: ActivityData): number[] | undefined {
+export const paceSeries = (data: ActivityData): number[] | undefined => {
   const p = data.paceProfile;
   return p && p.length > 1 ? p : undefined;
-}
+};
