@@ -15,7 +15,7 @@ A client-side web app that turns one GPX or .fit file into a beautiful, shareabl
 
 - GPX + .fit upload, drag-and-drop
 - Parsing → unified `Activity` shape
-- Six themes, sport-aware (ride / run / swim / triathlon)
+- Seven single-card and six carousel themes, sport-aware (ride / run / swim / triathlon)
 - Optional background photo
 - Live preview + minimal customisation (accent colour, stat toggles)
 - PNG export at 1080×1350 via `snapdom`
@@ -41,7 +41,7 @@ If a task seems to require one of these, stop and confirm with the user.
 - "Should I add a backend for X?" — no, MVP is fully client-side.
 - "Should I store this in localStorage?" — fine for transient UI prefs (selected theme, accent colour), not for activity data.
 - "Should I use a map?" — no. Routes are always abstract SVG polylines.
-- "Should I add another theme?" — six is the spec. Improve one of the six rather than adding a seventh.
+- "Should I add another theme?" — ask first. There are 7 single-card and 6 carousel themes; improve an existing one rather than adding another without sign-off.
 - "Should I support .tcx files?" — defer. GPX + .fit covers 95% of the market.
 - "Should I add server-side rendering for SEO?" — no, this is a tool not a content site.
 
