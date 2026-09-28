@@ -150,7 +150,6 @@ const FiltersStep = ({ durationInFrames }: { durationInFrames: number }) => {
       <PreloadImg src={staticFile(RIDE_PHOTO)} />
       <PhotoFxProvider
         value={{
-          // oxlint-disable-next-line remotion/slow-css-property -- not CSS: `PhotoEffects.filter` is the app's filter-preset id, fed to the real theme's photo layer
           effects: { ...NO_EFFECTS, filter: beat.preset, grain: beat.grain },
           imageSize: RIDE_SIZE,
         }}

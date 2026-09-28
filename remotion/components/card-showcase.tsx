@@ -27,7 +27,6 @@ export const CardScaled = ({
     <div
       style={{
         borderRadius: 6,
-        // oxlint-disable-next-line remotion/slow-css-property -- the soft lifted-card drop shadow is part of the approved video look; no cheaper property renders a blurred shadow
         boxShadow: shadow ? CARD_SHADOW : undefined,
         flex: "none",
         height,

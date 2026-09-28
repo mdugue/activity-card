@@ -91,7 +91,6 @@ export const Cursor = ({
           backgroundColor: RUST_BRIGHT,
           border: `3px solid ${PAPER}`,
           borderRadius: 999,
-          // oxlint-disable-next-line remotion/slow-css-property -- the cursor dot's soft shadow lifts it off the UI — part of the approved look; no cheaper property renders a blurred shadow
           boxShadow: "0 4px 16px rgba(0,0,0,0.45)",
           height: size,
           width: size,

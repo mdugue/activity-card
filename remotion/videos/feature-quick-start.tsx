@@ -86,7 +86,6 @@ const PhotoStep = () => {
         style={{
           backgroundColor: "#fff",
           borderRadius: RADIUS.md,
-          // oxlint-disable-next-line remotion/slow-css-property -- the soft lifted-card drop shadow is part of the approved video look; no cheaper property renders a blurred shadow
           boxShadow: "0 60px 120px -40px rgba(0,0,0,0.65)",
           padding: 18,
           transform: `rotate(${tilt}deg)`,

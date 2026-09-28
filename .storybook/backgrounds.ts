@@ -12,6 +12,7 @@
 
 import type { GlobalTypes } from "storybook/internal/types";
 
+export default {}
 export interface BackgroundPreset {
   label: string;
   url: string | null;

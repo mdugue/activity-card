@@ -19,6 +19,7 @@ import { SafeZoneOverlay } from "@/theme/editor/safe-zone-overlay";
 import { FormatProvider } from "@/theme/shared/format-context";
 
 /** A tile's size and scale, as CSS custom properties. */
+export default {}
 interface TileStyle extends CSSProperties {
   "--fmt-h": string;
   "--fmt-w": string;

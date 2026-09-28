@@ -26,7 +26,6 @@ export const FileChip = ({
       alignItems: "center",
       backgroundColor: INK_RAISED,
       borderRadius: RADIUS.pill,
-      // oxlint-disable-next-line remotion/slow-css-property -- the chip's soft drop shadow + hairline ring are part of the approved look; no cheaper property renders a blurred shadow
       boxShadow:
         "0 24px 48px -16px rgba(0,0,0,0.55), 0 0 0 1px rgba(247,243,236,0.14)",
       color: PAPER,

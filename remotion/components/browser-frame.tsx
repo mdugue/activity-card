@@ -41,7 +41,6 @@ export const BrowserFrame = ({
     style={{
       backgroundColor: INK_RAISED,
       borderRadius: RADIUS.lg,
-      // oxlint-disable-next-line remotion/slow-css-property -- the browser vignette's soft drop shadow + hairline ring are part of the approved look; no cheaper property renders a blurred shadow
       boxShadow:
         "0 60px 120px -40px rgba(0,0,0,0.65), 0 0 0 1px rgba(247,243,236,0.12)",
       display: "flex",

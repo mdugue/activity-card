@@ -173,12 +173,14 @@ appear.
   `--type-aware`, so the promise, deprecation and assertion rules that need type
   information run too. `oxlint.config.ts` takes every applicable Ultracite
   preset as shipped (core, react, next, jest, js-plugins — github, sonarjs,
-  React Doctor — next/js-plugins, anti-slop, shadcn) plus
-  eslint-plugin-storybook and @remotion/eslint-plugin, with **no rule
-  deviations**. The only scoped overrides: the vendored shadcn files, Next's
-  verb-named Route Handlers, and shadcn/lint's design-system rules not
-  applying to theme canvases / Remotion frames (pixel-exact inline-styled
-  output, not design-system UI). When a rule fires, change the code. A targeted
+  React Doctor — next/js-plugins, anti-slop, shadcn) plus the recommended sets
+  of eslint-plugin-storybook and @remotion/eslint-plugin, read from the
+  plugins themselves — **no rule tweaks**. The config only decides *where*
+  presets apply: generated code (`components/ui`, `hooks/use-mobile.ts`) is
+  ignored, shadcn/lint covers the app UI but not theme canvases / Remotion
+  frames (pixel-exact inline-styled output), `components/app/primitives` gets
+  the preset's own components/ui exemptions, and Next's verb-named Route
+  Handlers skip `sonarjs/function-name`. When a rule fires, change the code. A targeted
   `// oxlint-disable-next-line <rule> -- <reason>` is the escape hatch for a
   single line that genuinely cannot comply (a framework contract, a pixel-exact
   poster size); never a config switch, never a file-level disable.
@@ -283,8 +285,8 @@ public/               Static assets.
 Need a variant a primitive doesn't have? Build it as a wrapper in
 `components/app/primitives/` (linted like `components/ui`: it may restyle the
 primitive it wraps), not as call-site classes and not by editing `ui/`.
-`oxlint.config.ts` has one override for them that relaxes the rules shadcn's generated code violates, so a re-scaffold is never a lint failure — they are still linted and
-formatted, just at the level their generator ships. Don't restyle vendor files; if a
+`oxlint.config.ts` ignores them (they're formatted, not linted), so a re-scaffold
+is never a lint failure. Don't restyle vendor files; if a
 primitive doesn't fit, wrap it in `components/app/`. When re-adding one, check its
 import of `cn`: newer registry output imports it from a `cn` package, while this repo
 uses `@/lib/utils`.

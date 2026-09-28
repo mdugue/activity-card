@@ -1,33 +1,16 @@
 /**
- * Linting is oxlint with `--type-aware` (via `oxlint-tsgolint`) on top of
- * every Ultracite preset that applies to this stack, taken as shipped:
+ * oxlint (`--type-aware`, via oxlint-tsgolint) with the Ultracite presets and
+ * the framework plugins' own recommended sets — taken as shipped, no rule
+ * tweaks. When a rule fires, change the code; a single line that genuinely
+ * cannot comply gets `oxlint-disable-next-line <rule> -- <reason>`.
  *
- * - `core` — eslint, typescript, unicorn, oxc, import, promise, node, jsdoc…
- * - `react` + `next` — oxlint's native react, react-perf, jsx-a11y and nextjs
- *   rule sets.
- * - `js-plugins` + `next/js-plugins` — eslint-plugin-github,
- *   eslint-plugin-sonarjs and React Doctor (incl. its Next.js rules), run
- *   through oxlint's JS-plugin bridge.
- * - `jest` — the jest rule set, which also understands `bun:test`.
- * - `anti-slop` — the stricter TypeScript evidence rules (safety comments on
- *   assertions, no `unknown` leaking through signatures, …).
- *
- * On top of Ultracite, the framework plugins ESLint used to provide are back
- * as JS plugins: `eslint-plugin-storybook` for stories and
- * `@remotion/eslint-plugin` for the video compositions.
- *
- * There are deliberately NO rule deviations from the presets. When a rule
- * fires, change the code; when a single line genuinely cannot comply, use a
- * targeted `oxlint-disable-next-line <rule> -- <reason>` there, never a
- * config-level switch. The one exception is generated code (below).
- *
- * `eslint-plugin-github` and `eslint-plugin-sonarjs` import the TypeScript
- * compiler API, which TypeScript 7 does not ship. `package.json` therefore
- * installs TS 7 as `@typescript/native` (it owns the `tsc` binary) and aliases
- * `typescript` to the TS 6 API package — the side-by-side setup the TS 7
- * release notes recommend.
+ * The sonarjs and github plugins need the TypeScript compiler API, which TS 7
+ * no longer ships — see the TypeScript note in AGENTS.md.
  */
+import remotion from "@remotion/eslint-plugin";
+import { configs as storybookConfigs } from "eslint-plugin-storybook";
 import { defineConfig } from "oxlint";
+import type { DummyRule, DummyRuleMap, OxlintOverride } from "oxlint";
 import antiSlop from "ultracite/oxlint/anti-slop";
 import core from "ultracite/oxlint/core";
 import jest from "ultracite/oxlint/jest";
@@ -37,192 +20,86 @@ import nextJsPlugins from "ultracite/oxlint/next/js-plugins";
 import react from "ultracite/oxlint/react";
 import shadcn from "ultracite/oxlint/shadcn";
 
+/** A plugin preset's own rules — the entries for other plugins (it switches
+ *  off `react-hooks` / `import-x` rules oxlint doesn't load) dropped. */
+const ownRules = (
+  plugin: string,
+  rules: Readonly<Partial<Record<string, DummyRule>>> = {}
+): DummyRuleMap => {
+  const own: DummyRuleMap = {};
+  for (const [rule, entry] of Object.entries(rules)) {
+    if (rule.startsWith(plugin) && entry !== undefined) {
+      own[rule] = entry;
+    }
+  }
+  return own;
+};
+
+/** eslint-plugin-storybook's recommended + csf-strict flat sets, with the
+ *  file globs they ship (stories, and `.storybook/main`). */
+const storybookOverrides: OxlintOverride[] = [];
+for (const { files, rules } of [
+  ...storybookConfigs["flat/recommended"],
+  ...storybookConfigs["flat/csf-strict"],
+]) {
+  if (files !== undefined) {
+    storybookOverrides.push({
+      // The plugin ships extglobs (`*.stories.@(ts|tsx)`); oxlint's globs
+      // take brace alternation (`*.stories.{ts,tsx}`).
+      files: files
+        .flat()
+        .map((glob) =>
+          glob.replaceAll("@(", "{").replaceAll("|", ",").replaceAll(")", "}")
+        ),
+      rules: ownRules("storybook/", rules),
+    });
+  }
+}
+
 export default defineConfig({
-  extends: [
-    core,
-    react,
-    next,
-    jest,
-    jsPlugins,
-    nextJsPlugins,
-    antiSlop,
-    shadcn,
-  ],
+  extends: [core, react, next, jest, jsPlugins, nextJsPlugins, antiSlop],
   ignorePatterns: [
     ...(core.ignorePatterns ?? []),
-    // Vendored agent skills (`.agents/skills`, `.claude/skills`), installed
-    // via `npx skills add` and pinned by skills-lock.json. Third-party
-    // content — re-add/update, don't edit.
+    // Generated or vendored — re-scaffolded, never hand-edited (AGENTS.md):
+    // shadcn primitives, agent skills, test reports.
+    "components/ui/**",
+    "hooks/use-mobile.ts",
     "**/skills",
-    // Generated, gitignored test artifacts.
     "**/playwright-report",
     "**/test-results",
   ],
-  // Re-declared on the root so dependency analysers see the plugin packages
-  // (oxlint itself loads them from the extended presets either way).
   jsPlugins: [
     ...(jsPlugins.jsPlugins ?? []),
     ...(antiSlop.jsPlugins ?? []),
     ...(shadcn.jsPlugins ?? []),
     { name: "storybook", specifier: "eslint-plugin-storybook" },
-    { name: "remotion", specifier: "@remotion/eslint-plugin" },
+    { name: "@remotion", specifier: "@remotion/eslint-plugin" },
   ],
   overrides: [
+    ...storybookOverrides,
+    { files: ["remotion/**"], rules: remotion.configs.recommended.rules },
+    // shadcn/lint enforces the design system on app UI. Theme canvases and
+    // Remotion frames are not design-system UI (pixel-exact, inline-styled
+    // output), so the preset is scoped to the UI rather than extended globally.
     {
-      // eslint-plugin-storybook's flat/recommended + flat/csf-strict sets.
-      files: ["**/*.stories.tsx"],
-      rules: {
-        "storybook/await-interactions": "error",
-        "storybook/context-in-play-function": "error",
-        "storybook/csf-component": "error",
-        "storybook/default-exports": "error",
-        "storybook/hierarchy-separator": "error",
-        "storybook/meta-inline-properties": "error",
-        "storybook/meta-satisfies-type": "error",
-        "storybook/no-redundant-story-name": "error",
-        "storybook/no-renderer-packages": "error",
-        "storybook/no-stories-of": "error",
-        "storybook/no-title-property-in-meta": "error",
-        "storybook/prefer-pascal-case": "error",
-        "storybook/story-exports": "error",
-        "storybook/use-storybook-expect": "error",
-        "storybook/use-storybook-testing-library": "error",
-      },
-    },
-    {
-      files: [".storybook/main.ts"],
-      rules: {
-        "storybook/no-uninstalled-addons": "error",
-      },
-    },
-    {
-      // Every @remotion/eslint-plugin rule, all at "error".
-      files: ["remotion/**", "remotion.config.ts"],
-      rules: {
-        "remotion/deterministic-randomness": "error",
-        "remotion/duration-in-frames": "error",
-        "remotion/even-dimensions": "error",
-        "remotion/from-0": "error",
-        "remotion/no-background-image": "error",
-        "remotion/no-object-fit-on-media-video": "error",
-        "remotion/no-string-assets": "error",
-        "remotion/non-pure-animation": "error",
-        "remotion/slow-css-property": "error",
-        "remotion/staticfile-no-relative": "error",
-        "remotion/staticfile-no-remote": "error",
-        "remotion/use-gif-component": "error",
-        "remotion/v4-config-import": "error",
-        "remotion/valid-composition-and-folder-name": "error",
-        "remotion/volume-callback": "error",
-        "remotion/warn-native-media-tag": "error",
-      },
-    },
-    {
-      // Framework-mandated names: Next.js dispatches Route Handlers by their
-      // exported HTTP-verb name (`GET`, `POST`), which no camelCase pattern
-      // can match.
-      files: ["app/**/route.ts"],
-      rules: {
-        "sonarjs/function-name": "off",
-      },
-    },
-    {
-      // shadcn/lint enforces the Tailwind design system on app UI. Theme
-      // canvases and Remotion frames are not design-system UI: they are
-      // pixel-exact 1080-wide posters / video frames whose layout is inline
-      // styles by design (AGENTS.md — they rasterise to PNG), and moving them
-      // to classes would only trade no-inline-styles for no-arbitrary-values.
       files: [
-        "theme/single-card/**",
-        "theme/carousel/**",
-        "theme/shared/**",
-        "remotion/**",
+        "app/**",
+        "components/app/**",
+        "theme/editor/**",
+        ".storybook/**",
       ],
-      rules: {
-        "shadcn/no-arbitrary-values": "off",
-        "shadcn/no-inline-styles": "off",
-        "shadcn/no-raw-colors": "off",
-        "shadcn/no-restyle": "off",
-        "shadcn/no-unknown-classes": "off",
-        "shadcn/require-static-classes": "off",
-      },
+      rules: shadcn.rules,
     },
-    {
-      // Our own design-system layer next to the vendored components/ui: the
-      // styled wrappers that own a treatment (so call sites don't restyle
-      // vendor primitives). Same shape as the shadcn preset's override for
-      // components/ui — components own their appearance.
+    // Our own styled wrappers over components/ui get the exemptions the
+    // shadcn preset ships for components/ui — a component owns its look.
+    ...(shadcn.overrides ?? []).map((override) => ({
+      ...override,
       files: ["components/app/primitives/**"],
-      rules: {
-        "shadcn/no-arbitrary-values": "off",
-        "shadcn/no-restyle": "off",
-        "shadcn/require-static-classes": "off",
-      },
-    },
+    })),
     {
-      // Generated code, not ours: `components/ui/**` and `hooks/use-mobile.ts`
-      // are scaffolded by the shadcn CLI and re-added with `bunx shadcn add` —
-      // never hand-edited (AGENTS.md). Lint them at the level the generator
-      // ships so a re-scaffold is never a lint failure. Nothing else in the
-      // repo gets a rule switched off.
-      files: ["components/ui/**", "hooks/use-mobile.ts"],
-      rules: {
-        "anti-slop/no-runtime-typeof": "off",
-        "anti-slop/no-unknown-parameters": "off",
-        "anti-slop/require-safety-comment-for-type-assertion": "off",
-        "eslint/complexity": "off",
-        "eslint/eqeqeq": "off",
-        "eslint/func-style": "off",
-        "eslint/no-eq-null": "off",
-        "eslint/no-nested-ternary": "off",
-        "eslint/no-param-reassign": "off",
-        "eslint/no-shadow": "off",
-        "eslint/no-use-before-define": "off",
-        "eslint/sort-keys": "off",
-        "github/a11y-aria-label-is-well-formatted": "off",
-        "github/a11y-no-title-attribute": "off",
-        "jsx-a11y/click-events-have-key-events": "off",
-        "jsx-a11y/label-has-associated-control": "off",
-        "jsx-a11y/no-noninteractive-element-interactions": "off",
-        "jsx-a11y/prefer-tag-over-role": "off",
-        "react-doctor/effect-needs-cleanup": "off",
-        "react-doctor/js-combine-iterations": "off",
-        "react-doctor/no-array-index-as-key": "off",
-        "react-doctor/no-pass-data-to-parent": "off",
-        "react-doctor/no-pass-live-state-to-parent": "off",
-        "react-doctor/no-prop-callback-in-effect": "off",
-        "react-doctor/only-export-components": "off",
-        "react-doctor/prefer-dynamic-import": "off",
-        "react-doctor/rerender-memo-before-early-return": "off",
-        "react/button-has-type": "off",
-        "react/function-component-definition": "off",
-        "react/hook-use-state": "off",
-        "react/jsx-no-constructed-context-values": "off",
-        "react/no-danger": "off",
-        "react/no-unstable-nested-components": "off",
-        "react/set-state-in-effect": "off",
-        "shadcn/no-inline-styles": "off",
-        "shadcn/no-unknown-classes": "off",
-        "sonarjs/expression-complexity": "off",
-        "sonarjs/function-name": "off",
-        "sonarjs/max-union-size": "off",
-        "sonarjs/no-nested-conditional": "off",
-        "sonarjs/no-wildcard-import": "off",
-        "sonarjs/pseudo-random": "off",
-        "typescript/consistent-return": "off",
-        "typescript/consistent-type-definitions": "off",
-        "typescript/no-confusing-void-expression": "off",
-        "typescript/no-deprecated": "off",
-        "typescript/no-unsafe-argument": "off",
-        "typescript/no-unsafe-assignment": "off",
-        "typescript/no-unsafe-member-access": "off",
-        "typescript/no-unsafe-type-assertion": "off",
-        "typescript/prefer-nullish-coalescing": "off",
-        "typescript/promise-function-async": "off",
-        "typescript/restrict-template-expressions": "off",
-        "typescript/strict-boolean-expressions": "off",
-        "unicorn/no-document-cookie": "off",
-      },
+      // Next.js dispatches Route Handlers by their HTTP-verb name (`GET`).
+      files: ["app/**/route.ts"],
+      rules: { "sonarjs/function-name": "off" },
     },
   ],
   // oxlint does not merge `settings` from extended configs.
