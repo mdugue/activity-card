@@ -25,7 +25,6 @@ import type { ActivityData, ActivitySource, Sport } from "@/lib/activity";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
 import { formatDateUpper } from "@/lib/format";
 import type { ParsedActivity } from "@/lib/parse-activity";
-import { capPhotoResolution } from "@/lib/photo-resize";
 import { cn } from "@/lib/utils";
 import {
   CAROUSEL_THEMES,
@@ -131,9 +130,6 @@ export default function Home() {
   const [carouselTheme, setCarouselTheme] = useState<CarouselThemeId>(
     DEFAULT_CAROUSEL_THEME
   );
-  // The background photo cluster: object URL + pan/zoom + filter effects,
-  // including the object-URL revocation lifecycle (see the hook).
-  const photo = useCardPhoto();
   // The user's colour choice — a preset scheme or a photo-derived strategy.
   // `null` means "the active theme's default", so each theme keeps its own
   // signature colours until the user explicitly picks.
@@ -160,6 +156,10 @@ export default function Home() {
     mode === "carousel"
       ? CAROUSEL_THEMES[carouselTheme]
       : SINGLE_CARD_THEMES[theme];
+  // The background photo cluster: object URL + pan/zoom + filter effects,
+  // the resize-on-adopt (stale results dropped) and the object-URL revocation
+  // lifecycle (see the hook). A new photo adopts the active theme's policy.
+  const photo = useCardPhoto(activeTheme.photo);
   const activeConfig = coerceConfig(
     activeTheme.defaults,
     activeTheme.params,
@@ -324,8 +324,6 @@ export default function Home() {
     setData((prev) => (prev ? { ...prev, location } : prev));
   };
 
-  const activePhotoPolicy = activeTheme.photo;
-
   // Selecting a theme (either family) applies its photo policy: its default
   // backdrop state (STRATA / Data / Triathlon default OFF; the photo-led
   // themes default ON) and — when there's a photo to affect — its signature
@@ -340,17 +338,12 @@ export default function Home() {
   const handlePhotoChange = async (file: File | null) => {
     // A new (or removed) photo invalidates any previous pan/zoom. A fresh photo
     // adopts the active theme's photo policy from scratch (effects reset, not
-    // carried over from the previous photo). Oversized photos are capped first
-    // — see lib/photo-resize.
-    photo.adopt(
-      file ? await capPhotoResolution(file) : null,
-      activePhotoPolicy
-    );
-    if (file) {
-      setVisibility((v) => ({
-        ...v,
-        photoBackdrop: activePhotoPolicy.defaultOn,
-      }));
+    // carried over from the previous photo). The hook caps oversized photos
+    // first, reads the policy once the capped photo lands, and drops a result
+    // a newer pick/removal has superseded (`null`).
+    const policy = await photo.adopt(file);
+    if (file && policy) {
+      setVisibility((v) => ({ ...v, photoBackdrop: policy.defaultOn }));
     }
   };
 
