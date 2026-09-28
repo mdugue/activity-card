@@ -39,6 +39,10 @@ const FitRecordSchema = z.object({
 });
 
 const FitDataSchema = z.object({
+  // `mode: "list"` puts sessions at the top level; only `cascade` / `both`
+  // nest them under `activity`. Accept both so the mode can't silently drop
+  // every session field again.
+  sessions: z.optional(z.array(FitSessionSchema)),
   activity: z.optional(
     z.object({
       sessions: z.optional(z.array(FitSessionSchema)),
@@ -88,7 +92,7 @@ export function fitDataToParsed(
     throw new Error(`${filename} does not look like a valid FIT file.`);
   }
   const fit = parsed.data;
-  const session = fit.activity?.sessions?.[0];
+  const session = fit.sessions?.[0] ?? fit.activity?.sessions?.[0];
   const records = fit.records || [];
   const points: TrackPoint[] = records
     .filter(

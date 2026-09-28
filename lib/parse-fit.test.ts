@@ -7,7 +7,10 @@ import { fitDataToParsed } from "@/lib/parse-fit";
 // and `speedUnit: "km/h"`.
 function fitData(session: Record<string, unknown>) {
   return {
-    activity: { sessions: [session] },
+    // List mode: sessions sit at the top level; `activity` is the bare
+    // activity message (no nested sessions).
+    activity: { num_sessions: 1 },
+    sessions: [session],
     records: [
       {
         position_lat: 47,
@@ -64,9 +67,26 @@ describe("fitDataToParsed", () => {
     expect(parsed.elevationGainM).toBeGreaterThan(0);
   });
 
+  test("reads the declared sport from the list-mode session", () => {
+    const parsed = fitDataToParsed(
+      fitData({ ...SESSION, sport: "running" }),
+      "activity.fit"
+    );
+    expect(parsed.sport).toBe("run");
+  });
+
+  test("still reads a cascade-mode session nested under activity", () => {
+    const { sessions: _omit, ...rest } = fitData(SESSION);
+    const parsed = fitDataToParsed(
+      { ...rest, activity: { sessions: [SESSION] } },
+      "ride.fit"
+    );
+    expect(parsed.elevationGainM).toBe(450);
+  });
+
   test("prefers enhanced_altitude when present", () => {
     const data = {
-      activity: { sessions: [SESSION] },
+      sessions: [SESSION],
       records: [
         {
           position_lat: 47,
