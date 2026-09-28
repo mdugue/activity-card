@@ -11,7 +11,7 @@
 
 /** Fonts must be ready before rasterisation or fallbacks leak into the export. */
 export const waitForFonts = async (): Promise<void> => {
-  if (typeof document !== "undefined" && document.fonts) {
+  if (typeof document !== "undefined" && "fonts" in document) {
     await document.fonts.ready;
   }
 };
@@ -23,7 +23,7 @@ export const effortDateSlug = (date: string): string =>
 const DESKTOP_PLATFORM_REGEX = /Macintosh|Windows|Linux/u;
 
 export const isDesktopDevice = (): boolean => {
-  if (typeof window === "undefined" || !navigator) {
+  if (typeof window === "undefined" || typeof navigator === "undefined") {
     return false;
   }
 
@@ -31,7 +31,7 @@ export const isDesktopDevice = (): boolean => {
   const isDesktopPlatform = DESKTOP_PLATFORM_REGEX.test(navigator.userAgent);
 
   // 2. The iPad Trap: Modern iPads send "Macintosh" but support multi-touch
-  const isIPad = navigator.maxTouchPoints && navigator.maxTouchPoints > 1;
+  const isIPad = navigator.maxTouchPoints > 1;
 
   return isDesktopPlatform && !isIPad;
 };
@@ -84,9 +84,19 @@ export const createInFlightGuard = (): InFlightGuard => {
   };
 };
 
+/** Adapt a callback-only DOM API (`setTimeout`, `canvas.toBlob`, image load
+ *  events) to a promise — the one place the export pipeline builds one. */
+export const fromCallback = async <T>(
+  start: (resolve: (value: T) => void, reject: (reason: Error) => void) => void
+): Promise<T> =>
+  // oxlint-disable-next-line promise/avoid-new -- the single adapter for callback-only DOM APIs; Promise.withResolvers needs Safari 17.4, above the supported browser baseline
+  await new Promise<T>(start);
+
 const delay = async (ms: number): Promise<void> => {
-  await new Promise((resolve) => {
-    setTimeout(resolve, ms);
+  await fromCallback<null>((resolve) => {
+    setTimeout(() => {
+      resolve(null);
+    }, ms);
   });
 };
 
@@ -100,21 +110,25 @@ export const deliverFiles = async (
     return;
   }
   const nav = typeof navigator === "undefined" ? undefined : navigator;
-  if (!isDesktopDevice() && nav?.canShare?.({ files })) {
+  if (!isDesktopDevice() && nav?.canShare?.({ files }) === true) {
     try {
       await nav.share({ files, title: opts.title });
       return;
     } catch (error) {
-      if ((error as DOMException)?.name === "AbortError") {
+      // The user dismissing the share sheet rejects with an AbortError
+      // DOMException (an Error subclass).
+      if (error instanceof Error && error.name === "AbortError") {
         return;
       }
       // fall through to downloads
     }
   }
+  const { betweenMs } = opts;
   for (const file of files) {
     triggerDownload(file);
-    if (opts.betweenMs) {
-      await delay(opts.betweenMs);
+    if (betweenMs !== undefined && betweenMs > 0) {
+      // oxlint-disable-next-line eslint/no-await-in-loop -- the spacing IS the point: browsers throttle back-to-back downloads, so each one must wait for the previous gap
+      await delay(betweenMs);
     }
   }
 };

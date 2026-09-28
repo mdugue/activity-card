@@ -33,6 +33,7 @@ export const Caption = ({
   text: ReactNode;
 }) => {
   const centered = position === "bottom-center";
+  const hasLabel = label !== undefined && label !== "";
   return (
     <div
       style={{
@@ -48,7 +49,7 @@ export const Caption = ({
         transform: centered ? "translateX(-50%)" : undefined,
       }}
     >
-      {step || label ? (
+      {step !== undefined || hasLabel ? (
         <RiseIn delay={delay}>
           <div
             style={{
@@ -57,7 +58,7 @@ export const Caption = ({
               gap: 18,
             }}
           >
-            {step ? (
+            {step === undefined ? null : (
               <span
                 style={{
                   border: `2px solid ${RUST_BRIGHT}`,
@@ -73,8 +74,8 @@ export const Caption = ({
               >
                 Step {step.index}/{step.total}
               </span>
-            ) : null}
-            {label ? (
+            )}
+            {hasLabel ? (
               <span
                 style={{
                   color: RUST_BRIGHT,

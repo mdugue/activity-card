@@ -15,28 +15,18 @@ import {
 } from "@/lib/format";
 import { isMultiActivity, segmentRoutes } from "@/lib/multi-activity";
 import type { SegmentRoute } from "@/lib/multi-activity";
-import { defineTheme } from "@/theme/core/theme-contract";
 import type { ThemeProps } from "@/theme/core/theme-contract";
 
 import { SafeArea, useFormat } from "../shared/format-context";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoBackdrop } from "../shared/photo-backdrop";
+import { EDITORIAL_ACCENT } from "./default-accents";
+import type { EditorialCapability } from "./editorial.theme";
 
 // No `elevationViz`/`splits`: Editorial never draws the profile chart or split
 // tables, so the editor won't offer their toggles here. The sport-aware
 // refinements mirror the figures table exactly (see the `Row`s below).
-const USES = [
-  "athleteName",
-  "cadence",
-  "elevation",
-  "heartRate",
-  "location",
-  "pace",
-  "route",
-  "speed",
-] as const;
 
-const DEFAULT_ACCENT = "#1d3a2e";
 const INK = "#1a1816";
 // Soft warm paper — a gentle, low-chroma off-white so the editorial layout
 // reads as printed on a sheet, lifted off the lighter page. Much cleaner than
@@ -136,9 +126,9 @@ export const ThemeEditorial = ({
   photoUrl,
   imageTransform,
   colors,
-}: ThemeProps<(typeof USES)[number]>) => {
+}: ThemeProps<EditorialCapability>) => {
   const { width, height } = useFormat();
-  const accent = colors?.primary ?? DEFAULT_ACCENT;
+  const accent = colors?.primary ?? EDITORIAL_ACCENT;
   const { sport } = data;
   const multi = isMultiActivity(data);
   const routes = multi ? segmentRoutes(data) : [];
@@ -478,21 +468,3 @@ export const ThemeEditorial = ({
     </div>
   );
 };
-
-export const editorialTheme = defineTheme({
-  Component: ThemeEditorial,
-  colors: { default: { primary: DEFAULT_ACCENT }, userAdjustable: true },
-  id: "editorial",
-  label: "EDITORIAL",
-  photo: { defaultOn: true },
-  tagline: "typography led",
-  uses: USES,
-  usesWhen: {
-    // The figures table is sport-specific: elevation + speed rows are ride-only,
-    // cadence is run-only, pace appears for runs and swims.
-    cadence: (d) => d.sport === "run",
-    elevation: (d) => d.sport === "ride",
-    pace: (d) => d.sport === "run" || d.sport === "swim",
-    speed: (d) => d.sport === "ride",
-  },
-});

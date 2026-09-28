@@ -16,7 +16,7 @@ export const useStravaReturnToast = (onConnected: () => void): void => {
     }
     const params = new URLSearchParams(window.location.search);
     const flag = params.get("strava");
-    if (!flag) {
+    if (flag === null || flag === "") {
       return;
     }
     switch (flag) {

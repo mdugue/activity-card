@@ -8,6 +8,7 @@
 // layers see `null` and render unfiltered, exactly as before.
 
 import { createContext, useContext } from "react";
+import type { ReactNode } from "react";
 
 import type { ImageSize } from "@/hooks/use-image-natural-size";
 import { IDENTITY_TRANSFORM, transformToCss } from "@/lib/image-transform";
@@ -39,7 +40,13 @@ const PhotoFxContext = createContext<PhotoFx>({
 /** Provided by `RenderTheme` (single card) and the carousel deck. The photo
  *  source and pan/zoom are NOT in context: single-card themes take them as
  *  props, and the deck draws the strip photo itself with `CoverPhoto`. */
-export const PhotoFxProvider = PhotoFxContext.Provider;
+export const PhotoFxProvider = ({
+  children,
+  value,
+}: {
+  children: ReactNode;
+  value: PhotoFx;
+}) => <PhotoFxContext value={value}>{children}</PhotoFxContext>;
 
 export const usePhotoEffects = (): PhotoEffects | null =>
   useContext(PhotoFxContext).effects;

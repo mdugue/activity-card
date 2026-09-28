@@ -50,117 +50,120 @@ const sym = (n: number): SafeInsets => ({
   top: n,
 });
 
+/** The 4:5 master's id (see `DEFAULT_FORMAT_ID`). */
+const INSTAGRAM_FEED = "instagram-feed";
+
 /**
  * The curated registry. Multiple platforms can share an aspect bucket but keep
  * their own id + safe insets (Strava ≠ generic story).
  */
 export const EXPORT_FORMATS = {
   "instagram-feed": {
-    id: "instagram-feed",
-    label: "Instagram Feed",
-    platform: "Instagram",
-    bucket: "feed",
     aspectLabel: "4:5",
-    width: 1080,
+    bucket: "feed",
     height: 1350,
+    id: INSTAGRAM_FEED,
+    label: "Instagram Feed",
+    note: "Portrait feed — also Facebook & Threads",
+    platform: "Instagram",
     // No chrome over the image (feed UI sits below it) and shown uncropped — so
     // this keep-out is purely the 4:5 master's own aesthetic margin.
     safe: sym(48),
-    note: "Portrait feed — also Facebook & Threads",
+    width: 1080,
   },
   "instagram-story": {
+    aspectLabel: "9:16",
+    bucket: "story",
+    height: 1920,
     id: "instagram-story",
     label: "Instagram Story",
+    note: "Static → posts to Stories (not Reels)",
     platform: "Instagram",
-    bucket: "story",
-    aspectLabel: "9:16",
-    width: 1080,
-    height: 1920,
     // Occlusion only (played full-bleed): top = progress bar + avatar + name +
     // close; bottom = reply bar. Tuned for STORIES — a static image can't be a
     // Reel, so the (video-only) Reels right action rail doesn't apply here.
     safe: { bottom: 220, left: 64, right: 64, top: 220 },
-    note: "Static → posts to Stories (not Reels)",
+    width: 1080,
   },
   square: {
+    aspectLabel: "1:1",
+    bucket: "square",
+    height: 1080,
     id: "square",
     label: "Square",
+    note: "Strava-friendly, avatars, print",
     platform: "Universal",
-    bucket: "square",
-    aspectLabel: "1:1",
-    width: 1080,
-    height: 1080,
     // Uncropped, no overlay — aesthetic margin only.
     safe: sym(56),
-    note: "Strava-friendly, avatars, print",
+    width: 1080,
   },
   strava: {
+    aspectLabel: "9:16",
+    bucket: "story",
+    height: 1920,
     id: "strava",
     label: "Strava",
+    note: "Cover-crop tolerant — same photo, many crops",
     platform: "Strava",
-    bucket: "story",
-    aspectLabel: "9:16",
-    width: 1080,
-    height: 1920,
     // Shared full-bleed (no Strava chrome over a posted image) — a moderate,
     // fairly symmetric margin so the design survives Strava's centre-crop of the
     // same photo into its many card ratios. (Was top 300 — that over-reserved
     // for an in-app nav bar this static export never actually sits under.)
     safe: { bottom: 220, left: 64, right: 64, top: 160 },
-    note: "Cover-crop tolerant — same photo, many crops",
+    width: 1080,
   },
   tiktok: {
+    aspectLabel: "9:16",
+    bucket: "story",
+    height: 1920,
     id: "tiktok",
     label: "TikTok",
+    note: "Heavy bottom caption + right action rail",
     platform: "TikTok",
-    bucket: "story",
-    aspectLabel: "9:16",
-    width: 1080,
-    height: 1920,
     // Occlusion only (photo posts play full-bleed): bottom = @handle + caption
     // + music ticker (~440); right = action rail (avatar / like / comment /
     // share / sound disc, ~150); top = tab switcher + search.
     safe: { bottom: 440, left: 48, right: 150, top: 130 },
-    note: "Heavy bottom caption + right action rail",
+    width: 1080,
   },
   "whatsapp-status": {
+    aspectLabel: "9:16",
+    bucket: "story",
+    height: 1920,
     id: "whatsapp-status",
     label: "WhatsApp Status",
+    note: "Progress bar top, reply box bottom",
     platform: "WhatsApp",
-    bucket: "story",
-    aspectLabel: "9:16",
-    width: 1080,
-    height: 1920,
     // Occlusion only (fit-to-screen, letterboxed not cropped): top = progress
     // bar + avatar + sender name (~220); bottom = persistent "Reply…" pill +
     // home indicator (~280). No side rail.
     safe: { bottom: 280, left: 48, right: 48, top: 220 },
-    note: "Progress bar top, reply box bottom",
+    width: 1080,
   },
   "x-landscape": {
+    aspectLabel: "16:9",
+    bucket: "landscape",
+    height: 900,
     id: "x-landscape",
     label: "X / Twitter",
+    note: "In-stream, shown uncropped — also Komoot / OG",
     platform: "X",
-    bucket: "landscape",
-    aspectLabel: "16:9",
-    width: 1600,
-    height: 900,
     // Shown uncropped in-stream with no overlay, so the sides are aesthetic
     // only; the taller top/bottom survives the ~50px crop when this same asset
     // doubles as a 2:1 OpenGraph / link-card preview (also Komoot).
     safe: { bottom: 64, left: 40, right: 40, top: 64 },
-    note: "In-stream, shown uncropped — also Komoot / OG",
+    width: 1600,
   },
 } as const satisfies Record<string, ExportFormat>;
 
 export type ExportFormatId = keyof typeof EXPORT_FORMATS;
 
 /** The 4:5 master — its output stays pixel-identical to the legacy export. */
-export const DEFAULT_FORMAT_ID: ExportFormatId = "instagram-feed";
+export const DEFAULT_FORMAT_ID: ExportFormatId = INSTAGRAM_FEED;
 
 /** Picker / export-sheet order. */
 export const FORMAT_ORDER: ExportFormatId[] = [
-  "instagram-feed",
+  INSTAGRAM_FEED,
   "instagram-story",
   "square",
   "strava",
@@ -179,15 +182,16 @@ export const isExportFormatId = (id: string): id is ExportFormatId =>
 export const isDefaultFormat = (id: string): boolean =>
   id === DEFAULT_FORMAT_ID;
 
-/** The rectangle (format-space px) left for content after the safe insets. */
-export const contentBox = (
-  format: ExportFormat
-): {
+/** A rectangle in format-space px. */
+export interface ContentBox {
   h: number;
   w: number;
   x: number;
   y: number;
-} => {
+}
+
+/** The rectangle (format-space px) left for content after the safe insets. */
+export const contentBox = (format: ExportFormat): ContentBox => {
   const { safe, width, height } = format;
   return {
     h: Math.max(0, height - safe.top - safe.bottom),

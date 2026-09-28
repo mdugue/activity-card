@@ -30,7 +30,7 @@ import type { PhotoEffects } from "@/lib/photo-effects";
 
 // A glyph per preset that hints at its look — sun for warm, snowflake for cool,
 // moon for moody noir, film strip for vintage sepia, half-circle for grayscale.
-const FILTER_ICONS: Record<string, Icon> = {
+const FILTER_ICONS = {
   cool: SnowflakeIcon,
   fade: CloudFogIcon,
   mono: CircleHalfIcon,
@@ -39,7 +39,10 @@ const FILTER_ICONS: Record<string, Icon> = {
   sepia: FilmStripIcon,
   vivid: SparkleIcon,
   warm: SunIcon,
-};
+} satisfies Record<string, Icon>;
+
+const hasFilterIcon = (id: string): id is keyof typeof FILTER_ICONS =>
+  Object.hasOwn(FILTER_ICONS, id);
 
 interface PhotoControlProps {
   effects: PhotoEffects;
@@ -64,7 +67,7 @@ export const PhotoFilterControl = ({
     variant="outline"
   >
     {FILTER_PRESETS.map((p) => {
-      const FilterIcon = FILTER_ICONS[p.id];
+      const FilterIcon = hasFilterIcon(p.id) ? FILTER_ICONS[p.id] : null;
       return (
         <ToggleGroupItem
           aria-label={p.label}
@@ -72,9 +75,9 @@ export const PhotoFilterControl = ({
           key={p.id}
           value={p.id}
         >
-          {FilterIcon ? (
+          {FilterIcon === null ? null : (
             <FilterIcon aria-hidden className="size-3" weight="duotone" />
-          ) : null}
+          )}
           {p.label}
         </ToggleGroupItem>
       );

@@ -16,10 +16,15 @@ import type { CarouselLook, FontPair } from "./theme-tokens";
  * `resolveStyle` may post-process the whole object (STRATA's mood swaps
  * background/ink/accents/dark per config).
  */
-export interface EffectiveStyle extends Omit<
-  CarouselLook,
-  "defaultColorChoice" | "defaultFilter" | "defaultGrain" | "fontPair"
-> {
+/** Look fields that only seed the editor / get expanded — not part of the
+ *  rendered style. */
+type LookOnlyField =
+  | "defaultColorChoice"
+  | "defaultFilter"
+  | "defaultGrain"
+  | "fontPair";
+
+export interface EffectiveStyle extends Omit<CarouselLook, LookOnlyField> {
   fonts: FontPair;
   /** the theme's display name (Frame's nameplate / signature fallback) */
   label: string;
@@ -66,15 +71,16 @@ export const resolveDeckStyle = (
 
   return {
     ...look,
-    label,
-    fonts: FONT_PAIRS[look.fontPair],
     accent,
     accent2: colors.secondary ?? look.accent2,
-    onAccent,
     // Some themes tie the elevation viz to the (user-chosen) accent rather than
     // the fixed look colours.
-    elevation: look.elevationAccent
-      ? { fillFrom: accent, fillTo: look.background, line: accent }
-      : look.elevation,
+    elevation:
+      look.elevationAccent === true
+        ? { fillFrom: accent, fillTo: look.background, line: accent }
+        : look.elevation,
+    fonts: FONT_PAIRS[look.fontPair],
+    label,
+    onAccent,
   };
 };

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { stravaErrorResponse, stravaFetch } from "@/lib/strava-client";
 import { ensureFreshToken, readTokens } from "@/lib/strava-cookies";
-import type { StravaStats } from "@/lib/strava-types";
+import { StravaAthleteStatsSchema } from "@/lib/strava-schemas";
 
 const PER_PAGE = 30;
 
@@ -18,12 +18,13 @@ export const GET = async () => {
     const token = await ensureFreshToken();
     const tokens = await readTokens();
     const athleteId = tokens?.athlete?.id;
-    if (!athleteId) {
+    if (athleteId === undefined || athleteId === 0) {
       return NextResponse.json({ error: "no_athlete" }, { status: 400 });
     }
 
-    const stats = await stravaFetch<StravaStats>(
+    const stats = await stravaFetch(
       `/athletes/${athleteId}/stats`,
+      StravaAthleteStatsSchema,
       { token }
     );
     const totalCount =

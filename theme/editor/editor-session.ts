@@ -14,6 +14,13 @@ import type { ColorChoice, ColorScheme } from "@/theme/core/colors";
 import type { ParamDef } from "@/theme/core/params/kinds";
 import type { Visibility } from "@/theme/core/visibility";
 
+/** One stored theme-parameter value: a toggle's boolean, a slider's number or
+ *  a choice's option id — the only shapes `coerceConfig` lets into a config. */
+export type ParamValue = boolean | number | string;
+
+/** A theme's coerced parameter config, keyed by `ParamDef.id`. */
+export type ThemeConfigValues = Record<string, ParamValue>;
+
 export interface EditorSession {
   /** raw editable overlay text (unstripped, for the inputs) */
   athleteName: string;
@@ -33,13 +40,13 @@ export interface EditorSession {
     scheme: ColorScheme;
   };
   config: {
-    onChange: (next: Record<string, unknown>) => void;
+    onChange: (next: ThemeConfigValues) => void;
     /** extracted photo palette — colour swatches + calculated param options */
     palette: ExtractedPalette | null;
     /** the active theme's parameter schema */
     params: ParamDef[];
     /** the active theme's coerced config */
-    value: Record<string, unknown>;
+    value: ThemeConfigValues;
   };
   /** visibility-stripped activity the cards render */
   data: ActivityData;

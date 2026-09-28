@@ -6,7 +6,17 @@
 // the single place stale localStorage is made safe — replacing the scattered
 // `{ ...DEFAULT, ...persisted }` merges that let a bad enum slip through.
 
-import type { ChoiceParam, ParamDef } from "./kinds";
+import { z } from "zod/mini";
+
+import type { ChoiceParam, ParamDef, ParamValue, ThemeConfig } from "./kinds";
+
+/** A persisted config before coercion: any plain object, values unchecked. */
+const rawConfigSchema = z.record(z.string(), z.unknown());
+type RawConfig = z.infer<typeof rawConfigSchema>;
+
+const toggleSchema = z.boolean();
+const sliderSchema = z.number();
+const choiceSchema = z.string();
 
 /** The fixed id space for a choice param, or null when it can't be known
  *  statically (a dynamic option set with no declared `optionIds`). */
@@ -20,40 +30,45 @@ const optionIdSet = (p: ChoiceParam): Set<string> | null => {
   return null;
 };
 
-/** The accepted value for one param, or `undefined` when the raw value is
+/** The accepted value for one param, or `null` when the raw value is
  *  missing / mistyped / out of range / an unknown option id. */
-const coerceValue = (p: ParamDef, v: unknown): unknown => {
+const coerceValue = (p: ParamDef, source: RawConfig): ParamValue | null => {
+  const raw = source[p.id];
   if (p.kind === "toggle") {
-    return typeof v === "boolean" ? v : undefined;
+    const parsed = toggleSchema.safeParse(raw);
+    return parsed.success ? parsed.data : null;
   }
   if (p.kind === "slider") {
-    return typeof v === "number" && Number.isFinite(v)
-      ? Math.min(p.max, Math.max(p.min, v))
-      : undefined;
+    const parsed = sliderSchema.safeParse(raw);
+    return parsed.success && Number.isFinite(parsed.data)
+      ? Math.min(p.max, Math.max(p.min, parsed.data))
+      : null;
   }
   // choice — accept only a known option id
+  const parsed = choiceSchema.safeParse(raw);
+  if (!parsed.success) {
+    return null;
+  }
   const ids = optionIdSet(p);
-  return typeof v === "string" && (!ids || ids.has(v)) ? v : undefined;
+  return ids === null || ids.has(parsed.data) ? parsed.data : null;
 };
 
-export const coerceConfig = <C extends Record<string, unknown>>(
+export const coerceConfig = <C extends ThemeConfig>(
   defaults: C,
   params: ParamDef[],
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- this IS the I/O boundary parser: persisted localStorage / story args arrive untyped and are decoded here
   raw: unknown
 ): C => {
-  const out: C = { ...defaults };
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return out;
+  const source = rawConfigSchema.safeParse(raw);
+  if (!source.success) {
+    return { ...defaults };
   }
-  const r = raw as Record<string, unknown>;
+  const accepted: ThemeConfig = {};
   for (const p of params) {
-    if (!(p.id in r)) {
-      continue;
-    }
-    const v = coerceValue(p, r[p.id]);
-    if (v !== undefined) {
-      out[p.id as keyof C] = v as C[keyof C];
+    const v = coerceValue(p, source.data);
+    if (v !== null) {
+      accepted[p.id] = v;
     }
   }
-  return out;
+  return { ...defaults, ...accepted };
 };

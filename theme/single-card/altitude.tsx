@@ -20,7 +20,6 @@ import { useEffect, useId, useState } from "react";
 import type { CSSProperties } from "react";
 
 import {
-  ALTITUDE_PARAMS,
   DEFAULT_ALTITUDE_CONFIG,
   layoutClaim,
   resolveClaim,
@@ -37,22 +36,14 @@ import type { Coord, NormalizedCurve } from "@/lib/chart-helpers";
 import { formatDateUpper } from "@/lib/format";
 import { isMultiActivity, segmentProfiles } from "@/lib/multi-activity";
 import { profileSignal } from "@/lib/profile-signal";
-import { defineTheme } from "@/theme/core/theme-contract";
 import type { ThemeProps } from "@/theme/core/theme-contract";
 
 import { useFormat, useSafeInsets } from "../shared/format-context";
+import { hasText } from "../shared/has-text";
 import { PhotoLayer } from "../shared/photo-layer";
+import type { AltitudeCapability } from "./altitude.theme";
 
-const USES = [
-  "elevation",
-  "elevationViz",
-  "heartRate",
-  "location",
-  "pace",
-  "speed",
-] as const;
-
-type ThemeAltitudeProps = ThemeProps<(typeof USES)[number], AltitudeConfig>;
+type ThemeAltitudeProps = ThemeProps<AltitudeCapability, AltitudeConfig>;
 
 // Internal SVG coordinate space for the decorative elevation band (it renders at
 // width:100% of its container, so this is resolution, not a layout dimension).
@@ -206,9 +197,13 @@ const useFittedFontSize = (
         );
       }
     };
+    const remeasureOnceFontsLoad = async () => {
+      await document.fonts.ready;
+      measure();
+    };
     measure();
-    if (typeof document !== "undefined" && document.fonts) {
-      void document.fonts.ready.then(measure);
+    if (typeof document !== "undefined" && "fonts" in document) {
+      void remeasureOnceFontsLoad();
     }
     return () => {
       alive = false;
@@ -225,6 +220,10 @@ const FONT_WEIGHT: Record<AltitudeConfig["font"], number> = {
   modern: 400,
   serif: 600,
 };
+
+const MONO = "var(--font-mono), monospace";
+// Soft dark drop under every line of white type, for legibility over the photo.
+const TEXT_SHADOW = "0 2px 12px rgba(0,0,0,0.5)";
 
 const NO_PHOTO_BG =
   "radial-gradient(125% 95% at 50% 18%, #2b3340 0%, #171c24 55%, #0b0e13 100%)";
@@ -271,6 +270,12 @@ const clusterPosition = (
   }
   return { ...base, bottom: bottomInset };
 };
+
+/** An SVG polyline path (`M x y L x y …`) through `pts`, at 0.1 px precision. */
+const toPath = (pts: Coord[]) =>
+  pts
+    .map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`)
+    .join(" ");
 
 /**
  * Hero claim text + the elevation cutout. Four steps, in order: (1) SIZE the type
@@ -359,13 +364,9 @@ const ClaimText = ({
   const curveCap = fontSize * CURVE_CAP;
   const bandH = curveCap * 0.5;
   const peakY = lastBaseline - curveCap * 0.382;
-  const toPath = (pts: Coord[]) =>
-    pts
-      .map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`)
-      .join(" ");
-  const linePts: Coord[] = curves
-    .flatMap((c) => c.pts)
-    .map((p) => [p[0] * fullW, peakY + (1 - p[1]) * bandH]);
+  const linePts = curves.flatMap((c) =>
+    c.pts.map((p): Coord => [p[0] * fullW, peakY + (1 - p[1]) * bandH])
+  );
   const lineD = toPath(linePts);
 
   // 4. MASK — the opaque copy is the part ABOVE the line; the faded base shows
@@ -487,6 +488,27 @@ const MultiLineBand = ({
   );
 };
 
+const KICKER_STYLE = {
+  fontFamily: MONO,
+  fontSize: 24,
+  letterSpacing: "0.28em",
+  marginBottom: 16,
+  opacity: 0.82,
+  textShadow: TEXT_SHADOW,
+} satisfies CSSProperties;
+
+const FOOTER_STATS_STYLE = {
+  alignItems: "baseline",
+  display: "flex",
+  flexWrap: "wrap",
+  fontFamily: MONO,
+  fontSize: 31,
+  gap: 14,
+  letterSpacing: "0.04em",
+  opacity: 0.92,
+  textShadow: TEXT_SHADOW,
+} satisfies CSSProperties;
+
 /**
  * One condensed row under the claim: supporting stats on the left, the claim's
  * unit (when not already in a kicker) bottom-aligned on the right.
@@ -504,7 +526,8 @@ const FooterRow = ({
   unitFontFamily: string;
   unitFontSize: number;
 }) => {
-  if (stats.length === 0 && !unit) {
+  const hasUnit = unit !== undefined && unit !== "";
+  if (stats.length === 0 && !hasUnit) {
     return null;
   }
   return (
@@ -518,19 +541,7 @@ const FooterRow = ({
       }}
     >
       {stats.length > 0 ? (
-        <div
-          style={{
-            alignItems: "baseline",
-            display: "flex",
-            flexWrap: "wrap",
-            fontFamily: "var(--font-mono), monospace",
-            fontSize: 31,
-            gap: 14,
-            letterSpacing: "0.04em",
-            opacity: 0.92,
-            textShadow: "0 2px 12px rgba(0,0,0,0.5)",
-          }}
-        >
+        <div style={FOOTER_STATS_STYLE}>
           {stats.map((s, i) => (
             <span
               key={s.label}
@@ -547,7 +558,7 @@ const FooterRow = ({
           ))}
         </div>
       ) : null}
-      {unit ? (
+      {hasUnit ? (
         <div
           style={{
             fontFamily: unitFontFamily,
@@ -555,13 +566,149 @@ const FooterRow = ({
             lineHeight: 1,
             marginLeft: "auto",
             opacity: 0.9,
-            textShadow: "0 2px 12px rgba(0,0,0,0.5)",
+            textShadow: TEXT_SHADOW,
           }}
         >
           {unit}
         </div>
       ) : null}
     </div>
+  );
+};
+
+/**
+ * The stacked claim: a mono kicker (label · unit) over the solid claim, the
+ * elevation band beneath it when there is a line, then the footer row.
+ */
+const StackedClaim = ({
+  claimLabel,
+  claimUnit,
+  contentW,
+  curves,
+  fontFamily,
+  fontWeight,
+  fullW,
+  layout,
+  maxBoxH,
+  offsetX,
+  safePad,
+  stats,
+  uid,
+  unitFontSize,
+}: {
+  claimLabel: string;
+  claimUnit?: string;
+  contentW: number;
+  curves: NormalizedCurve[];
+  fontFamily: string;
+  fontWeight: number;
+  fullW: number;
+  layout: ClaimLayout;
+  maxBoxH: number;
+  offsetX: number;
+  safePad: CSSProperties;
+  stats: ResolvedStat[];
+  uid: string;
+  unitFontSize: number;
+}) => (
+  <div>
+    <div style={{ ...safePad, ...KICKER_STYLE }}>
+      {claimLabel}
+      {hasText(claimUnit) ? ` · ${claimUnit}` : ""}
+    </div>
+    <ClaimText
+      belowOpacity={1}
+      contentW={contentW}
+      curves={curves}
+      cut={false}
+      fontFamily={fontFamily}
+      fontWeight={fontWeight}
+      fullW={fullW}
+      layout={layout}
+      maxBoxH={maxBoxH}
+      offsetX={offsetX}
+      uid={uid}
+    />
+    {curves.length > 0 ? (
+      <div style={{ height: 104, marginTop: 22, width: "100%" }}>
+        <MultiLineBand curves={curves} style={{ height: "100%" }} />
+      </div>
+    ) : null}
+    <div style={safePad}>
+      <FooterRow
+        marginTop={18}
+        stats={stats}
+        unitFontFamily={fontFamily}
+        unitFontSize={unitFontSize}
+      />
+    </div>
+  </div>
+);
+
+const META_STYLE = {
+  color: "#fff",
+  fontFamily: MONO,
+  fontSize: 24,
+  letterSpacing: "0.18em",
+  opacity: 0.85,
+  position: "absolute",
+  textShadow: TEXT_SHADOW,
+  zIndex: 3,
+} satisfies CSSProperties;
+
+/** The bottom meta line (date · location), pinned to the safe box. */
+const MetaLine = ({
+  bits,
+  bottom,
+  left,
+  right,
+}: {
+  bits: string[];
+  bottom: number;
+  left: number;
+  right: number;
+}) => {
+  if (bits.length === 0) {
+    return null;
+  }
+  return (
+    <div style={{ ...META_STYLE, bottom, left, right }}>
+      {bits.join("   ·   ")}
+    </div>
+  );
+};
+
+// The footer unit scales with the claim (13% of its size), clamped to 40–64 px.
+const unitFontSizeFor = (layout: ClaimLayout | null): number =>
+  layout ? Math.min(64, Math.max(40, Math.round(layout.fontSize * 0.13))) : 40;
+
+// The bottom meta line: date, then location when known (empty bits dropped).
+const metaLineBits = (data: ThemeAltitudeProps["data"]): string[] =>
+  [formatDateUpper(data.date), (data.location ?? "").toUpperCase()].filter(
+    (bit) => bit !== ""
+  );
+
+// One curve for a single activity; for a project, every leg laid out side by
+// side on a shared scale (no gaps, vertical step at each seam).
+const elevationCurves = (
+  data: ThemeAltitudeProps["data"]
+): NormalizedCurve[] => {
+  if (isMultiActivity(data)) {
+    const seg = segmentProfiles(data);
+    return seg.profiles.length
+      ? sequenceProfiles(seg.profiles, seg.distances, seg.useElevation)
+      : [];
+  }
+  // The shared rule: elevation, else pace, else laps — a degenerate
+  // elevation array never shadows a usable pace profile.
+  const signal = profileSignal(data);
+  if (signal.mode === "none") {
+    return [];
+  }
+  return sequenceProfiles(
+    [signal.series],
+    [undefined],
+    signal.mode === "elevation"
   );
 };
 
@@ -588,28 +735,7 @@ export const ThemeAltitude = ({
     ? supportingStats(data, claim?.key ?? null)
     : [];
 
-  // One curve for a single activity; for a project, every leg laid out side by
-  // side on a shared scale (no gaps, vertical step at each seam).
-  const multi = isMultiActivity(data);
-  const curves = ((): NormalizedCurve[] => {
-    if (multi) {
-      const seg = segmentProfiles(data);
-      return seg.profiles.length
-        ? sequenceProfiles(seg.profiles, seg.distances, seg.useElevation)
-        : [];
-    }
-    // The shared rule: elevation, else pace, else laps — a degenerate
-    // elevation array never shadows a usable pace profile.
-    const signal = profileSignal(data);
-    if (signal.mode === "none") {
-      return [];
-    }
-    return sequenceProfiles(
-      [signal.series],
-      [undefined],
-      signal.mode === "elevation"
-    );
-  })();
+  const curves = elevationCurves(data);
   const hasLine = curves.length > 0;
 
   const font = FONT_FAMILY[config.font];
@@ -623,14 +749,9 @@ export const ThemeAltitude = ({
   // Strip the colons `useId` emits so the id is a clean `url(#…)` reference.
   const uid = `alt-${useId().replaceAll(":", "")}`;
 
-  const unitFontSize = layout
-    ? Math.min(64, Math.max(40, Math.round(layout.fontSize * 0.13)))
-    : 40;
+  const unitFontSize = unitFontSizeFor(layout);
 
-  const metaBits = [
-    formatDateUpper(data.date),
-    (data.location || "").toUpperCase(),
-  ].filter(Boolean);
+  const metaBits = metaLineBits(data);
 
   // Vertical budget so the headline never overflows a short / landscape canvas.
   // The cluster floats `META_GAP` above the meta line; the headline gets what's
@@ -647,7 +768,8 @@ export const ThemeAltitude = ({
       ? height - 2 * Math.max(insets.top, insets.bottom + META_GAP)
       : height - insets.top - insets.bottom - META_GAP
   );
-  const footerReserve = stats.length > 0 || claim?.unit ? FOOTER_RESERVE : 0;
+  const footerReserve =
+    stats.length > 0 || hasText(claim?.unit) ? FOOTER_RESERVE : 0;
   const cutoutMaxBoxH = clusterAvailH - footerReserve;
   const stackedMaxBoxH =
     clusterAvailH - footerReserve - KICKER_RESERVE - BAND_RESERVE;
@@ -670,7 +792,7 @@ export const ThemeAltitude = ({
         width,
       }}
     >
-      {photoUrl ? (
+      {hasText(photoUrl) ? (
         <PhotoLayer imageTransform={imageTransform} photoUrl={photoUrl} />
       ) : null}
 
@@ -720,48 +842,22 @@ export const ThemeAltitude = ({
         ) : null}
 
         {claim && !cutout && layout ? (
-          <div>
-            <div
-              style={{
-                ...safePad,
-                fontFamily: "var(--font-mono), monospace",
-                fontSize: 24,
-                letterSpacing: "0.28em",
-                marginBottom: 16,
-                opacity: 0.82,
-                textShadow: "0 2px 12px rgba(0,0,0,0.5)",
-              }}
-            >
-              {claim.label}
-              {claim.unit ? ` · ${claim.unit}` : ""}
-            </div>
-            <ClaimText
-              belowOpacity={1}
-              contentW={contentW}
-              curves={curves}
-              cut={false}
-              fontFamily={font}
-              fontWeight={fontWeight}
-              fullW={width}
-              layout={layout}
-              maxBoxH={stackedMaxBoxH}
-              offsetX={insets.left}
-              uid={uid}
-            />
-            {hasLine ? (
-              <div style={{ height: 104, marginTop: 22, width: "100%" }}>
-                <MultiLineBand curves={curves} style={{ height: "100%" }} />
-              </div>
-            ) : null}
-            <div style={safePad}>
-              <FooterRow
-                marginTop={18}
-                stats={stats}
-                unitFontFamily={font}
-                unitFontSize={unitFontSize}
-              />
-            </div>
-          </div>
+          <StackedClaim
+            claimLabel={claim.label}
+            claimUnit={claim.unit}
+            contentW={contentW}
+            curves={curves}
+            fontFamily={font}
+            fontWeight={fontWeight}
+            fullW={width}
+            layout={layout}
+            maxBoxH={stackedMaxBoxH}
+            offsetX={insets.left}
+            safePad={safePad}
+            stats={stats}
+            uid={uid}
+            unitFontSize={unitFontSize}
+          />
         ) : null}
 
         {/* No claim: the line becomes the hero element. */}
@@ -786,38 +882,12 @@ export const ThemeAltitude = ({
         ) : null}
       </div>
 
-      {metaBits.length > 0 ? (
-        <div
-          style={{
-            bottom: insets.bottom,
-            color: "#fff",
-            fontFamily: "var(--font-mono), monospace",
-            fontSize: 24,
-            left: insets.left,
-            letterSpacing: "0.18em",
-            opacity: 0.85,
-            position: "absolute",
-            right: insets.right,
-            textShadow: "0 2px 12px rgba(0,0,0,0.5)",
-            zIndex: 3,
-          }}
-        >
-          {metaBits.join("   ·   ")}
-        </div>
-      ) : null}
+      <MetaLine
+        bits={metaBits}
+        bottom={insets.bottom}
+        left={insets.left}
+        right={insets.right}
+      />
     </div>
   );
 };
-
-export const altitudeTheme = defineTheme({
-  id: "altitude",
-  label: "ALTITUDE",
-  tagline: "elevation as headline",
-  uses: USES,
-  // Fixed: white type + line over the photo is the design.
-  colors: { default: { primary: "#ffffff" }, userAdjustable: false },
-  photo: { defaultOn: true },
-  params: ALTITUDE_PARAMS,
-  defaults: DEFAULT_ALTITUDE_CONFIG,
-  Component: ThemeAltitude,
-});

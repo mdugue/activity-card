@@ -28,7 +28,15 @@ const FormatContext = createContext<ExportFormat>(
   EXPORT_FORMATS["instagram-feed"]
 );
 
-export const FormatProvider = FormatContext.Provider;
+interface FormatProviderProps {
+  children: ReactNode;
+  value: ExportFormat;
+}
+
+/** Supplies the active export format to every theme rendered beneath it. */
+export const FormatProvider = ({ children, value }: FormatProviderProps) => (
+  <FormatContext value={value}>{children}</FormatContext>
+);
 
 /** The active export format — dimensions, safe insets, aspect bucket. */
 export const useFormat = (): ExportFormat => useContext(FormatContext);

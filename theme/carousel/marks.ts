@@ -3,7 +3,7 @@
 // params appended to every theme by `defineCarouselTheme` (not flags in the
 // cross-family `Visibility`); the deck reads them back from the coerced config.
 
-import type { ParamDef } from "@/theme/core/params/kinds";
+import type { ParamDef, ThemeConfig } from "@/theme/core/params/kinds";
 
 /** The two universal carousel marks, as MARKS-group toggles. Default off. */
 export const CAROUSEL_MARK_PARAMS: ParamDef[] = [
@@ -29,7 +29,7 @@ export const CAROUSEL_MARK_DEFAULTS = {
 };
 
 /** Read the deck-chrome marks back out of a coerced theme config. */
-export const carouselMarks = (config: Record<string, unknown>) => ({
+export const carouselMarks = (config: ThemeConfig) => ({
   showEffort: config.showEffort === true,
   showPageNumber: config.showPageNumber === true,
 });

@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import { SAMPLE_RIDE } from "@/components/app/sample-data";
 import { ALTITUDE_PARAMS } from "@/lib/altitude";
-import type { ParamCtx, ParamDef } from "@/theme/core/params/kinds";
+import type { ParamCtx, ParamDef, ParamValue } from "@/theme/core/params/kinds";
 
 import preview from "../../.storybook/preview";
 import { ParamControl } from "./param-control";
@@ -12,8 +12,8 @@ import { ParamControl } from "./param-control";
 
 const ctx: ParamCtx = { data: SAMPLE_RIDE, palette: null };
 
-const Demo = ({ def, initial }: { def: ParamDef; initial: unknown }) => {
-  const [value, setValue] = useState<unknown>(initial);
+const Demo = ({ def, initial }: { def: ParamDef; initial: ParamValue }) => {
+  const [value, setValue] = useState<ParamValue>(initial);
   return (
     <div className="w-80 p-4">
       <ParamControl ctx={ctx} def={def} onChange={setValue} value={value} />

@@ -17,7 +17,11 @@
  *   STRAVA_API_BASE=http://localhost:PORT/api/v3
  */
 
-const PORT = Number(process.env.STRAVA_MOCK_PORT || 3101);
+/** An env var / query param, where unset or empty both mean "use the fallback". */
+const nonEmptyOr = (value: string | null | undefined, fallback: string) =>
+  value === null || value === undefined || value === "" ? fallback : value;
+
+const PORT = Number(nonEmptyOr(process.env.STRAVA_MOCK_PORT, "3101"));
 
 const ATHLETE = {
   firstname: "Alex",
@@ -27,9 +31,11 @@ const ATHLETE = {
 };
 
 interface ActivityFixture {
-  distance: number; // meters
+  /** meters */
+  distance: number;
   id: number;
-  moving_time: number; // seconds
+  /** seconds */
+  moving_time: number;
   name: string;
   sport_type: string;
   start_date: string;
@@ -75,7 +81,8 @@ const SYNTH_ACTIVITIES: ActivityFixture[] = Array.from(
   (_, i) => {
     const sport = SYNTH_SPORTS[i % SYNTH_SPORTS.length];
     const id = 2000 + i;
-    const dayOffset = i + 4; // pushed back past the three named activities
+    // pushed back past the three named activities
+    const dayOffset = i + 4;
     const start = new Date(Date.UTC(2026, 4, 16 - dayOffset, 7, 0, 0));
     return {
       distance: 5000 + i * 500,
@@ -102,7 +109,7 @@ const makeStreams = (count: number) => {
   const time: number[] = [];
   const distance: number[] = [];
   const velocity: number[] = [];
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < count; i += 1) {
     const t = i / (count - 1);
     latlng.push([50 + t * 0.04, 8 + t * 0.05 + Math.sin(t * 6) * 0.005]);
     altitude.push(100 + Math.sin(t * 8) * 40 + t * 60);
@@ -127,31 +134,37 @@ const makeStreams = (count: number) => {
   };
 };
 
-const DETAIL_RE = /^\/api\/v3\/activities\/(\d+)$/u;
-const STREAMS_RE = /^\/api\/v3\/activities\/(\d+)\/streams$/u;
-const STATS_RE = /^\/api\/v3\/athletes\/(\d+)\/stats$/u;
-const PHOTOS_RE = /^\/api\/v3\/activities\/(\d+)\/photos$/u;
-const PHOTO_FILE_RE = /^\/photos\/(\d+)-(\d+)\.png$/u;
+const DETAIL_RE = /^\/api\/v3\/activities\/\d+$/u;
+const STREAMS_RE = /^\/api\/v3\/activities\/\d+\/streams$/u;
+const STATS_RE = /^\/api\/v3\/athletes\/\d+\/stats$/u;
+const PHOTOS_RE = /^\/api\/v3\/activities\/\d+\/photos$/u;
+const PHOTO_FILE_RE = /^\/photos\/\d+-\d+\.png$/u;
+
+/** The activity id in a matched `/api/v3/activities/{id}…` path. */
+const activityIdOf = (url: URL): number => Number(url.pathname.split("/")[4]);
 
 // How many photos each fixture activity carries (others have none). The ride
 // gets two so the strip and "pick the second one" flows are coverable.
-const PHOTO_COUNTS: Record<number, number> = { 1001: 2, 1002: 1 };
+const PHOTO_COUNTS = new Map<number, number>([
+  [1001, 2],
+  [1002, 1],
+]);
 
 // A 1×1 orange PNG — enough for <img> rendering and the proxy round-trip.
 const PHOTO_PNG = Uint8Array.from(
   atob(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
   ),
-  (c) => c.charCodeAt(0)
+  // atob yields Latin-1 characters, so every code point is a byte.
+  (c) => c.codePointAt(0) ?? 0
 );
 
 /** The photo list endpoint + the static images its URLs point at. */
 const handlePhotoRoutes = (url: URL): Response | null => {
-  const photosMatch = PHOTOS_RE.exec(url.pathname);
-  if (photosMatch) {
-    const id = Number(photosMatch[1]);
-    const size = url.searchParams.get("size") || "600";
-    const count = PHOTO_COUNTS[id] ?? 0;
+  if (PHOTOS_RE.test(url.pathname)) {
+    const id = activityIdOf(url);
+    const size = nonEmptyOr(url.searchParams.get("size"), "600");
+    const count = PHOTO_COUNTS.get(id) ?? 0;
     return Response.json(
       Array.from({ length: count }, (_, i) => ({
         source: 1,
@@ -178,12 +191,12 @@ const handle = (req: Request): Response | Promise<Response> => {
   if (url.pathname === "/oauth/authorize") {
     const redirectUri = url.searchParams.get("redirect_uri");
     const state = url.searchParams.get("state");
-    if (!redirectUri) {
+    if (redirectUri === null || redirectUri === "") {
       return new Response("missing redirect_uri", { status: 400 });
     }
     const cb = new URL(redirectUri);
     cb.searchParams.set("code", "mock-auth-code");
-    if (state) {
+    if (state !== null && state !== "") {
       cb.searchParams.set("state", state);
     }
     return Response.redirect(cb.toString(), 302);
@@ -201,18 +214,20 @@ const handle = (req: Request): Response | Promise<Response> => {
   }
 
   if (url.pathname === "/api/v3/athlete/activities" && req.method === "GET") {
-    const page = Math.max(1, Number(url.searchParams.get("page") || "1"));
+    const page = Math.max(
+      1,
+      Number(nonEmptyOr(url.searchParams.get("page"), "1"))
+    );
     const perPage = Math.max(
       1,
-      Number(url.searchParams.get("per_page") || "30")
+      Number(nonEmptyOr(url.searchParams.get("per_page"), "30"))
     );
     const start = (page - 1) * perPage;
     return Response.json(ACTIVITIES.slice(start, start + perPage));
   }
 
-  const detailMatch = DETAIL_RE.exec(url.pathname);
-  if (detailMatch) {
-    const id = Number(detailMatch[1]);
+  if (DETAIL_RE.test(url.pathname)) {
+    const id = activityIdOf(url);
     const summary = ACTIVITIES.find((a) => a.id === id);
     if (!summary) {
       return Response.json({ error: "not_found" }, { status: 404 });

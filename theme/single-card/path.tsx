@@ -14,26 +14,17 @@ import {
 } from "@/lib/format";
 import { isMultiActivity, segmentRoutes } from "@/lib/multi-activity";
 import type { SegmentRoute } from "@/lib/multi-activity";
-import { defineTheme } from "@/theme/core/theme-contract";
 import type { ThemeProps } from "@/theme/core/theme-contract";
 
 import { SafeArea, useFormat } from "../shared/format-context";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoBackdrop } from "../shared/photo-backdrop";
+import { PATH_ACCENT } from "./default-accents";
+import type { PathCapability } from "./path.theme";
 
 const INK = "#1a1714";
-const DEFAULT_ACCENT = "#c45a2c";
 const ROUTE_W = 900;
 const ROUTE_H = 720;
-
-const USES = [
-  "athleteName",
-  "elevation",
-  "location",
-  "pace",
-  "route",
-  "speed",
-] as const;
 
 const PoolLanes = ({ accent }: { accent: string }) => (
   <g>
@@ -180,9 +171,9 @@ export const ThemePath = ({
   photoUrl,
   imageTransform,
   colors,
-}: ThemeProps<(typeof USES)[number]>) => {
+}: ThemeProps<PathCapability>) => {
   const { width, height } = useFormat();
-  const accent = colors?.primary ?? DEFAULT_ACCENT;
+  const accent = colors?.primary ?? PATH_ACCENT;
   const isPool = data.sport === "swim";
   const { sport } = data;
   const multi = isMultiActivity(data);
@@ -470,13 +461,3 @@ export const ThemePath = ({
     </div>
   );
 };
-
-export const pathTheme = defineTheme({
-  Component: ThemePath,
-  colors: { default: { primary: DEFAULT_ACCENT }, userAdjustable: true },
-  id: "path",
-  label: "PATH",
-  photo: { defaultOn: true },
-  tagline: "route is the hero",
-  uses: USES,
-});

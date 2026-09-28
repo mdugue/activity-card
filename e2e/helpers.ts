@@ -3,6 +3,8 @@ import type { Page } from "@playwright/test";
 
 import { SINGLE_RUN_GPX } from "./fixtures";
 
+const ARIA_PRESSED = "aria-pressed";
+
 /**
  * Select the named theme. Themes are an inline rail of toggle buttons in the
  * THEME section now (no popup) — each button is named "<LABEL> <tagline>", so
@@ -13,7 +15,7 @@ export const selectTheme = async (page: Page, theme: string): Promise<void> => {
     name: new RegExp(`^${theme}\\b`, "iu"),
   });
   await btn.click();
-  await expect(btn).toHaveAttribute("aria-pressed", "true");
+  await expect(btn).toHaveAttribute(ARIA_PRESSED, "true");
 };
 
 /**
@@ -25,7 +27,7 @@ export const selectTheme = async (page: Page, theme: string): Promise<void> => {
 export const selectSingleCard = async (page: Page): Promise<void> => {
   const button = page.getByRole("button", { name: /Single Card/iu });
   await button.click();
-  await expect(button).toHaveAttribute("aria-pressed", "true");
+  await expect(button).toHaveAttribute(ARIA_PRESSED, "true");
 };
 
 /**
@@ -36,7 +38,7 @@ export const selectSingleCard = async (page: Page): Promise<void> => {
 export const selectCarousel = async (page: Page): Promise<void> => {
   const button = page.getByRole("button", { name: /^Carousel$/iu });
   await button.click();
-  await expect(button).toHaveAttribute("aria-pressed", "true");
+  await expect(button).toHaveAttribute(ARIA_PRESSED, "true");
 };
 
 /**
@@ -94,4 +96,15 @@ export const enterEditViaUpload = async (
   });
   await page.reload();
   await uploadActivity(page);
+};
+
+/**
+ * Wait until a freshly rendered view has settled: webfonts have loaded (or
+ * fallen back), checked on an animation frame — so the commit has painted and
+ * its deferred `useEffect`s have run, surfacing any runtime error they throw.
+ */
+export const waitForRenderSettled = async (page: Page): Promise<void> => {
+  await page.waitForFunction(() => document.fonts.status === "loaded", null, {
+    polling: "raf",
+  });
 };

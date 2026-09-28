@@ -3,19 +3,10 @@
 // Generic renderer for a single theme parameter. Maps each `ParamDef.kind` to an
 // existing editor primitive, so a theme never writes its own control panel — it
 // declares `ParamDef`s (in `lib/`) and these render automatically. The value is
-// `unknown` at this boundary (the theme body stays strictly typed on its own
-// config); each kind narrows it as it reads.
+// any stored `ParamValue` at this boundary (the theme body stays strictly typed
+// on its own config); each kind parses its own shape as it reads.
 
-import {
-  CircleDashedIcon,
-  ClockIcon,
-  GaugeIcon,
-  LightningIcon,
-  MountainsIcon,
-  PathIcon,
-  TextAaIcon,
-  TimerIcon,
-} from "@phosphor-icons/react";
+import { z } from "zod/mini";
 
 import {
   ControlBlock,
@@ -32,32 +23,31 @@ import type {
   ParamOption,
 } from "@/theme/core/params/kinds";
 
+import type { ParamValue } from "./editor-session";
+import { isOptionGlyph, OPTION_GLYPHS } from "./option-glyphs";
+
 interface ParamControlProps {
   ctx: ParamCtx;
   def: ParamDef;
-  onChange: (value: unknown) => void;
-  value: unknown;
+  onChange: (value: ParamValue) => void;
+  /** the stored value — absent until the config carries this param */
+  value: ParamValue | undefined;
 }
 
-// Duotone glyph per option `glyph` id, sized to match the editor's other rich
-// selects (the sport picker). The map lives here — not on the `ParamOption` —
-// so param specs in `lib/` stay JSX-free.
+// Each kind reads its own shape out of the stored value, falling back to the
+// param's default when the stored value is absent or of another kind.
+const SLIDER_VALUE = z.number();
+const CHOICE_VALUE = z.string();
+
+// Sized to match the editor's other rich selects (the sport picker).
 const ICON_PROPS = {
   "aria-hidden": true,
   className: "size-5",
   weight: "duotone",
 } as const;
 
-export const OPTION_GLYPHS: Record<string, React.ReactNode> = {
-  avgSpeed: <GaugeIcon {...ICON_PROPS} />,
-  distance: <PathIcon {...ICON_PROPS} />,
-  duration: <ClockIcon {...ICON_PROPS} />,
-  elevation: <MountainsIcon {...ICON_PROPS} />,
-  maxSpeed: <LightningIcon {...ICON_PROPS} />,
-  name: <TextAaIcon {...ICON_PROPS} />,
-  none: <CircleDashedIcon {...ICON_PROPS} />,
-  pace: <TimerIcon {...ICON_PROPS} />,
-};
+const isPresent = (text: string | undefined): text is string =>
+  text !== undefined && text !== "";
 
 /** The option's semantic duotone icon, a colour swatch (palette picker), or a
  *  neutral disc — so option rows keep a consistent leading mark. */
@@ -68,11 +58,11 @@ const OptionGlyph = ({
   glyph?: string;
   swatch?: string;
 }) => {
-  const icon = glyph ? OPTION_GLYPHS[glyph] : undefined;
-  if (icon) {
-    return icon;
+  if (glyph !== undefined && isOptionGlyph(glyph)) {
+    const GlyphIcon = OPTION_GLYPHS[glyph];
+    return <GlyphIcon {...ICON_PROPS} />;
   }
-  if (swatch) {
+  if (isPresent(swatch)) {
     return (
       <span
         aria-hidden
@@ -90,7 +80,7 @@ const OptionGlyph = ({
 };
 
 const toRichOption = (o: ParamOption): RichSelectOption => ({
-  hint: o.hint ?? (o.value ? undefined : o.blurb),
+  hint: o.hint ?? (isPresent(o.value) ? undefined : o.blurb),
   icon: <OptionGlyph glyph={o.glyph} swatch={o.swatch} />,
   primary: o.value ?? o.label,
   unit: o.unit,
@@ -101,7 +91,7 @@ const resolveOptions = (
   def: Extract<ParamDef, { kind: "segmented" | "select" }>,
   ctx: ParamCtx
 ): ParamOption[] =>
-  typeof def.options === "function" ? def.options(ctx) : def.options;
+  Array.isArray(def.options) ? def.options : def.options(ctx);
 
 export const ParamControl = ({
   def,
@@ -122,7 +112,8 @@ export const ParamControl = ({
   }
 
   if (def.kind === "slider") {
-    const n = typeof value === "number" ? value : def.default;
+    const stored = SLIDER_VALUE.safeParse(value);
+    const n = stored.success ? stored.data : def.default;
     return (
       <ControlBlock label={def.label}>
         <div className="mt-3 flex items-center gap-4">
@@ -132,9 +123,9 @@ export const ParamControl = ({
             max={def.max}
             min={def.min}
             onValueChange={(v: number | readonly number[]) => {
-              // `Array.isArray` widens a readonly array to `any[]`, so narrow on
-              // the scalar side instead.
-              const next = typeof v === "number" ? v : (v[0] ?? 0);
+              // Flatten the scalar-or-array payload (`Array.isArray` would widen
+              // the readonly array to `any[]`) and take its first thumb.
+              const next = [v].flat()[0] ?? 0;
               onChange(Math.round(next));
             }}
             step={def.step ?? 1}
@@ -150,7 +141,8 @@ export const ParamControl = ({
   }
 
   const options = resolveOptions(def, ctx);
-  const current = typeof value === "string" ? value : def.default;
+  const stored = CHOICE_VALUE.safeParse(value);
+  const current = stored.success ? stored.data : def.default;
 
   if (def.kind === "select") {
     return (
@@ -192,7 +184,7 @@ export const ParamControl = ({
             <div className="font-heading text-base leading-none uppercase">
               {o.label}
             </div>
-            {o.blurb ? (
+            {isPresent(o.blurb) ? (
               <div className="caption-micro mt-1">{o.blurb}</div>
             ) : null}
           </ToggleGroupItem>

@@ -63,7 +63,11 @@ export const OverlayRoute = ({
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth={strokeWidth}
-              style={shadow ? { filter: shadow } : undefined}
+              style={
+                shadow !== undefined && shadow !== ""
+                  ? { filter: shadow }
+                  : undefined
+              }
             />
             {markers && pr.start ? (
               <circle

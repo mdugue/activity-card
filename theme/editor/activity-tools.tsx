@@ -43,11 +43,12 @@ import type { Visibility } from "@/theme/core/visibility";
 
 import { ColorControl } from "./color-control";
 import type { EditorSession } from "./editor-session";
+import { themeDeclaresGroup } from "./param-groups";
 import {
   PhotoFilterControl,
   PhotoTransformControls,
 } from "./photo-effects-controls";
-import { ThemeParamGroup, themeDeclaresGroup } from "./theme-params";
+import { ThemeParamGroup } from "./theme-params";
 
 // Shared by the section headers and the rich sport picker below — duotone glyph
 // at a calm, consistent size.
@@ -83,6 +84,10 @@ const SPORT_OPTIONS: RichSelectOption[] = [
     value: "triathlon",
   },
 ];
+
+/** Narrow a picked option value back to a `Sport` — only the rows above exist. */
+const isSport = (value: string): value is Sport =>
+  SPORT_OPTIONS.some((option) => option.value === value);
 
 interface ToggleDef {
   key: keyof Visibility;
@@ -143,6 +148,13 @@ export const useActivityTools = ({
     config,
     photo,
   } = session;
+  const { onChange: handleConfigChange } = config;
+  const { onChange: handleColorChange } = color;
+  const {
+    onChange: handlePhotoChange,
+    onEffectsChange: handlePhotoEffectsChange,
+  } = photo;
+  const hasPhoto = photo.url !== null && photo.url !== "";
   const paramCtx: ParamCtx = { data, palette: config.palette };
   const titleId = useId();
   const athleteId = useId();
@@ -158,18 +170,22 @@ export const useActivityTools = ({
     null
   );
   const pickStravaPhoto = async (ref: StravaPhotoRef) => {
-    if (pickingStravaPhoto) {
+    if (pickingStravaPhoto !== null) {
       return;
     }
     setPickingStravaPhoto(stravaPhotoKey(ref));
+    // The catch swallows every failure, so clearing the pending key after it
+    // runs on every path — no `finally` needed.
     try {
       const file = await fetchStravaPhotoFile(ref);
-      photo.onChange(file);
+      handlePhotoChange(file);
     } catch {
       toast.error("Couldn't load the photo from Strava.");
-    } finally {
-      setPickingStravaPhoto(null);
     }
+    setPickingStravaPhoto(null);
+  };
+  const handlePickStravaPhoto = (ref: StravaPhotoRef) => {
+    void pickStravaPhoto(ref);
   };
 
   const renderToggle = ({ key, label }: ToggleDef) => {
@@ -206,7 +222,7 @@ export const useActivityTools = ({
       config={config.value}
       ctx={paramCtx}
       group={group}
-      onChange={config.onChange}
+      onChange={handleConfigChange}
       params={config.params}
     />
   );
@@ -228,8 +244,8 @@ export const useActivityTools = ({
             <ColorControl
               choice={color.choice}
               isDefault={color.isDefault}
-              onChange={color.onChange}
-              palette={photo.url ? config.palette : null}
+              onChange={handleColorChange}
+              palette={hasPhoto ? config.palette : null}
             />
           ) : null}
         </ControlBlock>
@@ -245,13 +261,13 @@ export const useActivityTools = ({
   // the same filter / grain / transform presets in both modes. The "Use as
   // background" switch is the shared `photoBackdrop` visibility flag; the
   // adjustment controls only show while the photo is actually displayed.
-  const photoActive = Boolean(photo.url) && visibility.photoBackdrop;
+  const photoActive = hasPhoto && visibility.photoBackdrop;
   const stravaPhotos = data.stravaPhotos ?? [];
   tools.push({
     content: (
       <ControlBlock label="BACKGROUND PHOTO">
         <PhotoControl
-          onChange={photo.onChange}
+          onChange={handlePhotoChange}
           photoUrl={photo.url}
           prominent
         />
@@ -259,13 +275,13 @@ export const useActivityTools = ({
           <div className="mt-3">
             <div className="caption-micro mb-1.5">FROM STRAVA</div>
             <StravaPhotoStrip
-              onPick={pickStravaPhoto}
+              onPick={handlePickStravaPhoto}
               photos={stravaPhotos}
               pickingKey={pickingStravaPhoto}
             />
           </div>
         ) : null}
-        {photo.url ? (
+        {hasPhoto ? (
           <div className="mt-3">
             <ToggleRow
               checked={visibility.photoBackdrop}
@@ -285,12 +301,12 @@ export const useActivityTools = ({
               <div className="caption-micro mb-1.5">FILTER</div>
               <PhotoFilterControl
                 effects={photo.effects}
-                onChange={photo.onEffectsChange}
+                onChange={handlePhotoEffectsChange}
               />
             </div>
             <PhotoTransformControls
               effects={photo.effects}
-              onChange={photo.onEffectsChange}
+              onChange={handlePhotoEffectsChange}
             />
           </>
         ) : null}
@@ -415,7 +431,9 @@ export const useActivityTools = ({
           <RichSelect
             ariaLabel="Sport"
             onValueChange={(v) => {
-              onSportChange(v as Sport);
+              if (isSport(v)) {
+                onSportChange(v);
+              }
             }}
             options={SPORT_OPTIONS}
             value={data.sport}

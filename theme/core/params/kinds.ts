@@ -55,6 +55,14 @@ export interface ParamOption {
   value?: string;
 }
 
+/** The value space every param kind stores: a toggle's boolean, a slider's
+ *  number, a choice's option id. */
+export type ParamValue = boolean | number | string;
+
+/** A theme's parameter config: param id → that param's value. Concrete theme
+ *  configs (`StrataConfig`, …) extend it, keeping their declared keys precise. */
+export type ThemeConfig = Record<string, ParamValue>;
+
 interface BaseParam {
   group: ParamGroup;
   /** key into the theme's config object */
@@ -62,7 +70,7 @@ interface BaseParam {
   label: string;
   /** hide this control unless the predicate over the current config holds —
    *  declarative conditional params (e.g. cutout-opacity only in cutout mode) */
-  visibleWhen?: (config: Record<string, unknown>) => boolean;
+  visibleWhen?: (config: ThemeConfig) => boolean;
 }
 
 export interface ToggleParam extends BaseParam {

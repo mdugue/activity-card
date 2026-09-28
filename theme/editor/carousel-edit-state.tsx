@@ -57,7 +57,8 @@ export const CarouselEditState = ({
   onThemeChange,
 }: CarouselEditStateProps) => {
   const { data, visibility, color, config, photo } = session;
-  const { count, selectedIndex } = carousel;
+  const { onTransformChange: handlePhotoTransformChange } = photo;
+  const { count, select: handleSelectSlide, selectedIndex } = carousel;
   const descriptor = CAROUSEL_THEMES[theme];
   // The strip, every deck mount and the export all size from this one geometry —
   // no parallel literals. The carousel offers the same formats as the single
@@ -96,21 +97,18 @@ export const CarouselEditState = ({
   useEffect(() => {
     selectedIndexRef.current = selectedIndex;
     const vp = viewportRef.current;
-    if (!vp) {
-      return;
+    const target = selectedIndex * (vp?.clientWidth ?? 0);
+    let fallback: ReturnType<typeof setTimeout> | undefined;
+    if (vp && Math.abs(vp.scrollLeft - target) > 2) {
+      programmatic.current = true;
+      targetLeft.current = target;
+      vp.scrollTo({ behavior: "smooth", left: target });
+      fallback = setTimeout(() => {
+        programmatic.current = false;
+      }, 700);
     }
-    const target = selectedIndex * vp.clientWidth;
-    if (Math.abs(vp.scrollLeft - target) <= 2) {
-      return;
-    }
-    programmatic.current = true;
-    targetLeft.current = target;
-    vp.scrollTo({ behavior: "smooth", left: target });
-    const t = setTimeout(() => {
-      programmatic.current = false;
-    }, 700);
     return () => {
-      clearTimeout(t);
+      clearTimeout(fallback);
     };
   }, [selectedIndex]);
 
@@ -120,13 +118,10 @@ export const CarouselEditState = ({
   // slides. Re-pin instantly (we're mid layout change, not navigating).
   useEffect(() => {
     const vp = viewportRef.current;
-    if (!vp) {
-      return;
-    }
-    let lastWidth = vp.clientWidth;
+    let lastWidth = vp?.clientWidth ?? 0;
     const ro = new ResizeObserver(() => {
-      const width = vp.clientWidth;
-      if (width === 0 || width === lastWidth) {
+      const width = vp?.clientWidth ?? 0;
+      if (vp === null || width === 0 || width === lastWidth) {
         return;
       }
       lastWidth = width;
@@ -141,7 +136,9 @@ export const CarouselEditState = ({
         vp.scrollLeft = left;
       }
     });
-    ro.observe(vp);
+    if (vp) {
+      ro.observe(vp);
+    }
     return () => {
       ro.disconnect();
     };
@@ -273,7 +270,7 @@ export const CarouselEditState = ({
           adjust={adjust}
           contentWidth={slideW}
           label="Adjust photo"
-          onChange={photo.onTransformChange}
+          onChange={handlePhotoTransformChange}
           transform={photo.transform}
         />
       </CardStage>
@@ -298,7 +295,7 @@ export const CarouselEditState = ({
           format={format}
           imageSize={imageSize}
           imageTransform={photo.transform}
-          onSelect={carousel.select}
+          onSelect={handleSelectSlide}
           photoEffects={photo.effects}
           photoUrl={photo.url}
           selectedIndex={selectedIndex}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { z } from "zod/mini";
 
 export interface StravaAthleteInfo {
   avatar?: string | null;
@@ -19,10 +20,19 @@ interface State {
   loading: boolean;
 }
 
-interface MeResponse {
-  athlete?: StravaAthleteInfo | null;
-  connected: boolean;
-}
+/** `/api/strava/me` payload, validated at the fetch boundary. */
+const MeResponseSchema = z.object({
+  athlete: z.optional(
+    z.nullable(
+      z.object({
+        avatar: z.optional(z.nullable(z.string())),
+        firstname: z.optional(z.nullable(z.string())),
+        id: z.optional(z.number()),
+      })
+    )
+  ),
+  connected: z.boolean(),
+});
 
 export interface UseStravaConnection extends State {
   disconnect: () => Promise<void>;
@@ -54,7 +64,8 @@ export const useStravaConnection = (): UseStravaConnection => {
         });
         return;
       }
-      const data = (await res.json()) as MeResponse;
+      // A malformed body throws here and lands in the catch below.
+      const data = MeResponseSchema.parse(await res.json());
       setState({
         athlete: data.athlete ?? null,
         connected: data.connected,

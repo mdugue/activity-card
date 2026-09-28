@@ -1,6 +1,11 @@
 import { Buffer } from "node:buffer";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+import { z } from "zod/mini";
+
+import { hasText } from "./strava-params";
+import { lenient } from "./strava-schemas";
+
 /**
  * Structured `state` payload for the Strava OAuth round-trip. The plain
  * random nonce that older code stuffed into `state` is now the `r` field
@@ -31,26 +36,34 @@ export interface OAuthStatePayload {
 export const encodeOAuthState = (payload: OAuthStatePayload): string =>
   Buffer.from(JSON.stringify(payload)).toString("base64url");
 
+/**
+ * The decoded state: `r` must be a string or the whole state is rejected;
+ * `b` / `p` / `s` are kept only when they are strings.
+ */
+const OAuthStateSchema = z.object({
+  b: lenient(z.string()),
+  p: lenient(z.string()),
+  r: z.string(),
+  s: lenient(z.string()),
+});
+
 export const decodeOAuthState = (raw: string): OAuthStatePayload | null => {
-  let parsed: unknown;
+  let json: unknown;
   try {
-    parsed = JSON.parse(Buffer.from(raw, "base64url").toString("utf-8"));
+    json = JSON.parse(Buffer.from(raw, "base64url").toString("utf-8"));
   } catch {
     return null;
   }
-  if (
-    !parsed ||
-    typeof parsed !== "object" ||
-    typeof (parsed as { r?: unknown }).r !== "string"
-  ) {
+  const result = OAuthStateSchema.safeParse(json);
+  if (!result.success) {
     return null;
   }
-  const p = parsed as { b?: unknown; p?: unknown; r: string; s?: unknown };
+  const { b, p, r, s } = result.data;
   return {
-    b: typeof p.b === "string" ? p.b : undefined,
-    p: typeof p.p === "string" ? p.p : undefined,
-    r: p.r,
-    s: typeof p.s === "string" ? p.s : undefined,
+    b: b ?? undefined,
+    p: p ?? undefined,
+    r,
+    s: s ?? undefined,
   };
 };
 
@@ -71,7 +84,7 @@ export const verifyBounce = (
   s: string | undefined,
   secret: string
 ): boolean => {
-  if (!s) {
+  if (!hasText(s)) {
     return false;
   }
   const expected = Buffer.from(signBounce(b, r, secret));
@@ -160,14 +173,17 @@ const SPACE_CHARCODE = 0x20;
  * fail to encode redirect targets). Used by both the authorize route
  * (before stuffing into state) and the callback route. */
 export const safeRelativePath = (value: string | null): string | null => {
-  if (!value?.startsWith("/") || value.startsWith("//")) {
+  if (value === null || !value.startsWith("/") || value.startsWith("//")) {
     return null;
   }
   // Reject any C0 control byte (0x00–0x1F) or DEL (0x7F). CR/LF in
   // particular would allow header smuggling if a downstream redirect
   // handler ever forwarded the raw value without re-encoding.
-  for (let i = 0; i < value.length; i++) {
-    const code = value.charCodeAt(i);
+  // Code points, not UTF-16 units: a surrogate pair is one code point
+  // (>= 0x10000) and a lone surrogate stays itself, so neither can hit the
+  // control range — the verdict is the same as a per-unit scan.
+  for (const char of value) {
+    const code = char.codePointAt(0) ?? 0;
     if (code < SPACE_CHARCODE || code === DEL_CHARCODE) {
       return null;
     }

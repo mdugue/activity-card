@@ -14,9 +14,6 @@ import { RiseIn } from "../components/rise-in";
 import { VideoFrame } from "../components/video-frame";
 import { FONT, PAPER_DIM, RUST_BRIGHT, TRACKING, TYPE } from "../design/tokens";
 
-/** Walkthrough pacing norms (frames @30fps) — slower than the hero's cuts. */
-export const WALK = { fade: 12, outro: 110, title: 100 } as const;
-
 export const TitleScene = ({
   blurb,
   kicker,

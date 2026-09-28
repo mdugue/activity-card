@@ -4,6 +4,8 @@
 // old PhotoMood). One control serves both sources; the photo options show
 // their real computed swatches and are badged as coming from the photo.
 
+import { z } from "zod/mini";
+
 import type {
   ExtractedPalette,
   PaletteTheme,
@@ -104,36 +106,54 @@ export const resolveColors = (
 
 const HEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/u;
 
-const isHex = (v: unknown): v is string => typeof v === "string" && HEX.test(v);
+const hexSchema = z.string().check(z.regex(HEX));
+/** An optional hue: a hex literal, else undefined (absent or invalid). */
+const optionalHexSchema = z.pipe(
+  z.unknown(),
+  z.transform((v) => hexSchema.safeParse(v).data)
+);
 
-const isVariant = (v: unknown): v is PaletteVariant =>
-  typeof v === "string" && (PALETTE_VARIANTS as string[]).includes(v);
+/** A persisted photo-derived choice: a known palette strategy. */
+const photoChoiceSchema = z.object({
+  kind: z.literal("photo"),
+  variant: z.enum(PALETTE_VARIANTS),
+});
+
+/** A persisted preset choice. Only `primary` must be a hex literal; the
+ *  optional hues are vetted one by one (a bad one is dropped, not fatal). */
+const presetChoiceSchema = z.object({
+  kind: z.literal("preset"),
+  scheme: z.object({
+    onPrimary: optionalHexSchema,
+    primary: hexSchema,
+    secondary: optionalHexSchema,
+  }),
+});
 
 /**
  * Coerce a raw (persisted / hand-edited) value to a valid `ColorChoice`, or
  * `null` (= "use the theme's default") when it isn't one. CSS-injection-safe:
  * preset colours must be hex literals.
  */
-export const coerceColorChoice = (raw: unknown): ColorChoice | null => {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return null;
+export const coerceColorChoice = (
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- this IS the I/O boundary parser: the persisted colour choice arrives untyped from localStorage
+  raw: unknown
+): ColorChoice | null => {
+  const photo = photoChoiceSchema.safeParse(raw);
+  if (photo.success) {
+    return { kind: "photo", variant: photo.data.variant };
   }
-  const r = raw as Record<string, unknown>;
-  if (r.kind === "photo" && isVariant(r.variant)) {
-    return { kind: "photo", variant: r.variant };
-  }
-  if (r.kind === "preset" && r.scheme && typeof r.scheme === "object") {
-    const s = r.scheme as Record<string, unknown>;
-    if (isHex(s.primary)) {
-      return {
-        kind: "preset",
-        scheme: {
-          onPrimary: isHex(s.onPrimary) ? s.onPrimary : undefined,
-          primary: s.primary,
-          secondary: isHex(s.secondary) ? s.secondary : undefined,
-        },
-      };
-    }
+  const preset = presetChoiceSchema.safeParse(raw);
+  if (preset.success) {
+    const s = preset.data.scheme;
+    return {
+      kind: "preset",
+      scheme: {
+        onPrimary: s.onPrimary,
+        primary: s.primary,
+        secondary: s.secondary,
+      },
+    };
   }
   return null;
 };

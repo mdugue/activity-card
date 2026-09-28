@@ -24,9 +24,10 @@ import type { ColorChoice, ColorScheme } from "@/theme/core/colors";
 
 /** A round swatch; pairs render as a two-hue split disc. */
 const Swatch = ({ scheme }: { scheme: ColorScheme }) => {
-  const background = scheme.secondary
-    ? `linear-gradient(135deg, ${scheme.primary} 0 50%, ${scheme.secondary} 50% 100%)`
-    : scheme.primary;
+  const background =
+    scheme.secondary !== undefined && scheme.secondary !== ""
+      ? `linear-gradient(135deg, ${scheme.primary} 0 50%, ${scheme.secondary} 50% 100%)`
+      : scheme.primary;
   return (
     <span
       aria-hidden

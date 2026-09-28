@@ -24,8 +24,10 @@ export const StravaConnectButton = ({
   className,
   ref,
 }: StravaConnectButtonProps) => (
-  // The href is a Route Handler that redirects to Strava, not an in-app page.
-  // oxlint-disable-next-line nextjs/no-html-link-for-pages
+  // The href is a Route Handler that redirects to Strava, not an in-app page:
+  // next/link would prefetch it (minting an OAuth state cookie) and try a
+  // client-side RSC navigation, so this must stay a full-page <a>.
+  // oxlint-disable-next-line nextjs/no-html-link-for-pages, react-doctor/nextjs-no-a-element -- href is an OAuth Route Handler that redirects off-site; next/link would prefetch it and attempt client navigation
   <a
     aria-label="Connect with Strava"
     className={cn(

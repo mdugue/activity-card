@@ -16,6 +16,8 @@ import type { ColorScheme } from "@/theme/core/colors";
 import type { ExportFormat } from "@/theme/core/export-formats";
 import type { Visibility } from "@/theme/core/visibility";
 
+import type { ThemeConfigValues } from "./editor-session";
+
 // Each thumbnail fits within this box — capping BOTH width and height so a tall
 // format (9:16 Story) shrinks to a narrower mini instead of growing past the
 // strip's height and clipping. Feed / square / landscape stay width-bound, so
@@ -25,7 +27,7 @@ const THUMB_MAX_H = 116;
 
 interface SlideStripProps {
   colors: ColorScheme;
-  config?: Record<string, unknown>;
+  config?: ThemeConfigValues;
   data: ActivityData;
   /** the active export format — sizes each thumbnail's aspect + slice */
   format: ExportFormat;
@@ -104,7 +106,7 @@ export const SlideStrip = (props: SlideStripProps) => {
                 {canvas}
               </div>
             </button>
-            <span className="font-mono text-[9px] font-medium opacity-50">
+            <span className="font-mono text-xs font-medium opacity-50">
               {String(i + 1).padStart(2, "0")}
             </span>
           </div>

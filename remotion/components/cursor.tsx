@@ -62,32 +62,30 @@ export const Cursor = ({
         zIndex: 40,
       }}
     >
-      {keyframes
-        .filter((k) => k.click)
-        .map((k) => {
-          const t = frame - k.frame;
-          if (t < 0 || t > CLICK_FRAMES) {
-            return null;
-          }
-          const p = t / CLICK_FRAMES;
-          const ringSize = size * (1 + p * 2);
-          return (
-            <div
-              key={k.frame}
-              style={{
-                border: `3px solid ${PAPER}`,
-                borderRadius: 999,
-                height: ringSize,
-                left: "50%",
-                opacity: 0.55 * (1 - p),
-                position: "absolute",
-                top: "50%",
-                transform: "translate(-50%, -50%)",
-                width: ringSize,
-              }}
-            />
-          );
-        })}
+      {keyframes.map((k) => {
+        const t = frame - k.frame;
+        if (k.click !== true || t < 0 || t > CLICK_FRAMES) {
+          return null;
+        }
+        const p = t / CLICK_FRAMES;
+        const ringSize = size * (1 + p * 2);
+        return (
+          <div
+            key={k.frame}
+            style={{
+              border: `3px solid ${PAPER}`,
+              borderRadius: 999,
+              height: ringSize,
+              left: "50%",
+              opacity: 0.55 * (1 - p),
+              position: "absolute",
+              top: "50%",
+              transform: "translate(-50%, -50%)",
+              width: ringSize,
+            }}
+          />
+        );
+      })}
       <div
         style={{
           backgroundColor: RUST_BRIGHT,

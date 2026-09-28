@@ -8,6 +8,8 @@
  * Pure helpers (no Next.js imports) so they're unit-testable with bun:test.
  */
 
+import { hasText } from "./strava-params";
+
 /** Largest photo body the proxy will stream. Strava's biggest renditions
  * are a few MB; anything this large is not a photo we want to relay. */
 export const PHOTO_MAX_BYTES = 25 * 1024 * 1024;
@@ -49,10 +51,10 @@ export const isAllowedPhotoUrl = (
   } catch {
     return false;
   }
-  if (url.username || url.password) {
+  if (url.username !== "" || url.password !== "") {
     return false;
   }
-  if (trustedOrigin && url.origin === trustedOrigin) {
+  if (hasText(trustedOrigin) && url.origin === trustedOrigin) {
     return true;
   }
   if (url.protocol !== "https:" || url.port !== "") {
@@ -67,7 +69,7 @@ export const isAllowedPhotoUrl = (
 export const allowedPhotoContentType = (
   header: string | null
 ): string | null => {
-  if (!header) {
+  if (!hasText(header)) {
     return null;
   }
   const type = header.split(";")[0].trim().toLowerCase();
@@ -81,7 +83,7 @@ export const exceedsPhotoSizeCap = (
   header: string | null,
   max: number = PHOTO_MAX_BYTES
 ): boolean => {
-  if (!header) {
+  if (!hasText(header)) {
     return false;
   }
   const length = Number(header);

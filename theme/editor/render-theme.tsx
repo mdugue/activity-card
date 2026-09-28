@@ -10,13 +10,15 @@ import { PhotoFxProvider } from "@/theme/shared/photo-fx";
 import { SINGLE_CARD_THEMES } from "@/theme/single-card";
 import type { ThemeId } from "@/theme/single-card";
 
+import type { ThemeConfigValues } from "./editor-session";
+
 export type { ThemeId } from "@/theme/single-card";
 
 interface RenderThemeProps {
   /** the resolved colour scheme for the active theme (user choice or default) */
   colors?: ColorScheme;
   /** the active theme's coerced parameter config */
-  config?: Record<string, unknown>;
+  config?: ThemeConfigValues;
   data: ActivityData;
   /** Target export format. The theme renders itself directly at this size and
    *  reads its dimensions + safe insets from the FormatContext. Falls back to the

@@ -10,16 +10,16 @@ import {
   STRATA_MOODS,
   STRATA_PARAMS,
 } from "@/lib/strata";
-import type { StrataConfig } from "@/lib/strata";
 import {
   ATMOSPHERE_PARAMS,
   DEFAULT_ATMOSPHERE_CONFIG,
 } from "@/theme/carousel/atmosphere";
-import type { AtmosphereConfig } from "@/theme/carousel/atmosphere";
 import type { EffectiveStyle } from "@/theme/carousel/resolve";
 import { readableOn } from "@/theme/carousel/resolve";
+import { strataConfigOf } from "@/theme/carousel/strata-config";
 import { FONT_PAIRS } from "@/theme/carousel/theme-tokens";
 import type { CarouselLook } from "@/theme/carousel/theme-tokens";
+import type { ThemeConfig } from "@/theme/core/params/kinds";
 
 import { ElevationCanvas } from "./canvas/elevation";
 import { RouteCanvas } from "./canvas/route";
@@ -80,8 +80,8 @@ const PRESS_PANELS: PanelComponent[] = [
  */
 const atmosphereResolveStyle =
   (dawn: CarouselLook, dusk: CarouselLook): ResolveStyle =>
-  (base: EffectiveStyle, config: Record<string, unknown>) => {
-    if ((config as AtmosphereConfig).atmosphere !== "dusk") {
+  (base: EffectiveStyle, config: ThemeConfig) => {
+    if (config.atmosphere !== "dusk") {
       return base;
     }
     const userAccent = base.accent !== dawn.accent;
@@ -94,7 +94,7 @@ const atmosphereResolveStyle =
       accent2,
       background: dusk.background,
       dark: dusk.dark,
-      elevation: dusk.elevationAccent
+      elevation: dusk.elevationAccent === true
         ? { fillFrom: accent, fillTo: dusk.background, line: accent }
         : dusk.elevation,
       fonts: FONT_PAIRS[dusk.fontPair],
@@ -193,10 +193,9 @@ const ASCENT_DUSK: CarouselLook = {
  *  fixed look. */
 const strataResolveStyle = (
   base: EffectiveStyle,
-  config: Record<string, unknown>
+  config: ThemeConfig
 ): EffectiveStyle => {
-  const cfg = config as StrataConfig;
-  const m = STRATA_MOODS[cfg.mood ?? DEFAULT_STRATA_CONFIG.mood];
+  const m = STRATA_MOODS[strataConfigOf(config).mood];
   return {
     ...base,
     accent: m.routeColor,
@@ -210,18 +209,6 @@ const strataResolveStyle = (
 };
 
 export const CAROUSEL_THEMES: Record<CarouselThemeId, CarouselTheme> = {
-  // Trace — route silhouette as an art-print; ATMOSPHERE picks Dawn or Dusk.
-  trace: defineCarouselTheme({
-    canvas: RouteCanvas,
-    defaults: DEFAULT_ATMOSPHERE_CONFIG,
-    id: "trace",
-    label: "TRACE",
-    look: TRACE_DAWN,
-    panels: STANDARD_PANELS,
-    params: ATMOSPHERE_PARAMS,
-    resolveStyle: atmosphereResolveStyle(TRACE_DAWN, TRACE_DUSK),
-    tagline: "route, on paper",
-  }),
   // Ascent — the elevation mountain-range; ATMOSPHERE picks Dawn or Dusk.
   ascent: defineCarouselTheme({
     canvas: ElevationCanvas,
@@ -329,30 +316,42 @@ export const CAROUSEL_THEMES: Record<CarouselThemeId, CarouselTheme> = {
     id: "strata",
     label: "STRATA",
     look: {
-      dark: true,
-      background:
-        "linear-gradient(180deg, #241335 0%, #5e2450 32%, #b1402c 64%, #ec8a3c 100%)",
-      ink: "#f8ead7",
-      mutedInk: "rgba(248,234,215,0.62)",
       accent: "#ffd98a",
       accent2: "#ff6a3a",
-      onAccent: "#241335",
-      fontPair: "syne",
-      routeStyle: "poster",
-      elevation: { fillFrom: "#ff6a3a", fillTo: "#241335", line: "#ff6a3a" },
-      heroMetric: "distance",
+      background:
+        "linear-gradient(180deg, #241335 0%, #5e2450 32%, #b1402c 64%, #ec8a3c 100%)",
       contentAnchor: "bottom",
-      veil: true,
-      detailViz: false,
+      dark: true,
       // A background photo is optional: the woven field rides over it, the
       // same way the single card composes the field on a photo.
       defaultFilter: "none",
       defaultGrain: false,
+      detailViz: false,
+      elevation: { fillFrom: "#ff6a3a", fillTo: "#241335", line: "#ff6a3a" },
+      fontPair: "syne",
+      heroMetric: "distance",
+      ink: "#f8ead7",
+      mutedInk: "rgba(248,234,215,0.62)",
+      onAccent: "#241335",
+      routeStyle: "poster",
+      veil: true,
     },
     panels: STANDARD_PANELS,
     params: STRATA_PARAMS,
     resolveStyle: strataResolveStyle,
     tagline: "woven topography",
+  }),
+  // Trace — route silhouette as an art-print; ATMOSPHERE picks Dawn or Dusk.
+  trace: defineCarouselTheme({
+    canvas: RouteCanvas,
+    defaults: DEFAULT_ATMOSPHERE_CONFIG,
+    id: "trace",
+    label: "TRACE",
+    look: TRACE_DAWN,
+    panels: STANDARD_PANELS,
+    params: ATMOSPHERE_PARAMS,
+    resolveStyle: atmosphereResolveStyle(TRACE_DAWN, TRACE_DUSK),
+    tagline: "route, on paper",
   }),
 };
 

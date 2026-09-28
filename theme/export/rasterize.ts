@@ -10,6 +10,7 @@ import { snapdom } from "@zumer/snapdom";
 
 import { canRasterizeEmbeddedImages } from "@/lib/svg-raster-support";
 
+import { fromCallback } from "./export-shared";
 import { rasterizeWithPhotoComposite } from "./photo-composite";
 import type { RasterSize } from "./photo-composite";
 
@@ -74,7 +75,7 @@ export const rasterizeNode = async (
 
 /** Encode a rasterised canvas as PNG bytes. */
 export const canvasToPng = async (canvas: HTMLCanvasElement): Promise<Blob> => {
-  const blob = await new Promise<Blob | null>((resolve) => {
+  const blob = await fromCallback<Blob | null>((resolve) => {
     canvas.toBlob(resolve, "image/png");
   });
   if (!blob) {

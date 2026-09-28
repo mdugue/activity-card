@@ -33,8 +33,10 @@ export const ThemeRail = <T extends string>({
     aria-label="Theme"
     className="no-scrollbar mt-2 flex max-w-full justify-start overflow-x-auto lg:flex-wrap lg:overflow-visible"
     onValueChange={(values) => {
-      if (values[0]) {
-        onThemeChange(values[0] as T);
+      // Map the pressed value back onto the typed id space it came from.
+      const picked = order.find((id) => id === values[0]);
+      if (picked !== undefined) {
+        onThemeChange(picked);
       }
     }}
     spacing={2}

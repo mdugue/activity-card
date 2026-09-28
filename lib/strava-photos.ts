@@ -1,8 +1,11 @@
 import type { StravaPhotoRef } from "@/lib/activity";
 
+import { leadingInt } from "./strava-params";
+
 // Strava's photo CDN encodes the rendition's pixel size in the filename,
 // e.g. `…-576x768.jpg` (portrait) / `…-2048x1536.jpg` (landscape).
-const CDN_SIZE_SUFFIX_RE = /-(\d+)x(\d+)(\.(?:jpe?g|png|webp))$/iu;
+const CDN_SIZE_SUFFIX_RE =
+  /-(?<width>\d+)x(?<height>\d+)(?<ext>\.(?:jpe?g|png|webp))$/iu;
 
 /**
  * Pick the largest rendition from a Strava photo's `urls` record (keyed by
@@ -13,13 +16,13 @@ const CDN_SIZE_SUFFIX_RE = /-(\d+)x(\d+)(\.(?:jpe?g|png|webp))$/iu;
 export const largestPhotoUrl = (
   urls?: Record<string, string>
 ): string | undefined => {
-  if (!urls) {
-    return;
+  if (urls === undefined) {
+    return undefined;
   }
   let best: string | undefined;
   let bestSize = Number.NEGATIVE_INFINITY;
   for (const [key, url] of Object.entries(urls)) {
-    const size = Number.parseInt(key, 10);
+    const size = leadingInt(key);
     const rank = Number.isFinite(size) ? size : 0;
     if (rank > bestSize) {
       bestSize = rank;
@@ -44,12 +47,13 @@ export const upscaledPhotoUrl = (
   src: string,
   target: number
 ): string | null => {
-  const match = CDN_SIZE_SUFFIX_RE.exec(src);
-  if (!match) {
+  const groups = CDN_SIZE_SUFFIX_RE.exec(src)?.groups;
+  if (groups === undefined) {
     return null;
   }
-  const w = Number.parseInt(match[1], 10);
-  const h = Number.parseInt(match[2], 10);
+  // The groups are all-digit, so `Number` reads them as `parseInt` would.
+  const w = Number(groups.width);
+  const h = Number(groups.height);
   const long = Math.max(w, h);
   if (!(Number.isFinite(long) && long > 0) || long >= target) {
     return null;
@@ -57,7 +61,7 @@ export const upscaledPhotoUrl = (
   const scale = target / long;
   return src.replace(
     CDN_SIZE_SUFFIX_RE,
-    `-${Math.round(w * scale)}x${Math.round(h * scale)}${match[3]}`
+    `-${Math.round(w * scale)}x${Math.round(h * scale)}${groups.ext}`
   );
 };
 

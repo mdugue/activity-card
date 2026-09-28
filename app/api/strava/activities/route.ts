@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { stravaErrorResponse, stravaFetch } from "@/lib/strava-client";
 import { clampedIntParam } from "@/lib/strava-params";
-import type { StravaSummary } from "@/lib/strava-types";
+import { StravaActivitySummaryListSchema } from "@/lib/strava-schemas";
 
 export const GET = async (request: Request) => {
   const url = new URL(request.url);
@@ -16,8 +16,9 @@ export const GET = async (request: Request) => {
       page: String(page),
       per_page: String(perPage),
     });
-    const list = await stravaFetch<StravaSummary[]>(
-      `/athlete/activities?${qs}`
+    const list = await stravaFetch(
+      `/athlete/activities?${qs}`,
+      StravaActivitySummaryListSchema
     );
     return NextResponse.json({
       activities: list.map((a) => ({

@@ -15,12 +15,14 @@ import { CarouselDeck } from "@/theme/carousel/deck";
 import { CAROUSEL_THEMES } from "@/theme/carousel/registry";
 import type { CarouselThemeId } from "@/theme/carousel/registry";
 import { carouselArgs } from "@/theme/carousel/story-support";
+import type { ThemeConfigValues } from "@/theme/editor/editor-session";
 
 import { StripPan } from "../components/card-showcase";
 import { PreloadImg } from "../components/preload-img";
 import { Pill } from "../components/stat-chip";
 import { EASE_PANEL, SPACE } from "../design/tokens";
-import { OutroScene, StepScene, TitleScene, WALK } from "./walkthrough";
+import { OutroScene, StepScene, TitleScene } from "./walkthrough";
+import { WALK } from "./walkthrough-pacing";
 
 const STEPS = 3;
 const STEP_DUR = [260, 240, 240];
@@ -39,7 +41,7 @@ const DeckPan = ({
   photo = false,
   showSeams = false,
 }: {
-  config?: Record<string, unknown>;
+  config?: ThemeConfigValues;
   durationInFrames: number;
   id: CarouselThemeId;
   photo?: boolean;

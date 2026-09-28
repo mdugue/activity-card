@@ -53,7 +53,7 @@ export default definePreview({
 
     controls: {
       matchers: {
-        color: /(background|color)$/iu,
+        color: /(?:background|color)$/iu,
         date: /Date$/iu,
       },
     },

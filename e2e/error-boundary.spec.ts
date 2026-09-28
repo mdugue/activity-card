@@ -12,6 +12,10 @@ test("a failed lazy chunk shows the route error screen", async ({ page }) => {
     localStorage.clear();
   });
   await page.reload();
+  // The wizard is a post-hydration lazy chunk and opening it warms the editor
+  // chunk, so no single element signals "every chunk the landing fetches on its
+  // own is in"; only a quiet network does, before chunk requests are blocked.
+  // oxlint-disable-next-line sonarjs/no-networkidle-wait -- readiness here IS "all post-hydration chunk fetches settled" (see above); no DOM signal exists for it
   await page.waitForLoadState("networkidle");
   await page.route("**/_next/static/chunks/**", async (route) => {
     await route.abort();

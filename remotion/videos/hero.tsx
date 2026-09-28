@@ -8,7 +8,10 @@ import { linearTiming, TransitionSeries } from "@remotion/transitions";
 import { fade } from "@remotion/transitions/fade";
 
 import { cutSlices } from "../components/cut-slices";
-import { FPS, LANDSCAPE } from "../design/tokens";
+import {
+  HERO_BEATS as BEAT,
+  HERO_TRANSITIONS as TRANSITION,
+} from "./hero-meta";
 import {
   CarouselScene,
   ColorScene,
@@ -19,75 +22,51 @@ import {
   ThemesScene,
 } from "./hero-scenes";
 
-const OPENING = 250;
-const INGEST = 200;
-const THEMES = 176;
-const COLOR = 136;
-const CAROUSEL = 180;
-const SPORTS = 120;
-const CTA = 150;
-
-const CUT = 9;
-const FADE = 7;
-
-export const HERO_FPS = FPS;
-export const HERO_WIDTH = LANDSCAPE.width;
-export const HERO_HEIGHT = LANDSCAPE.height;
-export const HERO_DURATION_IN_FRAMES =
-  OPENING +
-  INGEST +
-  THEMES +
-  COLOR +
-  CAROUSEL +
-  SPORTS +
-  CTA -
-  (CUT + FADE * 5);
-
 export const Hero = () => (
   <TransitionSeries>
-    <TransitionSeries.Sequence durationInFrames={OPENING}>
+    <TransitionSeries.Sequence durationInFrames={BEAT.opening}>
       <OpeningScene />
     </TransitionSeries.Sequence>
     <TransitionSeries.Transition
       presentation={cutSlices({ slices: 4 })}
-      timing={linearTiming({ durationInFrames: CUT })}
+      timing={linearTiming({ durationInFrames: TRANSITION.cut })}
     />
-    <TransitionSeries.Sequence durationInFrames={INGEST}>
-      <IngestRevealScene durationInFrames={INGEST} />
+    <TransitionSeries.Sequence durationInFrames={BEAT.ingest}>
+      <IngestRevealScene durationInFrames={BEAT.ingest} />
     </TransitionSeries.Sequence>
     <TransitionSeries.Transition
       presentation={fade()}
-      timing={linearTiming({ durationInFrames: FADE })}
+      timing={linearTiming({ durationInFrames: TRANSITION.fade })}
     />
-    <TransitionSeries.Sequence durationInFrames={THEMES}>
-      <ThemesScene durationInFrames={THEMES} />
+    <TransitionSeries.Sequence durationInFrames={BEAT.themes}>
+      <ThemesScene durationInFrames={BEAT.themes} />
     </TransitionSeries.Sequence>
     <TransitionSeries.Transition
       presentation={fade()}
-      timing={linearTiming({ durationInFrames: FADE })}
+      timing={linearTiming({ durationInFrames: TRANSITION.fade })}
     />
-    <TransitionSeries.Sequence durationInFrames={COLOR}>
-      <ColorScene durationInFrames={COLOR} />
+    <TransitionSeries.Sequence durationInFrames={BEAT.color}>
+      <ColorScene durationInFrames={BEAT.color} />
     </TransitionSeries.Sequence>
     <TransitionSeries.Transition
       presentation={fade()}
-      timing={linearTiming({ durationInFrames: FADE })}
+      timing={linearTiming({ durationInFrames: TRANSITION.fade })}
     />
-    <TransitionSeries.Sequence durationInFrames={CAROUSEL}>
-      <CarouselScene durationInFrames={CAROUSEL} />
+    <TransitionSeries.Sequence durationInFrames={BEAT.carousel}>
+      <CarouselScene durationInFrames={BEAT.carousel} />
     </TransitionSeries.Sequence>
     <TransitionSeries.Transition
       presentation={fade()}
-      timing={linearTiming({ durationInFrames: FADE })}
+      timing={linearTiming({ durationInFrames: TRANSITION.fade })}
     />
-    <TransitionSeries.Sequence durationInFrames={SPORTS}>
+    <TransitionSeries.Sequence durationInFrames={BEAT.sports}>
       <SportsScene />
     </TransitionSeries.Sequence>
     <TransitionSeries.Transition
       presentation={fade()}
-      timing={linearTiming({ durationInFrames: FADE })}
+      timing={linearTiming({ durationInFrames: TRANSITION.fade })}
     />
-    <TransitionSeries.Sequence durationInFrames={CTA}>
+    <TransitionSeries.Sequence durationInFrames={BEAT.cta}>
       <CtaScene />
     </TransitionSeries.Sequence>
   </TransitionSeries>

@@ -63,15 +63,17 @@ const usePortrait = (): boolean => {
 
 const clamp01 = (v: number): number => Math.min(1, Math.max(0, v));
 
+const BORING_ROWS = [
+  ["Distance", "18.43 km"],
+  ["Moving time", "1:32:04"],
+  ["Avg pace", "4:59 /km"],
+  ["Elevation", "86 m"],
+] as const;
+
 // The deliberately dull "any stats app" panel — cold greys, system font. The
 // thing the bold claim is set against on the left of the opening's second beat.
 const BoringStats = ({ width }: { width: number }) => {
-  const rows = [
-    ["Distance", "18.43 km"],
-    ["Moving time", "1:32:04"],
-    ["Avg pace", "4:59 /km"],
-    ["Elevation", "86 m"],
-  ];
+  const rows = BORING_ROWS;
   return (
     <div
       style={{
@@ -161,7 +163,7 @@ const BoldHeadline = ({
           <div
             key={line.text}
             style={{
-              color: line.accent ? RUST_BRIGHT : PAPER,
+              color: line.accent === true ? RUST_BRIGHT : PAPER,
               fontFamily: FONT.heading,
               fontSize: size,
               letterSpacing: TRACKING.heading,
@@ -758,7 +760,7 @@ export const ThemesScene = ({
         <ThemeCard
           data={SAMPLE_RIDE}
           id={entry.id}
-          photoUrl={entry.photo ? staticFile(RIDE_PHOTO) : undefined}
+          photoUrl={entry.photo === true ? staticFile(RIDE_PHOTO) : undefined}
         />
       </CardScaled>
     </div>

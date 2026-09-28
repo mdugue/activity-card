@@ -31,12 +31,14 @@ import { loadFont as loadManrope } from "@remotion/google-fonts/Manrope";
 import { loadFont as loadPlayfair } from "@remotion/google-fonts/PlayfairDisplay";
 import { loadFont as loadSpaceGrotesk } from "@remotion/google-fonts/SpaceGrotesk";
 import { loadFont as loadSyne } from "@remotion/google-fonts/Syne";
-import type { CSSProperties } from "react";
 import { getRemotionEnvironment } from "remotion";
 
 const LATIN = ["latin"] as const;
 
-const loadAll = (): CSSProperties => {
+/** The app's `--font-*` custom properties, ready to spread into a style. */
+export type FontVars = Partial<Record<`--font-${string}`, string>>;
+
+const loadAll = (): FontVars => {
   const inter = loadInter("normal", {
     subsets: [...LATIN],
     weights: ["400", "500", "600", "700"],
@@ -122,12 +124,12 @@ const loadAll = (): CSSProperties => {
     "--font-sans": inter.fontFamily,
     "--font-space-grotesk": spaceGrotesk.fontFamily,
     "--font-syne": syne.fontFamily,
-  } as CSSProperties;
+  };
 };
 
-let cached: CSSProperties | null = null;
+let cached: FontVars | null = null;
 
-export const getFontVars = (): CSSProperties => {
+export const getFontVars = (): FontVars => {
   if (getRemotionEnvironment().isPlayer) {
     return {};
   }

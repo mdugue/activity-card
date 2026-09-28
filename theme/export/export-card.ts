@@ -46,8 +46,9 @@ export const exportCard = async (
   // Inject Effort metadata into the raw PNG bytes (canvas output carries none).
   const raw = new Uint8Array(await blob.arrayBuffer());
   const bytes = metadata ? applyMetadata(raw, metadata, metadataOptions) : raw;
-  // reason: BlobPart typing predates ArrayBufferView<ArrayBuffer> narrowing.
-  const out = new Blob([bytes as BlobPart], { type: "image/png" });
+  // BlobPart wants an ArrayBuffer-backed view; `applyMetadata` is typed over
+  // ArrayBufferLike, so hand the Blob a byte-identical ArrayBuffer-backed copy.
+  const out = new Blob([new Uint8Array(bytes)], { type: "image/png" });
   const file = new File([out], filename, { type: "image/png" });
 
   await deliverFiles([file], { title: "My Effort card" });

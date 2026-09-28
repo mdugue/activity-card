@@ -1,13 +1,21 @@
 import { cookies } from "next/headers";
+import { z } from "zod/mini";
 
+import { envOr, readStravaCredentials } from "./strava-env";
+import { hasText } from "./strava-params";
+import { lenient } from "./strava-schemas";
 import { readStravaTokenResponse } from "./strava-token-response";
 
 // Strava API endpoints. All three are overridable via env so E2E tests can
 // point the app at a local mock without monkey-patching `fetch`.
-export const STRAVA_API_BASE =
-  process.env.STRAVA_API_BASE || "https://www.strava.com/api/v3";
-export const STRAVA_TOKEN_URL =
-  process.env.STRAVA_TOKEN_URL || "https://www.strava.com/oauth/token";
+export const STRAVA_API_BASE = envOr(
+  process.env.STRAVA_API_BASE,
+  "https://www.strava.com/api/v3"
+);
+export const STRAVA_TOKEN_URL = envOr(
+  process.env.STRAVA_TOKEN_URL,
+  "https://www.strava.com/oauth/token"
+);
 
 const ACCESS = "strava_access";
 const REFRESH = "strava_refresh";
@@ -45,6 +53,35 @@ export interface StravaAthlete {
   id: number;
 }
 
+/**
+ * The athlete cookie. Its value is user-controllable (httpOnly protects
+ * against JS read, but a server-side tamper could put anything here). `id`
+ * flows into `/athletes/${id}/stats`, so it must be a finite number (zod's
+ * `number()` rejects NaN / ±Infinity); the display fields are best-effort
+ * and read as absent when they aren't strings.
+ */
+const StoredAthleteSchema = z.object({
+  avatar: lenient(z.string()),
+  firstname: lenient(z.string()),
+  id: z.number(),
+});
+
+const parseStoredAthlete = (raw: string): StravaAthlete | undefined => {
+  let json: unknown;
+  try {
+    json = JSON.parse(raw);
+  } catch {
+    // Corrupt cookie — ignore, athlete display is non-critical.
+    return undefined;
+  }
+  const result = StoredAthleteSchema.safeParse(json);
+  if (!result.success) {
+    return undefined;
+  }
+  const { avatar, firstname, id } = result.data;
+  return { avatar: avatar ?? undefined, firstname: firstname ?? undefined, id };
+};
+
 export interface StoredTokens {
   access: string;
   athlete?: StravaAthlete;
@@ -68,7 +105,7 @@ export const readTokens = async (): Promise<StoredTokens | null> => {
   const access = store.get(ACCESS)?.value;
   const refresh = store.get(REFRESH)?.value;
   const expiresAtRaw = store.get(EXPIRES)?.value;
-  if (!(access && refresh && expiresAtRaw)) {
+  if (!(hasText(access) && hasText(refresh) && hasText(expiresAtRaw))) {
     return null;
   }
   const expiresAt = Number(expiresAtRaw);
@@ -76,26 +113,9 @@ export const readTokens = async (): Promise<StoredTokens | null> => {
     return null;
   }
   const athleteRaw = store.get(ATHLETE)?.value;
-  let athlete: StravaAthlete | undefined;
-  if (athleteRaw) {
-    try {
-      const parsed = JSON.parse(athleteRaw) as unknown;
-      // Validate the shape — cookie value is user-controllable (httpOnly
-      // protects against JS read, but a server-side tamper could put
-      // anything here). `id` flows into `/athletes/${id}/stats`, so
-      // require it to be a finite number; rest of the shape is best-effort.
-      if (
-        parsed &&
-        typeof parsed === "object" &&
-        typeof (parsed as { id?: unknown }).id === "number" &&
-        Number.isFinite((parsed as { id: number }).id)
-      ) {
-        athlete = parsed as StravaAthlete;
-      }
-    } catch {
-      // Corrupt cookie — ignore, athlete display is non-critical.
-    }
-  }
+  const athlete = hasText(athleteRaw)
+    ? parseStoredAthlete(athleteRaw)
+    : undefined;
   return { access, athlete, expiresAt, refresh };
 };
 
@@ -126,7 +146,7 @@ export const writeTokens = async (
       id: payload.athlete.id,
     };
     store.set(ATHLETE, JSON.stringify(athlete), COOKIE_BASE);
-  } else if (options?.athleteOverride) {
+  } else if (options?.athleteOverride !== undefined) {
     // Refresh didn't include athlete data at all — carry the previously
     // stored athlete forward unchanged.
     store.set(ATHLETE, JSON.stringify(options.athleteOverride), COOKIE_BASE);
@@ -148,7 +168,7 @@ export const setOAuthState = async (state: string): Promise<void> => {
 export const consumeOAuthState = async (): Promise<string | null> => {
   const store = await cookies();
   const value = store.get(STATE)?.value ?? null;
-  if (value) {
+  if (hasText(value)) {
     store.delete(STATE);
   }
   return value;
@@ -178,11 +198,11 @@ export class StravaNotConnectedError extends Error {
 }
 
 const refreshStoredTokens = async (tokens: StoredTokens): Promise<string> => {
-  const clientId = process.env.STRAVA_CLIENT_ID;
-  const clientSecret = process.env.STRAVA_CLIENT_SECRET;
-  if (!(clientId && clientSecret)) {
+  const credentials = readStravaCredentials();
+  if (credentials === null) {
     throw new Error("STRAVA_CLIENT_ID / STRAVA_CLIENT_SECRET not set");
   }
+  const { clientId, clientSecret } = credentials;
   const res = await fetch(STRAVA_TOKEN_URL, {
     body: new URLSearchParams({
       client_id: clientId,
@@ -204,7 +224,7 @@ const refreshStoredTokens = async (tokens: StoredTokens): Promise<string> => {
     throw new StravaNotConnectedError();
   }
   const payload = await readStravaTokenResponse(res);
-  if (!payload) {
+  if (payload === null) {
     // A 2xx whose body isn't a token bundle is a Strava-side fault, not a
     // dead grant: like a 5xx, fail this request as "not connected" but
     // keep the stored cookies so the next request can refresh again.

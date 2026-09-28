@@ -11,6 +11,7 @@ export const EffortMark = ({ className }: { className?: string }) => (
   <svg
     aria-hidden="true"
     className={cn("block", className)}
+    // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- `shapeRendering` is the SVG presentation attribute's fixed React name, not a symbol we choose
     shapeRendering="geometricPrecision"
     viewBox="0 0 100 100"
   >

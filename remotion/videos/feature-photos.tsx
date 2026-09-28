@@ -20,7 +20,8 @@ import { PreloadImg } from "../components/preload-img";
 import { PaletteChip, Pill } from "../components/stat-chip";
 import { ThemeCard } from "../components/theme-card";
 import { SPACE } from "../design/tokens";
-import { OutroScene, StepScene, TitleScene, WALK } from "./walkthrough";
+import { OutroScene, StepScene, TitleScene } from "./walkthrough";
+import { WALK } from "./walkthrough-pacing";
 
 const STEPS = 3;
 const STEP_DUR = [240, 260, 260];

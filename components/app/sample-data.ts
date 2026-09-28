@@ -9,7 +9,7 @@ import type { ActivityData, Coord } from "@/lib/activity";
 
 export const genLoop = (seed: number, n: number): Coord[] => {
   const out: Coord[] = [];
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < n; i += 1) {
     const t = i / (n - 1);
     const angle = t * Math.PI * 2;
     const r =
@@ -25,7 +25,7 @@ export const genLoop = (seed: number, n: number): Coord[] => {
 
 export const genOutBack = (seed: number, n: number): Coord[] => {
   const out: Coord[] = [];
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < n; i += 1) {
     const t = i / (n - 1);
     const fold = t < 0.5 ? t * 2 : (1 - t) * 2;
     const x = fold * 1.6 - 0.8 + 0.08 * Math.sin(t * 31 + seed);
@@ -45,7 +45,7 @@ export const genElevation = (
   range = 1100
 ): number[] => {
   const out: number[] = [];
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < n; i += 1) {
     const t = i / (n - 1);
     const v =
       baseline +
@@ -64,7 +64,7 @@ export const genPace = (
   varSec = 35
 ): number[] => {
   const out: number[] = [];
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < n; i += 1) {
     const t = i / (n - 1);
     const v =
       basePaceSec +
@@ -82,7 +82,7 @@ export const genSwimLaps = (
   drift = 6
 ): number[] => {
   const out: number[] = [];
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < n; i += 1) {
     const t = i / (n - 1);
     out.push(Math.round(basePaceSec + drift * t + 3 * Math.sin(i * 0.9)));
   }
@@ -96,7 +96,7 @@ export const genPower = (
   range = 130
 ): number[] => {
   const out: number[] = [];
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < n; i += 1) {
     const t = i / (n - 1);
     const v =
       baseW +
@@ -115,7 +115,7 @@ export const genSpeed = (
   range = 18
 ): number[] => {
   const out: number[] = [];
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < n; i += 1) {
     const t = i / (n - 1);
     const v =
       baseKmh +
@@ -129,7 +129,7 @@ export const genSpeed = (
 
 const swimRouteCoords = ((): Coord[] => {
   const out: Coord[] = [];
-  for (let i = 0; i < 120; i++) {
+  for (let i = 0; i < 120; i += 1) {
     const t = i / 119;
     const seg = Math.floor(t * 4);
     const local = t * 4 - seg;
@@ -161,7 +161,7 @@ const translate = (coords: Coord[], dx: number, dy: number): Coord[] =>
 
 const triSwimRouteCoords = ((): Coord[] => {
   const out: Coord[] = [];
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 60; i += 1) {
     const t = i / 59;
     const x = -0.7 + t * 1.4 + 0.08 * Math.sin(t * 12);
     const y = 0.3 * Math.sin(t * 6) + 0.06 * Math.cos(t * 21);
@@ -285,13 +285,13 @@ export const SAMPLE_TRI: ActivityData = {
   location: "Puerto del Carmen, Canary Islands",
   segments: [
     {
-      sport: "swim",
+      avgPacePer100m: 60 + 48,
       distanceKm: 1.9,
       durationSec: 34 * 60 + 12,
-      avgPacePer100m: 60 + 48,
       // Legs are offset into distinct spots (as real GPS legs are) so the
       // shared-coordinate route render shows all three, not one on top of another.
       routeCoordinates: translate(triSwimRouteCoords, 0, -1.5),
+      sport: "swim",
     },
     {
       avgSpeedKmh: 33.5,

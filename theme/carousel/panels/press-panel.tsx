@@ -187,7 +187,6 @@ const FrontPage = ({
           fontWeight: style.fonts.displayWeight,
           lineHeight: 1.28,
           margin: "30px 0 0 0",
-          marginTop: 30,
           textIndent: 0,
         }}
       >

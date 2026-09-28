@@ -17,11 +17,12 @@ import { RenderTheme } from "@/theme/editor/render-theme";
 import type { ThemeId } from "@/theme/editor/render-theme";
 import { SafeZoneOverlay } from "@/theme/editor/safe-zone-overlay";
 
+import type { ThemeConfigValues } from "./editor-session";
 import { AdjustControls, usePhotoAdjust } from "./photo-adjust";
 
 interface SingleCardPreviewProps {
   colors: ColorScheme;
-  config: Record<string, unknown>;
+  config: ThemeConfigValues;
   data: ActivityData;
   /** target format the theme renders itself into (chosen in the FORMAT tool) */
   format: ExportFormat;

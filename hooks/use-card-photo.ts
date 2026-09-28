@@ -72,14 +72,14 @@ export const useCardPhoto = (activePolicy: ThemePhotoPolicy): UseCardPhoto => {
   // Object URLs need cleanup or they leak into memory. This cleanup is the
   // single owner of revocation — swap, removal and unmount all funnel here,
   // and it runs only after the render that stopped referencing the old URL.
-  useEffect(() => {
-    if (!url) {
-      return;
-    }
-    return () => {
-      URL.revokeObjectURL(url);
-    };
-  }, [url]);
+  useEffect(
+    () => () => {
+      if (url !== null && url !== "") {
+        URL.revokeObjectURL(url);
+      }
+    },
+    [url],
+  );
 
   const adopt = async (file: File | null) => {
     requestRef.current += 1;

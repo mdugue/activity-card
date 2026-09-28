@@ -8,11 +8,18 @@
 
 import type { ExportFormat } from "@/theme/core/export-formats";
 
-import { deliverFiles, effortDateSlug, waitForFonts } from "./export-shared";
+import {
+  deliverFiles,
+  effortDateSlug,
+  fromCallback,
+  waitForFonts,
+} from "./export-shared";
 import { rasterizeNode } from "./rasterize";
 
-const PIXEL_RATIO = 2; // each slide → 2× its format size, matching the single card
-const MAX_CANVAS_DIM = 16_384; // conservative cross-browser canvas width cap
+// Each slide → 2× its format size, matching the single card.
+const PIXEL_RATIO = 2;
+// Conservative cross-browser canvas width cap.
+const MAX_CANVAS_DIM = 16_384;
 
 const pad2 = (n: number): string => String(n).padStart(2, "0");
 
@@ -50,7 +57,7 @@ export const exportCarousel = async (
   // overlapping the 3–4 encodes beats awaiting them one after another. The
   // frame index rides along so ordering/naming holds.
   const encodings: { blob: Promise<Blob | null>; index: number }[] = [];
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < count; i += 1) {
     const out = document.createElement("canvas");
     out.width = outW;
     out.height = outH;
@@ -63,7 +70,7 @@ export const exportCarousel = async (
     }
     ctx.drawImage(canvas, i * sliceW, 0, sliceW, sliceH, 0, 0, outW, outH);
     encodings.push({
-      blob: new Promise<Blob | null>((resolve) => {
+      blob: fromCallback<Blob | null>((resolve) => {
         out.toBlob(resolve, "image/png");
       }),
       index: i,

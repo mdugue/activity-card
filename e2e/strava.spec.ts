@@ -186,11 +186,11 @@ test.describe("strava OAuth + picker", () => {
     // is BIKE (mapped from "ride") → id 1001, segment 2 is RUN → id 1002.
     // The mock orders: 2026-05-17 run, 2026-05-18 ride → so sorted is
     // [run (1002), ride (1001)] meaning segment 1 is RUN, segment 2 is BIKE.
-    const links = page.getByRole("link", { name: /^(run|bike|swim)$/iu });
+    const links = page.getByRole("link", { name: /^(?:run|bike|swim)$/iu });
     await expect(links).toHaveCount(2);
     // Don't pin to a specific order — just verify both ids are linked.
-    const hrefs = await links.evaluateAll((els) =>
-      (els as HTMLAnchorElement[]).map((a) => a.href)
+    const hrefs = await links.evaluateAll((els: HTMLAnchorElement[]) =>
+      els.map((a) => a.href)
     );
     expect(hrefs).toContain("https://www.strava.com/activities/1001/overview");
     expect(hrefs).toContain("https://www.strava.com/activities/1002/overview");
@@ -294,7 +294,7 @@ test.describe("strava OAuth + picker", () => {
     await page.goto(
       "/api/strava/authorize?return_to=https%3A%2F%2Fattacker.example%2Fphish"
     );
-    await page.waitForURL(/^http:\/\/localhost:3100\/(\?.*)?$/u, {
+    await page.waitForURL(/^http:\/\/localhost:3100\/(?:\?.*)?$/u, {
       timeout: 10_000,
     });
     await expect(

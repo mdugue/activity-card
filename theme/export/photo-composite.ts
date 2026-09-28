@@ -26,6 +26,8 @@ import {
 } from "@/lib/photo-draw";
 import type { PhotoDraw, Rect } from "@/lib/photo-draw";
 
+import { fromCallback } from "./export-shared";
+
 export interface RasterSize {
   height: number;
   width: number;
@@ -48,6 +50,35 @@ interface Collected {
   scale: number;
 }
 
+/** One photo layer mapped to output pixels, or null when it carries no valid
+ *  descriptor or has no painted box. */
+const measureLayer = (
+  el: HTMLElement,
+  root: DOMRect,
+  sx: number,
+  sy: number
+): Layer | null => {
+  const draw = decodePhotoDraw(el.getAttribute(PHOTO_LAYER_ATTR));
+  if (!draw) {
+    return null;
+  }
+  const box = el.getBoundingClientRect();
+  if (!(box.width > 0 && box.height > 0)) {
+    return null;
+  }
+  return {
+    draw,
+    el,
+    paint: el.querySelector<HTMLElement>(`[${PHOTO_PAINT_ATTR}]`),
+    rect: {
+      h: box.height * sy,
+      w: box.width * sx,
+      x: (box.left - root.left) * sx,
+      y: (box.top - root.top) * sy,
+    },
+  };
+};
+
 /** Collect the photo layers inside `node`, already mapped to output pixels. */
 const collectLayers = (node: HTMLElement, size: RasterSize): Collected => {
   const root = node.getBoundingClientRect();
@@ -64,31 +95,16 @@ const collectLayers = (node: HTMLElement, size: RasterSize): Collected => {
   for (const el of node.querySelectorAll<HTMLElement>(
     `[${PHOTO_LAYER_ATTR}]`
   )) {
-    const draw = decodePhotoDraw(el.getAttribute(PHOTO_LAYER_ATTR));
-    if (!draw) {
-      continue;
+    const layer = measureLayer(el, root, sx, sy);
+    if (layer) {
+      layers.push(layer);
     }
-    const box = el.getBoundingClientRect();
-    if (!(box.width > 0 && box.height > 0)) {
-      continue;
-    }
-    layers.push({
-      draw,
-      el,
-      paint: el.querySelector<HTMLElement>(`[${PHOTO_PAINT_ATTR}]`),
-      rect: {
-        h: box.height * sy,
-        w: box.width * sx,
-        x: (box.left - root.left) * sx,
-        y: (box.top - root.top) * sy,
-      },
-    });
   }
   return { layers, scale };
 };
 
 const loadImage = async (src: string): Promise<HTMLImageElement> =>
-  await new Promise((resolve, reject) => {
+  await fromCallback<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
     img.addEventListener("load", () => {
       resolve(img);
@@ -160,7 +176,7 @@ export const mergeProbes = (
     if (coverage === 0) {
       continue;
     }
-    for (let c = 0; c < 4; c++) {
+    for (let c = 0; c < 4; c += 1) {
       const base = av[i + c];
       const withPhoto = base + ((bv[i + c] - base) * pv[i + c]) / 255;
       av[i + c] = base + (withPhoto - base) * coverage;
@@ -193,12 +209,12 @@ export const rasterizeWithPhotoComposite = async (
   if (layers.length === 0) {
     return null;
   }
-  const images = new Map<string, HTMLImageElement>();
-  for (const layer of layers) {
-    if (!images.has(layer.draw.src)) {
-      images.set(layer.draw.src, await loadImage(layer.draw.src));
-    }
-  }
+  // Each distinct photo loads once; independent loads run in parallel.
+  const sources = [...new Set(layers.map((layer) => layer.draw.src))];
+  const loaded = await Promise.all(sources.map(loadImage));
+  const images = new Map<string, HTMLImageElement>(
+    sources.map((src, index) => [src, loaded[index]])
+  );
 
   // Probe passes: blank the photo paint (so the result is identical on every
   // engine, not only the ones that drop it) and fill the layer solid.

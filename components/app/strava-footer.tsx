@@ -18,7 +18,7 @@ export const StravaCompatLink = ({ className }: { className?: string }) => (
 // Standalone footer wrapper, used on the Strava picker. The landing page renders
 // `StravaCompatLink` inline within its own footer section instead.
 export const StravaFooter = () => (
-  <footer className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 px-4 py-4 font-mono text-[10px] tracking-[0.18em] uppercase opacity-70">
+  <footer className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 px-4 py-4 font-mono text-xs tracking-[0.18em] uppercase opacity-70">
     <StravaCompatLink />
   </footer>
 );

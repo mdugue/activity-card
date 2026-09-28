@@ -137,7 +137,9 @@ export const useFormatExports = (
   };
 
   const handleOne = async (format: ExportFormat) => {
-    await runExclusive(format.id, async () => await exportOne(format));
+    await runExclusive(format.id, async () => {
+      await exportOne(format);
+    });
   };
 
   const handleAll = async () => {

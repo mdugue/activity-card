@@ -12,15 +12,14 @@ import {
   formatPaceMin,
   formatPaceSec,
 } from "@/lib/format";
-import { defineTheme } from "@/theme/core/theme-contract";
 import type { ThemeProps } from "@/theme/core/theme-contract";
 
 import { SafeArea, useFormat } from "../shared/format-context";
 import { PhotoUnderlay } from "../shared/photo-underlay";
+import type { TriathlonCapability } from "./triathlon.theme";
 
 // The bands render per-segment data (`segments`/`transitions` — core fields,
 // not capabilities), so only the identity overlays are declared here.
-const USES = ["athleteName", "location"] as const;
 
 const INK = "#11151a";
 const PAPER = "#ffffff";
@@ -97,10 +96,10 @@ export const ThemeTriathlon = ({
   data,
   photoUrl,
   imageTransform,
-}: ThemeProps<(typeof USES)[number]>) => {
+}: ThemeProps<TriathlonCapability>) => {
   const { width, height } = useFormat();
-  const sports = data.segments || [];
-  const transitions = data.transitions || [];
+  const sports = data.segments ?? [];
+  const transitions = data.transitions ?? [];
 
   if (data.sport !== "triathlon" || sports.length === 0) {
     return (
@@ -580,14 +579,3 @@ export const ThemeTriathlon = ({
     </div>
   );
 };
-
-export const triathlonTheme = defineTheme({
-  id: "triathlon",
-  label: "TRIATHLON",
-  tagline: "multi-sport",
-  uses: USES,
-  // Fixed: the per-discipline swim/bike/run colour identity IS the theme.
-  colors: { default: { primary: "#11151a" }, userAdjustable: false },
-  photo: { defaultOn: false },
-  Component: ThemeTriathlon,
-});

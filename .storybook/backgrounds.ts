@@ -31,7 +31,7 @@ const unsplash = (id: string): string =>
   `https://images.unsplash.com/photo-${id}?w=1600&q=80&auto=format`;
 
 /** Keyed by the value stored in the `background` global. */
-export const BACKGROUND_PRESETS: Record<string, BackgroundPreset> = {
+export const BACKGROUND_PRESETS = {
   mountainTrail: {
     label: "Trail · mountains",
     url: unsplash("1551632811-561732d1e306"),
@@ -57,9 +57,22 @@ export const BACKGROUND_PRESETS: Record<string, BackgroundPreset> = {
     label: "Running · track",
     url: unsplash("1502904550040-7534597429ae"),
   },
-};
+} satisfies Record<string, BackgroundPreset>;
 
-export const DEFAULT_BACKGROUND = "none";
+export type BackgroundId = keyof typeof BACKGROUND_PRESETS;
+
+/** Toolbar dropdown order — explicit, since the preset map's keys are sorted. */
+export const BACKGROUND_ORDER = [
+  "none",
+  "trackRunners",
+  "peloton",
+  "roadBike",
+  "swimmer",
+  "mountainTrail",
+  "openRoad",
+] as const satisfies readonly BackgroundId[];
+
+export const DEFAULT_BACKGROUND = "none" satisfies BackgroundId;
 
 /** Toolbar dropdown of preset backgrounds — applies across every theme story. */
 export const backgroundGlobalTypes = {
@@ -69,8 +82,8 @@ export const backgroundGlobalTypes = {
     toolbar: {
       dynamicTitle: true,
       icon: "photo",
-      items: Object.entries(BACKGROUND_PRESETS).map(([value, preset]) => ({
-        title: preset.label,
+      items: BACKGROUND_ORDER.map((value) => ({
+        title: BACKGROUND_PRESETS[value].label,
         value,
       })),
       title: "Background",

@@ -82,7 +82,7 @@ export const StripPan = ({
   const x = interpolate(progress, [0, 1], [panFrom, panTo]);
   const seams: number[] = [];
   if (showSeams) {
-    for (let i = 1; i < slideCount; i++) {
+    for (let i = 1; i < slideCount; i += 1) {
       seams.push((i * CARD.width - x) * scale);
     }
   }

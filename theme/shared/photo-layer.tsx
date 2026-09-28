@@ -53,7 +53,7 @@ export const PhotoLayer = ({ photoUrl, imageTransform }: PhotoLayerProps) => {
       }}
     >
       <CssCoverImage imageTransform={t} photoUrl={photoUrl} />
-      {fx?.grain ? <GrainOverlay /> : null}
+      {fx?.grain === true ? <GrainOverlay /> : null}
     </div>
   );
 };

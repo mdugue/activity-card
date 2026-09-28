@@ -33,13 +33,13 @@ interface ActivitySourceProps {
  */
 const ViewOnStravaLinks = ({ data }: { data: ActivityData }) => {
   const ids = data.stravaActivityIds;
-  if (!ids?.length) {
+  if (ids === undefined || ids.length === 0) {
     return null;
   }
   if (ids.length === 1 && ids[0] !== null) {
     return (
       <a
-        className="inline-flex items-center gap-1 font-mono text-[11px] font-bold tracking-[0.14em] text-[#FC5200] uppercase underline-offset-4 hover:underline"
+        className="inline-flex items-center gap-1 font-mono text-xs font-bold tracking-[0.14em] text-[#FC5200] uppercase underline-offset-4 hover:underline"
         href={`https://www.strava.com/activities/${ids[0]}/overview`}
         rel="noopener noreferrer"
         target="_blank"
@@ -93,11 +93,16 @@ export const ActivitySource = ({
     friendlyDate.replaceAll(/\s|,/gu, "").toLowerCase() || "activity";
 
   // One Strava mention in the source line. Uploads show a file-style label.
+  const athleteName = strava.athlete?.firstname;
+  const athleteSuffix =
+    athleteName === null || athleteName === undefined || athleteName === ""
+      ? ""
+      : ` · ${athleteName}`;
   let sourceLabel: string;
-  if (fromStrava) {
-    sourceLabel = isMulti
-      ? `Strava · ${segCount} activities combined`
-      : `Strava${strava.athlete?.firstname ? ` · ${strava.athlete.firstname}` : ""}`;
+  if (fromStrava && isMulti) {
+    sourceLabel = `Strava · ${segCount} activities combined`;
+  } else if (fromStrava) {
+    sourceLabel = `Strava${athleteSuffix}`;
   } else if (isMulti) {
     sourceLabel = `${segCount} files · assembled`;
   } else {
@@ -116,13 +121,14 @@ export const ActivitySource = ({
     setIsSwapping(true);
     try {
       onFilesLoaded(await parseActivityFiles(fileList));
-    } catch (error) {
+    } catch (parseError) {
       setError(
-        error instanceof Error ? error.message : "Could not read that file."
+        parseError instanceof Error
+          ? parseError.message
+          : "Could not read that file."
       );
-    } finally {
-      setIsSwapping(false);
     }
+    setIsSwapping(false);
   };
 
   const handleSwap = () => {
@@ -182,8 +188,8 @@ export const ActivitySource = ({
         ) : null}
       </div>
 
-      {error ? (
-        <div className="text-destructive flex items-center gap-1.5 font-mono text-[10px]">
+      {error !== null && error !== "" ? (
+        <div className="text-destructive flex items-center gap-1.5 font-mono text-xs">
           <WarningCircleIcon
             aria-hidden
             className="size-3.5"

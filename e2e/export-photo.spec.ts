@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 
 import { expect, test } from "@playwright/test";
 import type { Download, Page } from "@playwright/test";
+import { z } from "zod";
 
 import {
   QUADRANT_PNG_BASE64,
@@ -14,6 +15,9 @@ import {
   selectSingleCard,
   selectTheme,
 } from "./helpers";
+
+/** The slice of the published `data-effort-photo` descriptor this spec reads. */
+const PhotoDrawSchema = z.object({ src: z.string().optional() });
 
 /**
  * Regression guard: the uploaded background photo must actually land in the
@@ -75,14 +79,15 @@ const quadrantHues = async (
       canvas.width,
       canvas.height
     );
+    // Type and scrim wash out the hue; only judge clearly coloured pixels.
+    const minChroma = 40;
     const hueOf = (r: number, g: number, b: number): string | null => {
       const max = Math.max(r, g, b);
       const min = Math.min(r, g, b);
-      // Type and scrim wash out the hue; only judge clearly coloured pixels.
-      if (max - min < 40) {
+      if (max - min < minChroma) {
         return null;
       }
-      if (r === max && g > b + 40) {
+      if (r === max && g > b + minChroma) {
         return "yellow";
       }
       if (r === max) {
@@ -106,7 +111,7 @@ const quadrantHues = async (
         for (let x = cx - span; x <= cx + span; x += 4) {
           const i = (y * width + x) * 4;
           const hue = hueOf(data[i], data[i + 1], data[i + 2]);
-          if (hue) {
+          if (hue !== null) {
             counts.set(hue, (counts.get(hue) ?? 0) + 1);
           }
         }
@@ -164,11 +169,11 @@ const magentaFraction = async (
         const r = data[i];
         const g = data[i + 1];
         const b = data[i + 2];
-        total++;
+        total += 1;
         // Tolerant of overlays/desaturation: magenta survives as long as red
         // and blue stay well above green.
         if (r > 80 && b > 80 && g + 30 < r && g + 30 < b) {
-          magenta++;
+          magenta += 1;
         }
       }
     }
@@ -272,16 +277,18 @@ test("an oversized photo still reaches the export", async ({ page }) => {
 
   // It really was capped — otherwise this test would pass on a 19 MP photo and
   // guard nothing.
-  const longEdge = await page.evaluate(async () => {
-    const el = document.querySelector<HTMLElement>("[data-effort-photo]");
-    const draw = JSON.parse(el?.dataset.effortPhoto ?? "{}") as {
-      src?: string;
-    };
+  const drawJson = await page.evaluate(
+    () =>
+      document.querySelector<HTMLElement>("[data-effort-photo]")?.dataset
+        .effortPhoto ?? "{}"
+  );
+  const draw = PhotoDrawSchema.parse(JSON.parse(drawJson));
+  const longEdge = await page.evaluate(async (src: string) => {
     const img = new Image();
-    img.src = draw.src ?? "";
+    img.src = src;
     await img.decode();
     return Math.max(img.naturalWidth, img.naturalHeight);
-  });
+  }, draw.src ?? "");
   expect(longEdge).toBeLessThanOrEqual(3840);
 
   await page.getByTestId("export-action").click();

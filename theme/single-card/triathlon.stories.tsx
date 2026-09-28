@@ -22,13 +22,6 @@ const THEME = SINGLE_CARD_THEMES.triathlon;
 type TriathlonArgs = ComponentProps<typeof ThemeTriathlon> & ThemeStoryExtras;
 
 const meta = preview.type<{ args: TriathlonArgs }>().meta({
-  component: ThemeTriathlon,
-  tags: ["ai-generated"],
-  parameters: {
-    controls: { exclude: THEME_PROP_CONTROLS_EXCLUDE },
-    layout: "fullscreen",
-  },
-  decorators: [withFormatMatrix],
   // Only the multi-sport fixtures have segments; the others render nothing.
   argTypes: {
     data: { ...activityArgType, options: ["Triathlon", "Brick"] },
@@ -37,7 +30,14 @@ const meta = preview.type<{ args: TriathlonArgs }>().meta({
     ...backgroundArgTypes,
   },
   args: { color: "Theme default", data: SAMPLE_TRI },
+  component: ThemeTriathlon,
+  decorators: [withFormatMatrix],
+  parameters: {
+    controls: { exclude: THEME_PROP_CONTROLS_EXCLUDE },
+    layout: "fullscreen",
+  },
   render: (args) => <ThemeStoryView args={args} theme={THEME} />,
+  tags: ["ai-generated"],
 });
 
 const TRI_TITLE = /Lanzarote/u;

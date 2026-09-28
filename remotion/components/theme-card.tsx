@@ -1,5 +1,6 @@
 import type { ActivityData } from "@/lib/activity";
 import type { ColorScheme } from "@/theme/core/colors";
+import type { ThemeConfigValues } from "@/theme/editor/editor-session";
 import { pickThemeData } from "@/theme/core/theme-contract";
 import { SINGLE_CARD_THEMES } from "@/theme/single-card";
 import type { ThemeId } from "@/theme/single-card";
@@ -17,7 +18,7 @@ export const ThemeCard = ({
   photoUrl,
 }: {
   colors?: ColorScheme;
-  config?: Record<string, unknown>;
+  config?: ThemeConfigValues;
   data: ActivityData;
   id: ThemeId;
   photoUrl?: string | null;

@@ -15,7 +15,8 @@ import { Easing, interpolate } from "remotion";
  */
 export const linger = (progress: number, power = 2.2): number => {
   const t = Math.min(1, Math.max(0, progress));
-  const signed = 2 * t - 1; // −1 … 1
+  // −1 … 1
+  const signed = 2 * t - 1;
   const eased = Math.sign(signed) * Math.abs(signed) ** power;
   return 0.5 + 0.5 * eased;
 };
@@ -51,13 +52,13 @@ export const breathe = (
  * scene in, so the 3D stage feels hand-held rather than locked. Subtle by
  * design — readability first.
  */
-export const cameraDrift = (
-  frame: number
-): {
+export interface CameraDrift {
   rotateX: number;
   rotateY: number;
   scale: number;
-} => ({
+}
+
+export const cameraDrift = (frame: number): CameraDrift => ({
   rotateX: breathe(frame, 1.4, 310, 1.1),
   rotateY: breathe(frame, 2.4, 230),
   scale: 1 + breathe(frame, 0.012, 270, 0.5),

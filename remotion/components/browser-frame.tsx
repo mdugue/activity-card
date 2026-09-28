@@ -10,6 +10,18 @@ import {
   TYPE,
 } from "../design/tokens";
 
+/** The browser chrome's title bar: traffic lights + the address pill. */
+const TITLE_BAR_STYLE = {
+  alignItems: "center",
+  display: "flex",
+  flex: "none",
+  gap: 10,
+  height: 58,
+  paddingLeft: 24,
+  paddingRight: 24,
+  position: "relative",
+} satisfies CSSProperties;
+
 /**
  * Minimal browser chrome for app vignettes — three window dots and a quiet
  * mono address pill over the content. Size it from the outside; the content
@@ -37,17 +49,7 @@ export const BrowserFrame = ({
       ...style,
     }}
   >
-    <div
-      style={{
-        alignItems: "center",
-        display: "flex",
-        flex: "none",
-        gap: 10,
-        height: 58,
-        paddingLeft: 24,
-        paddingRight: 24,
-        position: "relative",
-      }}
+    <div style={TITLE_BAR_STYLE}
     >
       {[0, 1, 2].map((i) => (
         <span

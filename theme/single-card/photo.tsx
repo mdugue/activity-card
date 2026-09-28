@@ -17,16 +17,14 @@ import {
 } from "@/lib/format";
 import { isMultiActivity, segmentRoutes } from "@/lib/multi-activity";
 import type { ColorScheme } from "@/theme/core/colors";
-import { defineTheme } from "@/theme/core/theme-contract";
 import type { ThemeProps } from "@/theme/core/theme-contract";
 
 import { useFormat, useSafeInsets } from "../shared/format-context";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoLayer } from "../shared/photo-layer";
+import type { PhotoCapability } from "./photo.theme";
 
-const USES = ["athleteName", "elevation", "location", "pace", "route"] as const;
-
-type ThemePhotoProps = ThemeProps<(typeof USES)[number]>;
+type ThemePhotoProps = ThemeProps<PhotoCapability>;
 
 interface StaticPalette {
   accent: string;
@@ -411,19 +409,3 @@ export const ThemePhoto = ({
     </div>
   );
 };
-
-export const photoTheme = defineTheme({
-  id: "photo",
-  label: "PHOTO",
-  tagline: "magazine cover",
-  uses: USES,
-  // Adjustable, and photo-first: until the user picks, the colours come from
-  // the photo (the old PhotoMood, now the shared photo-derived colour source).
-  colors: {
-    default: { onPrimary: "#0a0a0a", primary: "#c89d6e" },
-    defaultChoice: { kind: "photo", variant: "vibrant" },
-    userAdjustable: true,
-  },
-  photo: { defaultOn: true },
-  Component: ThemePhoto,
-});

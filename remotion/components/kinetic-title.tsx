@@ -43,7 +43,7 @@ export const KineticTitle = ({
       >
         <div
           style={{
-            color: line.accent ? RUST_BRIGHT : color,
+            color: line.accent === true ? RUST_BRIGHT : color,
             fontFamily: FONT.heading,
             fontSize: size,
             letterSpacing: TRACKING.heading,

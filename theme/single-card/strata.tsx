@@ -24,13 +24,11 @@ import {
   resolveStrataSource,
   STRATA_DENSITY_K,
   STRATA_MOODS,
-  STRATA_PARAMS,
   smoothPath,
   strataDirectionArrow,
   strataPeakMarker,
 } from "@/lib/strata";
 import type { StrataConfig } from "@/lib/strata";
-import { defineTheme } from "@/theme/core/theme-contract";
 import type { ActivityView, ThemeProps } from "@/theme/core/theme-contract";
 
 import { CoverPhoto } from "../shared/cover-photo";
@@ -40,6 +38,7 @@ import {
   usePhotoEffects,
   usePhotoImageSize,
 } from "../shared/photo-fx";
+import type { StrataCapability } from "./strata.theme";
 
 const DISPLAY = "var(--font-syne), sans-serif";
 const MONO = "var(--font-mono), monospace";
@@ -54,15 +53,7 @@ const FIELD_H = 880;
 // into an empty slab. 48 keeps the 4:5 feed master pixel-identical.
 const STAT_FOOTER_BASE = 48;
 
-const USES = [
-  "elevation",
-  "elevationViz",
-  "location",
-  "pace",
-  "route",
-] as const;
-
-type ThemeStrataProps = ThemeProps<(typeof USES)[number], StrataConfig>;
+type ThemeStrataProps = ThemeProps<StrataCapability, StrataConfig>;
 
 /** The reusable strata SVG: the woven field plus the two highlighted heroes. */
 const StrataField = ({
@@ -510,19 +501,3 @@ export const ThemeStrata = ({
     </div>
   );
 };
-
-export const strataTheme = defineTheme({
-  id: "strata",
-  label: "STRATA",
-  tagline: "woven topography",
-  uses: USES,
-  // Fixed: the mood param drives the whole palette.
-  colors: {
-    default: { primary: "#ffd98a", secondary: "#ff6a3a" },
-    userAdjustable: false,
-  },
-  photo: { defaultOn: false },
-  params: STRATA_PARAMS,
-  defaults: DEFAULT_STRATA_CONFIG,
-  Component: ThemeStrata,
-});

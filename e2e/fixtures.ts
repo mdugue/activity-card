@@ -19,6 +19,18 @@ export interface SyntheticGpx {
   startIso: string;
 }
 
+/** Synthetic elevation (m) at progress `t` ∈ [0, 1]: rolling for rides, gentle
+ *  for runs, flat for swims. */
+const elevationAt = (sport: SyntheticGpx["sport"], t: number): number => {
+  if (sport === "cycling") {
+    return 10 + 50 * Math.sin(t * 8);
+  }
+  if (sport === "running") {
+    return 5 + 5 * Math.sin(t * 4);
+  }
+  return 0;
+};
+
 export const makeGpx = (opts: SyntheticGpx): string => {
   const {
     sport,
@@ -33,17 +45,12 @@ export const makeGpx = (opts: SyntheticGpx): string => {
   } = opts;
   const startMs = Date.parse(startIso);
   const trkpts: string[] = [];
-  for (let i = 0; i < points; i++) {
+  for (let i = 0; i < points; i += 1) {
     const t = i / (points - 1);
     const lat = latStart + latStep * t;
     const lng = lngStart + lngStep * t;
     const time = new Date(startMs + t * durationSec * 1000).toISOString();
-    const elev =
-      sport === "cycling"
-        ? 10 + 50 * Math.sin(t * 8)
-        : sport === "running"
-          ? 5 + 5 * Math.sin(t * 4)
-          : 0;
+    const elev = elevationAt(sport, t);
     const extensions =
       hr === undefined
         ? ""
@@ -129,6 +136,16 @@ export const SOLID_MAGENTA_PNG_BASE64 =
 export const QUADRANT_PNG_BASE64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGO4Iycnt8+GQcPtzrMTGgAhzgVRsZiXAwAAAABJRU5ErkJggg==";
 
+/** One PNG chunk: big-endian length, type, data, CRC-32 over type + data. */
+const pngChunk = (type: string, data: Buffer): Buffer => {
+  const body = Buffer.concat([Buffer.from(type, "ascii"), data]);
+  const len = Buffer.alloc(4);
+  len.writeUInt32BE(data.length);
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(body));
+  return Buffer.concat([len, body, crc]);
+};
+
 /**
  * Synthesise a solid-colour PNG of any size. Used to feed the export an
  * oversized photo (Strava serves renditions up to 5000px) without carrying a
@@ -144,23 +161,17 @@ export const solidPngBuffer = (
     Buffer.from(Array.from({ length: width }, () => rgb).flat()),
   ]);
   const raw = Buffer.concat(Array.from({ length: height }, () => row));
-  const chunk = (type: string, data: Buffer): Buffer => {
-    const body = Buffer.concat([Buffer.from(type, "ascii"), data]);
-    const len = Buffer.alloc(4);
-    len.writeUInt32BE(data.length);
-    const crc = Buffer.alloc(4);
-    crc.writeUInt32BE(crc32(body));
-    return Buffer.concat([len, body, crc]);
-  };
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(width, 0);
   ihdr.writeUInt32BE(height, 4);
-  ihdr[8] = 8; // bit depth
-  ihdr[9] = 2; // colour type: truecolour
+  // bit depth
+  ihdr[8] = 8;
+  // colour type: truecolour
+  ihdr[9] = 2;
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    chunk("IHDR", ihdr),
-    chunk("IDAT", deflateSync(raw)),
-    chunk("IEND", Buffer.alloc(0)),
+    pngChunk("IHDR", ihdr),
+    pngChunk("IDAT", deflateSync(raw)),
+    pngChunk("IEND", Buffer.alloc(0)),
   ]);
 };

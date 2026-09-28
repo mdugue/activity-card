@@ -32,11 +32,18 @@ interface UseImageAdjustArgs {
 }
 
 const centroidOf = (pts: PointerPos[]): PointerPos => {
-  const sum = pts.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), {
-    x: 0,
-    y: 0,
-  });
-  return { x: sum.x / pts.length, y: sum.y / pts.length };
+  let sumX = 0;
+  let sumY = 0;
+  for (const p of pts) {
+    sumX += p.x;
+    sumY += p.y;
+  }
+  return { x: sumX / pts.length, y: sumY / pts.length };
+};
+
+// Effect cleanup for the branch that attached nothing.
+const noCleanup = (): void => {
+  // Nothing was attached, so there is nothing to detach.
 };
 
 const avgDistanceFromCentroid = (pts: PointerPos[], c: PointerPos): number => {
@@ -103,8 +110,8 @@ export const useImageAdjust = ({
 
   useEffect(() => {
     const el = ref.current;
-    if (!(enabled && el)) {
-      return;
+    if (!enabled || el === null) {
+      return noCleanup;
     }
 
     const onPointerDown = (e: PointerEvent) => {
@@ -177,6 +184,7 @@ export const useImageAdjust = ({
     el.addEventListener("pointerup", endPointer);
     el.addEventListener("pointercancel", endPointer);
     // Non-passive so we can cancel the page's scroll/zoom while adjusting.
+    // oxlint-disable-next-line github/require-passive-events -- onWheel calls preventDefault() to stop page scroll/zoom while adjusting, which a passive listener cannot do
     el.addEventListener("wheel", onWheel, { passive: false });
     el.addEventListener("dblclick", onDoubleClick);
 

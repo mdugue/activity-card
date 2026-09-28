@@ -30,6 +30,7 @@ const TokenResponseSchema = z.object({
  * fields are normalised to `undefined`.
  */
 export const parseStravaTokenResponse = (
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- this IS the I/O-boundary parser the rule points to: its input is the raw, not-yet-decoded token-endpoint body.
   json: unknown
 ): StravaTokenResponse | null => {
   const result = TokenResponseSchema.safeParse(json);

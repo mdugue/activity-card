@@ -1,7 +1,11 @@
 import { expect, test } from "@playwright/test";
 
 import { TINY_PNG_BASE64 } from "./fixtures";
-import { enterEditViaUpload, selectCarousel } from "./helpers";
+import {
+  enterEditViaUpload,
+  selectCarousel,
+  waitForRenderSettled,
+} from "./helpers";
 
 /**
  * Carousel Post mode (seamless, deck-wide). Runs against the production build,
@@ -29,7 +33,9 @@ test.describe("carousel mode", () => {
       page.getByRole("button", { name: /^Slide \d+:/iu })
     ).toHaveCount(3);
 
-    await page.waitForTimeout(200);
+    // Let the render settle so a runtime error inside a deferred useEffect or
+    // font fallback has time to surface.
+    await waitForRenderSettled(page);
     expect(errors).toEqual([]);
   });
 

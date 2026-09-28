@@ -25,7 +25,7 @@ export const Backdrop = ({
   vignette?: boolean;
 }) => (
   <AbsoluteFill style={{ backgroundColor: variant === "paper" ? PAPER : INK }}>
-    {variant === "photo" && photoSrc ? (
+    {variant === "photo" && photoSrc !== undefined && photoSrc !== "" ? (
       <>
         <Img
           src={photoSrc}

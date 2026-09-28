@@ -26,10 +26,12 @@ import {
   SPACE,
   TYPE,
 } from "../design/tokens";
-import { OutroScene, StepScene, TitleScene, WALK } from "./walkthrough";
+import { OutroScene, StepScene, TitleScene } from "./walkthrough";
+import { WALK } from "./walkthrough-pacing";
 
 const STEPS = 4;
 const STEP_DUR = [200, 200, 220, 200];
+const RIDE_PHOTO = "images/ride.jpg";
 
 export const QUICK_START_DURATION_IN_FRAMES =
   WALK.title +
@@ -90,7 +92,7 @@ const PhotoStep = () => {
         }}
       >
         <Img
-          src={staticFile("images/ride.jpg")}
+          src={staticFile(RIDE_PHOTO)}
           style={{
             borderRadius: RADIUS.sm,
             display: "block",
@@ -119,13 +121,13 @@ const PreviewStep = ({ durationInFrames }: { durationInFrames: number }) => {
         gap: SPACE.lg,
       }}
     >
-      <PreloadImg src={staticFile("images/ride.jpg")} />
+      <PreloadImg src={staticFile(RIDE_PHOTO)} />
       <RiseIn delay={6}>
         <CardScaled height={height * 0.52}>
           <ThemeCard
             data={SAMPLE_RIDE}
             id={id}
-            photoUrl={id === "altitude" ? staticFile("images/ride.jpg") : null}
+            photoUrl={id === "altitude" ? staticFile(RIDE_PHOTO) : null}
           />
         </CardScaled>
       </RiseIn>

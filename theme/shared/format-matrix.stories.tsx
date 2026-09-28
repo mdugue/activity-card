@@ -29,7 +29,7 @@ type FormatMatrixArgs = ComponentProps<typeof RenderTheme> & ThemeStoryExtras;
 const FormatMatrixView = ({
   args,
 }: {
-  args: ThemeStoryExtras & { data: unknown; theme: ThemeId };
+  args: ThemeStoryExtras & { theme: ThemeId };
 }) => {
   const { colors, config, data, photoUrl } = useStoryThemeProps(
     args,
@@ -50,13 +50,13 @@ const meta = preview.type<{ args: FormatMatrixArgs }>().meta({
   argTypes: {
     data: activityArgType,
     theme: {
-      name: "Theme",
       control: { type: "select" },
-      options: THEME_ORDER,
       // Map ids → the theme's own label (e.g. "altitude" → "ALTITUDE").
       labels: Object.fromEntries(
         THEME_ORDER.map((id) => [id, SINGLE_CARD_THEMES[id].label])
       ),
+      name: "Theme",
+      options: THEME_ORDER,
     },
     ...colorArgTypes,
     ...activityTuningArgTypes,

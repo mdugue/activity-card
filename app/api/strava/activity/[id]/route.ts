@@ -6,13 +6,14 @@ import {
   stravaFetchOptional,
 } from "@/lib/strava-client";
 import { ensureFreshToken } from "@/lib/strava-cookies";
+import { hasText } from "@/lib/strava-params";
 import { largestPhotoUrl } from "@/lib/strava-photos";
+import {
+  StravaActivitySchema,
+  StravaPhotoListSchema,
+  StravaStreamsSchema,
+} from "@/lib/strava-schemas";
 import { stravaToParsed } from "@/lib/strava-to-parsed";
-import type {
-  StravaActivityDetail,
-  StravaPhotoListItem,
-  StravaStreams,
-} from "@/lib/strava-types";
 
 const STREAM_KEYS =
   "latlng,altitude,heartrate,cadence,velocity_smooth,time,distance";
@@ -35,27 +36,31 @@ export const GET = async (
     // trigger a token refresh.
     const token = await ensureFreshToken();
     const [detail, streams, photoList] = await Promise.all([
-      stravaFetch<StravaActivityDetail>(`/activities/${id}`, { token }),
+      stravaFetch(`/activities/${id}`, StravaActivitySchema, { token }),
       // Streams are optional — if they fail (e.g. activity has no GPS) we
       // still return a parsed activity built from the session summary alone.
-      stravaFetchOptional<StravaStreams>(
+      stravaFetchOptional(
         `/activities/${id}/streams?keys=${STREAM_KEYS}&key_by_type=true`,
+        StravaStreamsSchema,
         { token }
       ),
       // Photos are optional too — the endpoint 404s for photo-less
       // activities on some accounts, and a missing strip is not an error.
-      stravaFetchOptional<StravaPhotoListItem[]>(
+      stravaFetchOptional(
         `/activities/${id}/photos?size=${PHOTO_PREVIEW_SIZE}&photo_sources=true`,
+        StravaPhotoListSchema,
         { token }
       ),
     ]);
 
     const parts = stravaToParsed(detail, streams ?? {});
     const photos = (photoList ?? []).flatMap((photo, index) => {
-      const previewUrl = largestPhotoUrl(photo.urls);
-      return previewUrl ? [{ activityId: Number(id), index, previewUrl }] : [];
+      const previewUrl = largestPhotoUrl(photo.urls ?? undefined);
+      return hasText(previewUrl)
+        ? [{ activityId: Number(id), index, previewUrl }]
+        : [];
     });
-    if (photos.length > 0 && parts[0]) {
+    if (photos.length > 0 && parts.length > 0) {
       parts[0].stravaPhotos = photos;
     }
     return NextResponse.json({ parts });

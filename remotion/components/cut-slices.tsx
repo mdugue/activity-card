@@ -36,7 +36,7 @@ const SlicePresentation = ({
   const overdrive = 1 + (slices - 1) * stagger;
 
   const points: string[] = ["0% 0%"];
-  for (let i = 0; i < slices; i++) {
+  for (let i = 0; i < slices; i += 1) {
     const local = clamp01(presentationProgress * overdrive - i * stagger);
     const drop = EASE_CUT(local) * 100;
     const x0 = (i / slices) * 100;

@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { setOAuthState } from "@/lib/strava-cookies";
+import { envOr, readStravaOAuthConfig } from "@/lib/strava-env";
 import {
   encodeOAuthState,
   safeRelativePath,
@@ -24,15 +25,14 @@ import type { OAuthStatePayload } from "@/lib/strava-oauth-state";
  * production only relays codes to origins one of our deployments vouched for.
  */
 export const GET = async (request: Request) => {
-  const clientId = process.env.STRAVA_CLIENT_ID;
-  const clientSecret = process.env.STRAVA_CLIENT_SECRET;
-  const redirectUri = process.env.STRAVA_REDIRECT_URI;
-  if (!(clientId && clientSecret && redirectUri)) {
+  const config = readStravaOAuthConfig();
+  if (config === null) {
     return NextResponse.json(
       { error: "Strava is not configured on this server" },
       { status: 500 }
     );
   }
+  const { clientId, clientSecret, redirectUri } = config;
 
   const nonce = randomBytes(24).toString("hex");
   await setOAuthState(nonce);
@@ -53,12 +53,12 @@ export const GET = async (request: Request) => {
   // link). Anything cross-origin is dropped here AND re-validated in
   // the callback as defense-in-depth.
   const returnPath = safeRelativePath(url.searchParams.get("return_to"));
-  if (returnPath) {
+  if (returnPath !== null) {
     payload.p = returnPath;
   }
 
   const authorize = new URL(
-    process.env.STRAVA_OAUTH_URL || "https://www.strava.com/oauth/authorize"
+    envOr(process.env.STRAVA_OAUTH_URL, "https://www.strava.com/oauth/authorize")
   );
   authorize.searchParams.set("client_id", clientId);
   authorize.searchParams.set("redirect_uri", redirectUri);

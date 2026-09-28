@@ -124,7 +124,7 @@ export const LogoSting = ({
       </span>
       <span style={{ backgroundColor: RUST, height: 2, width: 44 }} />
     </RiseIn>
-    {sub ? (
+    {sub !== undefined && sub !== "" ? (
       <RiseIn delay={delay + 48} style={{ marginTop: 10 }}>
         <div
           style={{
