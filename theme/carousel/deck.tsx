@@ -92,14 +92,7 @@ export function CarouselDeck({
 
   return (
     <FormatProvider value={stripFormat(activeFormat, total)}>
-      <PhotoFxProvider
-        value={{
-          effects: photoEffects,
-          imageSize,
-          imageTransform: imageTransform ?? null,
-          photoUrl: showPhoto ? (photoUrl ?? null) : null,
-        }}
-      >
+      <PhotoFxProvider value={{ effects: photoEffects, imageSize }}>
         <div
           style={{
             position: "relative",

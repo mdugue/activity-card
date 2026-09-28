@@ -111,8 +111,8 @@ signature viz only. Legibility comes from, in order of preference:
    opaque boxes.
 
 The panorama itself is the shared natural-size-aware `CoverPhoto`
-(`theme/shared/cover-photo.tsx`, drawn strip-wide by the deck; a panel that wants
-its own windowed copy reaches for `Panorama`): quarter-turn rotations swap the
+(`theme/shared/cover-photo.tsx`, drawn strip-wide once by the deck — panels
+never draw their own photo copy): quarter-turn rotations swap the
 element's width/height so the strip stays covered. Optional **film grain** survives snapdom because it's decoded as
 an image, not a live filter. Default-on for the art-print themes via the token
 look's photo fields.
@@ -217,7 +217,6 @@ theme/carousel/templates/        standard panels (Hero/StatGrid/Editorial) + Sli
 theme/carousel/panels/           Frame + Press per-slide panels
 theme/carousel/route-line.tsx    route + start-direction arrow
 theme/carousel/elevation-band.tsx mountain range / sparkline
-theme/carousel/panorama.tsx      per-panel strip-windowed photo (shared CoverPhoto) — masking / interweaving
 theme/carousel/<theme>.stories.tsx one story file per theme (required) · format-matrix.stories.tsx (every offered format)
 ```
 
