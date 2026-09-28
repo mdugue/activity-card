@@ -1,22 +1,30 @@
-// Which signal drives the elevation/pace visualisations: prefer a usable
-// elevation profile, otherwise fall back to pace. A present-but-degenerate
-// elevation profile (0 or 1 points) must NOT shadow a usable pace profile, so
-// the length check lives here rather than in a bare `??` at each call site
-// (the seamless hero band and the wrap-up cross-viz both consume this).
+// Which signal drives the carousel's elevation/pace visualisations (the Ascent
+// hero band, the mini-viz charts). A thin adapter over the ONE shared rule in
+// `lib/profile-signal.ts` — elevation, else pace, else swim laps, and only a
+// series with enough points to draw. A present-but-degenerate elevation profile
+// (0 or 1 points) therefore never shadows a usable pace profile, and a
+// lap-only pool swim still gets a (pace-oriented) laps profile.
 
 import type { ActivityData } from "@/lib/activity";
+import { profileSignal } from "@/lib/profile-signal";
+import type { ProfileSignal } from "@/lib/profile-signal";
 
 export interface PickedProfile {
+  /** How the band orients the curve: laps are a pace (lower = faster). */
   mode: "elevation" | "pace";
+  /** The drawable series, or `undefined` when there's nothing to draw. */
   profile: number[] | undefined;
+  /** Which series was picked (`"none"` when nothing is drawable). */
+  signal: ProfileSignal["mode"];
 }
 
 export function pickProfile(data: ActivityData): PickedProfile {
-  const elevation = data.elevationProfile;
-  if (elevation && elevation.length > 1) {
-    return { profile: elevation, mode: "elevation" };
-  }
-  return { profile: data.paceProfile, mode: "pace" };
+  const picked = profileSignal(data);
+  return {
+    mode: picked.mode === "elevation" ? "elevation" : "pace",
+    profile: picked.series ?? undefined,
+    signal: picked.mode,
+  };
 }
 
 /**

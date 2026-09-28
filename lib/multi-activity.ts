@@ -11,6 +11,7 @@
  */
 
 import type { Coord, TriSegment } from "@/lib/activity";
+import { legSeries, segmentProfileMetric } from "@/lib/profile-signal";
 import type { ActivityView } from "@/theme/core/theme-contract";
 
 /** A project carries two or more segments to combine. */
@@ -50,19 +51,21 @@ export interface SegmentProfiles {
 
 /**
  * Collect a single, *consistent* metric across the segments so overlaid curves
- * can share one vertical scale: elevation when any leg has it, otherwise pace.
- * Only legs carrying the chosen metric are included (e.g. a swim leg with no
- * elevation is skipped when biking/running legs do have it).
+ * can share one vertical scale: elevation when any leg has it, otherwise pace
+ * (the shared rule in `lib/profile-signal.ts`). Only legs carrying the chosen
+ * metric are included (e.g. a swim leg with no elevation is skipped when
+ * biking/running legs do have it).
  */
 export function segmentProfiles(data: ActivityView): SegmentProfiles {
   const segs = data.segments ?? [];
-  const useElevation = segs.some((s) => (s.elevationProfile?.length ?? 0) > 1);
+  const metric = segmentProfileMetric(segs);
+  const useElevation = metric === "elevation";
   const profiles: number[][] = [];
   const distances: number[] = [];
   const sports: TriSegment["sport"][] = [];
   for (const s of segs) {
-    const p = useElevation ? s.elevationProfile : s.paceProfile;
-    if (p && p.length > 1) {
+    const p = legSeries(s, metric);
+    if (p) {
       profiles.push(p);
       distances.push(s.distanceKm);
       sports.push(s.sport);

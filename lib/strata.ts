@@ -18,6 +18,11 @@
 
 import type { Coord } from "@/lib/chart-helpers";
 import { isMultiActivity } from "@/lib/multi-activity";
+import {
+  legSeries,
+  profileSignal,
+  segmentProfileMetric,
+} from "@/lib/profile-signal";
 import type { ParamDef } from "@/theme/core/params/kinds";
 import type { ActivityView } from "@/theme/core/theme-contract";
 
@@ -250,25 +255,21 @@ export interface StrataSource {
 
 type PickedProfile = Pick<StrataSource, "profile" | "profileLabel" | "elevMax">;
 
-/** The profile that becomes the bottom ridge: elevation, then pace, then laps. */
+/** The profile that becomes the bottom ridge — the shared profile-signal rule
+ *  (`lib/profile-signal.ts`): elevation, then pace, then laps. */
 function pickProfile(data: ActivityView): PickedProfile | null {
-  const elev = data.elevationProfile;
-  if (elev && elev.length > 1) {
-    return {
-      profile: elev,
-      profileLabel: "ELEVATION",
-      elevMax: Math.round(Math.max(...elev)),
-    };
+  const signal = profileSignal(data);
+  if (signal.mode === "none") {
+    return null;
   }
-  const pace = data.paceProfile;
-  if (pace && pace.length > 1) {
-    return { profile: pace, profileLabel: "PACE", elevMax: null };
-  }
-  const laps = data.lapPacesPer100m;
-  if (laps && laps.length > 1) {
-    return { profile: laps, profileLabel: "LAPS", elevMax: null };
-  }
-  return null;
+  return {
+    profile: signal.series,
+    profileLabel: signal.label,
+    elevMax:
+      signal.mode === "elevation"
+        ? Math.round(Math.max(...signal.series))
+        : null,
+  };
 }
 
 /**
@@ -299,13 +300,14 @@ export function resolveStrataSource(data: ActivityView): StrataSource | null {
  */
 function resolveMultiStrataSource(data: ActivityView): StrataSource | null {
   const segs = data.segments ?? [];
-  const useElevation = segs.some((s) => (s.elevationProfile?.length ?? 0) > 1);
+  const metric = segmentProfileMetric(segs);
+  const useElevation = metric === "elevation";
   const routeCoords: Coord[] = [];
   const profile: number[] = [];
   for (const s of segs) {
-    const prof = useElevation ? s.elevationProfile : s.paceProfile;
+    const prof = legSeries(s, metric);
     const legRoute = s.routeCoordinates;
-    if (legRoute && legRoute.length > 1 && prof && prof.length > 1) {
+    if (legRoute && legRoute.length > 1 && prof) {
       for (const c of legRoute) {
         routeCoords.push(c);
       }
