@@ -27,7 +27,7 @@ export function vizHasKind(data: ActivityData, kind: VizKind): boolean {
   if (kind === "route") {
     return (data.routeCoordinates?.length ?? 0) > 1;
   }
-  return (pickProfile(data).profile?.length ?? 0) > 1;
+  return pickProfile(data).signal !== "none";
 }
 
 interface MiniVizProps {

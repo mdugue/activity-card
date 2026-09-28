@@ -15,7 +15,7 @@ import { WorkerPipeline } from "node-vibrant/worker";
 
 const toOklch = converter("oklch");
 
-// Quantization is the slow stage of extraction (quality 1 scans every pixel)
+// Quantization is the slow stage of extraction (it scans every sampled pixel)
 // and it used to run on the main thread, freezing the editor for the duration
 // of a photo swap. node-vibrant's WorkerPipeline moves it into a Web Worker;
 // image decode stays on the main thread (it needs the DOM), only the pixel
@@ -118,6 +118,18 @@ const BLACK = "#0a0a0a";
 // ----------------------------------------------------------------------------
 
 /**
+ * Longest edge node-vibrant quantizes (it wins over `quality`). Photos arrive
+ * at up to 12 MP (lib/photo-resize), and quality 1 shipped every one of those
+ * pixels — ~48 MB of ImageData — through getImageData, into the worker and
+ * through the histogram. ~1 MP is plenty for a 6-swatch population palette:
+ * measured in Chromium on the sample photos (incl. 4000×3000 upscales), the
+ * swatch shifts at 1024 stay within the jitter quality 1 itself shows between
+ * the same photo at two sizes, while 256 flipped whole swatches (a gold
+ * DarkVibrant turned blue). Smaller photos are left untouched.
+ */
+export const PALETTE_MAX_DIMENSION = 1024;
+
+/**
  * Run node-vibrant on an image source (object URL, data URL, or HTMLImageElement).
  * Returns normalised swatches sorted by prominence (population) descending.
  */
@@ -125,7 +137,9 @@ export async function extractSwatches(
   src: string
 ): Promise<NormalisedSwatch[]> {
   ensureWorkerPipeline();
-  const palette = await Vibrant.from(src).quality(1).getPalette();
+  const palette = await Vibrant.from(src)
+    .maxDimension(PALETTE_MAX_DIMENSION)
+    .getPalette();
 
   const swatches: NormalisedSwatch[] = (Object.keys(palette) as SwatchName[])
     .map((name) => {

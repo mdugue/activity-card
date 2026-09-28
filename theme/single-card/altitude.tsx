@@ -36,6 +36,7 @@ import { sequenceProfiles } from "@/lib/chart-helpers";
 import type { Coord, NormalizedCurve } from "@/lib/chart-helpers";
 import { formatDateUpper } from "@/lib/format";
 import { isMultiActivity, segmentProfiles } from "@/lib/multi-activity";
+import { profileSignal } from "@/lib/profile-signal";
 import { defineTheme } from "@/theme/core/theme-contract";
 import type { ThemeProps } from "@/theme/core/theme-contract";
 
@@ -597,14 +598,16 @@ export function ThemeAltitude({
         ? sequenceProfiles(seg.profiles, seg.distances, seg.useElevation)
         : [];
     }
-    const profile = data.elevationProfile ?? data.paceProfile;
-    if (!profile || profile.length <= 1) {
+    // The shared rule: elevation, else pace, else laps — a degenerate
+    // elevation array never shadows a usable pace profile.
+    const signal = profileSignal(data);
+    if (signal.mode === "none") {
       return [];
     }
     return sequenceProfiles(
-      [profile],
+      [signal.series],
       [undefined],
-      Boolean(data.elevationProfile?.length)
+      signal.mode === "elevation"
     );
   })();
   const hasLine = curves.length > 0;

@@ -1,12 +1,11 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-import { CarouselExportSheet } from "@/components/app/carousel-export-sheet";
 import { EffortWordmark } from "@/components/app/effort-wordmark";
 import { EmptyState } from "@/components/app/empty-state";
-import { ExportSheet } from "@/components/app/export-sheet";
 import { ModeToggle } from "@/components/app/mode-toggle";
 import type { CardMode } from "@/components/app/mode-toggle";
 import type { OnboardingResult } from "@/components/app/onboarding-wizard";
@@ -18,16 +17,15 @@ import {
   savePersistedUi,
 } from "@/components/app/persisted-ui";
 import { StravaFooter } from "@/components/app/strava-footer";
-import { StravaPicker } from "@/components/app/strava-picker";
 import { useCardPhoto } from "@/hooks/use-card-photo";
 import { useCarousel } from "@/hooks/use-carousel";
 import { useImagePalette } from "@/hooks/use-image-palette";
 import { useStravaReturnToast } from "@/hooks/use-strava-return-toast";
 import type { ActivityData, ActivitySource, Sport } from "@/lib/activity";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
+import { createDebouncedWriter } from "@/lib/debounced-writer";
 import { formatDateUpper } from "@/lib/format";
 import type { ParsedActivity } from "@/lib/parse-activity";
-import { capPhotoResolution } from "@/lib/photo-resize";
 import { cn } from "@/lib/utils";
 import {
   CAROUSEL_THEMES,
@@ -47,13 +45,65 @@ import {
   themeAvailability,
 } from "@/theme/core/visibility";
 import type { Visibility } from "@/theme/core/visibility";
-import { CarouselEditState } from "@/theme/editor/carousel-edit-state";
-import { EditState } from "@/theme/editor/edit-state";
 import type { EditorSession } from "@/theme/editor/editor-session";
 import type { ThemeId } from "@/theme/editor/render-theme";
 import { SINGLE_CARD_THEMES } from "@/theme/single-card";
 
 type AppState = "empty" | "picking-strava" | "edit" | "download";
+
+// Code-split by app state: the landing only needs the empty state, so the
+// editor, the Strava picker and the export sheets (which pull the snapdom
+// export pipeline) load as separate chunks. Each loader is also called ahead of
+// time on user intent (see `preloadEditor` / `preloadExport`) so the chunk is
+// normally in cache before the state flips; the fallback only holds the
+// layout slot for the rare case it isn't.
+const loadEditState = () => import("@/theme/editor/edit-state");
+const loadCarouselEditState = () =>
+  import("@/theme/editor/carousel-edit-state");
+const loadExportSheet = () => import("@/components/app/export-sheet");
+const loadCarouselExportSheet = () =>
+  import("@/components/app/carousel-export-sheet");
+
+function preloadEditor(): void {
+  void loadEditState();
+  void loadCarouselEditState();
+}
+
+function preloadExport(): void {
+  void loadExportSheet();
+  void loadCarouselExportSheet();
+}
+
+// UI prefs are written at most once per quiet period (and flushed when the
+// page is hidden — see the effects in `Home`). One writer for the one page.
+const PERSIST_DEBOUNCE_MS = 300;
+const persistUi = createDebouncedWriter(savePersistedUi, PERSIST_DEBOUNCE_MS);
+
+/** Holds the state's flex slot while its chunk loads — no collapse/jump. */
+function StateFallback() {
+  return <div aria-busy className="flex flex-1 flex-col" />;
+}
+
+const EditState = dynamic(() => loadEditState().then((m) => m.EditState), {
+  loading: StateFallback,
+  ssr: false,
+});
+const CarouselEditState = dynamic(
+  () => loadCarouselEditState().then((m) => m.CarouselEditState),
+  { loading: StateFallback, ssr: false }
+);
+const ExportSheet = dynamic(
+  () => loadExportSheet().then((m) => m.ExportSheet),
+  { loading: StateFallback, ssr: false }
+);
+const CarouselExportSheet = dynamic(
+  () => loadCarouselExportSheet().then((m) => m.CarouselExportSheet),
+  { loading: StateFallback, ssr: false }
+);
+const StravaPicker = dynamic(
+  () => import("@/components/app/strava-picker").then((m) => m.StravaPicker),
+  { loading: StateFallback, ssr: false }
+);
 
 function adoptParsed(
   parsed: ParsedActivity,
@@ -86,9 +136,6 @@ export default function Home() {
   const [carouselTheme, setCarouselTheme] = useState<CarouselThemeId>(
     DEFAULT_CAROUSEL_THEME
   );
-  // The background photo cluster: object URL + pan/zoom + filter effects,
-  // including the object-URL revocation lifecycle (see the hook).
-  const photo = useCardPhoto();
   // The user's colour choice — a preset scheme or a photo-derived strategy.
   // `null` means "the active theme's default", so each theme keeps its own
   // signature colours until the user explicitly picks.
@@ -115,6 +162,10 @@ export default function Home() {
     mode === "carousel"
       ? CAROUSEL_THEMES[carouselTheme]
       : SINGLE_CARD_THEMES[theme];
+  // The background photo cluster: object URL + pan/zoom + filter effects,
+  // the resize-on-adopt (stale results dropped) and the object-URL revocation
+  // lifecycle (see the hook). A new photo adopts the active theme's policy.
+  const photo = useCardPhoto(activeTheme.photo);
   const activeConfig = coerceConfig(
     activeTheme.defaults,
     activeTheme.params,
@@ -183,10 +234,12 @@ export default function Home() {
     /* oxlint-enable react/set-state-in-effect */
   }, []);
 
-  // Persist on change. Athlete name comes from `data` (which the user edits
-  // in-place), so it shares this effect rather than getting its own.
+  // Persist on change — debounced, since a slider drag changes `themeConfigs`
+  // every tick and each save is a JSON.stringify + synchronous localStorage
+  // write. Athlete name comes from `data` (which the user edits in-place), so
+  // it shares this effect rather than getting its own.
   useEffect(() => {
-    savePersistedUi({
+    persistUi.schedule({
       theme,
       carouselTheme,
       colorChoice: colorChoice ?? undefined,
@@ -204,6 +257,33 @@ export default function Home() {
     mode,
     data?.athleteName,
   ]);
+
+  // The debounce timer never fires if the tab is closed or backgrounded (and
+  // then discarded) inside the quiet period, so write the pending prefs out
+  // as soon as the page is hidden — the last change is never lost.
+  useEffect(() => {
+    const flush = () => persistUi.flush();
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        flush();
+      }
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      flush();
+    };
+  }, []);
+
+  // In the editor the next stop is the export sheet: warm its chunk (and,
+  // through it, the export pipeline) while the user edits.
+  useEffect(() => {
+    if (state === "edit") {
+      preloadExport();
+    }
+  }, [state]);
 
   // After the Strava OAuth round-trip we land on `/?strava=...` — toast the
   // outcome and, on success, open the wizard with the Strava picker showing.
@@ -271,8 +351,6 @@ export default function Home() {
     setData((prev) => (prev ? { ...prev, location } : prev));
   };
 
-  const activePhotoPolicy = activeTheme.photo;
-
   // Selecting a theme (either family) applies its photo policy: its default
   // backdrop state (STRATA / Data / Triathlon default OFF; the photo-led
   // themes default ON) and — when there's a photo to affect — its signature
@@ -287,17 +365,12 @@ export default function Home() {
   const handlePhotoChange = async (file: File | null) => {
     // A new (or removed) photo invalidates any previous pan/zoom. A fresh photo
     // adopts the active theme's photo policy from scratch (effects reset, not
-    // carried over from the previous photo). Oversized photos are capped first
-    // — see lib/photo-resize.
-    photo.adopt(
-      file ? await capPhotoResolution(file) : null,
-      activePhotoPolicy
-    );
-    if (file) {
-      setVisibility((v) => ({
-        ...v,
-        photoBackdrop: activePhotoPolicy.defaultOn,
-      }));
+    // carried over from the previous photo). The hook caps oversized photos
+    // first, reads the policy once the capped photo lands, and drops a result
+    // a newer pick/removal has superseded (`null`).
+    const policy = await photo.adopt(file);
+    if (file && policy) {
+      setVisibility((v) => ({ ...v, photoBackdrop: policy.defaultOn }));
     }
   };
 
@@ -426,6 +499,7 @@ export default function Home() {
         <EmptyState
           autoStravaPicker={autoStravaPicker}
           onComplete={handleOnboardingComplete}
+          onIntent={preloadEditor}
         />
       ) : null}
       {state === "picking-strava" ? (

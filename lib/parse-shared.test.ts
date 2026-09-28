@@ -5,6 +5,11 @@ import { detectSport, finalise } from "@/lib/parse-shared";
 import type { TrackPoint } from "@/lib/parse-shared";
 
 describe("detectSport", () => {
+  test("splits camelCase names into words", () => {
+    expect(detectSport(undefined, "MorningRun.gpx")).toBe("run");
+    expect(detectSport(undefined, "EveningSwim.fit")).toBe("swim");
+  });
+
   test("maps cycling keywords from the raw type", () => {
     expect(detectSport("Ride", "x.gpx")).toBe("ride");
     expect(detectSport("VirtualRide", "x.gpx")).toBe("ride");
@@ -26,6 +31,16 @@ describe("detectSport", () => {
   test("falls back to the filename when the raw type is absent", () => {
     expect(detectSport(undefined, "morning-run.gpx")).toBe("run");
     expect(detectSport("", "weekend_bike_ride.fit")).toBe("ride");
+  });
+
+  test("the declared type wins over hints in the name", () => {
+    expect(detectSport("Run", "Bike commute home")).toBe("run");
+    expect(detectSport("Swim", "Swim before brunch")).toBe("swim");
+  });
+
+  test("name hints match whole words only", () => {
+    expect(detectSport(undefined, "tempo-strides-run.gpx")).toBe("run");
+    expect(detectSport(undefined, "brunch-ride.gpx")).toBe("ride");
   });
 
   test("defaults to ride for unrecognised input", () => {
@@ -107,6 +122,16 @@ describe("finalise", () => {
       isoDate: "2026-05-18T07:00:00Z",
     });
     expect(valid.date).toBe("2026-05-18");
+  });
+
+  test("keeps a bare calendar date unchanged in every timezone", () => {
+    const a = finalise({
+      points: linePoints(),
+      sport: "run",
+      name: "r",
+      isoDate: "2026-05-18",
+    });
+    expect(a.date).toBe("2026-05-18");
   });
 
   test("omits splits for swims", () => {

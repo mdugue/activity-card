@@ -7,6 +7,7 @@
  */
 
 import type { Coord, Split, StravaPhotoRef } from "@/lib/activity";
+import { CALENDAR_DATE_RE } from "@/lib/format";
 import { resampleTo, simplifyToCount, smooth } from "@/lib/simplify";
 
 export type ParsedSport = "ride" | "run" | "swim" | "triathlon";
@@ -174,35 +175,61 @@ function sportSpecificStats(
   return {};
 }
 
+/**
+ * Filename / activity-name hints, matched as whole words and checked in this
+ * order (run → swim → ride → triathlon): the first hit wins.
+ */
+const NAME_SPORT_WORDS: readonly [ParsedSport, readonly string[]][] = [
+  ["run", ["run", "running"]],
+  ["swim", ["swim", "swimming"]],
+  ["ride", ["ride", "bike", "cycling"]],
+  ["triathlon", ["triathlon"]],
+];
+
+/**
+ * Map a declared sport type (GPX `<type>`, FIT `sport`, Strava `sport_type`)
+ * to our sport. The declared type always wins; the filename (for Strava, the
+ * activity name) is only consulted when the type is missing or unrecognised,
+ * and then by whole words so "brunch" is not a run and "strides" not a ride.
+ * Defaults to ride.
+ */
 export function detectSport(
   raw: string | undefined,
   filename: string
 ): ParsedSport {
-  const s = (raw || "").toLowerCase();
-  const f = filename.toLowerCase();
-  if (
-    s.includes("cycl") ||
-    s.includes("bike") ||
-    s.includes("ride") ||
-    f.includes("ride") ||
-    f.includes("bike")
-  ) {
-    return "ride";
+  const declared = sportFromDeclaredType((raw || "").toLowerCase());
+  if (declared) {
+    return declared;
   }
-  if (s.includes("run") || f.includes("run")) {
-    return "run";
-  }
-  if (s.includes("swim") || f.includes("swim")) {
-    return "swim";
-  }
-  if (
-    s.includes("triathlon") ||
-    s.includes("multisport") ||
-    f.includes("triathlon")
-  ) {
-    return "triathlon";
+  // Split camelCase ("MorningRun") before lowercasing so it yields whole words.
+  const words = new Set(
+    filename
+      .replaceAll(/([a-z])([A-Z])/gu, "$1 $2")
+      .toLowerCase()
+      .split(/[^a-z]+/u)
+  );
+  for (const [sport, hints] of NAME_SPORT_WORDS) {
+    if (hints.some((w) => words.has(w))) {
+      return sport;
+    }
   }
   return "ride";
+}
+
+function sportFromDeclaredType(s: string): ParsedSport | undefined {
+  if (s.includes("cycl") || s.includes("bike") || s.includes("ride")) {
+    return "ride";
+  }
+  if (s.includes("run")) {
+    return "run";
+  }
+  if (s.includes("swim")) {
+    return "swim";
+  }
+  if (s.includes("triathlon") || s.includes("multisport")) {
+    return "triathlon";
+  }
+  return undefined;
 }
 
 function cumulativeDistanceKm(points: TrackPoint[]): number {
@@ -371,15 +398,23 @@ function round(n: number, digits: number): number {
   return Math.round(n * f) / f;
 }
 
+/**
+ * The activity's calendar date as `YYYY-MM-DD`. A bare calendar date passes
+ * through unchanged; an instant (GPX/FIT timestamps) is read in the local
+ * timezone — the athlete's device timezone is the best client-side proxy for
+ * where the activity happened. Never the UTC day.
+ */
 function toIsoDate(input?: string | number | Date): string {
-  if (!input) {
-    return new Date().toISOString().slice(0, 10);
+  if (typeof input === "string" && CALENDAR_DATE_RE.test(input)) {
+    return input;
   }
-  const d = new Date(input);
-  if (Number.isNaN(d.getTime())) {
-    return new Date().toISOString().slice(0, 10);
-  }
-  return d.toISOString().slice(0, 10);
+  const d = input ? new Date(input) : new Date();
+  return localCalendarDate(Number.isNaN(d.getTime()) ? new Date() : d);
+}
+
+function localCalendarDate(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 function prettifyName(name: string): string {

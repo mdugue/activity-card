@@ -4,7 +4,7 @@
 //
 // Built from the SHARED pure geometry in `lib/strata` (resample · positional
 // route→profile morph · Catmull-Rom smoothing) — NOT the single-card
-// `components/themes/strata` component — so the two theme families stay
+// `theme/single-card/strata.tsx` component — so the two theme families stay
 // decoupled (they only share `lib`). Colours come from the carousel token
 // (route = accent, elevation = accent2).
 //
@@ -27,7 +27,7 @@ import {
 import type { StrataConfig } from "@/lib/strata";
 import type { EffectiveStyle } from "@/theme/carousel/resolve";
 
-interface StrataCanvasProps {
+interface StrataFieldProps {
   data: ActivityData;
   /** number of woven in-between layers (the density lever) */
   densityK: number;
@@ -49,7 +49,7 @@ interface StrataCanvasProps {
   w: number;
 }
 
-export function StrataCanvas({
+export function StrataField({
   data,
   w,
   h,
@@ -61,7 +61,7 @@ export function StrataCanvas({
   scrim,
   overPhoto = false,
   lineAlpha = 0.4,
-}: StrataCanvasProps) {
+}: StrataFieldProps) {
   const source = resolveStrataSource(data);
   if (!source) {
     return null;
@@ -260,7 +260,7 @@ export function StrataHero({
   return (
     <>
       <div style={{ position: "absolute", inset: 0 }}>
-        <StrataCanvas
+        <StrataField
           data={data}
           densityK={STRATA_DENSITY_K[cfg.density]}
           elevColor={style.accent2}

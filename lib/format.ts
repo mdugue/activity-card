@@ -74,8 +74,10 @@ export function formatPaceSec(seconds?: number): string {
   if (seconds === undefined || !Number.isFinite(seconds) || seconds <= 0) {
     return DASH;
   }
-  const m = Math.floor(seconds / 60);
-  const s = Math.round(seconds % 60);
+  // Round the total first so 119.6 carries to "2:00", never "1:60".
+  const totalSec = Math.round(seconds);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
@@ -86,7 +88,24 @@ export function formatNumber(n?: number, digits = 0): string {
   return n.toFixed(digits);
 }
 
-export function formatDate(iso?: string): string {
+/** A bare `YYYY-MM-DD` calendar date (no time, no zone). */
+export const CALENDAR_DATE_RE = /^\d{4}-\d{2}-\d{2}$/u;
+
+export interface FormatDateOptions {
+  /** "long" → "September 3, 2026" (default); "short" → "Sep 3, 2026". */
+  month?: "long" | "short";
+}
+
+/**
+ * ISO date → "May 18, 2026". A bare `YYYY-MM-DD` is a calendar date, not an
+ * instant: `new Date()` reads it as UTC midnight, so it is formatted in UTC to
+ * print the same day in every viewer timezone. Full timestamps keep the
+ * viewer's local day.
+ */
+export function formatDate(
+  iso?: string,
+  { month = "long" }: FormatDateOptions = {}
+): string {
   if (!iso) {
     return "";
   }
@@ -95,9 +114,10 @@ export function formatDate(iso?: string): string {
     return iso;
   }
   return d.toLocaleDateString("en-US", {
-    month: "long",
+    month,
     day: "numeric",
     year: "numeric",
+    ...(CALENDAR_DATE_RE.test(iso) && { timeZone: "UTC" }),
   });
 }
 

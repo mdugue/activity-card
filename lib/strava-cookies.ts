@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
 
+import { readStravaTokenResponse } from "./strava-token-response";
+
 // Strava API endpoints. All three are overridable via env so E2E tests can
 // point the app at a local mock without monkey-patching `fetch`.
 export const STRAVA_API_BASE =
@@ -224,7 +226,13 @@ async function refreshStoredTokens(tokens: StoredTokens): Promise<string> {
     }
     throw new StravaNotConnectedError();
   }
-  const payload = (await res.json()) as StravaTokenResponse;
+  const payload = await readStravaTokenResponse(res);
+  if (!payload) {
+    // A 2xx whose body isn't a token bundle is a Strava-side fault, not a
+    // dead grant: like a 5xx, fail this request as "not connected" but
+    // keep the stored cookies so the next request can refresh again.
+    throw new StravaNotConnectedError();
+  }
   await writeTokens(payload, { athleteOverride: tokens.athlete });
   return payload.access_token;
 }

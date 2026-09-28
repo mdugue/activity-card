@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 
 import { stravaErrorResponse, stravaFetch } from "@/lib/strava-client";
+import { STRAVA_API_BASE } from "@/lib/strava-cookies";
 import { clampedIntParam } from "@/lib/strava-params";
+import {
+  allowedPhotoContentType,
+  exceedsPhotoSizeCap,
+  isAllowedPhotoUrl,
+  limitBody,
+} from "@/lib/strava-photo-proxy";
 import { largestPhotoUrl, upscaledPhotoUrl } from "@/lib/strava-photos";
 import type { StravaPhotoListItem } from "@/lib/strava-types";
 
@@ -13,13 +20,59 @@ const PHOTO_FULL_SIZE = 5000;
 // The largest standard CDN rendition's long edge (the Strava web app links
 // `…-1536x2048.jpg` / `…-2048x1536.jpg`).
 const PHOTO_TARGET_LONG_EDGE = 2048;
+// The API base's origin is trusted as a photo host too: in production it's
+// strava.com (already on the CDN allowlist); under the E2E / local mock it's
+// the mock server, which serves its photo fixtures from the same origin.
+const TRUSTED_PHOTO_ORIGIN = new URL(STRAVA_API_BASE).origin;
+
+type PhotoFailure =
+  | "photo_fetch_failed"
+  | "photo_host_rejected"
+  | "photo_too_large"
+  | "photo_unsupported_type";
+
+interface AcceptedPhoto {
+  body: ReadableStream<Uint8Array>;
+  contentType: string;
+}
+
+/** Fetch one candidate URL and apply every proxy guard. Redirects are not
+ * followed (`redirect: "manual"` turns them into a non-ok response), so the
+ * host check on `url` is the host the bytes actually come from. */
+async function fetchPhoto(url: string): Promise<AcceptedPhoto | PhotoFailure> {
+  if (!isAllowedPhotoUrl(url, TRUSTED_PHOTO_ORIGIN)) {
+    return "photo_host_rejected";
+  }
+  let res: Response;
+  try {
+    res = await fetch(url, { cache: "no-store", redirect: "manual" });
+  } catch {
+    return "photo_fetch_failed";
+  }
+  if (!(res.ok && res.body)) {
+    await res.body?.cancel();
+    return "photo_fetch_failed";
+  }
+  const contentType = allowedPhotoContentType(res.headers.get("content-type"));
+  if (!contentType) {
+    await res.body.cancel();
+    return "photo_unsupported_type";
+  }
+  if (exceedsPhotoSizeCap(res.headers.get("content-length"))) {
+    await res.body.cancel();
+    return "photo_too_large";
+  }
+  return { body: limitBody(res.body), contentType };
+}
 
 /**
  * Streams one of an activity's Strava photos through our origin. The image
  * URL is re-resolved server-side from Strava's photo list (the client only
  * supplies an activity id + index), so no client-controlled URL is ever
  * fetched, and the same-origin response keeps snapdom's export canvas
- * untainted.
+ * untainted. Even so, the list's URL is only followed when it's https on a
+ * Strava photo CDN host, and only image bodies up to `PHOTO_MAX_BYTES` are
+ * relayed (`lib/strava-photo-proxy.ts`).
  */
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -43,28 +96,24 @@ export async function GET(request: Request) {
     // to the URL the API actually gave us.
     const upgraded = upscaledPhotoUrl(src, PHOTO_TARGET_LONG_EDGE);
     const candidates = upgraded ? [upgraded, src] : [src];
-    let upstream: Response | undefined;
+    let failure: PhotoFailure = "photo_fetch_failed";
     for (const candidate of candidates) {
       // Sequential on purpose: the original URL is only fetched when the
       // upgraded rendition doesn't exist.
-      const res = await fetch(candidate, { cache: "no-store" });
-      if (res.ok && res.body) {
-        upstream = res;
-        break;
+      const result = await fetchPhoto(candidate);
+      if (typeof result !== "string") {
+        return new NextResponse(result.body, {
+          headers: {
+            "content-type": result.contentType,
+            "content-disposition": "inline",
+            "x-content-type-options": "nosniff",
+            "cache-control": "private, max-age=3600",
+          },
+        });
       }
+      failure = result;
     }
-    if (!upstream) {
-      return NextResponse.json(
-        { error: "photo_fetch_failed" },
-        { status: 502 }
-      );
-    }
-    return new NextResponse(upstream.body, {
-      headers: {
-        "content-type": upstream.headers.get("content-type") ?? "image/jpeg",
-        "cache-control": "private, max-age=3600",
-      },
-    });
+    return NextResponse.json({ error: failure }, { status: 502 });
   } catch (error) {
     return stravaErrorResponse(error);
   }

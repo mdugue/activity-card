@@ -5,7 +5,6 @@
 // same formats as the single card — every format is just a different slide box.
 
 import type { ExportFormat } from "@/theme/core/export-formats";
-import { useFormat } from "@/theme/shared/format-context";
 
 export interface StripGeometry {
   slideH: number;
@@ -23,11 +22,6 @@ export function stripGeometry(
     slideH: format.height,
     stripW: count * format.width,
   };
-}
-
-/** Strip geometry for the active format (from `FormatContext`) + slide count. */
-export function useStripGeometry(count: number): StripGeometry {
-  return stripGeometry(useFormat(), count);
 }
 
 /** The panel's natural margin, per side (was the flat `SLIDE_PAD`). `SafeArea`

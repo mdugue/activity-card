@@ -37,6 +37,11 @@ export function isDesktopDevice(): boolean {
 
 const DESKTOP_PLATFORM_REGEX = /Macintosh|Windows|Linux/u;
 
+/** How long a download's object URL outlives its click. `a.click()` only
+ *  queues the navigation — revoking in the same task can cancel the download
+ *  (seen in Firefox and Safari), so the URL is released a beat later. */
+export const REVOKE_DELAY_MS = 1000;
+
 export function triggerDownload(file: File): void {
   const url = URL.createObjectURL(file);
   const a = document.createElement("a");
@@ -45,7 +50,37 @@ export function triggerDownload(file: File): void {
   document.body.append(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), REVOKE_DELAY_MS);
+}
+
+/** A single-flight gate for export clicks. It is plain mutable state, not
+ *  React state, so a second click in the same frame (before a re-render has
+ *  disabled the buttons) sees the first one and is dropped. */
+export interface InFlightGuard {
+  readonly busy: boolean;
+  /** Runs `task` unless one is already running; resolves `false` if dropped. */
+  run: (task: () => Promise<void>) => Promise<boolean>;
+}
+
+export function createInFlightGuard(): InFlightGuard {
+  let busy = false;
+  return {
+    get busy() {
+      return busy;
+    },
+    async run(task) {
+      if (busy) {
+        return false;
+      }
+      busy = true;
+      try {
+        await task();
+      } finally {
+        busy = false;
+      }
+      return true;
+    },
+  };
 }
 
 function delay(ms: number): Promise<void> {
