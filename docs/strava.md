@@ -312,6 +312,18 @@ Failures return `502` with `{ error }` set to `photo_host_rejected`,
 (the last candidate's reason, after the upscaled rendition and the
 original URL have both been tried).
 
+## Security headers
+
+`next.config.ts` `headers()` adds a baseline to every route, the Strava
+Route Handlers included: `X-Content-Type-Options: nosniff`,
+`Referrer-Policy: strict-origin-when-cross-origin` (so OAuth `code` /
+`state` query strings never leak cross-origin in a `Referer`),
+`X-Frame-Options: DENY` plus `Content-Security-Policy: frame-ancestors
+'none'` (the app is never embedded), and a `Permissions-Policy` that
+turns off camera, microphone and geolocation. The CSP is intentionally
+only `frame-ancestors`: a full policy would need carve-outs for
+snapdom's export, the Remotion players and blob/data images.
+
 ## Strava brand requirements
 
 How we satisfy each clause of Strava's brand guidelines
