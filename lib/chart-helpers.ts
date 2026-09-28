@@ -205,6 +205,15 @@ export interface NormalizedCurve {
   widthFrac: number;
 }
 
+interface WeightedProfile {
+  p: number[];
+  weight: number | undefined;
+}
+
+/** A leg's share of the axis: its weight (distance), else its point count. */
+const widthOf = (e: WeightedProfile): number =>
+  e.weight !== undefined && e.weight > 0 ? e.weight : e.p.length;
+
 /**
  * Lay several profiles out **side by side** along one horizontal axis — for a
  * multi-activity project's elevation (or pace) legs shown end-to-end in a single
@@ -226,9 +235,12 @@ export const sequenceProfiles = (
   weights: (number | undefined)[],
   useElevation = true
 ): NormalizedCurve[] => {
-  const valid = profiles
-    .map((p, i) => ({ p, weight: weights[i] }))
-    .filter((e) => e.p.length > 1);
+  const valid: WeightedProfile[] = [];
+  for (const [i, p] of profiles.entries()) {
+    if (p.length > 1) {
+      valid.push({ p, weight: weights[i] });
+    }
+  }
   if (valid.length === 0) {
     return [];
   }
@@ -245,8 +257,6 @@ export const sequenceProfiles = (
     }
   }
   const dv = max - min || 1;
-  const widthOf = (e: { p: number[]; weight?: number }) =>
-    e.weight !== undefined && e.weight > 0 ? e.weight : e.p.length;
   const total = valid.reduce((sum, e) => sum + widthOf(e), 0) || 1;
   let cursor = 0;
   return valid.map((e) => {
@@ -289,9 +299,7 @@ export const sequencePaths = (
 ): OverlayPath[] => {
   const clampReach = Math.min(1, Math.max(0, reach));
   return curves.map((c) => {
-    const pts = c.pts.map(
-      (p) => [p[0] * w, h - p[1] * h * clampReach] as Coord
-    );
+    const pts = c.pts.map((p): Coord => [p[0] * w, h - p[1] * h * clampReach]);
     const line = pts
       .map(
         (p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`
@@ -308,7 +316,7 @@ export const sequencePaths = (
 
 const parseHex = (hex: string): [number, number, number] => {
   const h = hex.replace("#", "");
-  const full = h.length === 3 ? h.replaceAll(/(.)/gu, "$1$1") : h;
+  const full = h.length === 3 ? h.replaceAll(/./gu, (ch) => ch + ch) : h;
   return [
     Number.parseInt(full.slice(0, 2), 16),
     Number.parseInt(full.slice(2, 4), 16),

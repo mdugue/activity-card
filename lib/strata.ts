@@ -335,7 +335,7 @@ export const resolveStrataSource = (
 const resampleValues = (arr: number[], n: number): number[] => {
   const out: number[] = [];
   const len = arr.length;
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < n; i += 1) {
     const t = (i / (n - 1)) * (len - 1);
     const i0 = Math.floor(t);
     const i1 = Math.min(len - 1, i0 + 1);
@@ -349,7 +349,7 @@ const resampleValues = (arr: number[], n: number): number[] => {
 const resamplePoints = (pts: Coord[], n: number): Coord[] => {
   const out: Coord[] = [];
   const len = pts.length;
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < n; i += 1) {
     const t = (i / (n - 1)) * (len - 1);
     const i0 = Math.floor(t);
     const i1 = Math.min(len - 1, i0 + 1);
@@ -367,7 +367,7 @@ export const smoothPath = (pts: Coord[]): string => {
     return "";
   }
   let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
-  for (let i = 0; i < pts.length - 1; i++) {
+  for (let i = 0; i < pts.length - 1; i += 1) {
     const p0 = i > 0 ? pts[i - 1] : pts[i];
     const p1 = pts[i];
     const p2 = pts[i + 1];
@@ -480,7 +480,7 @@ export const buildStrata = (opts: BuildStrataOptions): StrataGeometry => {
   ]);
 
   const curves: StrataCurve[] = [];
-  for (let k = 0; k <= K; k++) {
+  for (let k = 0; k <= K; k += 1) {
     const t = k / K;
     // The two heroes ARE the source bands — assign them exactly rather than
     // lerp-rounded (`rp + (ep - rp) * 1` drifts by a float ULP from `ep`).
@@ -524,7 +524,7 @@ export const strataPeakMarker = (
   if (elevMax === null || elevPts.length === 0) {
     return null;
   }
-  let peak = elevPts[0];
+  let [peak] = elevPts;
   for (const p of elevPts) {
     if (p[1] < peak[1]) {
       peak = p;
@@ -565,7 +565,7 @@ export const strataDirectionArrow = (
   const clearanceAt = (i: number): number => {
     const p = routePts[i];
     let min = Number.POSITIVE_INFINITY;
-    for (let j = 0; j < n; j++) {
+    for (let j = 0; j < n; j += 1) {
       if (Math.abs(j - i) < gap) {
         continue;
       }

@@ -285,10 +285,7 @@ export const supportingStats = (
     if (out.length >= max) {
       break;
     }
-    if (key === excludeKey) {
-      continue;
-    }
-    const stat = metricStat(key, data);
+    const stat = key === excludeKey ? null : metricStat(key, data);
     if (stat) {
       out.push(stat);
     }
@@ -336,7 +333,8 @@ export const ALTITUDE_PARAMS: ParamDef[] = [
           hint: stat?.label ?? CLAIM_LABELS[c],
           id: c,
           label: CLAIM_LABELS[c],
-          unit: stat?.unit || undefined,
+          // An empty unit (name / time) means "no unit chip".
+          unit: stat === null || stat.unit === "" ? undefined : stat.unit,
           value: stat?.value ?? CLAIM_LABELS[c],
         };
       });
@@ -415,8 +413,10 @@ export const ALTITUDE_PARAMS: ParamDef[] = [
 // ---------------------------------------------------------------------------
 
 const ADVANCE: Record<AltitudeFont, number> = {
-  modern: 0.5, // Anton — heavy + condensed
-  serif: 0.55, // Playfair Display
+  // Anton — heavy + condensed
+  modern: 0.5,
+  // Playfair Display
+  serif: 0.55,
 };
 
 /** Largest hero height (px) we allow, so a 1–2 char value can't fill the card. */
@@ -485,7 +485,7 @@ export const layoutClaim = (
   // Long name: find the fewest lines that lift the size back to hero scale.
   const words = text.trim().split(WHITESPACE);
   let lines = [text];
-  for (let n = 2; n <= Math.min(MAX_LINES, words.length); n++) {
+  for (let n = 2; n <= Math.min(MAX_LINES, words.length); n += 1) {
     lines = balanceLines(words, n);
     const widest = Math.max(...lines.map(units));
     if (contentW / widest >= WRAP_MIN_FONT) {

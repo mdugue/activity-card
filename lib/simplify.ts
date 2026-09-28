@@ -15,15 +15,13 @@ export type Coord = [number, number];
 const SQ_TOL_FLOOR = 1e-12;
 
 const sqSegDist = (p: Coord, a: Coord, b: Coord): number => {
-  let x = a[0];
-  let y = a[1];
+  let [x, y] = a;
   let dx = b[0] - x;
   let dy = b[1] - y;
   if (dx !== 0 || dy !== 0) {
     const t = ((p[0] - x) * dx + (p[1] - y) * dy) / (dx * dx + dy * dy);
     if (t > 1) {
-      x = b[0];
-      y = b[1];
+      [x, y] = b;
     } else if (t > 0) {
       x += dx * t;
       y += dy * t;
@@ -45,7 +43,7 @@ const rdpRange = (
   }
   let maxSq = -1;
   let index = i;
-  for (let k = i + 1; k < j; k++) {
+  for (let k = i + 1; k < j; k += 1) {
     const sq = sqSegDist(points[k], points[i], points[j]);
     if (sq > maxSq) {
       maxSq = sq;
@@ -104,7 +102,8 @@ export const simplifyToCount = (points: Coord[], target: number): Coord[] => {
   let tol = diag * 1e-4;
   let out = simplifyRDP(points, tol);
   let guard = 0;
-  while (out.length > target && guard++ < 40) {
+  while (out.length > target && guard < 40) {
+    guard += 1;
     tol *= 2;
     out = simplifyRDP(points, tol);
   }
@@ -124,7 +123,7 @@ export const resampleTo = (values: number[], count: number): number[] => {
   }
   const out: number[] = Array.from({ length: count }, () => 0);
   const last = values.length - 1;
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < count; i += 1) {
     const t = (i / (count - 1)) * last;
     const lo = Math.floor(t);
     const hi = Math.min(lo + 1, last);
@@ -141,14 +140,14 @@ export const smooth = (values: number[], window = 5): number[] => {
   }
   const half = Math.floor(window / 2);
   const out: number[] = Array.from({ length: values.length }, () => 0);
-  for (let i = 0; i < values.length; i++) {
+  for (let i = 0; i < values.length; i += 1) {
     let sum = 0;
     let n = 0;
     const lo = Math.max(0, i - half);
     const hi = Math.min(values.length - 1, i + half);
-    for (let k = lo; k <= hi; k++) {
+    for (let k = lo; k <= hi; k += 1) {
       sum += values[k];
-      n++;
+      n += 1;
     }
     out[i] = n > 0 ? sum / n : values[i];
   }

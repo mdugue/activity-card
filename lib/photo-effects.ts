@@ -97,8 +97,15 @@ export const effectsTransformSuffix = (e?: PhotoEffects | null): string => {
   return parts.length ? ` ${parts.join(" ")}` : "";
 };
 
-export const nextRotation = (deg: RotateDeg): RotateDeg =>
-  ((deg + 90) % 360) as RotateDeg;
+/** Each quarter turn's clockwise successor. */
+const NEXT_ROTATION: Record<RotateDeg, RotateDeg> = {
+  0: 90,
+  180: 270,
+  270: 0,
+  90: 180,
+};
+
+export const nextRotation = (deg: RotateDeg): RotateDeg => NEXT_ROTATION[deg];
 
 /** True when the rotation swaps the image's width and height. */
 export const isQuarterTurn = (deg: RotateDeg): boolean =>

@@ -105,7 +105,7 @@ export const formatDate = (
   iso?: string,
   { month = "long" }: FormatDateOptions = {}
 ): string => {
-  if (!iso) {
+  if (iso === undefined || iso === "") {
     return "";
   }
   const d = new Date(iso);

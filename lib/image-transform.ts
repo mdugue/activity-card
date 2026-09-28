@@ -9,9 +9,18 @@
  */
 
 export interface ImageTransform {
-  scale: number; // >= 1, relative to cover baseline
-  x: number; // translation in card px (1080-space)
-  y: number; // translation in card px (1350-space)
+  /** >= 1, relative to cover baseline */
+  scale: number;
+  /** translation in card px (1080-space) */
+  x: number;
+  /** translation in card px (1350-space) */
+  y: number;
+}
+
+/** Rendered size (px) of an image scaled to cover a box. */
+export interface CoverSize {
+  h: number;
+  w: number;
 }
 
 export const IDENTITY_TRANSFORM: ImageTransform = { scale: 1, x: 0, y: 0 };
@@ -54,7 +63,7 @@ export const coverSize = (
   boxH: number,
   natW: number,
   natH: number
-): { h: number; w: number } => {
+): CoverSize => {
   const scale = Math.max(boxW / natW, boxH / natH);
   return { h: natH * scale, w: natW * scale };
 };

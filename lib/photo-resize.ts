@@ -55,10 +55,7 @@ export const cappedPhotoSize = (
  * *probably* handle beats no photo at all.
  */
 export const capPhotoResolution = async (file: File): Promise<File> => {
-  if (
-    typeof document === "undefined" ||
-    typeof createImageBitmap !== "function"
-  ) {
+  if (!("document" in globalThis) || !("createImageBitmap" in globalThis)) {
     return file;
   }
   let bitmap: ImageBitmap | undefined;
@@ -78,6 +75,7 @@ export const capPhotoResolution = async (file: File): Promise<File> => {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
     ctx.drawImage(bitmap, 0, 0, size.w, size.h);
+    // oxlint-disable-next-line promise/avoid-new -- `canvas.toBlob` is callback-only; Promise.withResolvers needs Safari 17.4, above the supported browser baseline
     const blob = await new Promise<Blob | null>((resolve) => {
       canvas.toBlob(resolve, "image/jpeg", 0.92);
     });
