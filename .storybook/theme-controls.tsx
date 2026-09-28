@@ -44,7 +44,6 @@ import type { BackgroundArgs } from "./backgrounds";
 /* ----------------------------- activity ----------------------------- */
 
 /** The sample activities, keyed by the label shown in the dropdown. */
-export default {}
 export const ACTIVITY_SAMPLES = {
   Brick: SAMPLE_BRICK,
   Ride: SAMPLE_RIDE,

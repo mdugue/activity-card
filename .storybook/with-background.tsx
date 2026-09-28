@@ -19,7 +19,6 @@ import { BACKGROUND_ORDER, BACKGROUND_PRESETS } from "./backgrounds";
 
 // Storybook's `file` control yields an array of object URLs for the upload;
 // the first one is the photo.
-export default {}
 const UploadSchema = z.tuple([z.string()]).rest(z.unknown());
 const BackgroundIdSchema = z.enum(BACKGROUND_ORDER);
 

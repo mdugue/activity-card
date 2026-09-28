@@ -175,7 +175,7 @@ appear.
   preset as shipped (core, react, next, jest, js-plugins — github, sonarjs,
   React Doctor — next/js-plugins, anti-slop, shadcn) plus the recommended sets
   of eslint-plugin-storybook and @remotion/eslint-plugin, read from the
-  plugins themselves — **no rule tweaks**. The config only decides *where*
+  plugins themselves — **no rule tweaks**. The config only decides _where_
   presets apply: generated code (`components/ui`, `hooks/use-mobile.ts`) is
   ignored, shadcn/lint covers the app UI but not theme canvases / Remotion
   frames (pixel-exact inline-styled output), `components/app/primitives` gets
