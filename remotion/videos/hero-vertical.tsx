@@ -5,7 +5,6 @@ import { linearTiming, TransitionSeries } from "@remotion/transitions";
 import { fade } from "@remotion/transitions/fade";
 
 import { cutSlices } from "../components/cut-slices";
-import { FPS, PORTRAIT } from "../design/tokens";
 import {
   CarouselScene,
   ColorScene,
@@ -15,79 +14,57 @@ import {
   SportsScene,
   ThemesScene,
 } from "./hero-scenes";
+import {
+  HERO_VERTICAL_BEATS as BEAT,
+  HERO_VERTICAL_TRANSITIONS as TRANSITION,
+} from "./hero-vertical-meta";
 
-const OPENING = 230;
-const INGEST = 180;
-const THEMES = 160;
-const COLOR = 120;
-const CAROUSEL = 165;
-const SPORTS = 104;
-const CTA = 140;
-
-const CUT = 9;
-const FADE = 7;
-
-export const HERO_VERTICAL_FPS = FPS;
-export const HERO_VERTICAL_WIDTH = PORTRAIT.width;
-export const HERO_VERTICAL_HEIGHT = PORTRAIT.height;
-export const HERO_VERTICAL_DURATION_IN_FRAMES =
-  OPENING +
-  INGEST +
-  THEMES +
-  COLOR +
-  CAROUSEL +
-  SPORTS +
-  CTA -
-  (CUT + FADE * 5);
-
-export function HeroVertical() {
-  return (
-    <TransitionSeries>
-      <TransitionSeries.Sequence durationInFrames={OPENING}>
-        <OpeningScene />
-      </TransitionSeries.Sequence>
-      <TransitionSeries.Transition
-        presentation={cutSlices({ slices: 3 })}
-        timing={linearTiming({ durationInFrames: CUT })}
-      />
-      <TransitionSeries.Sequence durationInFrames={INGEST}>
-        <IngestRevealScene durationInFrames={INGEST} />
-      </TransitionSeries.Sequence>
-      <TransitionSeries.Transition
-        presentation={fade()}
-        timing={linearTiming({ durationInFrames: FADE })}
-      />
-      <TransitionSeries.Sequence durationInFrames={THEMES}>
-        <ThemesScene durationInFrames={THEMES} />
-      </TransitionSeries.Sequence>
-      <TransitionSeries.Transition
-        presentation={fade()}
-        timing={linearTiming({ durationInFrames: FADE })}
-      />
-      <TransitionSeries.Sequence durationInFrames={COLOR}>
-        <ColorScene durationInFrames={COLOR} />
-      </TransitionSeries.Sequence>
-      <TransitionSeries.Transition
-        presentation={fade()}
-        timing={linearTiming({ durationInFrames: FADE })}
-      />
-      <TransitionSeries.Sequence durationInFrames={CAROUSEL}>
-        <CarouselScene durationInFrames={CAROUSEL} />
-      </TransitionSeries.Sequence>
-      <TransitionSeries.Transition
-        presentation={fade()}
-        timing={linearTiming({ durationInFrames: FADE })}
-      />
-      <TransitionSeries.Sequence durationInFrames={SPORTS}>
-        <SportsScene />
-      </TransitionSeries.Sequence>
-      <TransitionSeries.Transition
-        presentation={fade()}
-        timing={linearTiming({ durationInFrames: FADE })}
-      />
-      <TransitionSeries.Sequence durationInFrames={CTA}>
-        <CtaScene />
-      </TransitionSeries.Sequence>
-    </TransitionSeries>
-  );
-}
+export const HeroVertical = () => (
+  <TransitionSeries>
+    <TransitionSeries.Sequence durationInFrames={BEAT.opening}>
+      <OpeningScene />
+    </TransitionSeries.Sequence>
+    <TransitionSeries.Transition
+      presentation={cutSlices({ slices: 3 })}
+      timing={linearTiming({ durationInFrames: TRANSITION.cut })}
+    />
+    <TransitionSeries.Sequence durationInFrames={BEAT.ingest}>
+      <IngestRevealScene durationInFrames={BEAT.ingest} />
+    </TransitionSeries.Sequence>
+    <TransitionSeries.Transition
+      presentation={fade()}
+      timing={linearTiming({ durationInFrames: TRANSITION.fade })}
+    />
+    <TransitionSeries.Sequence durationInFrames={BEAT.themes}>
+      <ThemesScene durationInFrames={BEAT.themes} />
+    </TransitionSeries.Sequence>
+    <TransitionSeries.Transition
+      presentation={fade()}
+      timing={linearTiming({ durationInFrames: TRANSITION.fade })}
+    />
+    <TransitionSeries.Sequence durationInFrames={BEAT.color}>
+      <ColorScene durationInFrames={BEAT.color} />
+    </TransitionSeries.Sequence>
+    <TransitionSeries.Transition
+      presentation={fade()}
+      timing={linearTiming({ durationInFrames: TRANSITION.fade })}
+    />
+    <TransitionSeries.Sequence durationInFrames={BEAT.carousel}>
+      <CarouselScene durationInFrames={BEAT.carousel} />
+    </TransitionSeries.Sequence>
+    <TransitionSeries.Transition
+      presentation={fade()}
+      timing={linearTiming({ durationInFrames: TRANSITION.fade })}
+    />
+    <TransitionSeries.Sequence durationInFrames={BEAT.sports}>
+      <SportsScene />
+    </TransitionSeries.Sequence>
+    <TransitionSeries.Transition
+      presentation={fade()}
+      timing={linearTiming({ durationInFrames: TRANSITION.fade })}
+    />
+    <TransitionSeries.Sequence durationInFrames={BEAT.cta}>
+      <CtaScene />
+    </TransitionSeries.Sequence>
+  </TransitionSeries>
+);

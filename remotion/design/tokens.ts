@@ -12,10 +12,10 @@ import { Easing } from "remotion";
 /* ───────────────────────── canvas ───────────────────────── */
 
 export const FPS = 30;
-export const LANDSCAPE = { width: 1920, height: 1080 } as const;
-export const PORTRAIT = { width: 1080, height: 1920 } as const;
+export const LANDSCAPE = { height: 1080, width: 1920 } as const;
+export const PORTRAIT = { height: 1920, width: 1080 } as const;
 /** The app's export size for one card; a carousel strip is n× this width. */
-export const CARD = { width: 1080, height: 1350 } as const;
+export const CARD = { height: 1350, width: 1080 } as const;
 
 /* ───────────────────────── colour ───────────────────────── */
 // The warm ink / paper / rust identity. Ink and paper carry the same whisper
@@ -49,25 +49,25 @@ export const INK_SOFT = "#2e2820";
 export const FONT = {
   /** Anton — claims, headlines, the wordmark. Uppercase, tracking-wide. */
   heading: "var(--font-heading)",
-  /** Inter — body copy. */
-  sans: "var(--font-sans)",
   /** JetBrains Mono — caption labels, stats, file chips. */
   mono: "var(--font-mono)",
+  /** Inter — body copy. */
+  sans: "var(--font-sans)",
 } as const;
 
 export const TYPE = {
-  /** hero claims (Anton, uppercase) */
-  claim: 132,
-  /** scene headlines (Anton, uppercase) */
-  headline: 84,
-  /** sub-headlines / big stats */
-  title: 54,
   /** body copy (Inter) */
   body: 34,
   /** mono caption labels (uppercase, TRACKING.label) */
   caption: 26,
+  /** hero claims (Anton, uppercase) */
+  claim: 132,
+  /** scene headlines (Anton, uppercase) */
+  headline: 84,
   /** smallest mono captions (uppercase, TRACKING.micro) */
   micro: 21,
+  /** sub-headlines / big stats */
+  title: 54,
 } as const;
 
 /** Letterspacing recipes lifted from the app's caption utilities. */
@@ -84,9 +84,9 @@ export const TRACKING = {
 
 /** Safe-area inset every scene keeps clear of the canvas edge. */
 export const SAFE = 96;
-export const SPACE = { xs: 12, sm: 24, md: 48, lg: 72 } as const;
+export const SPACE = { lg: 72, md: 48, sm: 24, xs: 12 } as const;
 /** Scaled-for-video cousins of the app's --radius scale. */
-export const RADIUS = { sm: 10, md: 16, lg: 24, pill: 999 } as const;
+export const RADIUS = { lg: 24, md: 16, pill: 999, sm: 10 } as const;
 
 /* ───────────────────────── motion ───────────────────────── */
 // The app's settle curves — entrances ease out, nothing bounces.
@@ -104,14 +104,14 @@ export const RISE_LG_PX = 18;
 
 /** Duration norms in frames at 30 fps. */
 export const DUR = {
-  /** 300ms — micro transitions, UI beats */
-  fast: 9,
-  /** ~470ms — scene-to-scene transitions */
-  scene: 14,
-  /** ~570ms — element entrances */
-  rise: 17,
   /** ~800ms — a settled hold before the next beat */
   beat: 24,
+  /** 300ms — micro transitions, UI beats */
+  fast: 9,
+  /** ~570ms — element entrances */
+  rise: 17,
+  /** ~470ms — scene-to-scene transitions */
+  scene: 14,
 } as const;
 
 /** The app's no-bounce entrance spring (`damping: 200`). */
@@ -133,4 +133,4 @@ export const POP_SPRING = { damping: 9, mass: 0.7, stiffness: 170 } as const;
 export const EASE_ALPHA = Easing.bezier(0.4, 0, 0.2, 1);
 
 /** Stagger between sibling entrances, in frames (the intro's 0.18s / 0.09s). */
-export const STAGGER = { slices: 5, items: 3 } as const;
+export const STAGGER = { items: 3, slices: 5 } as const;

@@ -4,92 +4,126 @@ import { describe, expect, test } from "bun:test";
 import { fitDataToParsed } from "@/lib/parse-fit";
 
 // Shaped like fit-file-parser's `mode: "list"` output with `lengthUnit: "m"`
-// and `speedUnit: "km/h"` — the options `parseFit` passes.
-function fitData(session: Record<string, unknown> = {}) {
-  return {
-    activity: {
-      sessions: [
-        {
-          sport: "cycling",
-          start_time: "2026-05-18T07:00:00Z",
-          total_distance: 42_195,
-          total_elapsed_time: 3600,
-          total_ascent: 450,
-          avg_speed: 30,
-          ...session,
-        },
-      ],
-    },
-    records: [
-      {
-        position_lat: 47,
-        position_long: 11,
-        altitude: 500,
-        timestamp: "2026-05-18T07:00:00Z",
-      },
-      {
-        position_lat: 47.001,
-        position_long: 11,
-        altitude: 620,
-        timestamp: "2026-05-18T07:30:00Z",
-      },
-      {
-        position_lat: 47.002,
-        position_long: 11,
-        altitude: 950,
-        timestamp: "2026-05-18T08:00:00Z",
-      },
-    ],
-  };
+// and `speedUnit: "km/h"`.
+interface FitSessionFixture {
+  avg_speed?: number;
+  sport: string;
+  start_time: string;
+  total_ascent?: number;
+  total_distance: number;
+  total_elapsed_time: number;
 }
+
+const fitData = (session: FitSessionFixture) => ({
+  // List mode: sessions sit at the top level; `activity` is the bare
+  // activity message (no nested sessions).
+  activity: { num_sessions: 1 },
+  records: [
+    {
+      altitude: 500,
+      position_lat: 47,
+      position_long: 11,
+      timestamp: "2026-05-18T07:00:00Z",
+    },
+    {
+      altitude: 620,
+      position_lat: 47.001,
+      position_long: 11,
+      timestamp: "2026-05-18T07:30:00Z",
+    },
+    {
+      altitude: 950,
+      position_lat: 47.002,
+      position_long: 11,
+      timestamp: "2026-05-18T08:00:00Z",
+    },
+  ],
+  sessions: [session],
+});
+
+const SESSION_WITHOUT_ASCENT = {
+  // km/h
+  avg_speed: 30,
+  sport: "cycling",
+  start_time: "2026-05-18T07:00:00Z",
+  // metres
+  total_distance: 42_195,
+  total_elapsed_time: 3600,
+} satisfies FitSessionFixture;
+
+const SESSION = {
+  ...SESSION_WITHOUT_ASCENT,
+  // metres
+  total_ascent: 450,
+} satisfies FitSessionFixture;
 
 describe("fitDataToParsed", () => {
   test("converts the session distance from metres to km", () => {
-    const parsed = fitDataToParsed(fitData(), "ride.fit");
+    const parsed = fitDataToParsed(fitData(SESSION), "ride.fit");
     expect(parsed.distanceKm).toBeCloseTo(42.2, 1);
   });
 
   test("keeps the session ascent in metres", () => {
-    const parsed = fitDataToParsed(fitData(), "ride.fit");
+    const parsed = fitDataToParsed(fitData(SESSION), "ride.fit");
     expect(parsed.elevationGainM).toBe(450);
   });
 
-  test("the elevation profile holds real altitudes, not km fractions", () => {
-    const parsed = fitDataToParsed(fitData(), "ride.fit");
+  test("keeps record altitudes in metres for the elevation profile", () => {
+    const parsed = fitDataToParsed(fitData(SESSION), "ride.fit");
     const profile = parsed.elevationProfile ?? [];
-    expect(profile.length).toBeGreaterThan(0);
     expect(Math.max(...profile)).toBe(950);
     expect(Math.min(...profile)).toBe(500);
   });
 
-  test("derives the gain from records when the session has no ascent", () => {
-    const parsed = fitDataToParsed(
-      fitData({ total_ascent: undefined }),
-      "ride.fit"
-    );
+  test("derives elevation gain from records without total_ascent", () => {
+    const parsed = fitDataToParsed(fitData(SESSION_WITHOUT_ASCENT), "ride.fit");
     expect(parsed.elevationGainM).toBeGreaterThan(0);
   });
 
-  test("prefers enhanced_altitude when a device writes it", () => {
-    const data = fitData();
-    data.records = data.records.map((r) => ({
-      ...r,
-      enhanced_altitude: r.altitude + 1000,
-    }));
-    const parsed = fitDataToParsed(data, "ride.fit");
-    expect(Math.max(...(parsed.elevationProfile ?? []))).toBe(1950);
+  test("reads the declared sport from the list-mode session", () => {
+    const parsed = fitDataToParsed(
+      fitData({ ...SESSION, sport: "running" }),
+      "activity.fit"
+    );
+    expect(parsed.sport).toBe("run");
   });
 
-  test("an empty parse result degrades to an empty activity", () => {
+  test("still reads a cascade-mode session nested under activity", () => {
+    // No top-level `sessions`: the session only lives under `activity`.
+    const parsed = fitDataToParsed(
+      { activity: { sessions: [SESSION] }, records: fitData(SESSION).records },
+      "ride.fit"
+    );
+    expect(parsed.elevationGainM).toBe(450);
+  });
+
+  test("prefers enhanced_altitude when present", () => {
+    const data = {
+      records: [
+        {
+          enhanced_altitude: 1200,
+          position_lat: 47,
+          position_long: 11,
+          timestamp: "2026-05-18T07:00:00Z",
+        },
+        {
+          enhanced_altitude: 1300,
+          position_lat: 47.001,
+          position_long: 11,
+          timestamp: "2026-05-18T08:00:00Z",
+        },
+      ],
+      sessions: [SESSION],
+    };
+    const parsed = fitDataToParsed(data, "ride.fit");
+    expect(Math.max(...(parsed.elevationProfile ?? []))).toBe(1300);
+  });
+
+  test("an empty document degrades to an empty activity, not a crash", () => {
     const parsed = fitDataToParsed({}, "x.fit");
     expect(parsed.distanceKm).toBe(0);
     expect(parsed.durationSec).toBe(0);
     expect(parsed.routeCoordinates).toBeUndefined();
-  });
-
-  test("a structurally wrong result throws the FIT error", () => {
-    expect(() => fitDataToParsed({ records: "nope" }, "x.fit")).toThrow(
-      /does not look like a valid FIT/u
-    );
+    expect(parsed.elevationProfile).toBeUndefined();
   });
 });

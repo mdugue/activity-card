@@ -11,12 +11,12 @@
  */
 
 import type { Coord, TriSegment } from "@/lib/activity";
+import { legSeries, segmentProfileMetric } from "@/lib/profile-signal";
 import type { ActivityView } from "@/theme/core/theme-contract";
 
 /** A project carries two or more segments to combine. */
-export function isMultiActivity(data: ActivityView): boolean {
-  return (data.segments?.length ?? 0) >= 2;
-}
+export const isMultiActivity = (data: ActivityView): boolean =>
+  (data.segments?.length ?? 0) >= 2;
 
 export interface SegmentRoute {
   coords: Coord[];
@@ -25,7 +25,7 @@ export interface SegmentRoute {
 }
 
 /** Segments that have a usable route, in order. */
-export function segmentRoutes(data: ActivityView): SegmentRoute[] {
+export const segmentRoutes = (data: ActivityView): SegmentRoute[] => {
   const out: SegmentRoute[] = [];
   for (const s of data.segments ?? []) {
     if (s.routeCoordinates && s.routeCoordinates.length > 1) {
@@ -37,7 +37,7 @@ export function segmentRoutes(data: ActivityView): SegmentRoute[] {
     }
   }
   return out;
-}
+};
 
 export interface SegmentProfiles {
   /** Per-leg distance (km), index-aligned with `profiles`. */
@@ -50,25 +50,33 @@ export interface SegmentProfiles {
 
 /**
  * Collect a single, *consistent* metric across the segments so overlaid curves
- * can share one vertical scale: elevation when any leg has it, otherwise pace.
- * Only legs carrying the chosen metric are included (e.g. a swim leg with no
- * elevation is skipped when biking/running legs do have it).
+ * can share one vertical scale: elevation when any leg has it, otherwise pace
+ * (the shared rule in `lib/profile-signal.ts`). Only legs carrying the chosen
+ * metric are included (e.g. a swim leg with no elevation is skipped when
+ * biking/running legs do have it).
  */
-export function segmentProfiles(data: ActivityView): SegmentProfiles {
+export const segmentProfiles = (data: ActivityView): SegmentProfiles => {
   const segs = data.segments ?? [];
-  const useElevation = segs.some((s) => (s.elevationProfile?.length ?? 0) > 1);
+  const metric = segmentProfileMetric(segs);
+  const useElevation = metric === "elevation";
   const profiles: number[][] = [];
   const distances: number[] = [];
   const sports: TriSegment["sport"][] = [];
   for (const s of segs) {
-    const p = useElevation ? s.elevationProfile : s.paceProfile;
-    if (p && p.length > 1) {
+    const p = legSeries(s, metric);
+    if (p) {
       profiles.push(p);
       distances.push(s.distanceKm);
       sports.push(s.sport);
     }
   }
-  return { profiles, distances, sports, useElevation };
+  return { distances, profiles, sports, useElevation };
+};
+
+/** Per-segment profiles plus each segment's distance (the x-axis weight). */
+export interface SegmentSeries {
+  distances: number[];
+  profiles: number[][];
 }
 
 /**
@@ -76,10 +84,10 @@ export function segmentProfiles(data: ActivityView): SegmentProfiles {
  * for callers that need a fixed metric rather than `segmentProfiles`'
  * elevation-preferred pick (e.g. a theme showing a dedicated pace sparkline).
  */
-export function segmentSeries(
+export const segmentSeries = (
   data: ActivityView,
   field: "elevationProfile" | "paceProfile"
-): { distances: number[]; profiles: number[][] } {
+): SegmentSeries => {
   const profiles: number[][] = [];
   const distances: number[] = [];
   for (const s of data.segments ?? []) {
@@ -89,5 +97,5 @@ export function segmentSeries(
       distances.push(s.distanceKm);
     }
   }
-  return { profiles, distances };
-}
+  return { distances, profiles };
+};

@@ -10,7 +10,7 @@ import { EASE_PANEL, RUST_BRIGHT } from "../design/tokens";
  * gesture. Uses the app's own aspect-preserving projection (`routePath`), so
  * the silhouette is geographically faithful, never stretched.
  */
-export function RouteDraw({
+export const RouteDraw = ({
   coords,
   delay = 0,
   durationInFrames = 50,
@@ -26,7 +26,7 @@ export function RouteDraw({
   stroke?: string;
   strokeWidth?: number;
   width: number;
-}) {
+}) => {
   const frame = useCurrentFrame();
   const draw = interpolate(frame - delay, [0, durationInFrames], [0, 1], {
     easing: EASE_PANEL,
@@ -50,4 +50,4 @@ export function RouteDraw({
       />
     </svg>
   );
-}
+};

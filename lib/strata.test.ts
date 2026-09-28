@@ -16,18 +16,16 @@ import {
   strataPeakMarker,
 } from "@/lib/strata";
 
-function make(partial: Partial<ActivityData>): ActivityData {
-  return {
-    athleteName: "",
-    date: "2026-05-18",
-    distanceKm: 42,
-    durationSec: 9000,
-    location: "Elbsandstein",
-    sport: "ride",
-    title: "Test effort",
-    ...partial,
-  };
-}
+const make = (partial: Partial<ActivityData>): ActivityData => ({
+  athleteName: "",
+  date: "2026-05-18",
+  distanceKm: 42,
+  durationSec: 9000,
+  location: "Elbsandstein",
+  sport: "ride",
+  title: "Test effort",
+  ...partial,
+});
 
 const line: Coord[] = [
   [0, 0],
@@ -39,7 +37,7 @@ const line: Coord[] = [
 describe("resolveStrataSource", () => {
   test("prefers elevation, and reports its peak for the caption", () => {
     const src = resolveStrataSource(
-      make({ routeCoordinates: line, elevationProfile: [10, 40, 25, 70] })
+      make({ elevationProfile: [10, 40, 25, 70], routeCoordinates: line })
     );
     expect(src?.profileLabel).toBe("ELEVATION");
     expect(src?.elevMax).toBe(70);
@@ -48,9 +46,9 @@ describe("resolveStrataSource", () => {
   test("falls back to pace, then to swim laps", () => {
     const run = resolveStrataSource(
       make({
-        sport: "run",
-        routeCoordinates: line,
         paceProfile: [300, 290, 305],
+        routeCoordinates: line,
+        sport: "run",
       })
     );
     expect(run?.profileLabel).toBe("PACE");
@@ -58,9 +56,9 @@ describe("resolveStrataSource", () => {
 
     const swim = resolveStrataSource(
       make({
-        sport: "swim",
-        routeCoordinates: line,
         lapPacesPer100m: [110, 112, 108],
+        routeCoordinates: line,
+        sport: "swim",
       })
     );
     expect(swim?.profileLabel).toBe("LAPS");
@@ -93,19 +91,17 @@ describe("resolveStrataSource", () => {
       [3, 1],
     ];
     const data = make({
-      sport: "triathlon",
       segments: [
         {
-          sport: "bike",
           distanceKm: 40,
           durationSec: 3600,
-          routeCoordinates: bikeRoute,
           elevationProfile: [10, 40, 25, 70],
+          routeCoordinates: bikeRoute,
+          sport: "bike",
         },
         {
           // Route but NO elevation/pace → must be skipped, never concatenated
           // (otherwise this leg's route would morph against the bike's climb).
-          sport: "run",
           distanceKm: 10,
           durationSec: 3000,
           routeCoordinates: [
@@ -113,8 +109,10 @@ describe("resolveStrataSource", () => {
             [6, 6],
             [7, 5],
           ],
+          sport: "run",
         },
       ],
+      sport: "triathlon",
     });
     const src = resolveStrataSource(data);
     expect(src?.routeCoords.length).toBe(bikeRoute.length);
@@ -130,15 +128,15 @@ describe("resolveStrataSource", () => {
 
 describe("buildStrata", () => {
   const geo = buildStrata({
-    routeCoords: line,
-    profile: [0, 50, 20, 80],
-    W: 920,
     H: 880,
     K: 24,
+    W: 920,
+    profile: [0, 50, 20, 80],
+    routeCoords: line,
   });
 
   test("emits K + 1 curves, route (t=0) → profile (t=1)", () => {
-    expect(geo.curves.length).toBe(25);
+    expect(geo.curves).toHaveLength(25);
     expect(geo.curves[0].t).toBe(0);
     expect(geo.curves.at(-1)?.t).toBe(1);
   });
@@ -150,7 +148,7 @@ describe("buildStrata", () => {
 
   test("every layer is resampled to N points within the field box", () => {
     for (const c of geo.curves) {
-      expect(c.pts.length).toBe(220);
+      expect(c.pts).toHaveLength(220);
       for (const [x, y] of c.pts) {
         expect(x).toBeGreaterThanOrEqual(0);
         expect(x).toBeLessThanOrEqual(920);
@@ -204,7 +202,7 @@ describe("strataPeakMarker", () => {
       [20, 80],
     ];
     const m = strataPeakMarker(pts, 302);
-    expect(m).toMatchObject({ x: 10, y: 10, label: "302 M" });
+    expect(m).toMatchObject({ label: "302 M", x: 10, y: 10 });
   });
 });
 

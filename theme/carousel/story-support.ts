@@ -11,15 +11,15 @@ import { NO_EFFECTS } from "@/lib/photo-effects";
 import { CAROUSEL_THEMES } from "./registry";
 import type { CarouselThemeId } from "./registry";
 
-export function carouselArgs(id: CarouselThemeId) {
+export const carouselArgs = (id: CarouselThemeId) => {
   const theme = CAROUSEL_THEMES[id];
   return {
-    theme,
     colors: theme.colors.default,
     photoEffects: {
       ...NO_EFFECTS,
       filter: theme.photo.defaultFilter ?? "none",
       grain: theme.photo.defaultGrain ?? false,
     },
+    theme,
   };
-}
+};

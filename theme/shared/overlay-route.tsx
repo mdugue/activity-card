@@ -25,7 +25,7 @@ interface OverlayRouteProps {
   w: number;
 }
 
-export function OverlayRoute({
+export const OverlayRoute = ({
   routes,
   w,
   h,
@@ -36,7 +36,7 @@ export function OverlayRoute({
   markers = false,
   markerRadius = 8,
   shadow,
-}: OverlayRouteProps) {
+}: OverlayRouteProps) => {
   if (routes.length === 0) {
     return null;
   }
@@ -63,7 +63,11 @@ export function OverlayRoute({
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth={strokeWidth}
-              style={shadow ? { filter: shadow } : undefined}
+              style={
+                shadow !== undefined && shadow !== ""
+                  ? { filter: shadow }
+                  : undefined
+              }
             />
             {markers && pr.start ? (
               <circle
@@ -78,4 +82,4 @@ export function OverlayRoute({
       )}
     </>
   );
-}
+};

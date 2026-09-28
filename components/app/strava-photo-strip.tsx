@@ -22,12 +22,12 @@ interface StravaPhotoStripProps {
   selectedKey?: string | null;
 }
 
-export function StravaPhotoStrip({
+export const StravaPhotoStrip = ({
   onPick,
   photos,
   pickingKey = null,
   selectedKey = null,
-}: StravaPhotoStripProps) {
+}: StravaPhotoStripProps) => {
   if (photos.length === 0) {
     return null;
   }
@@ -47,7 +47,9 @@ export function StravaPhotoStrip({
             )}
             disabled={picking}
             key={key}
-            onClick={() => onPick(ref)}
+            onClick={() => {
+              onPick(ref);
+            }}
             type="button"
           >
             <Image
@@ -68,4 +70,4 @@ export function StravaPhotoStrip({
       })}
     </div>
   );
-}
+};

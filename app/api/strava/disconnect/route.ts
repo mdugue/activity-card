@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { clearTokens } from "@/lib/strava-cookies";
+import { hasText } from "@/lib/text";
 
 /**
  * Clearing the Strava cookies is state-changing, so reject cross-site
@@ -9,15 +10,19 @@ import { clearTokens } from "@/lib/strava-cookies";
  * Same-origin fetches send `Sec-Fetch-Site: same-origin` in all evergreen
  * browsers; the Origin fallback covers clients that omit fetch metadata.
  */
-export async function POST(request: Request) {
+export const POST = async (request: Request) => {
   const site = request.headers.get("sec-fetch-site");
-  if (site && site !== "same-origin") {
+  if (hasText(site) && site !== "same-origin") {
     return NextResponse.json({ error: "cross_origin" }, { status: 403 });
   }
   const origin = request.headers.get("origin");
-  if (!site && origin && origin !== new URL(request.url).origin) {
+  if (
+    !hasText(site) &&
+    hasText(origin) &&
+    origin !== new URL(request.url).origin
+  ) {
     return NextResponse.json({ error: "cross_origin" }, { status: 403 });
   }
   await clearTokens();
   return new NextResponse(null, { status: 204 });
-}
+};

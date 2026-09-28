@@ -10,8 +10,19 @@ import {
 } from "@phosphor-icons/react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { toast } from "sonner";
 
+import { FilledBadge } from "@/components/app/primitives/badge";
+import { CtaButton } from "@/components/app/primitives/button";
+import {
+  DisplayDialogTitle,
+  SheetDialogContent,
+} from "@/components/app/primitives/dialog";
+import {
+  PanelCard,
+  PanelCardTitle,
+} from "@/components/app/primitives/panel-card";
 import {
   SAMPLE_RIDE,
   SAMPLE_RUN,
@@ -21,19 +32,11 @@ import { StravaConnectButton } from "@/components/app/strava-connect-button";
 import { StravaPhotoStrip } from "@/components/app/strava-photo-strip";
 import { StravaPicker } from "@/components/app/strava-picker";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { CardAction, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Dialog,
   DialogClose,
-  DialogContent,
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -49,6 +52,7 @@ import { formatDuration, formatNumber } from "@/lib/format";
 import { ACTIVITY_FILE_RE, parseActivityFiles } from "@/lib/parse-activity";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import { fetchStravaPhotoFile } from "@/lib/strava-photos";
+import { hasText } from "@/lib/text";
 import { cn } from "@/lib/utils";
 
 /** What the wizard hands back when the user opens the editor. Exactly one of
@@ -100,102 +104,107 @@ const SAMPLE_PHOTOS = [
   { name: "north-sea-dusk.webp", url: "/images/dunes.webp" },
 ] as const;
 
-function activityMeta(a: {
+const activityMeta = (a: {
   distanceKm: number;
   durationSec: number;
   elevationGainM?: number;
-}): string {
+}): string => {
   const parts = [`${formatNumber(a.distanceKm, 1)} km`];
-  if (a.elevationGainM) {
-    parts.push(`${formatNumber(a.elevationGainM)} m`);
+  const gain = a.elevationGainM;
+  if (gain !== undefined && gain !== 0 && !Number.isNaN(gain)) {
+    parts.push(`${formatNumber(gain)} m`);
   }
   parts.push(formatDuration(a.durationSec));
   return parts.join(" · ");
-}
+};
 
 // Sample photos live in /public; fetch one back into a File so it flows through
 // the same File-based photo pipeline the editor already uses for uploads.
-async function urlToFile(url: string, name: string): Promise<File> {
-  const blob = await fetch(url).then((r) => r.blob());
+const urlToFile = async (url: string, name: string): Promise<File> => {
+  const response = await fetch(url);
+  const blob = await response.blob();
   return new File([blob], name, { type: blob.type });
+};
+
+/** The footer's status line: a short kicker over a one-line hint. */
+interface FooterNote {
+  hint: string;
+  kicker: string;
 }
 
-function footerNote(
-  hasActivity: boolean,
-  hasPhoto: boolean
-): { hint: string; kicker: string } {
+const footerNote = (hasActivity: boolean, hasPhoto: boolean): FooterNote => {
   if (!hasActivity) {
     return {
-      kicker: "Start with an activity",
       hint: "Add an activity to continue — the photo is optional.",
+      kicker: "Start with an activity",
     };
   }
   if (hasPhoto) {
     return {
-      kicker: "All set",
       hint: "You can keep refining everything in the editor.",
+      kicker: "All set",
     };
   }
   return {
-    kicker: "Photo is optional",
     hint: "You can still add a photo inside the editor.",
+    kicker: "Photo is optional",
   };
-}
+};
 
-function activityKicker(activity: WizardActivity): string {
+// The OAuth-init Route Handler redirects to Strava's consent screen.
+const handleReauth = (): void => {
+  if (typeof window !== "undefined") {
+    window.location.href = "/api/strava/authorize";
+  }
+};
+
+const activityKicker = (activity: WizardActivity): string => {
   if (activity.kind === "sample") {
     return "Sample loaded";
   }
   return activity.source === "strava" ? "From Strava" : "File loaded";
-}
+};
 
-function OrDivider() {
-  return (
-    <div className="my-2.5 flex items-center gap-3">
-      <span className="bg-border h-px flex-1" />
-      <span className="caption-micro">or</span>
-      <span className="bg-border h-px flex-1" />
-    </div>
-  );
-}
+const OrDivider = () => (
+  <div className="my-2.5 flex items-center gap-3">
+    <span className="bg-border h-px flex-1" />
+    <span className="caption-micro">or</span>
+    <span className="bg-border h-px flex-1" />
+  </div>
+);
 
 /** A wizard step rendered as a shadcn Card; the active step gets a primary
  * ring so attention flows from the activity to the (optional) photo. */
-function StepCard({
+const StepCard = ({
   active,
   badge,
-  badgeClass,
+  badgeTone,
   children,
   num,
   title,
 }: {
   active: boolean;
   badge: string;
-  badgeClass: string;
+  badgeTone: "inverse" | "primary";
   children: React.ReactNode;
   num: string;
   title: string;
-}) {
-  return (
-    <Card
-      className={cn("shrink-0 gap-4", active && "ring-primary ring-2")}
-      size="sm"
-    >
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <span className="font-heading">{num}</span>
-          {title}
-        </CardTitle>
-        <CardAction>
-          <Badge className={cn("px-2 py-1", badgeClass)}>{badge}</Badge>
-        </CardAction>
-      </CardHeader>
-      <CardContent className="flex flex-col">{children}</CardContent>
-    </Card>
-  );
-}
+}) => (
+  <PanelCard active={active} className="shrink-0" size="sm">
+    <CardHeader>
+      <PanelCardTitle>
+        <span className="font-heading">{num}</span>
+        {title}
+      </PanelCardTitle>
+      <CardAction>
+        <FilledBadge tone={badgeTone}>{badge}</FilledBadge>
+      </CardAction>
+    </CardHeader>
+    <CardContent className="flex flex-col">{children}</CardContent>
+  </PanelCard>
+);
 
-function DropZone({
+const DropZone = ({
   cta,
   dragging,
   hint,
@@ -203,7 +212,7 @@ function DropZone({
   onBrowse,
   onDragStateChange,
   onFiles,
-  parsing,
+  parsing = false,
 }: {
   cta: string;
   dragging: boolean;
@@ -213,43 +222,64 @@ function DropZone({
   onDragStateChange: (dragging: boolean) => void;
   onFiles: (files: FileList) => void;
   parsing?: boolean;
-}) {
-  return (
-    <button
-      className={cn(
-        "border-foreground/30 bg-foreground/[0.015] hover:border-primary hover:bg-primary/5 flex items-center gap-3 border border-dashed px-3 py-2.5 text-left transition-colors sm:flex-col sm:gap-2 sm:px-4 sm:py-4 sm:text-center",
-        dragging && "border-primary bg-primary/5"
-      )}
-      onClick={onBrowse}
-      onDragLeave={(e) => {
-        e.preventDefault();
-        onDragStateChange(false);
-      }}
-      onDragOver={(e) => {
-        e.preventDefault();
-        onDragStateChange(true);
-      }}
-      onDrop={(e) => {
-        e.preventDefault();
-        onDragStateChange(false);
-        if (e.dataTransfer.files.length) {
-          onFiles(e.dataTransfer.files);
-        }
-      }}
-      type="button"
-    >
-      {parsing ? <Spinner className="text-primary size-6 sm:size-9" /> : icon}
-      <span className="text-muted-foreground flex-1 text-sm sm:flex-none">
-        {hint}
+}) => (
+  <button
+    className={cn(
+      "border-foreground/30 bg-foreground/[0.015] hover:border-primary hover:bg-primary/5 flex items-center gap-3 border border-dashed px-3 py-2.5 text-left transition-colors sm:flex-col sm:gap-2 sm:px-4 sm:py-4 sm:text-center",
+      dragging && "border-primary bg-primary/5"
+    )}
+    onClick={onBrowse}
+    onDragLeave={(e) => {
+      e.preventDefault();
+      onDragStateChange(false);
+    }}
+    onDragOver={(e) => {
+      e.preventDefault();
+      onDragStateChange(true);
+    }}
+    onDrop={(e) => {
+      e.preventDefault();
+      onDragStateChange(false);
+      if (e.dataTransfer.files.length) {
+        onFiles(e.dataTransfer.files);
+      }
+    }}
+    type="button"
+  >
+    {parsing ? (
+      // `contents`: the wrapper only tints the spinner (it draws in
+      // currentColor) — the svg stays the flex item.
+      <span className="text-primary contents">
+        <Spinner className="size-6 sm:size-9" />
       </span>
-      <span className="bg-foreground font-heading text-background inline-flex h-8 shrink-0 items-center px-3 text-xs tracking-wide uppercase sm:h-9 sm:px-5 sm:text-sm">
-        {cta}
-      </span>
-    </button>
-  );
+    ) : (
+      icon
+    )}
+    <span className="text-muted-foreground flex-1 text-sm sm:flex-none">
+      {hint}
+    </span>
+    <span className="bg-foreground font-heading text-background inline-flex h-8 shrink-0 items-center px-3 text-xs tracking-wide uppercase sm:h-9 sm:px-5 sm:text-sm">
+      {cta}
+    </span>
+  </button>
+);
+
+/** The loaded item's thumbnail, read by `bg-(image:--thumb)`. */
+interface ThumbVars extends CSSProperties {
+  "--thumb": string;
 }
 
-function LoadedRow({
+const LoadedThumb = ({ src }: { src: string }) => {
+  const thumbVars: ThumbVars = { "--thumb": `url(${src})` };
+  return (
+    <div
+      className="w-24 shrink-0 bg-(image:--thumb) bg-cover bg-center"
+      style={thumbVars}
+    />
+  );
+};
+
+const LoadedRow = ({
   kicker,
   name,
   onRemove,
@@ -265,44 +295,37 @@ function LoadedRow({
   replaceLabel: string;
   sub?: string;
   thumb?: string;
-}) {
-  return (
-    <>
-      <div className="bg-foreground text-background flex items-stretch overflow-hidden">
-        {thumb ? (
-          <div
-            className="w-24 shrink-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${thumb})` }}
-          />
-        ) : null}
-        <div className="flex min-w-0 flex-1 items-center gap-3 p-4">
-          <span className="bg-primary text-primary-foreground flex size-7 shrink-0 items-center justify-center">
-            <CheckIcon className="size-4" weight="duotone" />
-          </span>
-          <div className="min-w-0">
-            <div className="caption-micro text-background/60">{kicker}</div>
-            <div className="truncate font-mono text-sm">{name}</div>
-            {sub ? (
-              <div className="text-background/70 truncate text-xs">{sub}</div>
-            ) : null}
-          </div>
+}) => (
+  <>
+    <div className="bg-foreground text-background flex items-stretch overflow-hidden">
+      {hasText(thumb) ? <LoadedThumb src={thumb} /> : null}
+      <div className="flex min-w-0 flex-1 items-center gap-3 p-4">
+        <span className="bg-primary text-primary-foreground flex size-7 shrink-0 items-center justify-center">
+          <CheckIcon className="size-4" weight="duotone" />
+        </span>
+        <div className="min-w-0">
+          <div className="caption-micro text-background/60">{kicker}</div>
+          <div className="truncate font-mono text-sm">{name}</div>
+          {hasText(sub) ? (
+            <div className="text-background/70 truncate text-xs">{sub}</div>
+          ) : null}
         </div>
       </div>
-      <div className="mt-3 flex gap-4">
-        <Button onClick={onReplace} size="xs" variant="link">
-          {replaceLabel}
-        </Button>
-        <Button onClick={onRemove} size="xs" variant="link">
-          Remove
-        </Button>
-      </div>
-    </>
-  );
-}
+    </div>
+    <div className="mt-3 flex gap-4">
+      <Button onClick={onReplace} size="xs" variant="link">
+        {replaceLabel}
+      </Button>
+      <Button onClick={onRemove} size="xs" variant="link">
+        Remove
+      </Button>
+    </div>
+  </>
+);
 
 // STEP 1 — activity (required): a drop zone, Strava, and samples, or a loaded
 // confirmation once something is chosen.
-function ActivityStep({
+const ActivityStep = ({
   active,
   activity,
   dragging,
@@ -326,14 +349,14 @@ function ActivityStep({
   onRemove: () => void;
   parsing: boolean;
   strava: UseStravaConnection;
-}) {
+}) => {
   const stravaLoaded =
     activity?.kind === "parts" && activity.source === "strava";
   return (
     <StepCard
       active={active}
       badge="Required"
-      badgeClass="bg-foreground text-background"
+      badgeTone="inverse"
       num="01"
       title="Add your activity"
     >
@@ -391,7 +414,7 @@ function ActivityStep({
               variant="outline"
             >
               Pick from Strava
-              {strava.athlete?.firstname
+              {hasText(strava.athlete?.firstname)
                 ? ` · ${strava.athlete.firstname}`
                 : ""}
             </Button>
@@ -411,9 +434,10 @@ function ActivityStep({
               <span className="caption-micro">Try a sample</span>
               {SAMPLES.map(({ data, sport }) => (
                 <Button
-                  className="px-3"
                   key={sport}
-                  onClick={() => onLoadSample(data)}
+                  onClick={() => {
+                    onLoadSample(data);
+                  }}
                   size="xs"
                   variant="outline"
                 >
@@ -426,11 +450,11 @@ function ActivityStep({
       )}
     </StepCard>
   );
-}
+};
 
 // STEP 2 — photo (recommended, optional): drop zone + sample thumbs + skip, a
 // loaded thumbnail, or a quiet "skipped" notice.
-function PhotoStepBody({
+const PhotoStepBody = ({
   dragging,
   onBrowse,
   onChooseSample,
@@ -456,7 +480,7 @@ function PhotoStepBody({
   photo: WizardPhoto | null;
   photoSkipped: boolean;
   stravaPhotos: StravaPhotoRef[];
-}) {
+}) => {
   if (photo) {
     return (
       <LoadedRow
@@ -517,9 +541,11 @@ function PhotoStepBody({
           <div className="flex gap-2">
             {SAMPLE_PHOTOS.map((p) => (
               <button
-                className="outline-foreground/20 hover:outline-primary relative h-14 w-20 overflow-hidden outline outline-1 transition-all hover:outline-2"
+                className="outline-foreground/20 hover:outline-primary transition-outline relative h-14 w-20 overflow-hidden outline outline-1 hover:outline-2"
                 key={p.url}
-                onClick={() => onChooseSample(p.url, p.name)}
+                onClick={() => {
+                  onChooseSample(p.url, p.name);
+                }}
                 type="button"
               >
                 <Image
@@ -541,31 +567,139 @@ function PhotoStepBody({
       </div>
     </>
   );
-}
+};
 
-function PhotoStep({
+const PhotoStep = ({
   active,
   ...body
-}: { active: boolean } & React.ComponentProps<typeof PhotoStepBody>) {
-  return (
-    <StepCard
-      active={active}
-      badge="Recommended"
-      badgeClass="bg-primary text-primary-foreground"
-      num="02"
-      title="Add a photo"
-    >
-      <PhotoStepBody {...body} />
-    </StepCard>
-  );
-}
+}: { active: boolean } & React.ComponentProps<typeof PhotoStepBody>) => (
+  <StepCard
+    active={active}
+    badge="Recommended"
+    badgeTone="primary"
+    num="02"
+    title="Add a photo"
+  >
+    <PhotoStepBody {...body} />
+  </StepCard>
+);
 
-export function OnboardingWizard({
+/** Title left, close top-right. */
+const WizardHeader = () => (
+  <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-3 sm:px-8 sm:pt-6 sm:pb-4">
+    <div className="flex flex-col gap-1.5">
+      <DisplayDialogTitle>Two steps to your card</DisplayDialogTitle>
+      <DialogDescription className="hidden max-w-md sm:block">
+        Bring in an activity, add a photo, then make it yours in the editor.
+      </DialogDescription>
+    </div>
+    <DialogClose render={<Button size="icon-sm" variant="outline" />}>
+      <XIcon />
+      <span className="sr-only">Close</span>
+    </DialogClose>
+  </div>
+);
+
+/** One row: status on the left, the gated hand-off on the right. On mobile
+ *  the description sits beside a compact "Open". */
+const WizardFooter = ({
+  disabled,
+  note,
+  onFinish,
+}: {
+  disabled: boolean;
+  note: FooterNote;
+  onFinish: () => void;
+}) => (
+  <div className="border-border bg-background flex items-center gap-3 border-t px-6 py-3 sm:gap-4 sm:px-8 sm:py-4">
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <span className="caption-micro truncate">{note.kicker}</span>
+      <span className="text-muted-foreground hidden truncate text-sm sm:block">
+        {note.hint}
+      </span>
+    </div>
+    <CtaButton
+      className="ml-auto shrink-0"
+      disabled={disabled}
+      onClick={onFinish}
+    >
+      <span className="sm:hidden">Open</span>
+      <span className="hidden sm:inline">Open the editor</span>
+      <ArrowRightIcon />
+    </CtaButton>
+  </div>
+);
+
+/** Strava activity selection — a dialog layered over the wizard. Rendered
+ *  nested in the wizard's tree (not a sibling portal) so Base UI links the two
+ *  modals; otherwise the wizard marks the picker's portal aria-hidden. Picking
+ *  or combining hands the activity back to step 1 so the photo step still
+ *  follows. */
+const StravaPickerDialog = ({
+  onActivityLoaded,
+  onOpenChange,
+  open,
+}: {
+  onActivityLoaded: (parts: ParsedActivity[]) => void;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+}) => (
+  <Dialog onOpenChange={onOpenChange} open={open}>
+    <SheetDialogContent
+      className="flex max-h-[90dvh] w-full max-w-2xl flex-col sm:max-h-[85vh]"
+      showCloseButton={false}
+    >
+      <div aria-hidden className="bg-foreground h-1 shrink-0" />
+      <DialogTitle className="sr-only">Pick from Strava</DialogTitle>
+      <DialogDescription className="sr-only">
+        Choose a recent Strava activity to turn into a card.
+      </DialogDescription>
+      <div className="flex-1 overflow-y-auto">
+        <StravaPicker
+          embedded
+          onActivityLoaded={onActivityLoaded}
+          onCancel={() => {
+            onOpenChange(false);
+          }}
+          onReauth={handleReauth}
+        />
+      </div>
+    </SheetDialogContent>
+  </Dialog>
+);
+
+/** Resolve the staged photo into the File the editor adopts (`null` when there
+ *  is none, or it couldn't be fetched). */
+const resolvePhotoFile = async (
+  photo: WizardPhoto | null
+): Promise<File | null> => {
+  if (photo === null) {
+    return null;
+  }
+  if (photo.kind === "upload") {
+    return photo.file;
+  }
+  if (photo.kind === "sample") {
+    try {
+      return await urlToFile(photo.url, photo.name);
+    } catch {
+      return null;
+    }
+  }
+  try {
+    return await fetchStravaPhotoFile(photo.ref);
+  } catch {
+    toast.error("Couldn't load the photo from Strava — opening without it.");
+    return null;
+  }
+};
+
+export const OnboardingWizard = ({
   initialStravaPickerOpen = false,
   onComplete,
   onOpenChange,
   open,
-}: OnboardingWizardProps) {
+}: OnboardingWizardProps) => {
   const strava = useStravaConnection();
   const [activity, setActivity] = useState<WizardActivity | null>(null);
   const [photo, setPhoto] = useState<WizardPhoto | null>(null);
@@ -582,23 +716,27 @@ export function OnboardingWizard({
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Open the Strava picker straight away when we land back from OAuth already
-  // connected (the flag flips after mount, so a useState initialiser misses it).
-  useEffect(() => {
+  // connected (the flag flips after mount, so a useState initialiser misses
+  // it) — adjusted during render whenever the flag turns on.
+  const [prevInitialPickerOpen, setPrevInitialPickerOpen] = useState(false);
+  if (initialStravaPickerOpen !== prevInitialPickerOpen) {
+    setPrevInitialPickerOpen(initialStravaPickerOpen);
     if (initialStravaPickerOpen) {
-      // oxlint-disable-next-line react/set-state-in-effect
       setStravaPickerOpen(true);
     }
-  }, [initialStravaPickerOpen]);
+  }
 
   // Revoke an uploaded photo's object URL when it's replaced or the wizard
   // unmounts. Sample photos use a static /public path, so they're left alone.
-  useEffect(() => {
-    if (photo?.kind !== "upload") {
-      return;
-    }
-    const { url } = photo;
-    return () => URL.revokeObjectURL(url);
-  }, [photo]);
+  const uploadUrl = photo?.kind === "upload" ? photo.url : null;
+  useEffect(
+    () => () => {
+      if (uploadUrl !== null) {
+        URL.revokeObjectURL(uploadUrl);
+      }
+    },
+    [uploadUrl]
+  );
 
   const loadFiles = async (files: FileList) => {
     if (parsing) {
@@ -612,40 +750,39 @@ export function OnboardingWizard({
       const matched = [...files].filter((f) => ACTIVITY_FILE_RE.test(f.name));
       setActivity({
         kind: "parts",
-        source: "upload",
-        parts,
-        name:
-          matched.length === 1 ? matched[0].name : `${matched.length} files`,
         label: parts[0].title,
         meta: activityMeta(parts[0]),
+        name:
+          matched.length === 1 ? matched[0].name : `${matched.length} files`,
+        parts,
+        source: "upload",
       });
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Could not read that file."
       );
-    } finally {
-      setParsing(false);
     }
+    setParsing(false);
   };
 
   const loadSample = (data: ActivityData) => {
     setActivity({
-      kind: "sample",
       data,
+      kind: "sample",
       label: data.title,
       meta: activityMeta(data),
     });
   };
 
   const handleStravaPicked = (parts: ParsedActivity[]) => {
-    const first = parts[0];
+    const [first] = parts;
     setActivity({
       kind: "parts",
-      source: "strava",
-      parts,
-      name: parts.length === 1 ? first.title : `${parts.length} activities`,
       label: first.title,
       meta: activityMeta(first),
+      name: parts.length === 1 ? first.title : `${parts.length} activities`,
+      parts,
+      source: "strava",
     });
     // A previously staged Strava photo belongs to the previous activity.
     setPhoto((prev) => (prev?.kind === "strava" ? null : prev));
@@ -664,16 +801,10 @@ export function OnboardingWizard({
       ? activity.parts.flatMap((p) => p.stravaPhotos ?? [])
       : [];
 
-  const handleReauth = () => {
-    if (typeof window !== "undefined") {
-      window.location.href = "/api/strava/authorize";
-    }
-  };
-
   const choosePhoto = (file: File) => {
     setPhoto({
-      kind: "upload",
       file,
+      kind: "upload",
       name: file.name,
       url: URL.createObjectURL(file),
     });
@@ -681,42 +812,24 @@ export function OnboardingWizard({
   };
 
   const finish = async () => {
-    if (!activity || finishing) {
+    if (activity === null || finishing) {
       return;
     }
     setFinishing(true);
-    let photoFile: File | null = null;
-    if (photo?.kind === "upload") {
-      photoFile = photo.file;
-    } else if (photo?.kind === "sample") {
-      try {
-        photoFile = await urlToFile(photo.url, photo.name);
-      } catch {
-        photoFile = null;
-      }
-    } else if (photo?.kind === "strava") {
-      try {
-        photoFile = await fetchStravaPhotoFile(photo.ref);
-      } catch {
-        toast.error(
-          "Couldn't load the photo from Strava — opening without it."
-        );
-        photoFile = null;
-      }
-    }
+    const photoFile = await resolvePhotoFile(photo);
     onComplete(
       activity.kind === "sample"
-        ? { sample: activity.data, source: "upload", photo: photoFile }
-        : { parts: activity.parts, source: activity.source, photo: photoFile }
+        ? { photo: photoFile, sample: activity.data, source: "upload" }
+        : { parts: activity.parts, photo: photoFile, source: activity.source }
     );
   };
 
-  const note = footerNote(Boolean(activity), Boolean(photo));
+  const note = footerNote(activity !== null, photo !== null);
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent
-        className="bg-background flex max-h-[96dvh] w-full max-w-[calc(100%-0.5rem)] flex-col gap-0 p-0 sm:max-h-[88vh] sm:max-w-[60rem]"
+      <SheetDialogContent
+        className="flex max-h-[96dvh] w-full max-w-[calc(100%-0.5rem)] flex-col sm:max-h-[88vh] sm:max-w-[60rem]"
         showCloseButton={false}
       >
         {/* Brutalist top accent, as a child bar. The dialog deliberately has
@@ -728,8 +841,9 @@ export function OnboardingWizard({
           className="hidden"
           multiple
           onChange={(e) => {
-            if (e.target.files?.length) {
-              void loadFiles(e.target.files);
+            const { files } = e.target;
+            if (files !== null && files.length > 0) {
+              void loadFiles(files);
             }
             e.target.value = "";
           }}
@@ -740,8 +854,8 @@ export function OnboardingWizard({
           accept="image/*"
           className="hidden"
           onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) {
+            const file = e.target.files?.item(0);
+            if (file !== null && file !== undefined) {
               choosePhoto(file);
             }
             e.target.value = "";
@@ -750,22 +864,7 @@ export function OnboardingWizard({
           type="file"
         />
 
-        {/* Header — title left, close top-right. */}
-        <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-3 sm:px-8 sm:pt-6 sm:pb-4">
-          <div className="flex flex-col gap-1.5">
-            <DialogTitle className="text-2xl sm:text-3xl">
-              Two steps to your card
-            </DialogTitle>
-            <DialogDescription className="hidden max-w-md sm:block">
-              Bring in an activity, add a photo, then make it yours in the
-              editor.
-            </DialogDescription>
-          </div>
-          <DialogClose render={<Button size="icon-sm" variant="outline" />}>
-            <XIcon />
-            <span className="sr-only">Close</span>
-          </DialogClose>
-        </div>
+        <WizardHeader />
 
         {/* Body — both steps at once. Flex column when stacked (touch) so the
             cards size to content and can't overlap; a 2-col grid on desktop.
@@ -776,21 +875,27 @@ export function OnboardingWizard({
             top/side padding, overflow-y-auto shaves the ring's outer edge. */}
         <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-2 sm:px-8 md:grid md:grid-cols-2 md:items-start">
           <ActivityStep
-            active={!activity}
+            active={activity === null}
             activity={activity}
             dragging={dragTarget === "activity"}
             onBrowse={() => activityInputRef.current?.click()}
-            onDragStateChange={(d) => setDragTarget(d ? "activity" : null)}
-            onFiles={loadFiles}
+            onDragStateChange={(d) => {
+              setDragTarget(d ? "activity" : null);
+            }}
+            onFiles={(files) => {
+              void loadFiles(files);
+            }}
             onLoadSample={loadSample}
-            onPickFromStrava={() => setStravaPickerOpen(true)}
+            onPickFromStrava={() => {
+              setStravaPickerOpen(true);
+            }}
             onRemove={removeActivity}
             parsing={parsing}
             strava={strava}
           />
 
           <PhotoStep
-            active={Boolean(activity) && !photo && !photoSkipped}
+            active={activity !== null && photo === null && !photoSkipped}
             dragging={dragTarget === "photo"}
             onBrowse={() => photoInputRef.current?.click()}
             onChooseSample={(url, name) => {
@@ -806,68 +911,44 @@ export function OnboardingWizard({
               });
               setPhotoSkipped(false);
             }}
-            onDragStateChange={(d) => setDragTarget(d ? "photo" : null)}
+            onDragStateChange={(d) => {
+              setDragTarget(d ? "photo" : null);
+            }}
             onFiles={(files) => {
-              if (files[0]) {
-                choosePhoto(files[0]);
+              const file = files.item(0);
+              if (file !== null) {
+                choosePhoto(file);
               }
             }}
-            onRemove={() => setPhoto(null)}
-            onSkip={() => setPhotoSkipped(true)}
-            onUnskip={() => setPhotoSkipped(false)}
+            onRemove={() => {
+              setPhoto(null);
+            }}
+            onSkip={() => {
+              setPhotoSkipped(true);
+            }}
+            onUnskip={() => {
+              setPhotoSkipped(false);
+            }}
             photo={photo}
             photoSkipped={photoSkipped}
             stravaPhotos={stravaPhotos}
           />
         </div>
 
-        {/* Footer — one row: status on the left, the gated hand-off on the
-            right. On mobile the description sits beside a compact "Open". */}
-        <div className="border-border bg-background flex items-center gap-3 border-t px-6 py-3 sm:gap-4 sm:px-8 sm:py-4">
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="caption-micro truncate">{note.kicker}</span>
-            <span className="text-muted-foreground hidden truncate text-sm sm:block">
-              {note.hint}
-            </span>
-          </div>
-          <Button
-            className="font-heading ml-auto h-11 shrink-0 px-6 text-base tracking-wide uppercase sm:h-12 sm:px-8 sm:text-lg"
-            disabled={!activity || finishing}
-            onClick={finish}
-            size="lg"
-          >
-            <span className="sm:hidden">Open</span>
-            <span className="hidden sm:inline">Open the editor</span>
-            <ArrowRightIcon />
-          </Button>
-        </div>
+        <WizardFooter
+          disabled={activity === null || finishing}
+          note={note}
+          onFinish={() => {
+            void finish();
+          }}
+        />
 
-        {/* Strava activity selection — a dialog layered over the wizard.
-              Nested in the tree (not a sibling portal) so Base UI links the
-              two modals; otherwise the wizard marks the picker's portal
-              aria-hidden. Picking or combining hands the activity back to
-              step 1 so the photo step still follows. */}
-        <Dialog onOpenChange={setStravaPickerOpen} open={stravaPickerOpen}>
-          <DialogContent
-            className="bg-background flex max-h-[90dvh] w-full max-w-2xl flex-col gap-0 p-0 sm:max-h-[85vh]"
-            showCloseButton={false}
-          >
-            <div aria-hidden className="bg-foreground h-1 shrink-0" />
-            <DialogTitle className="sr-only">Pick from Strava</DialogTitle>
-            <DialogDescription className="sr-only">
-              Choose a recent Strava activity to turn into a card.
-            </DialogDescription>
-            <div className="flex-1 overflow-y-auto">
-              <StravaPicker
-                embedded
-                onActivityLoaded={handleStravaPicked}
-                onCancel={() => setStravaPickerOpen(false)}
-                onReauth={handleReauth}
-              />
-            </div>
-          </DialogContent>
-        </Dialog>
-      </DialogContent>
+        <StravaPickerDialog
+          onActivityLoaded={handleStravaPicked}
+          onOpenChange={setStravaPickerOpen}
+          open={stravaPickerOpen}
+        />
+      </SheetDialogContent>
     </Dialog>
   );
-}
+};

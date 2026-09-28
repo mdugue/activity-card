@@ -26,33 +26,12 @@ interface ActivityExtras {
 }
 
 export type StravaActivityDetail = Schemas["DetailedActivity"] & ActivityExtras;
-export type StravaSummary = Schemas["SummaryActivity"];
-export type StravaStats = Schemas["ActivityStats"];
-export type StravaSportType = Schemas["SportType"];
 
 /**
- * Stream payloads. We always request `key_by_type=true` and read each
- * channel's `.data` array generically, so a permissive record is more
- * practical than the generated `StreamSet` (whose per-channel `data` is
- * optional and strongly typed, which the parser doesn't need).
+ * Stream payloads (channel name → samples), as parsed at the fetch boundary.
+ * We always request `key_by_type=true` and decode each channel's `.data`
+ * sample by sample, so a permissive record is more practical than the
+ * generated `StreamSet` (whose per-channel `data` is optional and strongly
+ * typed, which the parser doesn't need).
  */
-export interface StravaStream<T> {
-  data: T[];
-  original_size?: number;
-  resolution?: string;
-  series_type?: string;
-  type: string;
-}
-
-/**
- * One item of `/activities/{id}/photos?size=N&photo_sources=true`. The
- * Swagger spec doesn't model this endpoint; the shape is observed from the
- * live API — `urls` is keyed by the requested size.
- */
-export interface StravaPhotoListItem {
-  source?: number;
-  unique_id?: string;
-  urls?: Record<string, string>;
-}
-
-export type StravaStreams = Record<string, StravaStream<unknown>>;
+export type { StravaStreams } from "./strava-schemas";

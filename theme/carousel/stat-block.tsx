@@ -6,8 +6,8 @@ import type { StatItem } from "@/theme/carousel/stats";
 import type { FontPair } from "@/theme/carousel/theme-tokens";
 
 const TABULAR: React.CSSProperties = {
-  fontVariantNumeric: "tabular-nums",
   fontFeatureSettings: '"tnum" 1',
+  fontVariantNumeric: "tabular-nums",
 };
 
 interface StatProps {
@@ -19,33 +19,35 @@ interface StatProps {
   shadow?: string;
 }
 
-export function Stat({
+export const Stat = ({
   item,
   fonts,
   ink,
   muted,
   numeralSize,
   shadow,
-}: StatProps) {
+}: StatProps) => {
+  // An empty shadow means "none" — leave the property unset.
+  const textShadow = shadow === "" ? undefined : shadow;
   return (
     <div>
       <div
         style={{
+          color: muted,
           fontFamily: fonts.mono,
           fontSize: 17,
           fontWeight: 500,
           letterSpacing: "0.18em",
-          color: muted,
+          textShadow,
           textTransform: "uppercase",
-          textShadow: shadow || undefined,
         }}
       >
         {item.label}
       </div>
       <div
         style={{
-          display: "flex",
           alignItems: "baseline",
+          display: "flex",
           gap: 8,
           marginTop: 8,
         }}
@@ -53,13 +55,13 @@ export function Stat({
         <span
           style={{
             ...TABULAR,
-            fontFamily: fonts.numeral,
-            fontWeight: fonts.numeralWeight,
-            fontSize: numeralSize,
-            lineHeight: 0.86,
-            letterSpacing: "-0.01em",
             color: ink,
-            textShadow: shadow || undefined,
+            fontFamily: fonts.numeral,
+            fontSize: numeralSize,
+            fontWeight: fonts.numeralWeight,
+            letterSpacing: "-0.01em",
+            lineHeight: 0.86,
+            textShadow,
           }}
         >
           {item.value}
@@ -67,12 +69,12 @@ export function Stat({
         {item.unit ? (
           <span
             style={{
+              color: muted,
               fontFamily: fonts.mono,
               fontSize: Math.round(numeralSize * 0.26),
               fontWeight: 500,
               letterSpacing: "0.04em",
-              color: muted,
-              textShadow: shadow || undefined,
+              textShadow,
             }}
           >
             {item.unit}
@@ -81,4 +83,4 @@ export function Stat({
       </div>
     </div>
   );
-}
+};

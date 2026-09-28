@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 
 import { expect, test } from "@playwright/test";
 import type { Download, Page } from "@playwright/test";
+import { z } from "zod";
 
 import {
   QUADRANT_PNG_BASE64,
@@ -14,6 +15,9 @@ import {
   selectSingleCard,
   selectTheme,
 } from "./helpers";
+
+/** The slice of the published `data-effort-photo` descriptor this spec reads. */
+const PhotoDrawSchema = z.object({ src: z.string().optional() });
 
 /**
  * Regression guard: the uploaded background photo must actually land in the
@@ -32,15 +36,15 @@ import {
  */
 
 const MAGENTA_PHOTO = {
-  name: "bg.png",
-  mimeType: "image/png",
   buffer: Buffer.from(SOLID_MAGENTA_PNG_BASE64, "base64"),
+  mimeType: "image/png",
+  name: "bg.png",
 };
 
 const QUADRANT_PHOTO = {
-  name: "quadrants.png",
-  mimeType: "image/png",
   buffer: Buffer.from(QUADRANT_PNG_BASE64, "base64"),
+  mimeType: "image/png",
+  name: "quadrants.png",
 };
 
 const PHOTO_INPUT = 'input[type="file"][accept="image/*"]';
@@ -51,7 +55,10 @@ const PHOTO_INPUT = 'input[type="file"][accept="image/*"]';
  * skipped and the majority hue wins — enough to tell "the photo landed the
  * right way round" from "it is mirrored, offset or missing".
  */
-async function quadrantHues(page: Page, download: Download): Promise<string[]> {
+const quadrantHues = async (
+  page: Page,
+  download: Download
+): Promise<string[]> => {
   const path = await download.path();
   const bytes = await fs.readFile(path);
   return await page.evaluate(async (dataB64: string) => {
@@ -72,14 +79,15 @@ async function quadrantHues(page: Page, download: Download): Promise<string[]> {
       canvas.width,
       canvas.height
     );
+    // Type and scrim wash out the hue; only judge clearly coloured pixels.
+    const minChroma = 40;
     const hueOf = (r: number, g: number, b: number): string | null => {
       const max = Math.max(r, g, b);
       const min = Math.min(r, g, b);
-      // Type and scrim wash out the hue; only judge clearly coloured pixels.
-      if (max - min < 40) {
+      if (max - min < minChroma) {
         return null;
       }
-      if (r === max && g > b + 40) {
+      if (r === max && g > b + minChroma) {
         return "yellow";
       }
       if (r === max) {
@@ -103,7 +111,7 @@ async function quadrantHues(page: Page, download: Download): Promise<string[]> {
         for (let x = cx - span; x <= cx + span; x += 4) {
           const i = (y * width + x) * 4;
           const hue = hueOf(data[i], data[i + 1], data[i + 2]);
-          if (hue) {
+          if (hue !== null) {
             counts.set(hue, (counts.get(hue) ?? 0) + 1);
           }
         }
@@ -119,7 +127,7 @@ async function quadrantHues(page: Page, download: Download): Promise<string[]> {
       return best;
     });
   }, bytes.toString("base64"));
-}
+};
 
 /**
  * Decode a downloaded PNG in-page and return the fraction of sampled pixels
@@ -127,10 +135,10 @@ async function quadrantHues(page: Page, download: Download): Promise<string[]> {
  * uploaded background is solid magenta, so a healthy export reads mostly
  * magenta; an export that dropped the photo reads ~none.
  */
-async function magentaFraction(
+const magentaFraction = async (
   page: Page,
   download: Download
-): Promise<number> {
+): Promise<number> => {
   const path = await download.path();
   const bytes = await fs.readFile(path);
   const base64 = bytes.toString("base64");
@@ -161,24 +169,24 @@ async function magentaFraction(
         const r = data[i];
         const g = data[i + 1];
         const b = data[i + 2];
-        total++;
+        total += 1;
         // Tolerant of overlays/desaturation: magenta survives as long as red
         // and blue stay well above green.
         if (r > 80 && b > 80 && g + 30 < r && g + 30 < b) {
-          magenta++;
+          magenta += 1;
         }
       }
     }
     return total === 0 ? 0 : magenta / total;
   }, base64);
-}
+};
 
 /** Upload the magenta photo onto `theme` and download its 4:5 feed export. */
-async function exportSingleCardWithPhoto(
+const exportSingleCardWithPhoto = async (
   page: Page,
   theme: string,
   query = ""
-): Promise<number> {
+): Promise<number> => {
   await enterEditViaUpload(page, query);
   await selectSingleCard(page);
   await selectTheme(page, theme);
@@ -189,7 +197,7 @@ async function exportSingleCardWithPhoto(
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: /download instagram feed/iu }).click();
   return await magentaFraction(page, await downloadPromise);
-}
+};
 
 test("single-card Photo export embeds the uploaded background", async ({
   page,
@@ -233,7 +241,10 @@ test("single-card Photo export embeds the background via the photo composite", a
 });
 
 /** Export Altitude over the four-quadrant photo and read back its quadrants. */
-async function exportQuadrantCard(page: Page, query = ""): Promise<string[]> {
+const exportQuadrantCard = async (
+  page: Page,
+  query = ""
+): Promise<string[]> => {
   await enterEditViaUpload(page, query);
   await selectSingleCard(page);
   await selectTheme(page, "ALTITUDE");
@@ -244,7 +255,7 @@ async function exportQuadrantCard(page: Page, query = ""): Promise<string[]> {
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: /download instagram feed/iu }).click();
   return await quadrantHues(page, await downloadPromise);
-}
+};
 
 // A square photo cover-fits a 4:5 card by cropping its sides, so each quadrant
 // of the photo still owns the matching quadrant of the card.
@@ -258,24 +269,26 @@ test("an oversized photo still reaches the export", async ({ page }) => {
   await selectSingleCard(page);
   await selectTheme(page, "ALTITUDE");
   await page.locator(PHOTO_INPUT).setInputFiles({
-    name: "huge.png",
-    mimeType: "image/png",
     buffer: solidPngBuffer(5000, 3750, [255, 0, 255]),
+    mimeType: "image/png",
+    name: "huge.png",
   });
   await expect(page.getByText(/Photo loaded/iu)).toBeVisible();
 
   // It really was capped — otherwise this test would pass on a 19 MP photo and
   // guard nothing.
-  const longEdge = await page.evaluate(async () => {
-    const el = document.querySelector<HTMLElement>("[data-effort-photo]");
-    const draw = JSON.parse(el?.dataset.effortPhoto ?? "{}") as {
-      src?: string;
-    };
+  const drawJson = await page.evaluate(
+    () =>
+      document.querySelector<HTMLElement>("[data-effort-photo]")?.dataset
+        .effortPhoto ?? "{}"
+  );
+  const draw = PhotoDrawSchema.parse(JSON.parse(drawJson));
+  const longEdge = await page.evaluate(async (src: string) => {
     const img = new Image();
-    img.src = draw.src ?? "";
+    img.src = src;
     await img.decode();
     return Math.max(img.naturalWidth, img.naturalHeight);
-  });
+  }, draw.src ?? "");
   expect(longEdge).toBeLessThanOrEqual(3840);
 
   await page.getByTestId("export-action").click();
@@ -314,10 +327,10 @@ test("photo upload yields FROM YOUR PHOTO colour schemes (worker palette extract
   });
 });
 
-async function exportCarouselWithPhoto(
+const exportCarouselWithPhoto = async (
   page: Page,
   query = ""
-): Promise<number> {
+): Promise<number> => {
   await enterEditViaUpload(page, query);
   // Switch to carousel explicitly so the test is independent of the default mode.
   await selectCarousel(page);
@@ -340,7 +353,7 @@ async function exportCarouselWithPhoto(
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: /download instagram feed/iu }).click();
   return await magentaFraction(page, await downloadPromise);
-}
+};
 
 test("carousel Exposure export embeds the uploaded background", async ({
   page,

@@ -8,6 +8,7 @@
 // layers see `null` and render unfiltered, exactly as before.
 
 import { createContext, useContext } from "react";
+import type { ReactNode } from "react";
 
 import type { ImageSize } from "@/hooks/use-image-natural-size";
 import { IDENTITY_TRANSFORM, transformToCss } from "@/lib/image-transform";
@@ -29,44 +30,36 @@ export interface PhotoFx {
   effects: PhotoEffects | null;
   /** natural size of the photo — enables the rotation-correct cover layer */
   imageSize: ImageSize | null;
-  /** pan/zoom for the photo (carousel provides it; single-card uses a prop) */
-  imageTransform?: ImageTransform | null;
-  /** the photo source. The carousel provides it so a panel can render its own
-   *  photo layer (`Panorama`) from context with no prop-threading; single-card
-   *  themes take `photoUrl` as a component prop and leave this null. */
-  photoUrl?: string | null;
 }
 
 const PhotoFxContext = createContext<PhotoFx>({
   effects: null,
   imageSize: null,
-  photoUrl: null,
-  imageTransform: null,
 });
 
-export const PhotoFxProvider = PhotoFxContext.Provider;
+/** Provided by `RenderTheme` (single card) and the carousel deck. The photo
+ *  source and pan/zoom are NOT in context: single-card themes take them as
+ *  props, and the deck draws the strip photo itself with `CoverPhoto`. */
+export const PhotoFxProvider = ({
+  children,
+  value,
+}: {
+  children: ReactNode;
+  value: PhotoFx;
+}) => <PhotoFxContext value={value}>{children}</PhotoFxContext>;
 
-/** The whole photo bundle from context — effects + natural size + (carousel)
- *  source + transform. `Panorama` reads this so a panel composes the shared
- *  photo without threading any of it through props. */
-export function usePhotoFx(): PhotoFx {
-  return useContext(PhotoFxContext);
-}
+export const usePhotoEffects = (): PhotoEffects | null =>
+  useContext(PhotoFxContext).effects;
 
-export function usePhotoEffects(): PhotoEffects | null {
-  return useContext(PhotoFxContext).effects;
-}
-
-export function usePhotoImageSize(): ImageSize | null {
-  return useContext(PhotoFxContext).imageSize;
-}
+export const usePhotoImageSize = (): ImageSize | null =>
+  useContext(PhotoFxContext).imageSize;
 
 /** Shared CSS background-image cover layer behind the single-card photo
  *  treatments. Each treatment passes its own hand-tuned `restInset` (the
  *  non-quarter-turn bleed), `filterPrefix` and `opacity`; a quarter-turn
  *  over-bleeds to -160 so the rotated footprint still covers the box. Reads
  *  effects from context; inline CSS only (snapdom-safe). */
-export function CssCoverImage({
+export const CssCoverImage = ({
   photoUrl,
   imageTransform,
   restInset = 0,
@@ -78,7 +71,7 @@ export function CssCoverImage({
   opacity?: number;
   photoUrl: string;
   restInset?: number;
-}) {
+}) => {
   const fx = usePhotoEffects();
   const userFilter = fx ? filterCss(fx.filter) : "";
   const filter = [filterPrefix, userFilter].filter(Boolean).join(" ").trim();
@@ -91,7 +84,7 @@ export function CssCoverImage({
     <div
       {...{
         [PHOTO_LAYER_ATTR]: encodePhotoDraw({
-          box: { kind: "inset", inset },
+          box: { inset, kind: "inset" },
           filter,
           flipH: fx?.flipH ?? false,
           flipV: fx?.flipV ?? false,
@@ -103,43 +96,41 @@ export function CssCoverImage({
           y: t.y,
         }),
       }}
-      style={{ position: "absolute", inset: 0 }}
+      style={{ inset: 0, position: "absolute" }}
     >
       <div
         {...{ [PHOTO_PAINT_ATTR]: "" }}
         style={{
-          position: "absolute",
-          inset,
           backgroundImage: `url(${photoUrl})`,
-          backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
+          backgroundSize: "cover",
+          filter: filter || undefined,
+          inset,
+          opacity,
+          position: "absolute",
           transform: `${transformToCss(t)}${effectsTransformSuffix(fx)}`,
           transformOrigin: "center center",
-          filter: filter || undefined,
-          opacity,
         }}
       />
     </div>
   );
-}
+};
 
 /** Analogue film grain overlaid on a photo (survives snapdom as an image).
  *  Lay it over the photo div inside the same clipped container. */
-export function GrainOverlay() {
-  return (
-    <div
-      aria-hidden
-      style={{
-        position: "absolute",
-        inset: 0,
-        backgroundImage: GRAIN_BG,
-        backgroundRepeat: "repeat",
-        backgroundSize: "180px 180px",
-        mixBlendMode: "overlay",
-        opacity: 0.5,
-        pointerEvents: "none",
-      }}
-    />
-  );
-}
+export const GrainOverlay = () => (
+  <div
+    aria-hidden
+    style={{
+      backgroundImage: GRAIN_BG,
+      backgroundRepeat: "repeat",
+      backgroundSize: "180px 180px",
+      inset: 0,
+      mixBlendMode: "overlay",
+      opacity: 0.5,
+      pointerEvents: "none",
+      position: "absolute",
+    }}
+  />
+);

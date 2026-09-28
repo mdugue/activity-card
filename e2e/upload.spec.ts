@@ -6,15 +6,17 @@ import { openWizard, selectSingleCard, selectTheme } from "./helpers";
 test.describe("upload", () => {
   test("single file → edit state with parsed activity", async ({ page }) => {
     await page.goto("/");
-    await page.evaluate(() => localStorage.clear());
+    await page.evaluate(() => {
+      localStorage.clear();
+    });
     await page.reload();
 
     await openWizard(page);
     const fileInput = page.locator('input[type="file"][accept=".gpx,.fit"]');
     await fileInput.setInputFiles({
-      name: "morning-run.gpx",
-      mimeType: "application/gpx+xml",
       buffer: Buffer.from(SINGLE_RUN_GPX),
+      mimeType: "application/gpx+xml",
+      name: "morning-run.gpx",
     });
     await page.getByRole("button", { name: /open the editor/iu }).click();
 
@@ -29,26 +31,28 @@ test.describe("upload", () => {
     page,
   }) => {
     await page.goto("/");
-    await page.evaluate(() => localStorage.clear());
+    await page.evaluate(() => {
+      localStorage.clear();
+    });
     await page.reload();
 
     await openWizard(page);
     const fileInput = page.locator('input[type="file"][accept=".gpx,.fit"]');
     await fileInput.setInputFiles([
       {
-        name: "swim.gpx",
-        mimeType: "application/gpx+xml",
         buffer: Buffer.from(TRIATHLON_FILES.swim),
+        mimeType: "application/gpx+xml",
+        name: "swim.gpx",
       },
       {
-        name: "bike.gpx",
-        mimeType: "application/gpx+xml",
         buffer: Buffer.from(TRIATHLON_FILES.bike),
+        mimeType: "application/gpx+xml",
+        name: "bike.gpx",
       },
       {
-        name: "run.gpx",
-        mimeType: "application/gpx+xml",
         buffer: Buffer.from(TRIATHLON_FILES.run),
+        mimeType: "application/gpx+xml",
+        name: "run.gpx",
       },
     ]);
     await page.getByRole("button", { name: /open the editor/iu }).click();
@@ -74,9 +78,9 @@ test.describe("upload", () => {
     await openWizard(page);
     const fileInput = page.locator('input[type="file"][accept=".gpx,.fit"]');
     await fileInput.setInputFiles({
-      name: "not-an-activity.txt",
-      mimeType: "text/plain",
       buffer: Buffer.from("hello"),
+      mimeType: "text/plain",
+      name: "not-an-activity.txt",
     });
     // The error surfaces as a toast (scoped so it isn't confused with the
     // dropzone's own "Drop a .gpx or .fit file" hint).

@@ -3,13 +3,24 @@
 // them is the colour model's job (`resolveColors` over a photo-kind
 // `ColorChoice` — see `lib/colors.ts`), not this hook's.
 //
-// For heavy photos, buildPaletteFromImage can move into a Web Worker without
-// changing this hook's shape — see the note at the bottom of palette.ts.
+// `lib/palette` (node-vibrant + culori) is imported on demand inside the
+// effect: it's only needed once a photo exists, so it stays out of the
+// landing page's first-load bundle.
 
 import { useEffect, useState } from "react";
 
-import { buildPaletteFromImage } from "@/lib/palette";
 import type { ExtractedPalette } from "@/lib/palette";
+
+// Effect cleanup for the branch that started no extraction.
+const noCleanup = (): void => {
+  // No extraction was started, so there is nothing to cancel.
+};
+
+// Loads the extractor on demand, then runs it over the photo.
+const extractPalette = async (src: string): Promise<ExtractedPalette> => {
+  const { buildPaletteFromImage } = await import("@/lib/palette");
+  return await buildPaletteFromImage(src);
+};
 
 /**
  * @param src object URL / data URL of the uploaded photo, or null when no photo
@@ -17,39 +28,40 @@ import type { ExtractedPalette } from "@/lib/palette";
  *          palette is kept during a photo swap so consumers don't flash to
  *          their fallback between photos.
  */
-export function useImagePalette(
+export const useImagePalette = (
   src: string | null | undefined
-): ExtractedPalette | null {
+): ExtractedPalette | null => {
   const [palette, setPalette] = useState<ExtractedPalette | null>(null);
 
   // The synchronous setState below is intentional: it synchronises internal
   // state to an external prop (`src`). The rule warns about cascades when an
   // effect sets state it also depends on — not the case here.
-  /* oxlint-disable react/set-state-in-effect */
   useEffect(() => {
-    if (!src) {
+    if (src === null || src === undefined || src === "") {
+      // oxlint-disable-next-line react/set-state-in-effect -- synchronising state to the `src` prop: no photo means no palette
       setPalette(null);
-      return;
+      return noCleanup;
     }
     let cancelled = false;
-    buildPaletteFromImage(src)
-      .then((next) => {
+    const run = async () => {
+      try {
+        const next = await extractPalette(src);
         if (!cancelled) {
           setPalette(next);
         }
-      })
-      .catch(() => {
-        // Extraction failed (pathological image): drop to null so consumers
-        // fall back to their theme defaults — legibility always wins.
+      } catch {
+        // Extraction (or loading the extractor) failed: drop to null so
+        // consumers fall back to their theme defaults — legibility always wins.
         if (!cancelled) {
           setPalette(null);
         }
-      });
+      }
+    };
+    void run();
     return () => {
       cancelled = true;
     };
   }, [src]);
-  /* oxlint-enable react/set-state-in-effect */
 
   return palette;
-}
+};

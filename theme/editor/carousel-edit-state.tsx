@@ -11,6 +11,7 @@
 
 import { ImagesIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 
 import { CardStage } from "@/components/app/card-stage";
 import { ControlDeck, PANEL_MOTION } from "@/components/app/control-deck";
@@ -34,6 +35,21 @@ import { SafeZoneOverlay } from "./safe-zone-overlay";
 import { SlideStrip } from "./slide-strip";
 import { ThemeRail } from "./theme-rail";
 
+/** The preview window's slide/strip geometry, as CSS custom properties. */
+interface CarouselViewportStyle extends CSSProperties {
+  "--slide-fit": string;
+  "--slide-h": string;
+  "--slide-ratio": string;
+  "--slide-w": string;
+  "--strip-w": string;
+  "--view-strip-w": string;
+}
+
+/** One slide's left offset in strip space. */
+interface SlideOffsetStyle extends CSSProperties {
+  "--slide-left": string;
+}
+
 interface CarouselEditStateProps {
   carousel: CarouselController;
   /** the active export format (shared with single-card) */
@@ -47,7 +63,7 @@ interface CarouselEditStateProps {
   theme: CarouselThemeId;
 }
 
-export function CarouselEditState({
+export const CarouselEditState = ({
   carousel,
   session,
   theme,
@@ -55,9 +71,10 @@ export function CarouselEditState({
   onExport,
   onFormatChange,
   onThemeChange,
-}: CarouselEditStateProps) {
+}: CarouselEditStateProps) => {
   const { data, visibility, color, config, photo } = session;
-  const { count, selectedIndex } = carousel;
+  const { onTransformChange: handlePhotoTransformChange } = photo;
+  const { count, select: handleSelectSlide, selectedIndex } = carousel;
   const descriptor = CAROUSEL_THEMES[theme];
   // The strip, every deck mount and the export all size from this one geometry —
   // no parallel literals. The carousel offers the same formats as the single
@@ -81,8 +98,8 @@ export function CarouselEditState({
   // Pan/zoom against the whole strip's box (true-cover panorama). `imageSize`
   // also feeds the deck + slide strip; `adjusting` gates the scroll-snap below.
   const adjust = usePhotoAdjust({
-    boxW: stripW,
     boxH: slideH,
+    boxW: stripW,
     enabled: visibility.photoBackdrop,
     photoUrl: photo.url,
     rotate: photo.effects.rotate,
@@ -96,20 +113,19 @@ export function CarouselEditState({
   useEffect(() => {
     selectedIndexRef.current = selectedIndex;
     const vp = viewportRef.current;
-    if (!vp) {
-      return;
+    const target = selectedIndex * (vp?.clientWidth ?? 0);
+    let fallback: ReturnType<typeof setTimeout> | undefined;
+    if (vp && Math.abs(vp.scrollLeft - target) > 2) {
+      programmatic.current = true;
+      targetLeft.current = target;
+      vp.scrollTo({ behavior: "smooth", left: target });
+      fallback = setTimeout(() => {
+        programmatic.current = false;
+      }, 700);
     }
-    const target = selectedIndex * vp.clientWidth;
-    if (Math.abs(vp.scrollLeft - target) <= 2) {
-      return;
-    }
-    programmatic.current = true;
-    targetLeft.current = target;
-    vp.scrollTo({ left: target, behavior: "smooth" });
-    const t = setTimeout(() => {
-      programmatic.current = false;
-    }, 700);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(fallback);
+    };
   }, [selectedIndex]);
 
   // Keep the selected slide pinned to its snap point when the preview window
@@ -118,13 +134,10 @@ export function CarouselEditState({
   // slides. Re-pin instantly (we're mid layout change, not navigating).
   useEffect(() => {
     const vp = viewportRef.current;
-    if (!vp) {
-      return;
-    }
-    let lastWidth = vp.clientWidth;
+    let lastWidth = vp?.clientWidth ?? 0;
     const ro = new ResizeObserver(() => {
-      const width = vp.clientWidth;
-      if (width === 0 || width === lastWidth) {
+      const width = vp?.clientWidth ?? 0;
+      if (vp === null || width === 0 || width === lastWidth) {
         return;
       }
       lastWidth = width;
@@ -139,8 +152,12 @@ export function CarouselEditState({
         vp.scrollLeft = left;
       }
     });
-    ro.observe(vp);
-    return () => ro.disconnect();
+    if (vp) {
+      ro.observe(vp);
+    }
+    return () => {
+      ro.disconnect();
+    };
   }, []);
 
   // A manual swipe selects the slide it settles on (debounced). Ignored while a
@@ -193,6 +210,17 @@ export function CarouselEditState({
     ),
   });
 
+  // The slide geometry rides CSS custom properties (px, in format space); the
+  // strip is laid out at master size and scaled to the viewport's width.
+  const viewportStyle: CarouselViewportStyle = {
+    "--slide-fit": `scale(calc(100cqw / ${slideW}px))`,
+    "--slide-h": `${slideH}px`,
+    "--slide-ratio": `${slideW} / ${slideH}`,
+    "--slide-w": `${slideW}px`,
+    "--strip-w": `${stripW}px`,
+    "--view-strip-w": `calc(100cqw * ${count})`,
+  };
+
   const preview = (
     // Fill the preview area on the mobile app-shell so the seamless window can
     // scale to fit the space it's given; on desktop it's a fixed-width column.
@@ -204,61 +232,48 @@ export function CarouselEditState({
         maxWidthClassName="max-w-[360px]"
       >
         <div
-          className="@container relative w-full overflow-x-auto overflow-y-hidden bg-white shadow-[0_24px_50px_-14px_rgba(26,23,20,0.3)]"
+          className={cn(
+            "shadow-lift @container relative aspect-(--slide-ratio) w-full overflow-y-hidden bg-white",
+            adjusting
+              ? "snap-none overflow-x-hidden"
+              : "snap-x snap-mandatory overflow-x-auto"
+          )}
           data-testid="carousel-preview"
           onScroll={handleScroll}
           ref={viewportRef}
-          style={{
-            aspectRatio: `${slideW} / ${slideH}`,
-            scrollSnapType: adjusting ? "none" : "x mandatory",
-            overflowX: adjusting ? "hidden" : "auto",
-          }}
+          style={viewportStyle}
         >
-          <div
-            className="relative h-full"
-            style={{ width: `calc(100cqw * ${count})` }}
-          >
-            <div
-              className="absolute top-0 left-0 origin-top-left"
-              style={{
-                width: stripW,
-                height: slideH,
-                transform: `scale(calc(100cqw / ${slideW}px))`,
-              }}
-            >
+          <div className="relative h-full w-(--view-strip-w)">
+            <div className="absolute top-0 left-0 h-(--slide-h) w-(--strip-w) origin-top-left transform-(--slide-fit)">
               <CarouselDeck {...deckProps} />
               {/* Per-slide keep-out guide (display-only — never on the export
                   mount below). Each slide is one format box in strip space. */}
               {showSafe
-                ? Array.from({ length: count }, (_, i) => (
-                    <div
-                      aria-hidden
-                      // oxlint-disable-next-line react/no-array-index-key -- slides are positional — the index IS the identity (fixed count, never reordered)
-                      key={`safe-${i}`}
-                      style={{
-                        position: "absolute",
-                        top: 0,
-                        left: i * slideW,
-                        width: slideW,
-                        height: slideH,
-                      }}
-                    >
-                      <SafeZoneOverlay format={format} scale={1} />
-                    </div>
-                  ))
+                ? Array.from({ length: count }, (_, i) => {
+                    const slideStyle: SlideOffsetStyle = {
+                      "--slide-left": `${i * slideW}px`,
+                    };
+                    return (
+                      <div
+                        aria-hidden
+                        className="absolute top-0 left-(--slide-left) h-(--slide-h) w-(--slide-w)"
+                        // oxlint-disable-next-line react/no-array-index-key -- slides are positional — the index IS the identity (fixed count, never reordered)
+                        key={`safe-${i}`}
+                        style={slideStyle}
+                      >
+                        <SafeZoneOverlay format={format} scale={1} />
+                      </div>
+                    );
+                  })
                 : null}
             </div>
             <div className="absolute inset-0 flex">
               {Array.from({ length: count }, (_, i) => (
                 <div
                   aria-hidden
+                  className="w-[100cqw] flex-[0_0_100cqw] snap-start"
                   // oxlint-disable-next-line react/no-array-index-key -- slides are positional — the index IS the identity (fixed count, never reordered)
                   key={`snap-${i}`}
-                  style={{
-                    flex: "0 0 100cqw",
-                    width: "100cqw",
-                    scrollSnapAlign: "start",
-                  }}
                 />
               ))}
             </div>
@@ -269,7 +284,7 @@ export function CarouselEditState({
           adjust={adjust}
           contentWidth={slideW}
           label="Adjust photo"
-          onChange={photo.onTransformChange}
+          onChange={handlePhotoTransformChange}
           transform={photo.transform}
         />
       </CardStage>
@@ -294,7 +309,7 @@ export function CarouselEditState({
           format={format}
           imageSize={imageSize}
           imageTransform={photo.transform}
-          onSelect={carousel.select}
+          onSelect={handleSelectSlide}
           photoEffects={photo.effects}
           photoUrl={photo.url}
           selectedIndex={selectedIndex}
@@ -327,4 +342,4 @@ export function CarouselEditState({
       />
     </TooltipProvider>
   );
-}
+};

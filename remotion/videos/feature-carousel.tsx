@@ -15,12 +15,14 @@ import { CarouselDeck } from "@/theme/carousel/deck";
 import { CAROUSEL_THEMES } from "@/theme/carousel/registry";
 import type { CarouselThemeId } from "@/theme/carousel/registry";
 import { carouselArgs } from "@/theme/carousel/story-support";
+import type { ThemeConfig } from "@/theme/core/params/kinds";
 
 import { StripPan } from "../components/card-showcase";
 import { PreloadImg } from "../components/preload-img";
 import { Pill } from "../components/stat-chip";
 import { EASE_PANEL, SPACE } from "../design/tokens";
-import { OutroScene, StepScene, TitleScene, WALK } from "./walkthrough";
+import { OutroScene, StepScene, TitleScene } from "./walkthrough";
+import { WALK } from "./walkthrough-pacing";
 
 const STEPS = 3;
 const STEP_DUR = [260, 240, 240];
@@ -32,19 +34,19 @@ export const CAROUSEL_DURATION_IN_FRAMES =
   WALK.outro -
   WALK.fade * (STEPS + 1);
 
-function DeckPan({
+const DeckPan = ({
   config,
   durationInFrames,
   id,
   photo = false,
   showSeams = false,
 }: {
-  config?: Record<string, unknown>;
+  config?: ThemeConfig;
   durationInFrames: number;
   id: CarouselThemeId;
   photo?: boolean;
   showSeams?: boolean;
-}) {
+}) => {
   const frame = useCurrentFrame();
   const { height, width } = useVideoConfig();
   const theme = CAROUSEL_THEMES[id];
@@ -82,11 +84,11 @@ function DeckPan({
       </StripPan>
     </>
   );
-}
+};
 
 // The atmosphere knob: the same Trace deck, Dawn for the first half, Dusk for
 // the second — with the pills calling the switch.
-function AtmosphereStep({ durationInFrames }: { durationInFrames: number }) {
+const AtmosphereStep = ({ durationInFrames }: { durationInFrames: number }) => {
   const frame = useCurrentFrame();
   const { height, width } = useVideoConfig();
   const flipAt = Math.floor(durationInFrames / 2);
@@ -128,9 +130,9 @@ function AtmosphereStep({ durationInFrames }: { durationInFrames: number }) {
       </div>
     </div>
   );
-}
+};
 
-export function FeatureCarousel() {
+export const FeatureCarousel = () => {
   const t = (
     <TransitionSeries.Transition
       presentation={fade()}
@@ -190,4 +192,4 @@ export function FeatureCarousel() {
       </TransitionSeries.Sequence>
     </TransitionSeries>
   );
-}
+};

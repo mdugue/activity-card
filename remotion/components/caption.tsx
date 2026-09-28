@@ -15,7 +15,7 @@ import { RiseIn } from "./rise-in";
  * recipe) over a sentence of Inter. Pinned inside the safe area; every scene
  * that needs words uses this so type placement stays consistent across videos.
  */
-export function Caption({
+export const Caption = ({
   delay = 0,
   label,
   maxWidth = 760,
@@ -31,8 +31,9 @@ export function Caption({
   /** numbered walkthrough chip, e.g. { index: 2, total: 4 } → "STEP 2/4" */
   step?: { index: number; total: number };
   text: ReactNode;
-}) {
+}) => {
   const centered = position === "bottom-center";
+  const hasLabel = label !== undefined && label !== "";
   return (
     <div
       style={{
@@ -48,7 +49,7 @@ export function Caption({
         transform: centered ? "translateX(-50%)" : undefined,
       }}
     >
-      {step || label ? (
+      {step !== undefined || hasLabel ? (
         <RiseIn delay={delay}>
           <div
             style={{
@@ -57,7 +58,7 @@ export function Caption({
               gap: 18,
             }}
           >
-            {step ? (
+            {step === undefined ? null : (
               <span
                 style={{
                   border: `2px solid ${RUST_BRIGHT}`,
@@ -73,8 +74,8 @@ export function Caption({
               >
                 Step {step.index}/{step.total}
               </span>
-            ) : null}
-            {label ? (
+            )}
+            {hasLabel ? (
               <span
                 style={{
                   color: RUST_BRIGHT,
@@ -106,4 +107,4 @@ export function Caption({
       </RiseIn>
     </div>
   );
-}
+};

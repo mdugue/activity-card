@@ -9,7 +9,7 @@ import { heroInk } from "@/theme/carousel/resolve";
 
 import { RouteLine } from "../route-line";
 
-export function RouteCanvas({ data, style, w, h, overPhoto }: CanvasProps) {
+export const RouteCanvas = ({ data, style, w, h, overPhoto }: CanvasProps) => {
   const multi = isMultiActivity(data);
   const heroRoutes = multi
     ? segmentRoutes(data).map((r) => r.coords)
@@ -19,11 +19,11 @@ export function RouteCanvas({ data, style, w, h, overPhoto }: CanvasProps) {
   return (
     <div
       style={{
-        position: "absolute",
+        height: "60%",
         left: 0,
+        position: "absolute",
         right: 0,
         top: "20%",
-        height: "60%",
       }}
     >
       <RouteLine
@@ -42,4 +42,4 @@ export function RouteCanvas({ data, style, w, h, overPhoto }: CanvasProps) {
       />
     </div>
   );
-}
+};

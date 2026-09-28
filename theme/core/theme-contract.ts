@@ -19,23 +19,27 @@ import type {
   ColorScheme,
   ThemeColorPolicy,
 } from "@/theme/core/colors";
-import type { ParamDef } from "@/theme/core/params/kinds";
+import type { ParamDef, ThemeConfig } from "@/theme/core/params/kinds";
 
 /** Overlay elements a theme can opt into. Title/date/distance/time are a
  *  card's core — always present, not capabilities. Each key matches its
- *  visibility toggle. */
-export type CapabilityKey =
-  | "athleteName"
-  | "cadence"
-  | "elevation"
-  | "elevationViz"
-  | "heartRate"
-  | "location"
-  | "pace"
-  | "power"
-  | "route"
-  | "speed"
-  | "splits";
+ *  visibility toggle. (`GOVERNED_FIELDS` below `satisfies` a record over these
+ *  keys, so the list and the field map can't drift apart.) */
+export const CAPABILITY_KEYS = [
+  "athleteName",
+  "cadence",
+  "elevation",
+  "elevationViz",
+  "heartRate",
+  "location",
+  "pace",
+  "power",
+  "route",
+  "speed",
+  "splits",
+] as const;
+
+export type CapabilityKey = (typeof CAPABILITY_KEYS)[number];
 
 /** Which ActivityData fields each capability governs — the runtime source for
  *  `pickThemeData` and the type-level source for `ThemeData`. */
@@ -84,7 +88,7 @@ export type ActivityView = Omit<ActivityData, GovernedField> &
  *  itself directly at the active export size. */
 export interface ThemeProps<
   K extends CapabilityKey = CapabilityKey,
-  C = Record<string, unknown>,
+  C = ThemeConfig,
 > {
   /** the resolved colour scheme — colour-adjustable themes render with it;
    *  fixed-palette themes ignore it. Defaulted per theme so stories can omit. */
@@ -118,7 +122,7 @@ export interface ThemePhotoPolicy {
  */
 export interface ThemeBase {
   colors: ThemeColorPolicy;
-  defaults: Record<string, unknown>;
+  defaults: ThemeConfig;
   id: string;
   label: string;
   params: ParamDef[];
@@ -132,18 +136,15 @@ export interface ThemeBase {
 
 /** The user's effective colour choice for a theme: their pick, else the
  *  theme's default choice (photo-first themes), else its own preset scheme. */
-export function effectiveChoiceFor(
+export const effectiveChoiceFor = (
   theme: ThemeBase,
   choice: ColorChoice | null
-): ColorChoice {
-  return (
-    choice ??
-    theme.colors.defaultChoice ?? {
-      kind: "preset",
-      scheme: theme.colors.default,
-    }
-  );
-}
+): ColorChoice =>
+  choice ??
+  theme.colors.defaultChoice ?? {
+    kind: "preset",
+    scheme: theme.colors.default,
+  };
 
 /** The erased registry-facing single-card descriptor. The single card uniquely
  *  uses its `uses` to narrow the component's `data` type (see `defineTheme`). */
@@ -157,9 +158,9 @@ export interface SingleCardTheme extends ThemeBase {
  * component actually reads. `usesWhen` refines a declared capability per
  * activity (sport-aware), driving only the editor's availability.
  */
-export function defineTheme<
+export const defineTheme = <
   const K extends readonly CapabilityKey[],
-  C extends Record<string, unknown> = Record<string, never>,
+  C extends ThemeConfig = Record<string, never>,
 >(d: {
   colors: ThemeColorPolicy;
   Component: FC<ThemeProps<K[number], C>>;
@@ -171,46 +172,46 @@ export function defineTheme<
   tagline: string;
   uses: K;
   usesWhen?: Partial<Record<K[number], (data: ActivityView) => boolean>>;
-}): SingleCardTheme {
-  return {
-    id: d.id,
-    label: d.label,
-    tagline: d.tagline,
-    uses: d.uses,
-    usesWhen: d.usesWhen,
-    colors: d.colors,
-    photo: d.photo,
-    params: d.params ?? [],
-    defaults: d.defaults ?? {},
-    // reason: the registry stores all themes under one widened signature; the
-    // narrow K/C generics are fully checked above, at the definition site.
-    Component: d.Component as FC<ThemeProps>,
-  };
-}
+}): SingleCardTheme => ({
+  // SAFETY: the registry stores all themes under one widened signature; the
+  // narrow K/C generics are fully checked above, at the definition site, and
+  // `pickThemeData` + `coerceConfig` make the runtime props match them.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- deliberate generic erasure at the registry boundary (see SAFETY above)
+  Component: d.Component as FC<ThemeProps>,
+  colors: d.colors,
+  defaults: d.defaults ?? {},
+  id: d.id,
+  label: d.label,
+  params: d.params ?? [],
+  photo: d.photo,
+  tagline: d.tagline,
+  uses: d.uses,
+  usesWhen: d.usesWhen,
+});
 
 /**
  * Strip the governed fields a theme did NOT declare, so the runtime data
  * matches the narrowed `ThemeData` type. Required text fields blank to ""
- * (mirroring `applyVisibility`); optional fields drop to undefined.
+ * (mirroring `applyVisibility`); optional fields are dropped (read as
+ * undefined).
  */
-export function pickThemeData(
+export const pickThemeData = (
   theme: Pick<ThemeBase, "uses">,
   data: ActivityData
-): ActivityData {
+): ActivityData => {
   const declared = new Set(theme.uses);
   const out = { ...data };
-  for (const cap of Object.keys(GOVERNED_FIELDS) as CapabilityKey[]) {
+  for (const cap of CAPABILITY_KEYS) {
     if (declared.has(cap)) {
       continue;
     }
     for (const field of GOVERNED_FIELDS[cap]) {
-      // oxlint-disable-next-line unicorn/prefer-ternary
       if (field === "athleteName" || field === "location") {
         out[field] = "";
       } else {
-        out[field] = undefined;
+        Reflect.deleteProperty(out, field);
       }
     }
   }
   return out;
-}
+};

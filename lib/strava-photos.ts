@@ -1,8 +1,29 @@
 import type { StravaPhotoRef } from "@/lib/activity";
 
+import { leadingInt } from "./strava-params";
+
 // Strava's photo CDN encodes the rendition's pixel size in the filename,
 // e.g. `…-576x768.jpg` (portrait) / `…-2048x1536.jpg` (landscape).
-const CDN_SIZE_SUFFIX_RE = /-(\d+)x(\d+)(\.(?:jpe?g|png|webp))$/iu;
+// Matched without capture groups (named groups need an ES2018 target; the
+// tsconfig is ES2017): `sizeSuffix` splits the matched suffix instead.
+const CDN_SIZE_SUFFIX_RE = /-\d+x\d+\.(?:jpe?g|png|webp)$/iu;
+
+interface SizeSuffix {
+  ext: string;
+  height: number;
+  width: number;
+}
+
+/** Split a matched `-WxH.ext` suffix into its parts. */
+const sizeSuffix = (suffix: string): SizeSuffix => {
+  const dot = suffix.indexOf(".");
+  const [width, height] = suffix.slice(1, dot).toLowerCase().split("x");
+  return {
+    ext: suffix.slice(dot),
+    height: Number(height),
+    width: Number(width),
+  };
+};
 
 /**
  * Pick the largest rendition from a Strava photo's `urls` record (keyed by
@@ -10,16 +31,16 @@ const CDN_SIZE_SUFFIX_RE = /-(\d+)x(\d+)(\.(?:jpe?g|png|webp))$/iu;
  * the requested size, but when it returns several — or a different bucket
  * than asked for — taking the first entry can silently land on a thumbnail.
  */
-export function largestPhotoUrl(
+export const largestPhotoUrl = (
   urls?: Record<string, string>
-): string | undefined {
-  if (!urls) {
-    return;
+): string | undefined => {
+  if (urls === undefined) {
+    return undefined;
   }
   let best: string | undefined;
   let bestSize = Number.NEGATIVE_INFINITY;
   for (const [key, url] of Object.entries(urls)) {
-    const size = Number.parseInt(key, 10);
+    const size = leadingInt(key);
     const rank = Number.isFinite(size) ? size : 0;
     if (rank > bestSize) {
       bestSize = rank;
@@ -27,7 +48,7 @@ export function largestPhotoUrl(
     }
   }
   return best;
-}
+};
 
 /**
  * Strava's CDN stores several pre-generated renditions of each photo at the
@@ -40,13 +61,16 @@ export function largestPhotoUrl(
  * rewritten URL as a *candidate* (fetch may 404 for non-standard renditions)
  * and fall back to the original.
  */
-export function upscaledPhotoUrl(src: string, target: number): string | null {
+export const upscaledPhotoUrl = (
+  src: string,
+  target: number
+): string | null => {
   const match = CDN_SIZE_SUFFIX_RE.exec(src);
-  if (!match) {
+  if (match === null) {
     return null;
   }
-  const w = Number.parseInt(match[1], 10);
-  const h = Number.parseInt(match[2], 10);
+  // The size parts are all-digit, so `Number` reads them as `parseInt` would.
+  const { ext, height: h, width: w } = sizeSuffix(match[0]);
   const long = Math.max(w, h);
   if (!(Number.isFinite(long) && long > 0) || long >= target) {
     return null;
@@ -54,34 +78,35 @@ export function upscaledPhotoUrl(src: string, target: number): string | null {
   const scale = target / long;
   return src.replace(
     CDN_SIZE_SUFFIX_RE,
-    `-${Math.round(w * scale)}x${Math.round(h * scale)}${match[3]}`
+    `-${Math.round(w * scale)}x${Math.round(h * scale)}${ext}`
   );
-}
+};
 
 /**
  * Same-origin URL for the full-size variant of a Strava photo. Routing the
  * bytes through our own origin keeps the export canvas untainted (Strava's
  * CDN doesn't promise CORS) and keeps Strava URLs out of client state.
  */
-export function stravaPhotoProxyUrl(ref: StravaPhotoRef): string {
+export const stravaPhotoProxyUrl = (ref: StravaPhotoRef): string => {
   const qs = new URLSearchParams({
     activity: String(ref.activityId),
     index: String(ref.index),
   });
   return `/api/strava/photo?${qs}`;
-}
+};
 
 /** Stable identity for a photo ref (thumb keys, selection highlighting). */
-export function stravaPhotoKey(ref: StravaPhotoRef): string {
-  return `${ref.activityId}-${ref.index}`;
-}
+export const stravaPhotoKey = (ref: StravaPhotoRef): string =>
+  `${ref.activityId}-${ref.index}`;
 
 /**
  * Download the full-size photo through the proxy and wrap it as a File so it
  * flows through the exact pipeline an uploaded photo uses (object URL,
  * palette extraction, pan/zoom, export).
  */
-export async function fetchStravaPhotoFile(ref: StravaPhotoRef): Promise<File> {
+export const fetchStravaPhotoFile = async (
+  ref: StravaPhotoRef
+): Promise<File> => {
   const res = await fetch(stravaPhotoProxyUrl(ref));
   if (!res.ok) {
     throw new Error("Could not load the photo from Strava.");
@@ -91,4 +116,4 @@ export async function fetchStravaPhotoFile(ref: StravaPhotoRef): Promise<File> {
   return new File([blob], `strava-photo-${stravaPhotoKey(ref)}.${ext}`, {
     type: blob.type || "image/jpeg",
   });
-}
+};

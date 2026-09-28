@@ -18,33 +18,31 @@ interface MetaBandProps {
   total: number;
 }
 
-export function MetaBand({
+export const MetaBand = ({
   data,
   colors,
   fonts,
   index,
   total,
   showPageNumber,
-}: MetaBandProps) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "baseline",
-        fontFamily: fonts.mono,
-        fontSize: 22,
-        fontWeight: 500,
-        letterSpacing: "0.22em",
-        color: colors.muted,
-        textShadow: colors.shadow || undefined,
-      }}
-    >
-      <span>{index === 1 && data.date ? formatDateUpper(data.date) : ""}</span>
-      {showPageNumber ? <span>{slideNumber(index, total)}</span> : null}
-    </div>
-  );
-}
+}: MetaBandProps) => (
+  <div
+    style={{
+      alignItems: "baseline",
+      color: colors.muted,
+      display: "flex",
+      fontFamily: fonts.mono,
+      fontSize: 22,
+      fontWeight: 500,
+      justifyContent: "space-between",
+      letterSpacing: "0.22em",
+      textShadow: colors.shadow || undefined,
+    }}
+  >
+    <span>{index === 1 && data.date ? formatDateUpper(data.date) : ""}</span>
+    {showPageNumber ? <span>{slideNumber(index, total)}</span> : null}
+  </div>
+);
 
 interface SignatureProps {
   accent: string;
@@ -56,39 +54,40 @@ interface SignatureProps {
 
 /** Wrap-up mark. Renders nothing unless the Effort mark or athlete name is
  *  enabled, so a clean deck stays clean. */
-export function Signature({
+export const Signature = ({
   colors,
   fonts,
   accent,
   showEffort,
   athleteName,
-}: SignatureProps) {
-  if (!(showEffort || athleteName)) {
+}: SignatureProps) => {
+  const hasName = athleteName !== undefined && athleteName !== "";
+  if (!(showEffort || hasName)) {
     return null;
   }
   return (
     <div
       style={{
-        display: "flex",
-        justifyContent: "space-between",
         alignItems: "center",
+        color: colors.muted,
+        display: "flex",
         fontFamily: fonts.mono,
         fontSize: 20,
         fontWeight: 500,
+        justifyContent: "space-between",
         letterSpacing: "0.2em",
-        color: colors.muted,
         textShadow: colors.shadow || undefined,
       }}
     >
       {showEffort ? (
-        <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <span style={{ alignItems: "center", display: "flex", gap: 12 }}>
           <span
             aria-hidden
             style={{
-              width: 30,
-              height: 3,
               background: accent,
               display: "block",
+              height: 3,
+              width: 30,
             }}
           />
           MADE WITH EFFORT
@@ -96,7 +95,7 @@ export function Signature({
       ) : (
         <span />
       )}
-      {athleteName ? <span>— {athleteName.toUpperCase()}</span> : null}
+      {hasName ? <span>— {athleteName.toUpperCase()}</span> : null}
     </div>
   );
-}
+};

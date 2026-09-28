@@ -1,27 +1,41 @@
 "use client";
 
 import { ArrowRightIcon, CaretDownIcon } from "@phosphor-icons/react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import type { CSSProperties } from "react";
 
 import { EffortMark, EffortWordmark } from "@/components/app/effort-wordmark";
+import { IntroReplay, RevealOverlay } from "@/components/app/empty-state-intro";
 import {
-  claimStyle,
-  IntroReplay,
+  claimMotion,
   PANEL_REST_CLASS,
-  panelFadeStyle,
-  panelPartStyle,
-  RevealOverlay,
-  useEmptyStateIntro,
-} from "@/components/app/empty-state-intro";
-import type { IntroStage } from "@/components/app/empty-state-intro";
+  panelFadeMotion,
+  panelPartMotion,
+} from "@/components/app/empty-state-intro-motion";
+import type {
+  IntroStage,
+  IntroVars,
+} from "@/components/app/empty-state-intro-motion";
 import { IntroVideo } from "@/components/app/intro-video";
-import { OnboardingWizard } from "@/components/app/onboarding-wizard";
 import type { OnboardingResult } from "@/components/app/onboarding-wizard";
+import { CtaButton } from "@/components/app/primitives/button";
 import { StravaCompatLink } from "@/components/app/strava-footer";
-import { Button } from "@/components/ui/button";
+import { useEmptyStateIntro } from "@/hooks/use-empty-state-intro";
 import { cn } from "@/lib/utils";
+
+// The wizard (and the Strava picker inside it) is a separate chunk: it renders
+// nothing until opened, so it stays out of the landing's first load and is
+// fetched right after hydration — in cache before anyone reaches the CTA.
+const OnboardingWizard = dynamic(
+  async () => {
+    const m = await import("@/components/app/onboarding-wizard");
+    return m.OnboardingWizard;
+  },
+  { ssr: false }
+);
 
 const PANEL_COUNT = 3;
 // Keep in sync with the rail's `gap-4` (16px) so the sliced panorama lines up
@@ -33,76 +47,73 @@ interface EmptyStateProps {
    * this opens the wizard with the Strava picker showing. */
   autoStravaPicker?: boolean;
   onComplete: (result: OnboardingResult) => void;
+  /** fired once the user shows intent to make a card (the wizard opens) — the
+   *  page warms the editor chunk so it's ready when the wizard completes */
+  onIntent?: () => void;
 }
 
 /** Abstract route squiggle — the "drop" slide's footer glyph. */
-function RouteGlyph() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="text-primary block size-full"
-      preserveAspectRatio="none"
-      viewBox="0 0 100 70"
-    >
-      <title>Route</title>
-      <path
-        d="M6 56 C18 26 30 64 41 42 S62 20 72 48 S90 26 95 38"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="3.4"
-      />
-      <circle className="fill-background" cx="6" cy="56" r="3.6" />
-      <rect fill="currentColor" height="6" width="6" x="92" y="35" />
-    </svg>
-  );
-}
+const RouteGlyph = () => (
+  <svg
+    aria-hidden="true"
+    className="text-primary block size-full"
+    preserveAspectRatio="none"
+    viewBox="0 0 100 70"
+  >
+    <title>Route</title>
+    <path
+      d="M6 56 C18 26 30 64 41 42 S62 20 72 48 S90 26 95 38"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="3.4"
+    />
+    <circle className="fill-background" cx="6" cy="56" r="3.6" />
+    <rect fill="currentColor" height="6" width="6" x="92" y="35" />
+  </svg>
+);
 
 /** Abstract elevation profile — the "your" slide's footer glyph. */
-function ElevationGlyph() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="text-primary block size-full"
-      preserveAspectRatio="none"
-      viewBox="0 0 100 56"
-    >
-      <title>Elevation</title>
-      <polygon
-        className="opacity-90"
-        fill="currentColor"
-        points="0,56 0,42 13,38 27,28 39,33 52,16 65,23 78,9 90,17 100,12 100,56"
-      />
-    </svg>
-  );
-}
+const ElevationGlyph = () => (
+  <svg
+    aria-hidden="true"
+    className="text-primary block size-full"
+    preserveAspectRatio="none"
+    viewBox="0 0 100 56"
+  >
+    <title>Elevation</title>
+    <polygon
+      className="opacity-90"
+      fill="currentColor"
+      points="0,56 0,42 13,38 27,28 39,33 52,16 65,23 78,9 90,17 100,12 100,56"
+    />
+  </svg>
+);
 
 // The card claim "DROP YOUR EFFORT" spelled one word per slide, fading back so
 // the eye reads left-to-right, with a sample of what each slide becomes
 // underneath. Three panels mirror the usual three-slide carousel output.
 const PANELS: { glyph: React.ReactNode; word: string; wordClass: string }[] = [
   {
-    word: "DROP",
-    wordClass: "text-[3.5rem] leading-[0.86] text-background lg:text-[4rem]",
     glyph: (
       <div className="h-16 lg:h-20">
         <RouteGlyph />
       </div>
     ),
+    word: "DROP",
+    wordClass: "text-[3.5rem] leading-[0.86] text-background lg:text-[4rem]",
   },
   {
-    word: "YOUR",
-    wordClass: "text-[3.5rem] leading-[0.86] text-background/60 lg:text-[4rem]",
     glyph: (
       <div className="h-16 lg:h-20">
         <ElevationGlyph />
       </div>
     ),
+    word: "YOUR",
+    wordClass: "text-[3.5rem] leading-[0.86] text-background/60 lg:text-[4rem]",
   },
   {
-    word: "EFFORT",
-    wordClass: "text-[2.75rem] leading-[0.86] text-primary lg:text-[3.125rem]",
     glyph: (
       <div className="font-heading text-background grid grid-cols-2 gap-x-3 gap-y-1.5 text-xl lg:text-2xl">
         {["82.4KM", "3:14", "1240M", "148"].map((v) => (
@@ -110,10 +121,20 @@ const PANELS: { glyph: React.ReactNode; word: string; wordClass: string }[] = [
         ))}
       </div>
     ),
+    word: "EFFORT",
+    wordClass: "text-[2.75rem] leading-[0.86] text-primary lg:text-[3.125rem]",
   },
 ];
 
-function ClaimPanel({
+/** Where a panel's slice of the shared panorama sits: shifted left by whole
+ *  panels (plus gutters), spanning every panel. */
+interface SliceVars extends CSSProperties {
+  "--panel-count": number;
+  "--panel-gap": string;
+  "--panel-offset": number;
+}
+
+const ClaimPanel = ({
   glyph,
   index,
   stage,
@@ -125,27 +146,68 @@ function ClaimPanel({
   stage: IntroStage;
   word: string;
   wordClass: string;
-}) {
+}) => {
+  const fade = panelFadeMotion(stage, index);
+  const parts = {
+    content: panelPartMotion(stage, "content", index),
+    num: panelPartMotion(stage, "num", index),
+    scrim: panelPartMotion(stage, "scrim", index),
+    tint: panelPartMotion(stage, "tint", index),
+    word: panelPartMotion(stage, "word", index),
+  };
+  const fadeVars: IntroVars = {
+    "--intro-opacity": fade.opacity,
+    "--intro-transform": fade.transform,
+    "--intro-transition": fade.transition,
+  };
+  const contentVars: IntroVars = {
+    "--intro-opacity": parts.content.opacity,
+    "--intro-transform": parts.content.transform,
+    "--intro-transition": parts.content.transition,
+  };
+  const numVars: IntroVars = {
+    "--intro-opacity": parts.num.opacity,
+    "--intro-transform": parts.num.transform,
+    "--intro-transition": parts.num.transition,
+  };
+  const scrimVars: IntroVars = {
+    "--intro-opacity": parts.scrim.opacity,
+    "--intro-transform": parts.scrim.transform,
+    "--intro-transition": parts.scrim.transition,
+  };
+  const tintVars: IntroVars = {
+    "--intro-opacity": parts.tint.opacity,
+    "--intro-transform": parts.tint.transform,
+    "--intro-transition": parts.tint.transition,
+  };
+  const wordVars: IntroVars = {
+    "--intro-opacity": parts.word.opacity,
+    "--intro-transform": parts.word.transform,
+    "--intro-transition": parts.word.transition,
+  };
+  const sliceVars: SliceVars = {
+    "--panel-count": PANEL_COUNT,
+    "--panel-gap": PANEL_GAP,
+    "--panel-offset": -index,
+  };
   return (
     <div
       className={cn(
         "bg-foreground text-background relative flex h-80 w-64 shrink-0 snap-center flex-col overflow-hidden p-5 lg:h-[26rem] lg:w-auto lg:flex-1 lg:basis-0 lg:p-6",
-        PANEL_REST_CLASS[index]
+        PANEL_REST_CLASS[index],
+        fade.className
       )}
-      style={panelFadeStyle(stage, index)}
+      style={fadeVars}
     >
       {/* One panorama, sliced across all panels — the carousel made literal. */}
       <div
         aria-hidden
-        className="absolute inset-y-0 z-0"
-        style={{
-          width: `calc(${PANEL_COUNT} * 100% + ${PANEL_COUNT - 1} * ${PANEL_GAP})`,
-          left: `calc(${-index} * (100% + ${PANEL_GAP}))`,
-        }}
+        className="absolute inset-y-0 left-[calc(var(--panel-offset)*(100%+var(--panel-gap)))] z-0 w-[calc(var(--panel-count)*100%+(var(--panel-count)-1)*var(--panel-gap))]"
+        style={sliceVars}
       >
         <Image
           alt=""
-          className="object-cover brightness-[0.8] contrast-[1.05] grayscale-[0.42]"
+          className="object-cover brightness-80 contrast-105 grayscale-42"
           fill
           priority={index === 0}
           sizes="1024px"
@@ -154,62 +216,101 @@ function ClaimPanel({
       </div>
       <div
         aria-hidden
-        className="from-foreground/60 via-foreground/10 to-foreground/90 absolute inset-0 z-10 bg-linear-to-b"
-        style={panelPartStyle(stage, "scrim", index)}
+        className={cn(
+          "from-foreground/60 via-foreground/10 to-foreground/90 absolute inset-0 z-10 bg-linear-to-b",
+          parts.scrim.className
+        )}
+        style={scrimVars}
       />
       <div
         aria-hidden
-        className="bg-foreground absolute inset-0 z-10 opacity-25 mix-blend-color"
-        style={panelPartStyle(stage, "tint", index)}
+        className={cn(
+          "bg-foreground absolute inset-0 z-10 opacity-25 mix-blend-color",
+          parts.tint.className
+        )}
+        style={tintVars}
       />
 
       <div
-        className="text-background/55 relative z-20 flex justify-between font-mono text-[11px] tracking-[0.18em]"
-        style={panelPartStyle(stage, "num", index)}
+        className={cn(
+          "text-background/55 tracking-caps-md relative z-20 flex justify-between font-mono text-xs",
+          parts.num.className
+        )}
+        style={numVars}
       >
         <span>{String(index + 1).padStart(2, "0")}</span>
         <span>/ 0{PANEL_COUNT}</span>
       </div>
       <p
-        className={cn("font-heading relative z-20 mt-5 uppercase", wordClass)}
-        style={panelPartStyle(stage, "word", index)}
+        className={cn(
+          "font-heading relative z-20 mt-5 uppercase",
+          wordClass,
+          parts.word.className
+        )}
+        style={wordVars}
       >
         {word}
       </p>
       <div
         aria-hidden
-        className="relative z-20 mt-auto"
-        style={panelPartStyle(stage, "content", index)}
+        className={cn("relative z-20 mt-auto", parts.content.className)}
+        style={contentVars}
       >
         {glyph}
       </div>
     </div>
   );
-}
+};
 
-export function EmptyState({
+export const EmptyState = ({
   autoStravaPicker = false,
   onComplete,
-}: EmptyStateProps) {
+  onIntent,
+}: EmptyStateProps) => {
   const intro = useEmptyStateIntro();
+  const claim = claimMotion(intro.stage);
+  const claimVars: IntroVars = {
+    "--intro-opacity": claim.opacity,
+    "--intro-transform": claim.transform,
+    "--intro-transition": claim.transition,
+  };
   const railRef = useRef<HTMLDivElement>(null);
   const [activeSlide, setActiveSlide] = useState(0);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const { replay: handleReplay } = intro;
 
   // The OAuth round-trip lands back here already connected; open the wizard so
   // its Strava picker (auto-opened via initialStravaPickerOpen) is visible.
-  useEffect(() => {
+  // Adjusted during render when the prop flips on (the page warms the editor
+  // chunk itself on that path).
+  const [prevAutoStravaPicker, setPrevAutoStravaPicker] = useState(false);
+  if (autoStravaPicker !== prevAutoStravaPicker) {
+    setPrevAutoStravaPicker(autoStravaPicker);
     if (autoStravaPicker) {
-      // oxlint-disable-next-line react/set-state-in-effect
       setWizardOpen(true);
     }
-  }, [autoStravaPicker]);
+  }
+
+  // Opening the wizard is the user's intent to make a card: tell the page, so
+  // it warms the editor chunk while the wizard is up.
+  const openWizard = () => {
+    setWizardOpen(true);
+    onIntent?.();
+  };
+
+  const handleWizardOpenChange = (open: boolean) => {
+    if (open) {
+      openWizard();
+    } else {
+      setWizardOpen(false);
+    }
+  };
 
   // Track the centred slide on the touch rail so the dots reflect the swipe.
   // (No-op on desktop, where the grid doesn't scroll and the dots are hidden.)
   const handleRailScroll = () => {
     const el = railRef.current;
-    if (!el) {
+    if (el === null) {
       return;
     }
     const max = el.scrollWidth - el.clientWidth;
@@ -227,15 +328,18 @@ export function EmptyState({
       <section className="relative flex min-h-dvh snap-start flex-col px-6 pt-7 pb-10 lg:pt-9">
         <div className="mx-auto flex w-full max-w-[64rem] items-start justify-between">
           <EffortWordmark />
-          <p className="font-mono text-[10px] font-medium tracking-[0.22em] opacity-55 sm:text-[11px]">
+          <p className="tracking-caps-xl font-mono text-xs font-medium opacity-55">
             TURN ANY EFFORT INTO A CARD
           </p>
         </div>
 
         <div className="flex flex-1 flex-col items-center justify-center gap-5 lg:gap-8">
           <h1
-            className="text-foreground/70 w-full max-w-[64rem] text-left text-lg leading-snug font-medium text-balance lg:mx-auto lg:text-center lg:text-xl"
-            style={claimStyle(intro.stage)}
+            className={cn(
+              "text-foreground/70 w-full max-w-[64rem] text-left text-lg leading-snug font-medium text-balance lg:mx-auto lg:text-center lg:text-xl",
+              claim.className
+            )}
+            style={claimVars}
           >
             {intro.claim}
           </h1>
@@ -267,7 +371,7 @@ export function EmptyState({
             {PANELS.map((p, i) => (
               <span
                 className={cn(
-                  "h-1.5 rounded-full transition-all",
+                  "transition-size-colors h-1.5 rounded-full",
                   i === activeSlide
                     ? "bg-primary w-4"
                     : "bg-foreground/25 w-1.5"
@@ -280,7 +384,7 @@ export function EmptyState({
           {/* Action bar — a single GET STARTED CTA opens the two-step wizard. */}
           <div className="bg-foreground text-background shadow-foreground/20 flex w-full max-w-[64rem] flex-col gap-4 p-5 shadow-2xl lg:mx-auto lg:flex-row lg:items-center lg:gap-8 lg:px-8 lg:py-7">
             <div className="hidden lg:block">
-              <p className="text-background/55 font-mono text-[11px] font-medium tracking-[0.2em] uppercase">
+              <p className="text-background/55 tracking-caps-lg font-mono text-xs font-medium uppercase">
                 Ready in two steps
               </p>
               <p className="font-heading mt-1.5 text-3xl leading-none uppercase">
@@ -288,21 +392,17 @@ export function EmptyState({
               </p>
             </div>
 
-            <Button
-              className="font-heading shadow-primary/50 h-auto justify-center px-8 py-4 text-2xl tracking-wide uppercase shadow-xl hover:-translate-y-0.5"
-              onClick={() => setWizardOpen(true)}
-              size="lg"
-            >
+            <CtaButton onClick={openWizard} scale="hero">
               Get started
               <ArrowRightIcon className="size-5" weight="duotone" />
-            </Button>
+            </CtaButton>
 
             <div className="flex items-center justify-between gap-4 lg:ml-auto lg:block lg:text-right">
-              <div className="text-background/60 flex items-center gap-2 font-mono text-[11px] font-medium tracking-[0.14em] uppercase lg:justify-end">
+              <div className="text-background/60 tracking-caps-sm flex items-center gap-2 font-mono text-xs font-medium uppercase lg:justify-end">
                 <span className="bg-primary size-1.5" />
                 Add activity
               </div>
-              <div className="text-background/60 flex items-center gap-2 font-mono text-[11px] font-medium tracking-[0.14em] uppercase lg:mt-2 lg:justify-end">
+              <div className="text-background/60 tracking-caps-sm flex items-center gap-2 font-mono text-xs font-medium uppercase lg:mt-2 lg:justify-end">
                 <span className="bg-primary size-1.5" />
                 Add a photo
               </div>
@@ -314,12 +414,12 @@ export function EmptyState({
         <div className="text-foreground/40 pointer-events-none flex flex-col items-center gap-1">
           <span className="caption-micro">Scroll</span>
           <CaretDownIcon
-            className="size-4 motion-safe:animate-bounce"
+            className="motion-safe:animate-scroll-cue size-4"
             weight="duotone"
           />
         </div>
 
-        {intro.showReplay ? <IntroReplay onReplay={intro.replay} /> : null}
+        {intro.showReplay ? <IntroReplay onReplay={handleReplay} /> : null}
       </section>
 
       {/* ───── Section 2 · Intro video (dark) ───── */}
@@ -327,7 +427,7 @@ export function EmptyState({
         <div className="mx-auto grid w-full max-w-[68rem] items-center gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
           <div>
             <p className="caption-label">See it in action</p>
-            <h2 className="font-heading mt-4 text-4xl leading-[0.95] text-balance uppercase lg:text-5xl">
+            <h2 className="font-heading leading-display-loose mt-4 text-4xl text-balance uppercase lg:text-5xl">
               From activity to art
             </h2>
             <p className="text-background/70 mt-5 max-w-md leading-relaxed">
@@ -336,7 +436,7 @@ export function EmptyState({
               numbers that matter. Here’s the gist.
             </p>
             <Link
-              className="text-background/60 hover:text-background mt-6 inline-flex items-center gap-2 font-mono text-[11px] font-medium tracking-[0.16em] uppercase transition-colors"
+              className="text-background/60 hover:text-background tracking-caps mt-6 inline-flex items-center gap-2 font-mono text-xs font-medium uppercase transition-colors"
               href="/tutorials"
             >
               Watch the tutorials
@@ -351,28 +451,24 @@ export function EmptyState({
       <footer className="bg-background flex min-h-dvh snap-start flex-col px-6 pt-20 pb-8">
         <div className="mx-auto flex w-full max-w-[64rem] flex-1 flex-col items-center justify-center gap-6 text-center">
           <EffortMark className="size-12 lg:size-14" />
-          <h2 className="font-heading text-5xl leading-[0.9] text-balance uppercase lg:text-7xl">
+          <h2 className="font-heading leading-display-tight text-5xl text-balance uppercase lg:text-7xl">
             Make your card
           </h2>
           <p className="text-foreground/65 max-w-md leading-relaxed text-balance">
             Every ride, run, and swim deserves a finish worth sharing. Two
             steps, no account needed.
           </p>
-          <Button
-            className="font-heading shadow-primary/50 h-auto justify-center px-8 py-4 text-2xl tracking-wide uppercase shadow-xl hover:-translate-y-0.5"
-            onClick={() => setWizardOpen(true)}
-            size="lg"
-          >
+          <CtaButton onClick={openWizard} scale="hero">
             Get started
             <ArrowRightIcon className="size-5" weight="duotone" />
-          </Button>
+          </CtaButton>
         </div>
 
         <div className="border-foreground/10 mx-auto mt-16 flex w-full max-w-[64rem] flex-col items-center gap-5 border-t pt-8 sm:flex-row sm:justify-between">
-          <span className="font-mono text-[11px] tracking-[0.16em] uppercase opacity-80">
+          <span className="tracking-caps font-mono text-xs uppercase opacity-80">
             <StravaCompatLink />
           </span>
-          <nav className="flex items-center gap-5 font-mono text-[11px] font-medium tracking-[0.16em] uppercase">
+          <nav className="tracking-caps flex items-center gap-5 font-mono text-xs font-medium uppercase">
             <Link
               className="opacity-60 transition-opacity hover:opacity-100"
               href="/tutorials"
@@ -393,7 +489,7 @@ export function EmptyState({
             </Link>
           </nav>
           <a
-            className="group text-foreground/60 hover:text-foreground font-mono text-[11px] font-medium tracking-[0.16em] uppercase transition-colors"
+            className="group text-foreground/60 hover:text-foreground tracking-caps font-mono text-xs font-medium uppercase transition-colors"
             href="https://manuel.fyi/"
             rel="noopener noreferrer"
             target="_blank"
@@ -407,9 +503,9 @@ export function EmptyState({
       <OnboardingWizard
         initialStravaPickerOpen={autoStravaPicker}
         onComplete={onComplete}
-        onOpenChange={setWizardOpen}
+        onOpenChange={handleWizardOpenChange}
         open={wizardOpen}
       />
     </div>
   );
-}
+};

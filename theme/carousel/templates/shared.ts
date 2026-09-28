@@ -6,6 +6,7 @@
 // spanning canvas, and chrome.
 
 import type { EffectiveStyle } from "@/theme/carousel/resolve";
+import type { StatItem } from "@/theme/carousel/stats";
 
 export interface SlideTextColors {
   fg: string;
@@ -22,10 +23,10 @@ const LIGHT_SHADOW =
   "0 0 2px rgba(255,255,255,1), 0 0 6px rgba(255,255,255,0.98), 0 0 14px rgba(255,255,255,0.9), 0 0 26px rgba(255,255,255,0.72), 0 0 46px rgba(255,255,255,0.5), 0 1px 2px rgba(0,0,0,0.2)";
 
 /** Foreground colours + an optional text-shadow for the slide's text. */
-export function slideText(
+export const slideText = (
   style: EffectiveStyle,
   hasPhoto: boolean
-): SlideTextColors {
+): SlideTextColors => {
   if (hasPhoto && style.dark) {
     return {
       fg: "#ffffff",
@@ -48,10 +49,14 @@ export function slideText(
     muted: style.mutedInk,
     shadow: "",
   };
-}
+};
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
 
 /** "01 / 05" slide index, zero-padded. */
-export function slideNumber(index: number, total: number): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(index + 1)} / ${pad(total)}`;
-}
+export const slideNumber = (index: number, total: number): string =>
+  `${pad2(index + 1)} / ${pad2(total)}`;
+
+/** A stat as running text: "42.1 km", or just the value when unitless. */
+export const statWithUnit = (s: StatItem): string =>
+  s.unit ? `${s.value} ${s.unit}` : s.value;

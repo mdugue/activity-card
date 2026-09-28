@@ -22,46 +22,49 @@ export interface FontPair {
   numeralWeight: number;
 }
 
+/** The shared label / unit face of the serif, bold and magazine pairs. */
+const PLEX_MONO = "var(--font-ibm-plex-mono), monospace";
+
 export const FONT_PAIRS: Record<FontPairId, FontPair> = {
-  // Light & serif — the Dawn pairs. Elegant garamond numerals, art-print energy.
-  serif: {
-    display: "var(--font-cormorant), serif",
-    displayWeight: 600,
-    numeral: "var(--font-cormorant), serif",
-    numeralWeight: 600,
-    mono: "var(--font-ibm-plex-mono), monospace",
-  },
   // Dark & bold — the Dusk pairs. Anton slab of condensed weight.
   bold: {
     display: "var(--font-heading), sans-serif",
     displayWeight: 400,
+    mono: PLEX_MONO,
     numeral: "var(--font-heading), sans-serif",
     numeralWeight: 400,
-    mono: "var(--font-ibm-plex-mono), monospace",
-  },
-  // Magazine — Playfair display + numerals for Exposure / Press.
-  magazine: {
-    display: "var(--font-playfair), serif",
-    displayWeight: 700,
-    numeral: "var(--font-playfair), serif",
-    numeralWeight: 600,
-    mono: "var(--font-ibm-plex-mono), monospace",
   },
   // Grotesk — Space Grotesk, the Frame system face.
   grotesk: {
     display: "var(--font-space-grotesk), sans-serif",
     displayWeight: 600,
+    mono: "var(--font-geist-mono), monospace",
     numeral: "var(--font-space-grotesk), sans-serif",
     numeralWeight: 600,
-    mono: "var(--font-geist-mono), monospace",
+  },
+  // Magazine — Playfair display + numerals for Exposure / Press.
+  magazine: {
+    display: "var(--font-playfair), serif",
+    displayWeight: 700,
+    mono: PLEX_MONO,
+    numeral: "var(--font-playfair), serif",
+    numeralWeight: 600,
+  },
+  // Light & serif — the Dawn pairs. Elegant garamond numerals, art-print energy.
+  serif: {
+    display: "var(--font-cormorant), serif",
+    displayWeight: 600,
+    mono: PLEX_MONO,
+    numeral: "var(--font-cormorant), serif",
+    numeralWeight: 600,
   },
   // Syne — the STRATA face: geometric display + JetBrains Mono cartography.
   syne: {
     display: "var(--font-syne), sans-serif",
     displayWeight: 800,
+    mono: "var(--font-mono), monospace",
     numeral: "var(--font-syne), sans-serif",
     numeralWeight: 700,
-    mono: "var(--font-mono), monospace",
   },
 };
 

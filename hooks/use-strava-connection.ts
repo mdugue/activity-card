@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { z } from "zod/mini";
 
 export interface StravaAthleteInfo {
   avatar?: string | null;
@@ -19,10 +20,19 @@ interface State {
   loading: boolean;
 }
 
-interface MeResponse {
-  athlete?: StravaAthleteInfo | null;
-  connected: boolean;
-}
+/** `/api/strava/me` payload, validated at the fetch boundary. */
+const MeResponseSchema = z.object({
+  athlete: z.optional(
+    z.nullable(
+      z.object({
+        avatar: z.optional(z.nullable(z.string())),
+        firstname: z.optional(z.nullable(z.string())),
+        id: z.optional(z.number()),
+      })
+    )
+  ),
+  connected: z.boolean(),
+});
 
 export interface UseStravaConnection extends State {
   disconnect: () => Promise<void>;
@@ -34,12 +44,12 @@ export interface UseStravaConnection extends State {
  * themselves are httpOnly, so this hook is the only way the client UI learns
  * whether to render "Connect" vs "Pick from Strava".
  */
-export function useStravaConnection(): UseStravaConnection {
+export const useStravaConnection = (): UseStravaConnection => {
   const [state, setState] = useState<State>({
-    connected: false,
     athlete: null,
-    loading: true,
+    connected: false,
     error: null,
+    loading: true,
   });
 
   const refresh = useCallback(async () => {
@@ -47,26 +57,27 @@ export function useStravaConnection(): UseStravaConnection {
       const res = await fetch("/api/strava/me", { cache: "no-store" });
       if (!res.ok) {
         setState({
-          connected: false,
           athlete: null,
-          loading: false,
+          connected: false,
           error: "fetch_failed",
+          loading: false,
         });
         return;
       }
-      const data = (await res.json()) as MeResponse;
+      // A malformed body throws here and lands in the catch below.
+      const data = MeResponseSchema.parse(await res.json());
       setState({
-        connected: data.connected,
         athlete: data.athlete ?? null,
-        loading: false,
+        connected: data.connected,
         error: null,
+        loading: false,
       });
     } catch {
       setState({
-        connected: false,
         athlete: null,
-        loading: false,
+        connected: false,
         error: "fetch_failed",
+        loading: false,
       });
     }
   }, []);
@@ -81,10 +92,10 @@ export function useStravaConnection(): UseStravaConnection {
         return;
       }
       setState({
-        connected: false,
         athlete: null,
-        loading: false,
+        connected: false,
         error: null,
+        loading: false,
       });
     } catch {
       await refresh();
@@ -99,5 +110,5 @@ export function useStravaConnection(): UseStravaConnection {
     void refresh();
   }, [refresh]);
 
-  return { ...state, refresh, disconnect };
-}
+  return { ...state, disconnect, refresh };
+};

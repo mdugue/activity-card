@@ -2,6 +2,14 @@ import type { CSSProperties, ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
+/** The inline style carrying the card's aspect ratio as a CSS custom property. */
+interface CardAspectStyle extends CSSProperties {
+  "--card-aspect": number;
+}
+
+/** The single card's 4:5 master (1080×1350). */
+const DEFAULT_ASPECT_RATIO = 1080 / 1350;
+
 interface CardStageProps {
   /** card aspect ratio (w / h) driving the fit-to-box width cap; default 4:5 */
   aspectRatio?: number;
@@ -26,15 +34,16 @@ interface CardStageProps {
  * bounded-height ancestor: it's a `container-type:size` container, so `100cqh`
  * resolves to 0 unless an ancestor supplies a definite block-size.
  */
-export function CardStage({
+export const CardStage = ({
   children,
   maxWidthClassName,
-  aspectRatio = 1080 / 1350,
-}: CardStageProps) {
+  aspectRatio = DEFAULT_ASPECT_RATIO,
+}: CardStageProps) => {
+  const style: CardAspectStyle = { "--card-aspect": aspectRatio };
   return (
     <div
       className="max-lg:[container-type:size] max-lg:grid max-lg:min-h-0 max-lg:flex-1 max-lg:place-items-center lg:block"
-      style={{ "--card-aspect": aspectRatio } as CSSProperties}
+      style={style}
     >
       <div
         className={cn(
@@ -46,4 +55,4 @@ export function CardStage({
       </div>
     </div>
   );
-}
+};

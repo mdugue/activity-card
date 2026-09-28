@@ -29,7 +29,55 @@ interface ElevationBandProps {
   weights?: number[];
 }
 
-export function ElevationBand({
+// The sequenced-leg variant: each leg's profile laid out side by side along the
+// width (shared scale), sharing one gradient fill. No high/low markers (they'd
+// be ambiguous across legs on a shared scale).
+const MultiBand = ({
+  paths,
+  w,
+  h,
+  colors,
+  areaId,
+}: {
+  areaId: string;
+  colors: ElevationColors;
+  h: number;
+  paths: OverlayPath[];
+  w: number;
+}) => (
+  <svg
+    aria-hidden="true"
+    preserveAspectRatio="none"
+    style={{ display: "block", height: "100%", width: "100%" }}
+    viewBox={`0 0 ${w} ${h}`}
+  >
+    <title>Elevation profiles</title>
+    <defs>
+      <linearGradient id={areaId} x1="0%" x2="0%" y1="0%" y2="100%">
+        <stop offset="0%" stopColor={colors.fillFrom} stopOpacity={0.55} />
+        <stop offset="100%" stopColor={colors.fillTo} stopOpacity={0.04} />
+      </linearGradient>
+    </defs>
+    {paths.map((p, i) => {
+      const key = `band-${i}-${p.line}`;
+      return (
+        <g key={key}>
+          <path d={p.area} fill={`url(#${areaId})`} stroke="none" />
+          <path
+            d={p.line}
+            fill="none"
+            stroke={colors.line}
+            strokeLinejoin="round"
+            strokeWidth={4}
+            style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.35))" }}
+          />
+        </g>
+      );
+    })}
+  </svg>
+);
+
+export const ElevationBand = ({
   profile,
   profiles,
   weights,
@@ -41,7 +89,7 @@ export function ElevationBand({
   markers = false,
   markerColor = "#ffffff",
   markerFont = "monospace",
-}: ElevationBandProps) {
+}: ElevationBandProps) => {
   const areaId = useId();
 
   // Multi-activity project: overlay every leg, sharing one vertical scale.
@@ -90,8 +138,8 @@ export function ElevationBand({
   const minIdx = profile.indexOf(min);
   const tags = showMarkers
     ? [
-        { p: pts[maxIdx], value: max, above: true },
-        { p: pts[minIdx], value: min, above: false },
+        { above: true, p: pts[maxIdx], value: max },
+        { above: false, p: pts[minIdx], value: min },
       ]
     : [];
   const labelX = (x: number) => Math.min(Math.max(x, 90), w - 90);
@@ -104,7 +152,7 @@ export function ElevationBand({
     <svg
       aria-hidden="true"
       preserveAspectRatio="none"
-      style={{ width: "100%", height: "100%", display: "block" }}
+      style={{ display: "block", height: "100%", width: "100%" }}
       viewBox={`0 0 ${w} ${h}`}
     >
       <title>{mode === "pace" ? "Pace profile" : "Elevation profile"}</title>
@@ -144,54 +192,4 @@ export function ElevationBand({
       ))}
     </svg>
   );
-}
-
-// The sequenced-leg variant: each leg's profile laid out side by side along the
-// width (shared scale), sharing one gradient fill. No high/low markers (they'd
-// be ambiguous across legs on a shared scale).
-function MultiBand({
-  paths,
-  w,
-  h,
-  colors,
-  areaId,
-}: {
-  areaId: string;
-  colors: ElevationColors;
-  h: number;
-  paths: OverlayPath[];
-  w: number;
-}) {
-  return (
-    <svg
-      aria-hidden="true"
-      preserveAspectRatio="none"
-      style={{ width: "100%", height: "100%", display: "block" }}
-      viewBox={`0 0 ${w} ${h}`}
-    >
-      <title>Elevation profiles</title>
-      <defs>
-        <linearGradient id={areaId} x1="0%" x2="0%" y1="0%" y2="100%">
-          <stop offset="0%" stopColor={colors.fillFrom} stopOpacity={0.55} />
-          <stop offset="100%" stopColor={colors.fillTo} stopOpacity={0.04} />
-        </linearGradient>
-      </defs>
-      {paths.map((p, i) => {
-        const key = `band-${i}-${p.line}`;
-        return (
-          <g key={key}>
-            <path d={p.area} fill={`url(#${areaId})`} stroke="none" />
-            <path
-              d={p.line}
-              fill="none"
-              stroke={colors.line}
-              strokeLinejoin="round"
-              strokeWidth={4}
-              style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.35))" }}
-            />
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
+};

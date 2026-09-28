@@ -23,28 +23,6 @@ is listed under "Findings not yet planned" so it can be picked later
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
-## Execution notes (2026-09-28)
-
-All five plans landed on `claude/pending-plans-review-pgjogn`. Where the
-execution deviated from a plan:
-
-- **002** — the plan's `isoDate: start_date_local?.slice(0, 10)` would have
-  moved every Strava activity's `startTimeMs` to UTC midnight (finalise
-  derives both from `isoDate`), breaking triathlon ordering. `isoDate` stays
-  `start_date`; only `date` is overridden from `start_date_local`. A test
-  pins both.
-- **003** — besides the unit tests, an e2e test now proves an unsigned
-  bounce is refused even when its host passes the allowlist
-  (`STRAVA_ALLOW_HTTP_BOUNCE=1` in the e2e server env). A signed happy-path
-  e2e is not possible: `next start` reports every request as `localhost`,
-  so a second origin can't initiate a bounce.
-- **004** — name hints also split camelCase ("MorningRun.gpx" kept working
-  under whole-word matching) and "triathlon" wins over the leg words a
-  triathlon title names. Sport words are looked up in a `Map` so
-  `constructor.gpx` can't hit `Object.prototype`.
-- **005** — items 1–6 had already been fixed in the dependency-refresh
-  commit; only item 7 (Strava cookie lifetimes and token paths) was left.
-
 ## Dependency notes
 
 - 001, 002 and 004 all touch the ingestion path (`lib/parse-*.ts`) but in
@@ -53,6 +31,21 @@ execution deviated from a plan:
 - The architecture review's "deepen activity ingestion" candidate would
   absorb 001/002/004. Land these small fixes first — they come with the
   tests that a later deepening needs as a safety net.
+
+## Implemented directly (2026-09-28)
+
+These findings were fixed without a separate plan: F6 (photo proxy
+hardening), F7 (landing route code-split: first-load JS for `/` down from
+~551 KB to ~327 KB gzip), F9 (palette sampled at max 1024 px), F10 (one
+`lib/profile-signal.ts` rule), F11 (baseline security headers), F12 (export
+single-flight, late blob revoke, error toast), F13 (stale photo resize
+dropped), F16 (picker uses `lib/format`), F17 (Panorama removed,
+`StrataField` rename), F18 (token response validation), F19 (`formatPaceSec`
+rounding), F20 (debounced UI persistence).
+
+Still open: F8 (multisport FIT splitting — needs real `.fit` fixtures), F14
+(slide-strip render cost — profile first), F15 (unused shadcn vendor files —
+maintainer call), and the direction options below.
 
 ## Findings not yet planned (vetted, ordered by leverage)
 

@@ -9,7 +9,7 @@ import {
 import type { PhotoDraw } from "@/lib/photo-draw";
 
 const DRAW: PhotoDraw = {
-  box: { kind: "box", x: -60, y: 0, w: 1200, h: 1350 },
+  box: { h: 1350, kind: "box", w: 1200, x: -60, y: 0 },
   filter: "grayscale(1)",
   flipH: true,
   flipV: false,
@@ -42,7 +42,7 @@ describe("photo-draw descriptor", () => {
       '{"src":"blob:x","box":{"kind":"inset","inset":0}}'
     );
     expect(decoded).toEqual({
-      box: { kind: "inset", inset: 0 },
+      box: { inset: 0, kind: "inset" },
       filter: "",
       flipH: false,
       flipV: false,
@@ -59,33 +59,33 @@ describe("photo-draw descriptor", () => {
 describe("resolvePhotoBox", () => {
   test("passes an explicit box through untouched", () => {
     expect(resolvePhotoBox(DRAW.box, 1080, 1350)).toEqual({
+      h: 1350,
+      w: 1200,
       x: -60,
       y: 0,
-      w: 1200,
-      h: 1350,
     });
   });
 
   test("expands an inset box against the measured layer", () => {
     // A negative inset bleeds outward on every side — the same over-bleed
     // CssCoverImage uses so a rotated photo still covers its container.
-    expect(resolvePhotoBox({ kind: "inset", inset: -40 }, 1080, 1350)).toEqual({
+    expect(resolvePhotoBox({ inset: -40, kind: "inset" }, 1080, 1350)).toEqual({
+      h: 1430,
+      w: 1160,
       x: -40,
       y: -40,
-      w: 1160,
-      h: 1430,
     });
-    expect(resolvePhotoBox({ kind: "inset", inset: 0 }, 1080, 1350)).toEqual({
+    expect(resolvePhotoBox({ inset: 0, kind: "inset" }, 1080, 1350)).toEqual({
+      h: 1350,
+      w: 1080,
       x: 0,
       y: 0,
-      w: 1080,
-      h: 1350,
     });
   });
 });
 
 describe("coverRectAroundCentre", () => {
-  const box = { x: 0, y: 0, w: 1080, h: 1350 };
+  const box = { h: 1350, w: 1080, x: 0, y: 0 };
 
   test("matches background-size: cover for a landscape photo", () => {
     // 2048×1536 covering 1080×1350 scales by height (1350/1536).
@@ -105,10 +105,10 @@ describe("coverRectAroundCentre", () => {
 
   test("falls back to the box when the natural size is unknown", () => {
     expect(coverRectAroundCentre(box, 0, 0)).toEqual({
+      h: 1350,
+      w: 1080,
       x: -540,
       y: -675,
-      w: 1080,
-      h: 1350,
     });
   });
 });

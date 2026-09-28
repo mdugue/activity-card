@@ -14,20 +14,18 @@ import type { OAuthStatePayload } from "@/lib/strava-oauth-state";
 describe("encode/decode OAuth state", () => {
   test("round-trips a full payload", () => {
     const payload: OAuthStatePayload = {
-      r: "nonce-123",
       b: "https://preview.example.app",
       p: "/?strava=connected",
+      r: "nonce-123",
     };
     expect(decodeOAuthState(encodeOAuthState(payload))).toEqual(payload);
   });
 
   test("round-trips a minimal payload, omitting absent fields", () => {
     const encoded = encodeOAuthState({ r: "only-nonce" });
-    expect(decodeOAuthState(encoded)).toEqual({
-      r: "only-nonce",
-      b: undefined,
-      p: undefined,
-    });
+    // `toEqual` treats a missing key and an `undefined` one alike, so this
+    // pins b/p as absent.
+    expect(decodeOAuthState(encoded)).toEqual({ r: "only-nonce" });
   });
 
   test("produces URL-safe base64 (no +, /, or = padding)", () => {
@@ -49,53 +47,10 @@ describe("encode/decode OAuth state", () => {
 
   test("drops non-string b/p fields rather than trusting them", () => {
     const encoded = Buffer.from(
-      JSON.stringify({ r: "n", b: 42, p: { evil: true } })
+      JSON.stringify({ b: 42, p: { evil: true }, r: "n" })
     ).toString("base64url");
-    expect(decodeOAuthState(encoded)).toEqual({
-      r: "n",
-      b: undefined,
-      p: undefined,
-    });
-  });
-});
-
-describe("bounce signature", () => {
-  const B = "https://effort-git-feature-team.vercel.app";
-  const R = "nonce-123";
-  const KEY = "test-key";
-
-  test("verifies a signature made with the same target, nonce and key", () => {
-    expect(verifyBounce(B, R, signBounce(B, R, KEY), KEY)).toBe(true);
-  });
-
-  test("rejects the signature on another target", () => {
-    const s = signBounce(B, R, KEY);
-    expect(verifyBounce("https://evil-team.vercel.app", R, s, KEY)).toBe(false);
-  });
-
-  test("rejects the signature under another nonce", () => {
-    expect(verifyBounce(B, "other-nonce", signBounce(B, R, KEY), KEY)).toBe(
-      false
-    );
-  });
-
-  test("rejects a signature made with another key", () => {
-    expect(verifyBounce(B, R, signBounce(B, R, "other-key"), KEY)).toBe(false);
-  });
-
-  test("rejects a missing or malformed signature", () => {
-    expect(verifyBounce(B, R, undefined, KEY)).toBe(false);
-    expect(verifyBounce(B, R, "", KEY)).toBe(false);
-    expect(verifyBounce(B, R, "short", KEY)).toBe(false);
-  });
-
-  test("the signature survives the state round-trip; non-strings are dropped", () => {
-    const payload: OAuthStatePayload = { r: R, b: B, s: signBounce(B, R, KEY) };
-    expect(decodeOAuthState(encodeOAuthState(payload))).toEqual(payload);
-    const forged = Buffer.from(JSON.stringify({ r: R, b: B, s: 42 })).toString(
-      "base64url"
-    );
-    expect(decodeOAuthState(forged)?.s).toBeUndefined();
+    // b/p must come back absent (`toEqual` ignores undefined keys).
+    expect(decodeOAuthState(encoded)).toEqual({ r: "n" });
   });
 });
 
@@ -105,8 +60,8 @@ describe("isAllowedBounceOrigin", () => {
   const originalHttp = process.env.STRAVA_ALLOW_HTTP_BOUNCE;
 
   beforeEach(() => {
-    process.env.STRAVA_BOUNCE_ALLOWED_HOST_SUFFIX = undefined;
-    process.env.STRAVA_ALLOW_HTTP_BOUNCE = undefined;
+    delete process.env.STRAVA_BOUNCE_ALLOWED_HOST_SUFFIX;
+    delete process.env.STRAVA_ALLOW_HTTP_BOUNCE;
   });
 
   afterEach(() => {
@@ -189,6 +144,51 @@ describe("safeRelativePath", () => {
   test("rejects control characters to block header smuggling", () => {
     expect(safeRelativePath("/foo\r\nLocation: https://evil")).toBeNull();
     expect(safeRelativePath("/foo\u0000bar")).toBeNull();
-    expect(safeRelativePath("/foo\x7Fbar")).toBeNull();
+    expect(safeRelativePath("/foo\u007Fbar")).toBeNull();
+  });
+});
+
+describe("bounce signature", () => {
+  const B = "https://effort-git-feature-team.vercel.app";
+  const R = "nonce-abc";
+  const KEY = "test-signing-key";
+
+  test("verifies a signature minted for the same b, r and secret", () => {
+    expect(verifyBounce(B, R, signBounce(B, R, KEY), KEY)).toBe(true);
+  });
+
+  test("rejects the signature when b is swapped for an attacker host", () => {
+    const s = signBounce(B, R, KEY);
+    expect(verifyBounce("https://evil-team.vercel.app", R, s, KEY)).toBe(false);
+  });
+
+  test("rejects the signature when replayed with another nonce", () => {
+    const s = signBounce(B, R, KEY);
+    expect(verifyBounce(B, "other-nonce", s, KEY)).toBe(false);
+  });
+
+  test("rejects a signature made with a different secret", () => {
+    const s = signBounce(B, R, "some-other-key");
+    expect(verifyBounce(B, R, s, KEY)).toBe(false);
+  });
+
+  test("rejects a missing or wrong-length signature", () => {
+    expect(verifyBounce(B, R, undefined, KEY)).toBe(false);
+    expect(verifyBounce(B, R, "", KEY)).toBe(false);
+    expect(verifyBounce(B, R, "short", KEY)).toBe(false);
+  });
+
+  test("s survives the state round-trip; a non-string s is dropped", () => {
+    const s = signBounce(B, R, KEY);
+    // p stays absent (`toEqual` ignores undefined keys).
+    expect(decodeOAuthState(encodeOAuthState({ b: B, r: R, s }))).toEqual({
+      b: B,
+      r: R,
+      s,
+    });
+    const encoded = Buffer.from(
+      JSON.stringify({ b: B, r: R, s: 123 })
+    ).toString("base64url");
+    expect(decodeOAuthState(encoded)?.s).toBeUndefined();
   });
 });

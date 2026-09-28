@@ -8,7 +8,8 @@ import type {
   FontPair,
 } from "@/theme/carousel/theme-tokens";
 
-import { MiniViz, vizHasKind } from "./mini-viz";
+import { MiniViz } from "./mini-viz";
+import { vizHasKind } from "./viz-kind";
 
 interface CrossVizProps {
   accent: string;
@@ -23,7 +24,7 @@ interface CrossVizProps {
   w?: number;
 }
 
-export function CrossViz({
+export const CrossViz = ({
   kind,
   data,
   color,
@@ -32,7 +33,7 @@ export function CrossViz({
   fonts,
   w = 260,
   h = 150,
-}: CrossVizProps) {
+}: CrossVizProps) => {
   if (!vizHasKind(data, kind)) {
     return null;
   }
@@ -40,16 +41,16 @@ export function CrossViz({
     <div style={{ width: w }}>
       <div
         style={{
+          color: muted,
           fontFamily: fonts.mono,
           fontSize: 15,
           letterSpacing: "0.2em",
-          color: muted,
           marginBottom: 6,
         }}
       >
         {kind === "elevation" ? "PROFILE" : "ROUTE"}
       </div>
-      <div style={{ width: w, height: h }}>
+      <div style={{ height: h, width: w }}>
         <MiniViz
           accent={accent}
           color={color}
@@ -63,4 +64,4 @@ export function CrossViz({
       </div>
     </div>
   );
-}
+};

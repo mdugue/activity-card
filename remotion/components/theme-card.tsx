@@ -1,5 +1,6 @@
 import type { ActivityData } from "@/lib/activity";
 import type { ColorScheme } from "@/theme/core/colors";
+import type { ThemeConfig } from "@/theme/core/params/kinds";
 import { pickThemeData } from "@/theme/core/theme-contract";
 import { SINGLE_CARD_THEMES } from "@/theme/single-card";
 import type { ThemeId } from "@/theme/single-card";
@@ -9,7 +10,7 @@ import type { ThemeId } from "@/theme/single-card";
  * app exports it — same registry, same data stripping. Wrap in `CardScaled`
  * to place it in a scene. The videos never mock a card.
  */
-export function ThemeCard({
+export const ThemeCard = ({
   colors,
   config,
   data,
@@ -17,11 +18,11 @@ export function ThemeCard({
   photoUrl,
 }: {
   colors?: ColorScheme;
-  config?: Record<string, unknown>;
+  config?: ThemeConfig;
   data: ActivityData;
   id: ThemeId;
   photoUrl?: string | null;
-}) {
+}) => {
   const theme = SINGLE_CARD_THEMES[id];
   const { Component } = theme;
   return (
@@ -32,4 +33,4 @@ export function ThemeCard({
       photoUrl={photoUrl}
     />
   );
-}
+};

@@ -4,8 +4,7 @@
 // legacy 1080 × 1350, so the strip stays byte-identical. The carousel offers the
 // same formats as the single card — every format is just a different slide box.
 
-import type { ExportFormat } from "@/theme/core/export-formats";
-import { useFormat } from "@/theme/shared/format-context";
+import type { ExportFormat, SafeInsets } from "@/theme/core/export-formats";
 
 export interface StripGeometry {
   slideH: number;
@@ -14,28 +13,30 @@ export interface StripGeometry {
 }
 
 /** Pure strip geometry for a format + slide count (the non-React callers). */
-export function stripGeometry(
+export const stripGeometry = (
   format: ExportFormat,
   count: number
-): StripGeometry {
-  return {
-    slideW: format.width,
-    slideH: format.height,
-    stripW: count * format.width,
-  };
-}
-
-/** Strip geometry for the active format (from `FormatContext`) + slide count. */
-export function useStripGeometry(count: number): StripGeometry {
-  return stripGeometry(useFormat(), count);
-}
+): StripGeometry => ({
+  slideH: format.height,
+  slideW: format.width,
+  stripW: count * format.width,
+});
 
 /** The panel's natural margin, per side (was the flat `SLIDE_PAD`). `SafeArea`
  *  floors content to max(this, platform safe inset), so feed is unchanged
  *  (90 > 48) while a tall Story pushes content clear of the chrome. */
 export const CAROUSEL_NATURAL_MARGIN = 90;
 
+/** The panel's natural margin as a per-side inset. */
+export const CAROUSEL_NATURAL_PAD: Partial<SafeInsets> = {
+  bottom: CAROUSEL_NATURAL_MARGIN,
+  left: CAROUSEL_NATURAL_MARGIN,
+  right: CAROUSEL_NATURAL_MARGIN,
+  top: CAROUSEL_NATURAL_MARGIN,
+};
+
 /** The full-width STRIP frame the canvas reads — count slides across, one tall. */
-export function stripFormat(format: ExportFormat, count: number): ExportFormat {
-  return { ...format, width: count * format.width };
-}
+export const stripFormat = (
+  format: ExportFormat,
+  count: number
+): ExportFormat => ({ ...format, width: count * format.width });

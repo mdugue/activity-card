@@ -9,14 +9,14 @@ import { toast } from "sonner";
  * success (the caller opens the wizard's Strava picker), then strip the
  * param so a reload doesn't re-fire. Re-runs are no-ops once stripped.
  */
-export function useStravaReturnToast(onConnected: () => void): void {
+export const useStravaReturnToast = (onConnected: () => void): void => {
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
     const params = new URLSearchParams(window.location.search);
     const flag = params.get("strava");
-    if (!flag) {
+    if (flag === null || flag === "") {
       return;
     }
     switch (flag) {
@@ -28,6 +28,12 @@ export function useStravaReturnToast(onConnected: () => void): void {
       }
       case "denied": {
         toast.error("You declined to connect Strava. You can try again.");
+        break;
+      }
+      case "scope_missing": {
+        toast.error(
+          "Strava didn't share your activities. Connect again and keep “View data about your activities” ticked."
+        );
         break;
       }
       case "state_mismatch": {
@@ -58,4 +64,4 @@ export function useStravaReturnToast(onConnected: () => void): void {
     url.searchParams.delete("reason");
     window.history.replaceState({}, "", url.toString());
   }, [onConnected]);
-}
+};

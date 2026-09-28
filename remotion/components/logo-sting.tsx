@@ -15,7 +15,7 @@ import { RiseIn } from "./rise-in";
  * overshoot — the one deliberate "pop" in the brand's motion language.
  * Geometry mirrors components/app/effort-wordmark.tsx exactly.
  */
-export function AnimatedMark({
+export const AnimatedMark = ({
   delay = 0,
   peak = RUST,
   size = 150,
@@ -25,7 +25,7 @@ export function AnimatedMark({
   peak?: string;
   size?: number;
   stroke?: string;
-}) {
+}) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const draw = interpolate(frame - delay, [0, 22], [0, 1], {
@@ -67,13 +67,13 @@ export function AnimatedMark({
       />
     </svg>
   );
-}
+};
 
 /**
  * The intro/outro sting: mark draw-in, EFFORT wordmark, the rust-rule claim
  * row, and an optional small mono sub-line (CTA). Centre it in a VideoFrame.
  */
-export function LogoSting({
+export const LogoSting = ({
   claim = "Make every effort worth sharing.",
   delay = 0,
   sub,
@@ -82,65 +82,63 @@ export function LogoSting({
   delay?: number;
   /** small uppercase mono line under the claim, e.g. "Free · No account" */
   sub?: string;
-}) {
-  return (
-    <div
-      style={{
-        alignItems: "center",
-        display: "flex",
-        flexDirection: "column",
-        gap: 30,
-      }}
+}) => (
+  <div
+    style={{
+      alignItems: "center",
+      display: "flex",
+      flexDirection: "column",
+      gap: 30,
+    }}
+  >
+    <AnimatedMark delay={delay} />
+    <RiseIn delay={delay + 14}>
+      <div
+        style={{
+          color: PAPER,
+          fontFamily: FONT.heading,
+          fontSize: TYPE.claim * 0.73,
+          letterSpacing: 8,
+          lineHeight: 1,
+          textTransform: "uppercase",
+        }}
+      >
+        Effort
+      </div>
+    </RiseIn>
+    <RiseIn
+      delay={delay + 34}
+      style={{ alignItems: "center", display: "flex", gap: 18 }}
     >
-      <AnimatedMark delay={delay} />
-      <RiseIn delay={delay + 14}>
+      <span style={{ backgroundColor: RUST, height: 2, width: 44 }} />
+      <span
+        style={{
+          color: PAPER,
+          fontFamily: FONT.sans,
+          fontSize: 32,
+          letterSpacing: 1,
+          opacity: 0.85,
+        }}
+      >
+        {claim}
+      </span>
+      <span style={{ backgroundColor: RUST, height: 2, width: 44 }} />
+    </RiseIn>
+    {sub !== undefined && sub !== "" ? (
+      <RiseIn delay={delay + 48} style={{ marginTop: 10 }}>
         <div
           style={{
-            color: PAPER,
-            fontFamily: FONT.heading,
-            fontSize: TYPE.claim * 0.73,
-            letterSpacing: 8,
-            lineHeight: 1,
+            color: PAPER_DIM,
+            fontFamily: FONT.mono,
+            fontSize: TYPE.caption,
+            fontWeight: 600,
+            letterSpacing: TRACKING.label,
             textTransform: "uppercase",
           }}
         >
-          Effort
+          {sub}
         </div>
       </RiseIn>
-      <RiseIn
-        delay={delay + 34}
-        style={{ alignItems: "center", display: "flex", gap: 18 }}
-      >
-        <span style={{ backgroundColor: RUST, height: 2, width: 44 }} />
-        <span
-          style={{
-            color: PAPER,
-            fontFamily: FONT.sans,
-            fontSize: 32,
-            letterSpacing: 1,
-            opacity: 0.85,
-          }}
-        >
-          {claim}
-        </span>
-        <span style={{ backgroundColor: RUST, height: 2, width: 44 }} />
-      </RiseIn>
-      {sub ? (
-        <RiseIn delay={delay + 48} style={{ marginTop: 10 }}>
-          <div
-            style={{
-              color: PAPER_DIM,
-              fontFamily: FONT.mono,
-              fontSize: TYPE.caption,
-              fontWeight: 600,
-              letterSpacing: TRACKING.label,
-              textTransform: "uppercase",
-            }}
-          >
-            {sub}
-          </div>
-        </RiseIn>
-      ) : null}
-    </div>
-  );
-}
+    ) : null}
+  </div>
+);

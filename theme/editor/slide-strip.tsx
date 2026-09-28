@@ -5,6 +5,8 @@
 // agree. Click a thumbnail to bring it into the preview. The theme defines how
 // many slides exist (its panel count); the strip is just navigation.
 
+import type { CSSProperties } from "react";
+
 import type { ImageSize } from "@/hooks/use-image-natural-size";
 import type { ActivityData } from "@/lib/activity";
 import type { ImageTransform } from "@/lib/image-transform";
@@ -14,6 +16,7 @@ import { CarouselDeck } from "@/theme/carousel/deck";
 import type { CarouselTheme } from "@/theme/carousel/define-theme";
 import type { ColorScheme } from "@/theme/core/colors";
 import type { ExportFormat } from "@/theme/core/export-formats";
+import type { ThemeConfig } from "@/theme/core/params/kinds";
 import type { Visibility } from "@/theme/core/visibility";
 
 // Each thumbnail fits within this box — capping BOTH width and height so a tall
@@ -23,9 +26,18 @@ import type { Visibility } from "@/theme/core/visibility";
 const THUMB_MAX_W = 92;
 const THUMB_MAX_H = 116;
 
+/** A thumbnail's size and strip slice, as CSS custom properties. */
+interface ThumbStyle extends CSSProperties {
+  "--strip-h": string;
+  "--strip-w": string;
+  "--thumb-h": string;
+  "--thumb-slice": string;
+  "--thumb-w": string;
+}
+
 interface SlideStripProps {
   colors: ColorScheme;
-  config?: Record<string, unknown>;
+  config?: ThemeConfig;
   data: ActivityData;
   /** the active export format — sizes each thumbnail's aspect + slice */
   format: ExportFormat;
@@ -39,7 +51,7 @@ interface SlideStripProps {
   visibility?: Visibility;
 }
 
-export function SlideStrip(props: SlideStripProps) {
+export const SlideStrip = (props: SlideStripProps) => {
   const { selectedIndex, onSelect, theme, format } = props;
   const total = theme.panels.length;
   // Thumbnail aspect + slice scale follow the active format, fit-to-box so the
@@ -72,6 +84,15 @@ export function SlideStrip(props: SlideStripProps) {
     <div className="flex items-stretch justify-center gap-2">
       {Array.from({ length: total }, (_, i) => {
         const active = i === selectedIndex;
+        // Each thumbnail windows onto its own slice of the full strip; the
+        // geometry rides CSS custom properties (px).
+        const thumbStyle: ThumbStyle = {
+          "--strip-h": `${format.height}px`,
+          "--strip-w": `${format.width * total}px`,
+          "--thumb-h": `${thumbH}px`,
+          "--thumb-slice": `translateX(${-(i * thumbW)}px) scale(${scale})`,
+          "--thumb-w": `${thumbW}px`,
+        };
         return (
           <div
             className="flex flex-col items-center gap-1"
@@ -82,27 +103,22 @@ export function SlideStrip(props: SlideStripProps) {
               aria-label={`Slide ${i + 1}: ${theme.label}`}
               aria-pressed={active}
               className={cn(
-                "relative overflow-hidden border-2 bg-white transition-all",
+                "relative h-(--thumb-h) w-(--thumb-w) overflow-hidden border-2 bg-white transition-all",
                 active
                   ? "border-foreground shadow-md"
                   : "border-foreground/15 opacity-80 hover:opacity-100"
               )}
-              onClick={() => onSelect(i)}
-              style={{ width: thumbW, height: thumbH }}
+              onClick={() => {
+                onSelect(i);
+              }}
+              style={thumbStyle}
               type="button"
             >
-              <div
-                className="origin-top-left"
-                style={{
-                  width: format.width * total,
-                  height: format.height,
-                  transform: `translateX(${-(i * thumbW)}px) scale(${scale})`,
-                }}
-              >
+              <div className="h-(--strip-h) w-(--strip-w) origin-top-left transform-(--thumb-slice)">
                 {canvas}
               </div>
             </button>
-            <span className="font-mono text-[9px] font-medium opacity-50">
+            <span className="font-mono text-xs font-medium opacity-50">
               {String(i + 1).padStart(2, "0")}
             </span>
           </div>
@@ -110,4 +126,4 @@ export function SlideStrip(props: SlideStripProps) {
       })}
     </div>
   );
-}
+};

@@ -4,7 +4,7 @@
 //
 // Built from the SHARED pure geometry in `lib/strata` (resample · positional
 // route→profile morph · Catmull-Rom smoothing) — NOT the single-card
-// `components/themes/strata` component — so the two theme families stay
+// `theme/single-card/strata.tsx` component — so the two theme families stay
 // decoupled (they only share `lib`). Colours come from the carousel token
 // (route = accent, elevation = accent2).
 //
@@ -27,7 +27,7 @@ import {
 import type { StrataConfig } from "@/lib/strata";
 import type { EffectiveStyle } from "@/theme/carousel/resolve";
 
-interface StrataCanvasProps {
+interface StrataFieldProps {
   data: ActivityData;
   /** number of woven in-between layers (the density lever) */
   densityK: number;
@@ -49,7 +49,7 @@ interface StrataCanvasProps {
   w: number;
 }
 
-export function StrataCanvas({
+export const StrataField = ({
   data,
   w,
   h,
@@ -61,23 +61,23 @@ export function StrataCanvas({
   scrim,
   overPhoto = false,
   lineAlpha = 0.4,
-}: StrataCanvasProps) {
+}: StrataFieldProps) => {
   const source = resolveStrataSource(data);
   if (!source) {
     return null;
   }
   const { curves, routePts, elevPts } = buildStrata({
-    routeCoords: source.routeCoords,
-    profile: source.profile,
-    W: w,
     H: h,
     K: densityK,
+    W: w,
+    profile: source.profile,
+    routeCoords: source.routeCoords,
     stretch: true,
   });
   if (curves.length < 2) {
     return null;
   }
-  const hero0 = curves[0];
+  const [hero0] = curves;
   const heroN = curves.at(-1);
   if (!heroN) {
     return null;
@@ -101,10 +101,10 @@ export function StrataCanvas({
     <svg
       aria-hidden="true"
       style={{
-        width: "100%",
-        height: "100%",
         display: "block",
+        height: "100%",
         overflow: "visible",
+        width: "100%",
       }}
       viewBox={`0 0 ${w} ${h}`}
     >
@@ -227,7 +227,7 @@ export function StrataCanvas({
       ) : null}
     </svg>
   );
-}
+};
 
 /**
  * The full STRATA carousel hero: the spanning field plus — over the mood
@@ -237,7 +237,7 @@ export function StrataCanvas({
  * for any non-STRATA deck (so the renderer can drop it in unconditionally).
  * `style` is the mood-resolved deck style (route = accent, elevation = accent2).
  */
-export function StrataHero({
+export const StrataHero = ({
   cfg,
   data,
   w,
@@ -252,15 +252,15 @@ export function StrataHero({
   overPhoto?: boolean;
   style: EffectiveStyle;
   w: number;
-}) {
+}) => {
   if (!cfg) {
     return null;
   }
   const mood = STRATA_MOODS[cfg.mood];
   return (
     <>
-      <div style={{ position: "absolute", inset: 0 }}>
-        <StrataCanvas
+      <div style={{ inset: 0, position: "absolute" }}>
+        <StrataField
           data={data}
           densityK={STRATA_DENSITY_K[cfg.density]}
           elevColor={style.accent2}
@@ -277,12 +277,12 @@ export function StrataHero({
         <div
           aria-hidden
           style={{
-            position: "absolute",
-            inset: 0,
             background: `linear-gradient(180deg, rgba(${mood.scrim},0.6) 0%, rgba(${mood.scrim},0.12) 24%, rgba(${mood.scrim},0) 46%, rgba(${mood.scrim},0.1) 66%, rgba(${mood.scrim},0.56) 100%)`,
+            inset: 0,
+            position: "absolute",
           }}
         />
       )}
     </>
   );
-}
+};

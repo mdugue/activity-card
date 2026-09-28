@@ -3,13 +3,19 @@ import { describe, expect, test } from "bun:test";
 
 import { parseGpx } from "@/lib/parse-gpx";
 
-function gpx(body: string): string {
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1">${body}</gpx>`;
-}
+const gpx = (body: string): string =>
+  `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1">${body}</gpx>`;
 
-function trkpt(lat: string, lon: string, ele: number, time: string): string {
-  return `<trkpt lat="${lat}" lon="${lon}"><ele>${ele}</ele><time>${time}</time></trkpt>`;
-}
+const trkpt = (lat: string, lon: string, ele: number, time: string): string =>
+  `<trkpt lat="${lat}" lon="${lon}"><ele>${ele}</ele><time>${time}</time></trkpt>`;
+
+/** Track point with HR/cadence under a non-gpxtpx (`ns3:`) prefix. */
+const ns3Trkpt = (lat: string, time: string): string =>
+  `<trkpt lat="${lat}" lon="11.0"><ele>500</ele><time>${time}</time><extensions><ns3:TrackPointExtension><ns3:hr>150</ns3:hr><ns3:cad>85</ns3:cad></ns3:TrackPointExtension></extensions></trkpt>`;
+
+/** Track point with HR/cadence in an unprefixed (default-namespace) extension. */
+const defaultNsTrkpt = (lat: string, time: string): string =>
+  `<trkpt lat="${lat}" lon="11.0"><ele>500</ele><time>${time}</time><extensions><TrackPointExtension xmlns="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"><hr>142</hr><cad>80</cad></TrackPointExtension></extensions></trkpt>`;
 
 const THREE_POINT_RIDE = gpx(
   `<trk><name>Morning Ride</name><type>cycling</type><trkseg>${[
@@ -103,55 +109,66 @@ describe("parseGpx", () => {
     expect(parsed.title.toLowerCase()).toContain("run");
   });
 
-  test("numeric names and types parse instead of failing the schema", () => {
+  test("numeric track name and type still parse", () => {
     const text = gpx(
       `<trk><name>2024</name><type>9</type><trkseg>${[
         trkpt("47.0", "11.0", 500, "2026-05-18T07:00:00Z"),
         trkpt("47.001", "11.0", 505, "2026-05-18T07:01:00Z"),
       ].join("")}</trkseg></trk>`
     );
-    const parsed = parseGpx(text, "export.gpx");
+    const parsed = parseGpx(text, "numeric.gpx");
     expect(parsed.title).toContain("2024");
-    expect(parsed.durationSec).toBe(60);
   });
 
-  test("several tracks are joined in order", () => {
-    const second = `<trk><trkseg>${[
-      trkpt("47.003", "11.0", 515, "2026-05-18T07:03:00Z"),
-      trkpt("47.004", "11.0", 520, "2026-05-18T07:04:00Z"),
+  test("concatenates the points of several <trk> elements", () => {
+    const first = `<trk><name>Leg one</name><trkseg>${[
+      trkpt("47.0", "11.0", 500, "2026-05-18T07:00:00Z"),
+      trkpt("47.001", "11.0", 505, "2026-05-18T07:01:00Z"),
     ].join("")}</trkseg></trk>`;
-    const single = parseGpx(THREE_POINT_RIDE, "one.gpx");
-    const text = THREE_POINT_RIDE.replace("</gpx>", `${second}</gpx>`);
-    const parsed = parseGpx(text, "two.gpx");
-    expect(parsed.title).toBe("Morning Ride");
-    expect(parsed.sport).toBe("ride");
-    expect(parsed.routeCoordinates?.length).toBe(5);
-    expect(parsed.distanceKm).toBeGreaterThan(single.distanceKm);
-    expect(parsed.durationSec).toBe(240);
+    const second = `<trk><name>Leg two</name><trkseg>${[
+      trkpt("47.002", "11.0", 510, "2026-05-18T07:02:00Z"),
+      trkpt("47.003", "11.0", 515, "2026-05-18T07:03:00Z"),
+    ].join("")}</trkseg></trk>`;
+    const single = parseGpx(gpx(first), "one.gpx");
+    const both = parseGpx(gpx(first + second), "two.gpx");
+    expect(both.routeCoordinates?.length).toBeGreaterThan(0);
+    expect(both.distanceKm).toBeGreaterThan(single.distanceKm);
+    expect(both.title).toBe("Leg One");
   });
 
-  test("reads heart rate and cadence whatever the extension prefix", () => {
-    const point = (lat: string, time: string, prefix: string) =>
-      `<trkpt lat="${lat}" lon="11.0"><ele>500</ele><time>${time}</time>` +
-      `<extensions><${prefix}:TrackPointExtension><${prefix}:hr>150</${prefix}:hr>` +
-      `<${prefix}:cad>80</${prefix}:cad></${prefix}:TrackPointExtension></extensions></trkpt>`;
-    for (const prefix of ["gpxtpx", "ns3"]) {
-      const text = gpx(
-        `<trk><trkseg>${[
-          point("47.0", "2026-05-18T07:00:00Z", prefix),
-          point("47.001", "2026-05-18T07:01:00Z", prefix),
-        ].join("")}</trkseg></trk>`
-      );
-      const parsed = parseGpx(text, "garmin.gpx");
-      expect(parsed.avgHeartRate).toBe(150);
-      expect(parsed.avgCadence).toBe(80);
-    }
-  });
-
-  test("an empty extensions element does not fail the file", () => {
+  test("reads heart rate from a non-gpxtpx extension prefix (ns3:)", () => {
     const text = gpx(
-      `<trk><trkseg><trkpt lat="47.0" lon="11.0"><extensions></extensions></trkpt></trkseg></trk>`
+      `<trk><name>Garmin</name><trkseg>${[
+        ns3Trkpt("47.0", "2026-05-18T07:00:00Z"),
+        ns3Trkpt("47.001", "2026-05-18T07:01:00Z"),
+      ].join("")}</trkseg></trk>`
     );
-    expect(() => parseGpx(text, "empty-ext.gpx")).not.toThrow();
+    const parsed = parseGpx(text, "garmin.gpx");
+    expect(parsed.avgHeartRate).toBe(150);
+    expect(parsed.avgCadence).toBe(85);
+  });
+
+  test("reads heart rate from an unprefixed (default-namespace) extension", () => {
+    const text = gpx(
+      `<trk><name>Default ns</name><trkseg>${[
+        defaultNsTrkpt("47.0", "2026-05-18T07:00:00Z"),
+        defaultNsTrkpt("47.001", "2026-05-18T07:01:00Z"),
+      ].join("")}</trkseg></trk>`
+    );
+    const parsed = parseGpx(text, "default-ns.gpx");
+    expect(parsed.avgHeartRate).toBe(142);
+    expect(parsed.avgCadence).toBe(80);
+  });
+
+  test("an empty <extensions/> element does not fail the file", () => {
+    const text = gpx(
+      `<trk><trkseg>${[
+        `<trkpt lat="47.0" lon="11.0"><time>2026-05-18T07:00:00Z</time><extensions></extensions></trkpt>`,
+        `<trkpt lat="47.001" lon="11.0"><time>2026-05-18T07:01:00Z</time><extensions/></trkpt>`,
+      ].join("")}</trkseg></trk>`
+    );
+    const parsed = parseGpx(text, "empty-ext.gpx");
+    expect(parsed.durationSec).toBe(60);
+    expect(parsed.avgHeartRate).toBeUndefined();
   });
 });

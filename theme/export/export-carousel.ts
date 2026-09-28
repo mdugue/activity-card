@@ -8,24 +8,29 @@
 
 import type { ExportFormat } from "@/theme/core/export-formats";
 
-import { deliverFiles, effortDateSlug, waitForFonts } from "./export-shared";
+import {
+  deliverFiles,
+  effortDateSlug,
+  fromCallback,
+  waitForFonts,
+} from "./export-shared";
 import { rasterizeNode } from "./rasterize";
 
-const PIXEL_RATIO = 2; // each slide → 2× its format size, matching the single card
-const MAX_CANVAS_DIM = 16_384; // conservative cross-browser canvas width cap
+// Each slide → 2× its format size, matching the single card.
+const PIXEL_RATIO = 2;
+// Conservative cross-browser canvas width cap.
+const MAX_CANVAS_DIM = 16_384;
 
-function pad2(n: number): string {
-  return String(n).padStart(2, "0");
-}
+const pad2 = (n: number): string => String(n).padStart(2, "0");
 
 /** Rasterise the wide strip node once and slice it into `count` format-sized
  *  frames. `format` is the chosen export format (4:5 feed by default). */
-export async function exportCarousel(
+export const exportCarousel = async (
   wideNode: HTMLElement,
   count: number,
   baseName: string,
   format: ExportFormat
-): Promise<void> {
+): Promise<void> => {
   await waitForFonts();
 
   const width = count * format.width;
@@ -38,8 +43,8 @@ export async function exportCarousel(
   // The output size is given pre-multiplied by `pr`; `rasterizeNode` owns the
   // snapdom options and the WebKit photo fallback.
   const canvas = await rasterizeNode(wideNode, {
-    width: width * pr,
     height: format.height * pr,
+    width: width * pr,
   });
 
   const sliceW = format.width * pr;
@@ -52,7 +57,7 @@ export async function exportCarousel(
   // overlapping the 3–4 encodes beats awaiting them one after another. The
   // frame index rides along so ordering/naming holds.
   const encodings: { blob: Promise<Blob | null>; index: number }[] = [];
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < count; i += 1) {
     const out = document.createElement("canvas");
     out.width = outW;
     out.height = outH;
@@ -65,10 +70,10 @@ export async function exportCarousel(
     }
     ctx.drawImage(canvas, i * sliceW, 0, sliceW, sliceH, 0, 0, outW, outH);
     encodings.push({
-      index: i,
-      blob: new Promise<Blob | null>((resolve) => {
+      blob: fromCallback<Blob | null>((resolve) => {
         out.toBlob(resolve, "image/png");
       }),
+      index: i,
     });
   }
 
@@ -85,10 +90,9 @@ export async function exportCarousel(
       });
     })
   );
-  await deliverFiles(files, { title: "My Effort carousel", betweenMs: 350 });
-}
+  await deliverFiles(files, { betweenMs: 350, title: "My Effort carousel" });
+};
 
 /** "effort_ride_20260518_carousel" — slide index is appended at export. */
-export function carouselBaseName(sport: string, date: string): string {
-  return `effort_${sport}_${effortDateSlug(date)}_carousel`;
-}
+export const carouselBaseName = (sport: string, date: string): string =>
+  `effort_${sport}_${effortDateSlug(date)}_carousel`;

@@ -20,7 +20,7 @@ interface StatLayoutProps extends PanelProps {
   titleSize: number;
 }
 
-export function StatLayout({
+export const StatLayout = ({
   data,
   style,
   hasPhoto,
@@ -31,7 +31,7 @@ export function StatLayout({
   columns,
   numeralSize,
   titleSize,
-}: StatLayoutProps) {
+}: StatLayoutProps) => {
   const colors = slideText(style, hasPhoto);
   const anchor = style.contentAnchor;
   // Every stat except the one the hero slide headlines (no repeated big number).
@@ -56,24 +56,24 @@ export function StatLayout({
       <div
         aria-hidden
         style={{
-          width: 64,
-          height: 4,
           background: style.accent,
+          height: 4,
           marginBottom: 18,
+          width: 64,
         }}
       />
       {data.title ? (
         <h2
           style={{
+            color: colors.fg,
             fontFamily: style.fonts.display,
-            fontWeight: style.fonts.displayWeight,
             fontSize: titleSize,
+            fontWeight: style.fonts.displayWeight,
             lineHeight: 0.98,
             margin: "0 0 44px 0",
-            color: colors.fg,
             maxWidth: "88%",
-            textWrap: "pretty",
             textShadow: colors.shadow || undefined,
+            textWrap: "pretty",
           }}
         >
           {data.title}
@@ -86,9 +86,9 @@ export function StatLayout({
       <div
         style={{
           display: "grid",
+          gap: "38px 72px",
           gridTemplateColumns: columns,
           justifyContent: "start",
-          gap: "38px 72px",
         }}
       >
         {stats.map((item) => (
@@ -123,4 +123,4 @@ export function StatLayout({
       {group}
     </SlideScaffold>
   );
-}
+};

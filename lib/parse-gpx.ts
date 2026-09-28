@@ -5,37 +5,54 @@
  */
 
 import { XMLParser } from "fast-xml-parser";
-import { z } from "zod/mini";
+// `catch` is renamed on import: as a `z.catch` member call it reads like
+// `Promise#catch` to the promise lint rules.
+import { catch as withFallback, z } from "zod/mini";
 
 import { detectSport, finalise } from "./parse-shared";
 import type { ParsedActivity, TrackPoint } from "./parse-shared";
 
 const GPX_EXT_RE = /\.gpx$/iu;
 
-// fast-xml-parser may yield numbers or strings depending on input; accept both
+// fast-xml-parser may yield numbers or strings depending on input (a
+// `<name>2024</name>` or `<type>9</type>` arrives as a number); accept both
 // and coerce in the mapping below.
 const Numeric = z.union([z.string(), z.number()]);
+
+/**
+ * `<extensions>` children, keyed by (prefixed) element name. Only the
+ * TrackPointExtension element is read: its channels (`hr`, `cad`, …) are
+ * kept when they are XML text values, and any other extension child — or a
+ * channel with nested markup — reads as `null` (no reading), so an exotic
+ * extension never fails the whole file.
+ */
+const ChannelValue = withFallback(z.nullish(Numeric), null);
+const TrackPointExtensionSchema = z.record(z.string(), ChannelValue);
+const ExtensionsSchema = z.record(
+  z.string(),
+  withFallback(z.nullish(TrackPointExtensionSchema), null)
+);
 
 const TrkPtSchema = z.object({
   "@_lat": Numeric,
   "@_lon": Numeric,
   ele: z.optional(Numeric),
+  // The TrackPointExtension namespace prefix varies by exporter (`gpxtpx:`,
+  // Garmin's `ns3:`, …), so keep every key and pick by suffix in the mapping.
+  // An empty `<extensions/>` parses to "" — read it as no extension data
+  // rather than failing the file.
+  extensions: withFallback(z.nullish(ExtensionsSchema), null),
   time: z.optional(z.string()),
-  // Left open: the namespace prefix is whatever the file declares (`gpxtpx:`
-  // from most devices, `ns3:` from some Garmin exports). `trackPointExtension`
-  // `fieldBySuffix` picks the fields out whatever the prefix.
-  extensions: z.optional(z.unknown()),
 });
 
 const TrkSegSchema = z.object({
   trkpt: z.union([TrkPtSchema, z.array(TrkPtSchema)]),
 });
 
-// `<name>2024</name>` or `<type>9</type>` arrive as numbers.
 const TrkSchema = z.object({
   name: z.optional(Numeric),
-  type: z.optional(Numeric),
   trkseg: z.optional(z.union([TrkSegSchema, z.array(TrkSegSchema)])),
+  type: z.optional(Numeric),
 });
 
 const GpxSchema = z.object({
@@ -47,14 +64,17 @@ const GpxSchema = z.object({
           time: z.optional(z.string()),
         })
       ),
-      // A file with several `<trk>` elements parses to an array.
+      // Several `<trk>` elements parse to an array.
       trk: z.optional(z.union([TrkSchema, z.array(TrkSchema)])),
     })
   ),
 });
 
 type GpxTrk = z.infer<typeof TrkSchema>;
+type GpxTrkSeg = z.infer<typeof TrkSegSchema>;
 type GpxTrkPt = z.infer<typeof TrkPtSchema>;
+/** An XML text value as fast-xml-parser yields it, or no value at all. */
+type XmlNumeric = z.infer<typeof ChannelValue>;
 
 /**
  * Coerce a value to a finite number, or `undefined` on bad input. fast-xml-parser
@@ -62,18 +82,45 @@ type GpxTrkPt = z.infer<typeof TrkPtSchema>;
  * — letting that through poisons haversine, splits, and route projection
  * downstream because `lat === undefined` is false for NaN.
  */
-function toFiniteNumber(v: unknown): number | undefined {
+const toFiniteNumber = (v: XmlNumeric): number | undefined => {
   if (v === undefined || v === null || v === "") {
-    return;
+    return undefined;
   }
-  const n = typeof v === "number" ? v : Number(v);
+  const n = Number(v);
   return Number.isFinite(n) ? n : undefined;
-}
+};
 
-export function parseGpx(text: string, filename: string): ParsedActivity {
+/** A string/number XML text value as a string, or `undefined` if empty. */
+const toText = (v: string | number | undefined): string | undefined =>
+  v === undefined || v === "" ? undefined : String(v);
+
+/** The value of the first key in `obj` named `local`, whatever its namespace
+ *  prefix (`gpxtpx:hr`, `ns3:hr`) — or unprefixed, when the exporter declares
+ *  the extension namespace as the default (`<TrackPointExtension xmlns=…>`). */
+const pickByLocalName = <T>(
+  obj: Readonly<Record<string, T>> | null | undefined,
+  local: string
+): T | undefined => {
+  if (obj === undefined || obj === null) {
+    return undefined;
+  }
+  const key = Object.keys(obj).find(
+    (k) => k === local || k.endsWith(`:${local}`)
+  );
+  return key === undefined ? undefined : obj[key];
+};
+
+const asArray = <T>(v: T | T[] | undefined): T[] => {
+  if (v === undefined) {
+    return [];
+  }
+  return Array.isArray(v) ? v : [v];
+};
+
+export const parseGpx = (text: string, filename: string): ParsedActivity => {
   const parser = new XMLParser({
-    ignoreAttributes: false,
     attributeNamePrefix: "@_",
+    ignoreAttributes: false,
   });
 
   let raw: unknown;
@@ -89,56 +136,43 @@ export function parseGpx(text: string, filename: string): ParsedActivity {
   }
   const xml = result.data;
 
-  const rawTrk = xml.gpx?.trk;
-  const tracks: GpxTrk[] = Array.isArray(rawTrk)
-    ? rawTrk
-    : [rawTrk].filter((t) => t !== undefined);
-  const flatPts: GpxTrkPt[] = tracks.flatMap((trk) =>
-    [trk.trkseg ?? []].flat().flatMap((seg) => [seg.trkpt].flat())
-  );
+  // Multiple tracks are concatenated in document order; name and type come
+  // from the first track that declares them.
+  const trks: GpxTrk[] = asArray(xml.gpx?.trk);
+  const segs: GpxTrkSeg[] = trks.flatMap((t) => asArray(t.trkseg));
+  const flatPts: GpxTrkPt[] = segs.flatMap((seg) => asArray(seg.trkpt));
+  // `toText` never yields "", so the first defined text is the first
+  // non-empty one.
+  const trkName = trks.map((t) => toText(t.name)).find((n) => n !== undefined);
+  const trkType = trks.map((t) => toText(t.type)).find((n) => n !== undefined);
 
   const points: TrackPoint[] = flatPts.map((p) => {
-    const ext = fieldBySuffix(p.extensions, "TrackPointExtension");
+    const ext = pickByLocalName(p.extensions, "TrackPointExtension");
     return {
+      cadence: toFiniteNumber(pickByLocalName(ext, "cad")),
+      elevation: toFiniteNumber(p.ele),
+      heartRate: toFiniteNumber(pickByLocalName(ext, "hr")),
       lat: toFiniteNumber(p["@_lat"]),
       lng: toFiniteNumber(p["@_lon"]),
-      elevation: toFiniteNumber(p.ele),
-      time: p.time ? toFiniteNumber(Date.parse(p.time)) : undefined,
-      heartRate: toFiniteNumber(fieldBySuffix(ext, "hr")),
-      cadence: toFiniteNumber(fieldBySuffix(ext, "cad")),
+      time:
+        p.time === undefined || p.time === ""
+          ? undefined
+          : toFiniteNumber(Date.parse(p.time)),
     };
   });
 
-  // Name and type come from the first track that has them.
-  const trkName = tracks.find((t) => hasText(t.name))?.name;
-  const trkType = tracks.find((t) => hasText(t.type))?.type;
-  const metaName = xml.gpx?.metadata?.name;
-  const sport = detectSport(
-    trkType === undefined ? undefined : String(trkType),
-    filename
-  );
+  const sport = detectSport(trkType, filename);
+  const metadataTime = xml.gpx?.metadata?.time;
   return finalise({
+    isoDate:
+      metadataTime === undefined || metadataTime === ""
+        ? points[0]?.time
+        : metadataTime,
+    name:
+      trkName ??
+      toText(xml.gpx?.metadata?.name) ??
+      filename.replace(GPX_EXT_RE, ""),
     points,
     sport,
-    name:
-      [trkName, metaName].find(hasText)?.toString() ??
-      filename.replace(GPX_EXT_RE, ""),
-    isoDate: xml.gpx?.metadata?.time || points[0]?.time,
   });
-}
-
-function hasText(v: string | number | undefined): v is string | number {
-  return v !== undefined && String(v) !== "";
-}
-
-/** Read `<prefix:key>` (or an unprefixed `<key>`) from a parsed element. */
-function fieldBySuffix(element: unknown, key: string): unknown {
-  if (!element || typeof element !== "object") {
-    return;
-  }
-  for (const [name, value] of Object.entries(element)) {
-    if (name === key || name.endsWith(`:${key}`)) {
-      return value;
-    }
-  }
-}
+};

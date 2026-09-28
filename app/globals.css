@@ -55,6 +55,43 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* App-chrome type scale below the Tailwind defaults — the letter-spaced
+     mono / caps captions of the editor and landing. Named here so class
+     strings stay on tokens (shadcn/lint no-arbitrary-values). */
+  --tracking-caps-xs: 0.12em;
+  --tracking-caps-sm: 0.14em;
+  --tracking-caps: 0.16em;
+  --tracking-caps-md: 0.18em;
+  --tracking-caps-lg: 0.2em;
+  --tracking-caps-xl: 0.22em;
+  --tracking-caps-display: 0.32em;
+  --leading-display-tight: 0.9;
+  --leading-display: 0.92;
+  --leading-display-loose: 0.95;
+  /* Micro text for dense chrome (dock tabs, swatch captions, theme-rail
+     taglines) where 12px does not fit; prefer text-xs everywhere else. No
+     paired line-height: like the arbitrary sizes they replace, they inherit
+     the surrounding line-height. */
+  --text-2xs: 0.625rem;
+  --text-3xs: 0.5625rem;
+
+  /* Strava's brand orange (docs/strava.md brand guidelines). */
+  --color-strava: #fc5200;
+  /* The warm sand-to-umber wash that stands in for a photo before one is
+     picked (photo thumbnails in the editor). */
+  --color-photo-placeholder-from: #d8c5a0;
+  --color-photo-placeholder-to: #4a2a18;
+
+  --shadow-lift: 0 24px 50px -14px rgb(26 23 20 / 0.3);
+  /* Dims everything around a focused element (image-adjust overlay). */
+  --shadow-scrim: 0 0 0 9999px rgb(0 0 0 / 0.18);
+
+  /* The mobile control deck's drawer easing. */
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --animate-scroll-cue: effort-scroll-cue 1.6s ease-in-out infinite;
+  --animate-route-draw: effort-route-draw 2.8s ease-out forwards;
+  --animate-aura: effort-aura 6s ease-in-out infinite;
 }
 
 :root {
@@ -162,6 +199,59 @@
   @apply font-mono text-[10px] font-medium tracking-[0.18em] uppercase opacity-60;
 }
 
+/* Transition only the properties a component animates (never
+   transition-all), with Tailwind's default duration / easing like its own
+   transition-* utilities (duration-* / ease-* still override). */
+@utility transition-drawer {
+  transition-property: max-height, max-width, opacity, visibility;
+  transition-timing-function: var(
+    --tw-ease,
+    var(--default-transition-timing-function)
+  );
+  transition-duration: var(--tw-duration, var(--default-transition-duration));
+}
+@utility transition-outline {
+  transition-property: outline-color, outline-width;
+  transition-timing-function: var(
+    --tw-ease,
+    var(--default-transition-timing-function)
+  );
+  transition-duration: var(--tw-duration, var(--default-transition-duration));
+}
+@utility transition-size-colors {
+  transition-property: width, background-color;
+  transition-timing-function: var(
+    --tw-ease,
+    var(--default-transition-timing-function)
+  );
+  transition-duration: var(--tw-duration, var(--default-transition-duration));
+}
+@utility transition-height {
+  transition-property: height;
+  transition-timing-function: var(
+    --tw-ease,
+    var(--default-transition-timing-function)
+  );
+  transition-duration: var(--tw-duration, var(--default-transition-duration));
+}
+
+/* The landing intro's JS-timed frames (components/app/empty-state-intro-motion.ts):
+   the stage machine writes --intro-* custom properties and adds these
+   classes. !important keeps the precedence the frames had as inline styles —
+   a frame always beats the element's resting classes. */
+@utility intro-fade {
+  opacity: var(--intro-opacity) !important;
+  transition: var(--intro-transition) !important;
+}
+@utility intro-rise {
+  transform: var(--intro-transform) !important;
+}
+
+/* Bottom padding that clears the iOS home indicator. */
+@utility pb-safe {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
 /* Hide the scrollbar on touch-swipe rails (the claim-panel carousel) while
    keeping the element scrollable. */
 @utility no-scrollbar {
@@ -180,6 +270,17 @@
   }
   to {
     stroke-dashoffset: 0;
+  }
+}
+
+/* Landing scroll cue — a gentle ease-in-out nudge down and back. */
+@keyframes effort-scroll-cue {
+  0%,
+  100% {
+    transform: translateY(-15%);
+  }
+  50% {
+    transform: translateY(15%);
   }
 }
 

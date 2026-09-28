@@ -3,20 +3,20 @@ import { describe, expect, test } from "bun:test";
 import { mergeProbes } from "./photo-composite";
 
 /** Minimal stand-in for ImageData — bun's test runner has no DOM. */
-function imageData(pixels: number[][]): ImageData {
+const imageData = (pixels: number[][]): ImageData => {
   const data = Uint8ClampedArray.from(pixels.flat());
-  return { data, width: pixels.length, height: 1 } as ImageData;
-}
+  return { colorSpace: "srgb", data, height: 1, width: pixels.length };
+};
 
 /** What the browser would paint: `src` composited over `backdrop`. */
-function over(src: number[], backdrop: number[]): number[] {
+const over = (src: number[], backdrop: number[]): number[] => {
   const a = src[3] / 255;
   return [0, 1, 2, 3].map((c) =>
     c === 3
       ? Math.round(255 * (a + (backdrop[3] / 255) * (1 - a)))
       : Math.round(src[c] * a + backdrop[c] * (1 - a))
   );
-}
+};
 
 const BLACK = [0, 0, 0, 255];
 const WHITE = [255, 255, 255, 255];

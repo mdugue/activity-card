@@ -33,7 +33,8 @@ If a decision is in SPEC.md, follow it. If you want to deviate, raise it and ask
 - Next.js (App Router) + TypeScript 7, checked with `tsc` (the native compiler)
 - Bun 1.4 as package manager, script runner and unit-test runner
   (pinned in `.bun-version`, which CI reads)
-- oxlint + oxfmt for linting and formatting, configured through Ultracite
+- oxlint (type-aware, via `oxlint-tsgolint`) + oxfmt, configured through
+  Ultracite with every applicable preset — see [Conventions](#conventions)
 - Tailwind v4
 - `snapdom` (`@zumer/snapdom`) for DOM-to-PNG
 - `fast-xml-parser` for GPX, `fit-file-parser` for .fit
@@ -98,7 +99,7 @@ strip).
 | ------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
 | Output        | one 1080×1350 poster                                                                 | an n×1080 × 1350 seamless strip, sliced into slides                        |
 | A theme is…   | **a `defineTheme` descriptor** (component + declaration)                             | **a `defineCarouselTheme` descriptor** (`canvas?` + `panels[]`)            |
-| Lives in      | `theme/single-card/<name>.tsx`                                                       | `theme/carousel/registry.ts` (descriptor incl. its `look`)                 |
+| Lives in      | `theme/single-card/<name>.tsx` + `<name>.theme.ts` (descriptor)                      | `theme/carousel/registry.ts` (descriptor incl. its `look`)                 |
 | Id space      | `ThemeId` (`theme/single-card/index.ts`)                                             | `CarouselThemeId` (`theme/carousel/registry.ts`)                           |
 | Registered in | `SINGLE_CARD_THEMES` (descriptor registry)                                           | `CAROUSEL_THEMES` (`registry.ts`) · `CAROUSEL_THEME_ORDER`                 |
 | Renderer      | the theme component itself                                                           | one shared `theme/carousel/deck.tsx` (`CarouselDeck`)                      |
@@ -154,6 +155,13 @@ appear.
 - **TypeScript strict mode.** No `any` without a `// reason:` comment.
 - **Tailwind for styling.** No CSS-in-JS, no styled-components. Theme components may use scoped `<style>` for fonts.
 - **Combine class names with `cn()`** from `@/lib/utils` (clsx + tailwind-merge). Never template-literal concatenation for conditional classes — write `cn("base", active && "…")`, not `` `base ${active ? "…" : ""}` ``.
+- **App UI stays on the design system** (`shadcn/lint`): no arbitrary values
+  off the token scale, no inline styles (dynamic values go through a CSS
+  custom property consumed by a class, e.g. `w-(--tile-w)`), no raw colours,
+  and no restyling a shadcn primitive at a call site — call sites may only add
+  layout (margin, width, flex, position). A repeated treatment becomes a
+  styled wrapper in `components/app/primitives/`; a one-off value becomes a
+  token in `app/globals.css` (`@theme`) or an `@utility` recipe there.
 - **Shadows use Tailwind's scale** (`shadow-xs` … `shadow-2xl`), tinted when needed via `shadow-<token>` (e.g. `shadow-primary/50`). No arbitrary `shadow-[…]` in app chrome. Themes in `theme/` are the exception: they rasterise to PNG, so their shadows stay inline as `style={{ boxShadow }}`.
 - **Route/path silhouettes stay geographically faithful.** Project route coordinates with a single uniform scale and centre them in their container — use `projectRoute` / `routePath` (`lib/chart-helpers.ts`), which do exactly this. Never stretch a path per-axis to fill a box (e.g. to span the full carousel width): a distorted silhouette misrepresents the real route. Keep its true proportions and centre it (for the carousel hero, in the middle of the complete viewport).
 - **No console.log in committed code.** Use proper error UI for user-facing failures.
@@ -163,9 +171,20 @@ appear.
 - **Lint + typecheck must be green** before pushing: `bun lint && bun typecheck`.
   `bun lint` is one command for both halves — `oxfmt --check` then `oxlint` with
   `--type-aware`, so the promise, deprecation and assertion rules that need type
-  information run too. Rule decisions and the reason for each deviation from
-  Ultracite's defaults live in `oxlint.config.ts`; read it before adding a
-  suppression comment.
+  information run too. `oxlint.config.ts` takes every applicable Ultracite
+  preset as shipped (core, react, next, jest, React Doctor from js-plugins,
+  next/js-plugins, anti-slop, shadcn) plus the recommended sets
+  of eslint-plugin-storybook and @remotion/eslint-plugin, read from the
+  plugins themselves — **no rule tweaks**. The config only decides _where_
+  presets apply: generated code (`components/ui`, `hooks/use-mobile.ts`) is
+  ignored, shadcn/lint covers the app UI but not theme canvases / Remotion
+  frames (pixel-exact inline-styled output), `components/app/primitives` gets
+  the preset's own components/ui exemptions. (js-plugins' sonarjs and github
+  plugins stay out until they run on TypeScript 7 — they need the compiler
+  API TS 7 no longer ships.) When a rule fires, change the code. A targeted
+  `// oxlint-disable-next-line <rule> -- <reason>` is the escape hatch for a
+  single line that genuinely cannot comply (a framework contract, a pixel-exact
+  poster size); never a config switch, never a file-level disable.
   `bun run build-storybook` is a useful local smoke check when you touch themes
   or stories; it is deliberately not a CI gate.
 
@@ -176,6 +195,8 @@ app/                  Next.js App Router routes only (page.tsx, layout.tsx, rout
                       No private `_components/` folders — keep components in `/components/`.
 components/
   ui/                 shadcn primitives. VENDOR — do NOT edit; re-add via `bunx shadcn add`.
+  app/primitives/     OUR design-system layer over the vendored `ui/`: styled wrappers
+                      that own a treatment (appearance lives here, not at call sites).
   app/                App-level composite components NOT specific to theme editing —
                       states, shell, wordmark, sample data, control primitives /
                       control-deck, card-stage, mode-toggle, export-sheet, onboarding,
@@ -191,8 +212,9 @@ theme/                THE theme feature module — everything that IS a theme, o
   shared/             Rendering utilities both card kinds build on: photo layers
                       (cover-photo, photo-backdrop/layer/fx/underlay), overlay-route,
                       and `format-context.tsx` (`FormatProvider` / `SafeArea`).
-  single-card/        SINGLE-CARD themes — one file per theme, each exporting its
-                      component plus a `defineTheme` descriptor; collected in
+  single-card/        SINGLE-CARD themes — per theme, `<name>.tsx` (the component
+                      only) + `<name>.theme.ts` (its `defineTheme` descriptor);
+                      shared fallback accents in `default-accents.ts`; collected in
                       `index.ts` (`SINGLE_CARD_THEMES` / `ThemeId`).
   carousel/           CAROUSEL ("accordion") themes — descriptors (`registry.ts`, built
                       via `define-theme.ts`) composed by one shared renderer (`deck.tsx`,
@@ -213,7 +235,8 @@ lib/                  THEME-AGNOSTIC utilities only: the canonical `activity.ts`
                       ActivityData model, parsers (`parse-activity`/`gpx`/`fit`),
                       formatters (`format.ts`), geometry (`chart-helpers`, `simplify`),
                       `image-transform`, `multi-activity`, `strata` geometry, `palette`,
-                      `photo-effects`, the Strava client, and `cn` (`utils.ts`).
+                      `photo-effects`, the Strava client, `hasText` / `nonEmpty` (`text.ts`),
+                      and `cn` (`utils.ts`).
 public/               Static assets.
 .storybook/           Storybook config + the shared preview, background presets,
                       and the background-photo decorator.
@@ -227,6 +250,10 @@ public/               Static assets.
 - **Files** are `kebab-case.tsx` / `kebab-case.ts`.
 - **Components** are `PascalCase` named exports. No default exports except for Next.js
   page/layout files.
+- **Functions are arrow-function consts** — `export const Foo = (props: FooProps) => …`,
+  never `function` declarations (`func-style`, `react/function-component-definition`).
+  Without hoisting, a module reads bottom-up: helpers and constants first, the
+  exported component that uses them last (`no-use-before-define`).
 - **Hooks** start with `use` and live in `hooks/`.
 - Prefer `interface` over `type` for object shapes (`typescript/consistent-type-definitions`).
 - Use the `@/...` path alias for absolute imports across folders. Sibling files may use
@@ -235,8 +262,8 @@ public/               Static assets.
 ### Where new code goes
 
 - **A new screen or state of the app** → `components/app/<name>.tsx`, wired from `app/page.tsx`.
-- **A new single-card theme** → one `theme/single-card/<name>.tsx`
-  exporting the component and a `defineTheme` descriptor (capabilities, colour +
+- **A new single-card theme** → `theme/single-card/<name>.tsx` (the component)
+  plus `theme/single-card/<name>.theme.ts` (its `defineTheme` descriptor: capabilities, colour +
   photo policy, params); add it to `SINGLE_CARD_THEMES` + `THEME_ORDER`
   (`theme/single-card/index.ts`), **plus a colocated
   `theme/single-card/<name>.stories.tsx`**.
@@ -256,9 +283,11 @@ public/               Static assets.
 ### Vendor files
 
 `components/ui/**` and `hooks/use-mobile.ts` are scaffolded by the shadcn / Next.js CLIs.
-`oxlint.config.ts` has one override for them that relaxes the rules shadcn's generated
-code violates, so a re-scaffold is never a lint failure — they are still linted and
-formatted, just at the level their generator ships. Don't restyle vendor files; if a
+Need a variant a primitive doesn't have? Build it as a wrapper in
+`components/app/primitives/` (linted like `components/ui`: it may restyle the
+primitive it wraps), not as call-site classes and not by editing `ui/`.
+`oxlint.config.ts` ignores them (they're formatted, not linted), so a re-scaffold
+is never a lint failure. Don't restyle vendor files; if a
 primitive doesn't fit, wrap it in `components/app/`. When re-adding one, check its
 import of `cn`: newer registry output imports it from a `cn` package, while this repo
 uses `@/lib/utils`.

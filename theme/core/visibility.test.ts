@@ -10,20 +10,17 @@ import {
 import type { Visibility } from "@/theme/core/visibility";
 
 const FULL: ActivityData = {
-  sport: "ride",
-  title: "Morning Ride",
-  date: "2026-05-18",
-  location: "Innsbruck",
   athleteName: "Jo Rider",
+  avgCadence: 88,
+  avgHeartRate: 148,
+  avgSpeedKmh: 28.3,
+  date: "2026-05-18",
   distanceKm: 42.5,
   durationSec: 5400,
   elevationGainM: 800,
   elevationProfile: [500, 600, 700],
-  avgSpeedKmh: 28.3,
+  location: "Innsbruck",
   maxSpeedKmh: 61.2,
-  speedProfile: [25, 30, 28],
-  avgHeartRate: 148,
-  avgCadence: 88,
   normalizedPowerW: 220,
   powerProfile: [200, 240, 220],
   routeCoordinates: [
@@ -31,7 +28,10 @@ const FULL: ActivityData = {
     [1, 1],
     [2, 0],
   ],
-  splits: [{ km: 1, durationSec: 120 }],
+  speedProfile: [25, 30, 28],
+  splits: [{ durationSec: 120, km: 1 }],
+  sport: "ride",
+  title: "Morning Ride",
 };
 
 const ALL_ON: Visibility = {
@@ -47,10 +47,10 @@ describe("applyVisibility", () => {
   test("text switches blank their strings", () => {
     const out = applyVisibility(FULL, {
       ...ALL_ON,
-      title: false,
+      athleteName: false,
       date: false,
       location: false,
-      athleteName: false,
+      title: false,
     });
     expect(out.title).toBe("");
     expect(out.date).toBe("");
@@ -119,11 +119,13 @@ describe("themeAvailability", () => {
     const avail = themeAvailability(FULL, { uses: ["heartRate", "route"] });
     expect(avail.heartRate).toBe(true);
     expect(avail.route).toBe(true);
-    expect(avail.cadence).toBe(false); // present in data, not declared
+    // present in data, not declared
+    expect(avail.cadence).toBe(false);
   });
 
   test("declared capability without data stays unavailable", () => {
-    const noHr: ActivityData = { ...FULL, avgHeartRate: undefined };
+    const noHr: ActivityData = { ...FULL };
+    delete noHr.avgHeartRate;
     const avail = themeAvailability(noHr, { uses: ["heartRate"] });
     expect(avail.heartRate).toBe(false);
   });

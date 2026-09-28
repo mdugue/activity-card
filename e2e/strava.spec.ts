@@ -17,7 +17,9 @@ const CONNECT_BUTTON = { name: /connect with strava/iu };
 test.describe("strava OAuth + picker", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
-    await page.evaluate(() => localStorage.clear());
+    await page.evaluate(() => {
+      localStorage.clear();
+    });
     await page.reload();
   });
 
@@ -60,6 +62,30 @@ test.describe("strava OAuth + picker", () => {
         .locator("footer")
         .getByRole("link", { name: /compatible with strava/iu })
     ).toBeVisible();
+  });
+
+  test("a grant without activity access stops at a clear message", async ({
+    page,
+  }) => {
+    // Simulate the athlete unticking "View data about your activities" on
+    // Strava's consent screen. The mock grants whatever scope the authorize
+    // redirect asks for, so narrow that redirect to `read` only.
+    await page.route("**/api/strava/authorize*", async (route) => {
+      const response = await route.fetch({ maxRedirects: 0 });
+      const location = new URL(response.headers().location ?? "");
+      location.searchParams.set("scope", "read");
+      await route.fulfill({
+        headers: { ...response.headers(), location: location.toString() },
+        response,
+      });
+    });
+    await connectStrava(page);
+    await expect(
+      page.getByText(/didn.?t share your activities/iu)
+    ).toBeVisible();
+    // No tokens were stored, so the app is still disconnected.
+    const me = await page.request.get("/api/strava/me");
+    expect(await me.json()).toMatchObject({ connected: false });
   });
 
   test("after connecting, the wizard offers 'Pick from Strava'", async ({
@@ -184,11 +210,11 @@ test.describe("strava OAuth + picker", () => {
     // is BIKE (mapped from "ride") → id 1001, segment 2 is RUN → id 1002.
     // The mock orders: 2026-05-17 run, 2026-05-18 ride → so sorted is
     // [run (1002), ride (1001)] meaning segment 1 is RUN, segment 2 is BIKE.
-    const links = page.getByRole("link", { name: /^(run|bike|swim)$/iu });
+    const links = page.getByRole("link", { name: /^(?:run|bike|swim)$/iu });
     await expect(links).toHaveCount(2);
     // Don't pin to a specific order — just verify both ids are linked.
-    const hrefs = await links.evaluateAll((els) =>
-      (els as HTMLAnchorElement[]).map((a) => a.href)
+    const hrefs = await links.evaluateAll((els: HTMLAnchorElement[]) =>
+      els.map((a) => a.href)
     );
     expect(hrefs).toContain("https://www.strava.com/activities/1001/overview");
     expect(hrefs).toContain("https://www.strava.com/activities/1002/overview");
@@ -292,7 +318,7 @@ test.describe("strava OAuth + picker", () => {
     await page.goto(
       "/api/strava/authorize?return_to=https%3A%2F%2Fattacker.example%2Fphish"
     );
-    await page.waitForURL(/^http:\/\/localhost:3100\/(\?.*)?$/u, {
+    await page.waitForURL(/^http:\/\/localhost:3100\/(?:\?.*)?$/u, {
       timeout: 10_000,
     });
     await expect(
@@ -303,13 +329,13 @@ test.describe("strava OAuth + picker", () => {
   test("callback rejects a crafted bounce origin (open-redirect defence)", async ({
     page,
   }) => {
-    // Mint a state payload claiming to come from `attacker.example`. It is
-    // neither signed by one of our deploys nor on the bounce allowlist, so
-    // the callback should redirect to /?strava=bounce_rejected rather than
-    // relaying the code to the attacker.
+    // Mint a state payload claiming to come from `attacker.example`. It has
+    // no bounce signature (`s`, an HMAC only our own authorize route can
+    // mint), so the callback must redirect to /?strava=bounce_rejected rather
+    // than relaying the code to the attacker.
     const payload = JSON.stringify({
-      r: "x".repeat(48),
       b: "https://attacker.example",
+      r: "x".repeat(48),
     });
     const state = Buffer.from(payload).toString("base64url");
     // Assert the redirect target at navigation commit — the home page strips the
@@ -325,14 +351,13 @@ test.describe("strava OAuth + picker", () => {
   test("callback refuses an unsigned bounce, even to an allowed host", async ({
     page,
   }) => {
-    // 127.0.0.1 passes the bounce allowlist (STRAVA_ALLOW_HTTP_BOUNCE), but
-    // no deploy of ours signed it — so the code must not be relayed there.
-    // The signed happy path is unit-tested in lib/strava-oauth-state.test.ts:
-    // `next start` reports every request as `localhost`, so a second origin
-    // can't initiate a real bounce here.
+    // 127.0.0.1 passes the bounce allowlist (STRAVA_ALLOW_HTTP_BOUNCE), so
+    // only the missing signature stops the relay here. The signed happy path
+    // is unit-tested: `next start` reports every request as `localhost`, so a
+    // second origin can't initiate a real bounce in this setup.
     const payload = JSON.stringify({
-      r: "x".repeat(48),
       b: "http://127.0.0.1:3100",
+      r: "x".repeat(48),
     });
     const state = Buffer.from(payload).toString("base64url");
     await page.goto(
@@ -353,13 +378,13 @@ test.describe("strava OAuth + picker", () => {
       page.getByRole("heading", { name: /your recent/iu })
     ).toBeVisible();
 
-    await page.route("**/api/strava/activity/*", (route) =>
-      route.fulfill({
-        status: 502,
-        contentType: "application/json",
+    await page.route("**/api/strava/activity/*", async (route) => {
+      await route.fulfill({
         body: JSON.stringify({ error: "strava_error", status: 502 }),
-      })
-    );
+        contentType: "application/json",
+        status: 502,
+      });
+    });
     await page
       .getByRole("button", { name: /saturday in the elbsandstein/iu })
       .click();
@@ -370,14 +395,14 @@ test.describe("strava OAuth + picker", () => {
   test("429 from /api/strava/activities surfaces a rate-limit alert with countdown", async ({
     page,
   }) => {
-    await page.route("**/api/strava/activities**", (route) =>
-      route.fulfill({
-        status: 429,
+    await page.route("**/api/strava/activities**", async (route) => {
+      await route.fulfill({
+        body: JSON.stringify({ error: "rate_limited", retryAfter: 30 }),
         contentType: "application/json",
         headers: { "retry-after": "30" },
-        body: JSON.stringify({ error: "rate_limited", retryAfter: 30 }),
-      })
-    );
+        status: 429,
+      });
+    });
     await connectStrava(page);
     await page.waitForURL(/\/$/u);
 
@@ -393,9 +418,9 @@ test.describe("strava OAuth + picker", () => {
   test("502 from /api/strava/me surfaces a server-broken alert in the wizard", async ({
     page,
   }) => {
-    await page.route("**/api/strava/me", (route) =>
-      route.fulfill({ status: 502, body: "server down" })
-    );
+    await page.route("**/api/strava/me", async (route) => {
+      await route.fulfill({ body: "server down", status: 502 });
+    });
     await page.reload();
     await openWizard(page);
 
@@ -406,10 +431,11 @@ test.describe("strava OAuth + picker", () => {
 
   test.describe("OAuth callback toasts", () => {
     for (const { flag, copy } of [
-      { flag: "denied", copy: /declined to connect strava/iu },
-      { flag: "state_mismatch", copy: /couldn.?t verify the strava sign-in/iu },
-      { flag: "token_exchange", copy: /strava rejected the sign-in/iu },
-      { flag: "failed", copy: /couldn.?t start the strava sign-in/iu },
+      { copy: /declined to connect strava/iu, flag: "denied" },
+      { copy: /couldn.?t verify the strava sign-in/iu, flag: "state_mismatch" },
+      { copy: /strava rejected the sign-in/iu, flag: "token_exchange" },
+      { copy: /couldn.?t start the strava sign-in/iu, flag: "failed" },
+      { copy: /didn.?t share your activities/iu, flag: "scope_missing" },
     ]) {
       test(`?strava=${flag} shows the specific toast`, async ({ page }) => {
         await page.goto(`/?strava=${flag}`);

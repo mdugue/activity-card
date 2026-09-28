@@ -10,26 +10,24 @@ import {
 } from "@/theme/core/colors";
 import type { ColorChoice } from "@/theme/core/colors";
 
-function paletteTheme(accent: string): PaletteTheme {
-  return {
-    variant: "vibrant",
-    accent,
-    accent2: "#222222",
-    background: "#101010",
-    body: "#cccccc",
-    headline: "#ffffff",
-    onAccent: "#000000",
-  };
-}
+const paletteTheme = (accent: string): PaletteTheme => ({
+  accent,
+  accent2: "#222222",
+  background: "#101010",
+  body: "#cccccc",
+  headline: "#ffffff",
+  onAccent: "#000000",
+  variant: "vibrant",
+});
 
 const PALETTE: ExtractedPalette = {
   swatches: [],
   themes: {
-    vibrant: paletteTheme("#ff0000"),
-    muted: paletteTheme("#884444"),
     complementary: paletteTheme("#00ff00"),
-    spectrum: paletteTheme("#0000ff"),
+    muted: paletteTheme("#884444"),
     pure: paletteTheme("#ffffff"),
+    spectrum: paletteTheme("#0000ff"),
+    vibrant: paletteTheme("#ff0000"),
   },
 };
 
@@ -86,14 +84,16 @@ describe("coerceColorChoice", () => {
     const out = coerceColorChoice({
       kind: "preset",
       scheme: {
-        primary: "#abc",
-        secondary: "javascript:alert(1)",
         onPrimary: "#ffffff",
+        primary: "#abc",
+        // oxlint-disable-next-line eslint/no-script-url -- inert test data: asserts a script URL is dropped as a non-hex colour
+        secondary: "javascript:alert(1)",
       },
     });
+    // `secondary` comes back absent/undefined (`toEqual` ignores undefined keys).
     expect(out).toEqual({
       kind: "preset",
-      scheme: { primary: "#abc", secondary: undefined, onPrimary: "#ffffff" },
+      scheme: { onPrimary: "#ffffff", primary: "#abc" },
     });
   });
 

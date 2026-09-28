@@ -9,7 +9,7 @@ import { DUR, RISE_PX, SETTLE_SPRING } from "../design/tokens";
  * Every element entrance in every video goes through this or KineticTitle so
  * the motion language stays uniform.
  */
-export function RiseIn({
+export const RiseIn = ({
   children,
   className,
   delay = 0,
@@ -24,7 +24,7 @@ export function RiseIn({
   distance?: number;
   durationInFrames?: number;
   style?: CSSProperties;
-}) {
+}) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const progress = spring({
@@ -45,13 +45,13 @@ export function RiseIn({
       {children}
     </div>
   );
-}
+};
 
 /**
  * Fade a block out near the end of its scene — the quiet counterpart to
  * RiseIn for elements that must clear the stage before a cut.
  */
-export function FadeOut({
+export const FadeOut = ({
   children,
   from,
   durationInFrames = DUR.fast,
@@ -62,11 +62,11 @@ export function FadeOut({
   from: number;
   durationInFrames?: number;
   style?: CSSProperties;
-}) {
+}) => {
   const frame = useCurrentFrame();
   const opacity = interpolate(frame, [from, from + durationInFrames], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
   return <div style={{ ...style, opacity }}>{children}</div>;
-}
+};

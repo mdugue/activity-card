@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { z } from "zod/mini";
 
 import {
   clearTokens,
@@ -7,30 +8,7 @@ import {
   STRAVA_API_BASE,
   StravaNotConnectedError,
 } from "./strava-cookies";
-
-/**
- * Strava enforces a short-window read limit (default 100 requests / 15 min)
- * and a daily one (default 1000 / day). On a breach it returns 429 with the
- * usage exposed via `X-RateLimit-*` headers. We surface this distinctly so
- * the picker can say "slow down" instead of showing a generic upstream error.
- */
-export interface StravaRateLimit {
-  /** `[short, daily]` limit, parsed from `X-RateLimit-Limit`. */
-  limit?: [number, number];
-  /** Seconds until the next 15-minute window resets (approximate). */
-  retryAfter: number;
-  /** `[short, daily]` usage, parsed from `X-RateLimit-Usage`. */
-  usage?: [number, number];
-}
-
-export class StravaRateLimitError extends Error {
-  readonly info: StravaRateLimit;
-  constructor(info: StravaRateLimit) {
-    super("Strava rate limit exceeded");
-    this.name = "StravaRateLimitError";
-    this.info = info;
-  }
-}
+import { rateLimitFrom, StravaRateLimitError } from "./strava-rate-limit";
 
 export class StravaUpstreamError extends Error {
   readonly status: number;
@@ -41,47 +19,18 @@ export class StravaUpstreamError extends Error {
   }
 }
 
-const SECONDS = 60;
-const QUARTER_HOUR_MIN = 15;
-
-/** Strava's short-window limit resets on the quarter hour. */
-function secondsToNextWindow(): number {
-  const now = new Date();
-  const elapsed =
-    (now.getMinutes() % QUARTER_HOUR_MIN) * SECONDS + now.getSeconds();
-  return QUARTER_HOUR_MIN * SECONDS - elapsed;
-}
-
-function parsePair(header: string | null): [number, number] | undefined {
-  if (!header) {
-    return;
-  }
-  const [a, b] = header.split(",").map((n) => Number(n.trim()));
-  if (Number.isFinite(a) && Number.isFinite(b)) {
-    return [a, b];
-  }
-}
-
-function rateLimitFrom(res: Response): StravaRateLimit {
-  return {
-    retryAfter: secondsToNextWindow(),
-    limit: parsePair(res.headers.get("x-ratelimit-limit")),
-    usage: parsePair(res.headers.get("x-ratelimit-usage")),
-  };
-}
-
 const UNAUTHORIZED = 401;
 const TOO_MANY_REQUESTS = 429;
 
-function rawFetch(path: string, token: string): Promise<Response> {
-  return fetch(`${STRAVA_API_BASE}${path}`, {
-    headers: { authorization: `Bearer ${token}` },
+const rawFetch = async (path: string, token: string): Promise<Response> =>
+  await fetch(`${STRAVA_API_BASE}${path}`, {
     cache: "no-store",
+    headers: { authorization: `Bearer ${token}` },
   });
-}
 
 /**
- * GET a Strava endpoint with a valid access token and return its JSON body.
+ * GET a Strava endpoint with a valid access token and return its JSON body,
+ * parsed with `schema`.
  *
  * - Mints / refreshes the token via `ensureFreshToken()` unless `opts.token`
  *   is supplied (pass a pre-minted token when firing several calls in
@@ -89,14 +38,16 @@ function rawFetch(path: string, token: string): Promise<Response> {
  * - On a `401` it force-refreshes once and retries; a second `401` means the
  *   grant is dead, so it clears cookies and throws `StravaNotConnectedError`.
  * - On `429` it throws `StravaRateLimitError` carrying the parsed usage.
- * - Any other non-2xx throws `StravaUpstreamError`.
+ * - Any other non-2xx throws `StravaUpstreamError`, as does a 2xx body that
+ *   doesn't match `schema`.
  *
  * Map these to HTTP responses with `stravaErrorResponse()`.
  */
-export async function stravaFetch<T>(
+export const stravaFetch = async <T>(
   path: string,
+  schema: z.ZodMiniType<T>,
   opts?: { token?: string }
-): Promise<T> {
+): Promise<T> => {
   let token = opts?.token ?? (await ensureFreshToken());
   let res = await rawFetch(path, token);
 
@@ -116,8 +67,13 @@ export async function stravaFetch<T>(
   if (!res.ok) {
     throw new StravaUpstreamError(res.status);
   }
-  return (await res.json()) as T;
-}
+  const body: unknown = await res.json();
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) {
+    throw new StravaUpstreamError(res.status);
+  }
+  return parsed.data;
+};
 
 /**
  * Like `stravaFetch`, but returns `null` instead of throwing when Strava
@@ -127,39 +83,40 @@ export async function stravaFetch<T>(
  * "successful" but data-poor response; dropping a 429 would burn the next
  * call against the limit anyway.
  */
-export async function stravaFetchOptional<T>(
+export const stravaFetchOptional = async <T>(
   path: string,
+  schema: z.ZodMiniType<T>,
   opts?: { token?: string }
-): Promise<T | null> {
+): Promise<T | null> => {
   try {
-    return await stravaFetch<T>(path, opts);
+    return await stravaFetch(path, schema, opts);
   } catch (error) {
     if (error instanceof StravaUpstreamError) {
       return null;
     }
     throw error;
   }
-}
+};
 
 /**
  * Translate a thrown Strava error into the JSON response shape the client
  * expects. Re-throws anything unrecognised so Next surfaces a real 500.
  */
-export function stravaErrorResponse(err: unknown): NextResponse {
-  if (err instanceof StravaNotConnectedError) {
+export const stravaErrorResponse = (cause: unknown): NextResponse => {
+  if (cause instanceof StravaNotConnectedError) {
     return NextResponse.json({ error: "not_connected" }, { status: 401 });
   }
-  if (err instanceof StravaRateLimitError) {
+  if (cause instanceof StravaRateLimitError) {
     return NextResponse.json(
-      { error: "rate_limited", retryAfter: err.info.retryAfter },
-      { status: 429, headers: { "retry-after": String(err.info.retryAfter) } }
+      { error: "rate_limited", retryAfter: cause.info.retryAfter },
+      { headers: { "retry-after": String(cause.info.retryAfter) }, status: 429 }
     );
   }
-  if (err instanceof StravaUpstreamError) {
+  if (cause instanceof StravaUpstreamError) {
     return NextResponse.json(
-      { error: "strava_error", status: err.status },
+      { error: "strava_error", status: cause.status },
       { status: 502 }
     );
   }
-  throw err;
-}
+  throw cause;
+};

@@ -64,10 +64,10 @@ A grey photo should get a clean neutral accent, never an invented brown. The gua
 ## node-vibrant v4 specifics
 
 - Browser import: `import { Vibrant } from 'node-vibrant/browser'`
-- `Vibrant.from(src).quality(1).getPalette()` — quality 1 = no downsampling, most consistent results
+- `Vibrant.from(src).maxDimension(PALETTE_MAX_DIMENSION).getPalette()` — samples at most 1024px on the long edge (`maxDimension` wins over `quality`). Quality 1 on a 12 MP photo pushed ~48 MB of pixels through the quantizer for no visible gain; 256 was measured to flip whole swatches, so don't go that low.
 - Swatches can be `null` — always null-check before reading `.hex`
 - Each swatch also exposes `bodyTextColor` / `titleTextColor` (Vibrant's own legible-text computation). We compute our own via culori for full control, but these are a valid shortcut.
-- Results vary slightly across browsers/machines (canvas fingerprinting). Imperceptible at quality 1; don't rely on byte-identical output.
+- Results vary slightly across browsers/machines (canvas fingerprinting). Imperceptible at the 1024 sample size; don't rely on byte-identical output.
 
 ## Performance
 

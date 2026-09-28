@@ -17,19 +17,25 @@
  *   STRAVA_API_BASE=http://localhost:PORT/api/v3
  */
 
-const PORT = Number(process.env.STRAVA_MOCK_PORT || 3101);
+/** An env var / query param, where unset or empty both mean "use the fallback". */
+const nonEmptyOr = (value: string | null | undefined, fallback: string) =>
+  value === null || value === undefined || value === "" ? fallback : value;
+
+const PORT = Number(nonEmptyOr(process.env.STRAVA_MOCK_PORT, "3101"));
 
 const ATHLETE = {
-  id: 99_001,
   firstname: "Alex",
+  id: 99_001,
   lastname: "Tester",
   profile_medium: "https://example.com/avatar.png",
 };
 
 interface ActivityFixture {
-  distance: number; // meters
+  /** meters */
+  distance: number;
   id: number;
-  moving_time: number; // seconds
+  /** seconds */
+  moving_time: number;
   name: string;
   sport_type: string;
   start_date: string;
@@ -38,30 +44,30 @@ interface ActivityFixture {
 
 const NAMED_ACTIVITIES: ActivityFixture[] = [
   {
+    distance: 42_300,
     id: 1001,
+    moving_time: 5400,
     name: "Saturday in the Elbsandstein",
     sport_type: "Ride",
     start_date: "2026-05-18T08:30:00Z",
-    distance: 42_300,
-    moving_time: 5400,
     total_elevation_gain: 480,
   },
   {
+    distance: 8400,
     id: 1002,
+    moving_time: 2640,
     name: "Föhrer Westwind",
     sport_type: "Run",
     start_date: "2026-05-17T07:00:00Z",
-    distance: 8400,
-    moving_time: 2640,
     total_elevation_gain: 32,
   },
   {
+    distance: 2000,
     id: 1003,
+    moving_time: 2700,
     name: "Müggelsee laps",
     sport_type: "Swim",
     start_date: "2026-05-16T18:00:00Z",
-    distance: 2000,
-    moving_time: 2700,
   },
 ];
 
@@ -75,15 +81,16 @@ const SYNTH_ACTIVITIES: ActivityFixture[] = Array.from(
   (_, i) => {
     const sport = SYNTH_SPORTS[i % SYNTH_SPORTS.length];
     const id = 2000 + i;
-    const dayOffset = i + 4; // pushed back past the three named activities
+    // pushed back past the three named activities
+    const dayOffset = i + 4;
     const start = new Date(Date.UTC(2026, 4, 16 - dayOffset, 7, 0, 0));
     return {
+      distance: 5000 + i * 500,
       id,
+      moving_time: 1800 + i * 60,
       name: `Mock ${sport} #${i + 1}`,
       sport_type: sport,
       start_date: start.toISOString(),
-      distance: 5000 + i * 500,
-      moving_time: 1800 + i * 60,
       total_elevation_gain: sport === "Ride" ? 200 + i * 5 : 20 + i,
     };
   }
@@ -94,7 +101,7 @@ const ACTIVITIES: ActivityFixture[] = [
   ...SYNTH_ACTIVITIES,
 ];
 
-function makeStreams(count: number) {
+const makeStreams = (count: number) => {
   const latlng: [number, number][] = [];
   const altitude: number[] = [];
   const heartrate: number[] = [];
@@ -102,7 +109,7 @@ function makeStreams(count: number) {
   const time: number[] = [];
   const distance: number[] = [];
   const velocity: number[] = [];
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < count; i += 1) {
     const t = i / (count - 1);
     latlng.push([50 + t * 0.04, 8 + t * 0.05 + Math.sin(t * 6) * 0.005]);
     altitude.push(100 + Math.sin(t * 8) * 40 + t * 60);
@@ -113,49 +120,55 @@ function makeStreams(count: number) {
     velocity.push(8 + Math.sin(t * 5) * 1.5);
   }
   return {
-    latlng: { type: "latlng", data: latlng, original_size: count },
-    altitude: { type: "altitude", data: altitude, original_size: count },
-    heartrate: { type: "heartrate", data: heartrate, original_size: count },
-    cadence: { type: "cadence", data: cadence, original_size: count },
-    time: { type: "time", data: time, original_size: count },
-    distance: { type: "distance", data: distance, original_size: count },
+    altitude: { data: altitude, original_size: count, type: "altitude" },
+    cadence: { data: cadence, original_size: count, type: "cadence" },
+    distance: { data: distance, original_size: count, type: "distance" },
+    heartrate: { data: heartrate, original_size: count, type: "heartrate" },
+    latlng: { data: latlng, original_size: count, type: "latlng" },
+    time: { data: time, original_size: count, type: "time" },
     velocity_smooth: {
-      type: "velocity_smooth",
       data: velocity,
       original_size: count,
+      type: "velocity_smooth",
     },
   };
-}
+};
 
-const DETAIL_RE = /^\/api\/v3\/activities\/(\d+)$/u;
-const STREAMS_RE = /^\/api\/v3\/activities\/(\d+)\/streams$/u;
-const STATS_RE = /^\/api\/v3\/athletes\/(\d+)\/stats$/u;
-const PHOTOS_RE = /^\/api\/v3\/activities\/(\d+)\/photos$/u;
-const PHOTO_FILE_RE = /^\/photos\/(\d+)-(\d+)\.png$/u;
+const DETAIL_RE = /^\/api\/v3\/activities\/\d+$/u;
+const STREAMS_RE = /^\/api\/v3\/activities\/\d+\/streams$/u;
+const STATS_RE = /^\/api\/v3\/athletes\/\d+\/stats$/u;
+const PHOTOS_RE = /^\/api\/v3\/activities\/\d+\/photos$/u;
+const PHOTO_FILE_RE = /^\/photos\/\d+-\d+\.png$/u;
+
+/** The activity id in a matched `/api/v3/activities/{id}…` path. */
+const activityIdOf = (url: URL): number => Number(url.pathname.split("/")[4]);
 
 // How many photos each fixture activity carries (others have none). The ride
 // gets two so the strip and "pick the second one" flows are coverable.
-const PHOTO_COUNTS: Record<number, number> = { 1001: 2, 1002: 1 };
+const PHOTO_COUNTS = new Map<number, number>([
+  [1001, 2],
+  [1002, 1],
+]);
 
 // A 1×1 orange PNG — enough for <img> rendering and the proxy round-trip.
 const PHOTO_PNG = Uint8Array.from(
   atob(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
   ),
-  (c) => c.charCodeAt(0)
+  // atob yields Latin-1 characters, so every code point is a byte.
+  (c) => c.codePointAt(0) ?? 0
 );
 
 /** The photo list endpoint + the static images its URLs point at. */
-function handlePhotoRoutes(url: URL): Response | null {
-  const photosMatch = PHOTOS_RE.exec(url.pathname);
-  if (photosMatch) {
-    const id = Number(photosMatch[1]);
-    const size = url.searchParams.get("size") || "600";
-    const count = PHOTO_COUNTS[id] ?? 0;
+const handlePhotoRoutes = (url: URL): Response | null => {
+  if (PHOTOS_RE.test(url.pathname)) {
+    const id = activityIdOf(url);
+    const size = nonEmptyOr(url.searchParams.get("size"), "600");
+    const count = PHOTO_COUNTS.get(id) ?? 0;
     return Response.json(
       Array.from({ length: count }, (_, i) => ({
-        unique_id: `photo-${id}-${i}`,
         source: 1,
+        unique_id: `photo-${id}-${i}`,
         urls: { [size]: `http://localhost:${PORT}/photos/${id}-${i}.png` },
       }))
     );
@@ -166,9 +179,9 @@ function handlePhotoRoutes(url: URL): Response | null {
     });
   }
   return null;
-}
+};
 
-function handle(req: Request): Response | Promise<Response> {
+const handle = (req: Request): Response | Promise<Response> => {
   const url = new URL(req.url);
 
   if (url.pathname === "/health") {
@@ -178,12 +191,17 @@ function handle(req: Request): Response | Promise<Response> {
   if (url.pathname === "/oauth/authorize") {
     const redirectUri = url.searchParams.get("redirect_uri");
     const state = url.searchParams.get("state");
-    if (!redirectUri) {
+    if (redirectUri === null || redirectUri === "") {
       return new Response("missing redirect_uri", { status: 400 });
     }
     const cb = new URL(redirectUri);
     cb.searchParams.set("code", "mock-auth-code");
-    if (state) {
+    // Like Strava: report the scopes the athlete granted (here, all asked).
+    cb.searchParams.set(
+      "scope",
+      nonEmptyOr(url.searchParams.get("scope"), "read")
+    );
+    if (state !== null && state !== "") {
       cb.searchParams.set("state", state);
     }
     return Response.redirect(cb.toString(), 302);
@@ -192,27 +210,29 @@ function handle(req: Request): Response | Promise<Response> {
   if (url.pathname === "/oauth/token" && req.method === "POST") {
     return Response.json({
       access_token: "mock-access-token",
-      refresh_token: "mock-refresh-token",
-      token_type: "Bearer",
+      athlete: ATHLETE,
       expires_at: Math.floor(Date.now() / 1000) + 6 * 3600,
       expires_in: 6 * 3600,
-      athlete: ATHLETE,
+      refresh_token: "mock-refresh-token",
+      token_type: "Bearer",
     });
   }
 
   if (url.pathname === "/api/v3/athlete/activities" && req.method === "GET") {
-    const page = Math.max(1, Number(url.searchParams.get("page") || "1"));
+    const page = Math.max(
+      1,
+      Number(nonEmptyOr(url.searchParams.get("page"), "1"))
+    );
     const perPage = Math.max(
       1,
-      Number(url.searchParams.get("per_page") || "30")
+      Number(nonEmptyOr(url.searchParams.get("per_page"), "30"))
     );
     const start = (page - 1) * perPage;
     return Response.json(ACTIVITIES.slice(start, start + perPage));
   }
 
-  const detailMatch = DETAIL_RE.exec(url.pathname);
-  if (detailMatch) {
-    const id = Number(detailMatch[1]);
+  if (DETAIL_RE.test(url.pathname)) {
+    const id = activityIdOf(url);
     const summary = ACTIVITIES.find((a) => a.id === id);
     if (!summary) {
       return Response.json({ error: "not_found" }, { status: 404 });
@@ -221,13 +241,13 @@ function handle(req: Request): Response | Promise<Response> {
       summary.moving_time > 0 ? summary.distance / summary.moving_time : 0;
     return Response.json({
       ...summary,
-      average_speed: avgSpeedMps,
-      max_speed: avgSpeedMps * 1.6,
-      average_heartrate: 152,
+      athlete: { firstname: ATHLETE.firstname, lastname: ATHLETE.lastname },
       average_cadence: 82,
+      average_heartrate: 152,
+      average_speed: avgSpeedMps,
       location_city: "Berlin",
       location_country: "Germany",
-      athlete: { firstname: ATHLETE.firstname, lastname: ATHLETE.lastname },
+      max_speed: avgSpeedMps * 1.6,
     });
   }
 
@@ -260,7 +280,7 @@ function handle(req: Request): Response | Promise<Response> {
   }
 
   return new Response("not found", { status: 404 });
-}
+};
 
-Bun.serve({ port: PORT, fetch: handle });
+Bun.serve({ fetch: handle, port: PORT });
 console.log(`Strava mock listening on http://localhost:${PORT}`);

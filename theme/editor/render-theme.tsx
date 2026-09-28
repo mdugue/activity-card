@@ -4,6 +4,7 @@ import type { ImageTransform } from "@/lib/image-transform";
 import type { PhotoEffects } from "@/lib/photo-effects";
 import type { ColorScheme } from "@/theme/core/colors";
 import type { ExportFormat } from "@/theme/core/export-formats";
+import type { ThemeConfig } from "@/theme/core/params/kinds";
 import { pickThemeData } from "@/theme/core/theme-contract";
 import { FormatProvider, useFormat } from "@/theme/shared/format-context";
 import { PhotoFxProvider } from "@/theme/shared/photo-fx";
@@ -16,7 +17,7 @@ interface RenderThemeProps {
   /** the resolved colour scheme for the active theme (user choice or default) */
   colors?: ColorScheme;
   /** the active theme's coerced parameter config */
-  config?: Record<string, unknown>;
+  config?: ThemeConfig;
   data: ActivityData;
   /** Target export format. The theme renders itself directly at this size and
    *  reads its dimensions + safe insets from the FormatContext. Falls back to the
@@ -41,7 +42,7 @@ interface RenderThemeProps {
  * photo-effects context. No per-theme branches and no Hybrid frame — every theme
  * is format-aware and renders itself at the target dimensions.
  */
-export function RenderTheme({
+export const RenderTheme = ({
   theme,
   data,
   photoUrl,
@@ -51,14 +52,14 @@ export function RenderTheme({
   photoEffects = null,
   imageTransform = null,
   format,
-}: RenderThemeProps) {
+}: RenderThemeProps) => {
   const descriptor = SINGLE_CARD_THEMES[theme];
   const ctxFormat = useFormat();
   const photo = photoBackdropEnabled ? (photoUrl ?? null) : null;
   // Natural size feeds the rotation-correct cover layer (quarter turns swap
   // the photo's width/height); derived here once so themes need no new props.
   const imageSize = useImageNaturalSize(photo);
-  const Component = descriptor.Component;
+  const { Component } = descriptor;
   const resolvedColors = colors ?? descriptor.colors.default;
   const themeData = pickThemeData(descriptor, data);
   // An explicit prop wins; otherwise inherit the ambient FormatContext (which
@@ -79,4 +80,4 @@ export function RenderTheme({
       </PhotoFxProvider>
     </FormatProvider>
   );
-}
+};

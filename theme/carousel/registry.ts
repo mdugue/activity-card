@@ -10,16 +10,16 @@ import {
   STRATA_MOODS,
   STRATA_PARAMS,
 } from "@/lib/strata";
-import type { StrataConfig } from "@/lib/strata";
 import {
   ATMOSPHERE_PARAMS,
   DEFAULT_ATMOSPHERE_CONFIG,
 } from "@/theme/carousel/atmosphere";
-import type { AtmosphereConfig } from "@/theme/carousel/atmosphere";
 import type { EffectiveStyle } from "@/theme/carousel/resolve";
 import { readableOn } from "@/theme/carousel/resolve";
+import { strataConfigOf } from "@/theme/carousel/strata-config";
 import { FONT_PAIRS } from "@/theme/carousel/theme-tokens";
 import type { CarouselLook } from "@/theme/carousel/theme-tokens";
+import type { ThemeConfig } from "@/theme/core/params/kinds";
 
 import { ElevationCanvas } from "./canvas/elevation";
 import { RouteCanvas } from "./canvas/route";
@@ -78,12 +78,10 @@ const PRESS_PANELS: PanelComponent[] = [
  * pair (serif → condensed bold). A user-picked accent survives the swap: only
  * accents still sitting at the dawn look's defaults move to the dusk set.
  */
-function atmosphereResolveStyle(
-  dawn: CarouselLook,
-  dusk: CarouselLook
-): ResolveStyle {
-  return (base: EffectiveStyle, config: Record<string, unknown>) => {
-    if ((config as AtmosphereConfig).atmosphere !== "dusk") {
+const atmosphereResolveStyle =
+  (dawn: CarouselLook, dusk: CarouselLook): ResolveStyle =>
+  (base: EffectiveStyle, config: ThemeConfig) => {
+    if (config.atmosphere !== "dusk") {
       return base;
     }
     const userAccent = base.accent !== dawn.accent;
@@ -92,208 +90,195 @@ function atmosphereResolveStyle(
     const onAccent = userAccent ? base.onAccent : dusk.onAccent;
     return {
       ...base,
-      dark: dusk.dark,
-      background: dusk.background,
-      ink: dusk.ink,
-      mutedInk: dusk.mutedInk,
       accent,
       accent2,
-      onAccent,
+      background: dusk.background,
+      dark: dusk.dark,
+      elevation:
+        dusk.elevationAccent === true
+          ? { fillFrom: accent, fillTo: dusk.background, line: accent }
+          : dusk.elevation,
       fonts: FONT_PAIRS[dusk.fontPair],
-      elevation: dusk.elevationAccent
-        ? { line: accent, fillFrom: accent, fillTo: dusk.background }
-        : dusk.elevation,
+      ink: dusk.ink,
+      mutedInk: dusk.mutedInk,
+      onAccent,
     };
   };
-}
 
 // Trace — route silhouette as an art-print. Dawn: serif on warm paper; Dusk:
 // the same route after dark, condensed bold over warm black.
 const TRACE_DAWN: CarouselLook = {
-  dark: false,
-  background: "#f1ebdf",
-  ink: "#211c17",
-  mutedInk: "rgba(33,28,23,0.55)",
   accent: "#c45a2c",
   accent2: "#a98352",
-  onAccent: "#ffffff",
-  fontPair: "serif",
-  routeStyle: "poster",
-  elevation: { line: "#c45a2c", fillFrom: "#c45a2c", fillTo: "#f1ebdf" },
-  heroMetric: "distance",
-  crossViz: "elevation",
+  background: "#f1ebdf",
   contentAnchor: "bottom",
-  veil: true,
-  detailViz: false,
+  crossViz: "elevation",
+  dark: false,
   defaultFilter: "fade",
   defaultGrain: true,
+  detailViz: false,
+  elevation: { fillFrom: "#c45a2c", fillTo: "#f1ebdf", line: "#c45a2c" },
+  fontPair: "serif",
+  heroMetric: "distance",
+  ink: "#211c17",
+  mutedInk: "rgba(33,28,23,0.55)",
+  onAccent: "#ffffff",
+  routeStyle: "poster",
+  veil: true,
 };
 const TRACE_DUSK: CarouselLook = {
-  dark: true,
-  background: "#16120e",
-  ink: "#f3ede2",
-  mutedInk: "rgba(243,237,226,0.6)",
   accent: "#e0683a",
   accent2: "#caa46a",
-  onAccent: "#16120e",
-  fontPair: "bold",
-  routeStyle: "poster",
-  elevation: { line: "#e0683a", fillFrom: "#e0683a", fillTo: "#16120e" },
-  heroMetric: "distance",
-  crossViz: "elevation",
+  background: "#16120e",
   contentAnchor: "bottom",
-  veil: true,
-  detailViz: false,
+  crossViz: "elevation",
+  dark: true,
   defaultFilter: "noir",
   defaultGrain: false,
+  detailViz: false,
+  elevation: { fillFrom: "#e0683a", fillTo: "#16120e", line: "#e0683a" },
+  fontPair: "bold",
+  heroMetric: "distance",
+  ink: "#f3ede2",
+  mutedInk: "rgba(243,237,226,0.6)",
+  onAccent: "#16120e",
+  routeStyle: "poster",
+  veil: true,
 };
 
 // Ascent — the elevation mountain-range. Dawn: serif on alpine haze; Dusk: the
 // range after dark, condensed bold.
 const ASCENT_DAWN: CarouselLook = {
-  dark: false,
-  background: "#eaedef",
-  ink: "#1a2026",
-  mutedInk: "rgba(26,32,38,0.55)",
   accent: "#2f6f86",
   accent2: "#c4663a",
-  onAccent: "#ffffff",
-  fontPair: "serif",
-  routeStyle: "poster",
-  elevation: { line: "#2f6f86", fillFrom: "#2f6f86", fillTo: "#eaedef" },
-  elevationAccent: true,
-  heroMetric: "elevation",
-  crossViz: "route",
+  background: "#eaedef",
   contentAnchor: "top",
-  veil: true,
-  detailViz: false,
+  crossViz: "route",
+  dark: false,
   defaultFilter: "fade",
   defaultGrain: true,
+  detailViz: false,
+  elevation: { fillFrom: "#2f6f86", fillTo: "#eaedef", line: "#2f6f86" },
+  elevationAccent: true,
+  fontPair: "serif",
+  heroMetric: "elevation",
+  ink: "#1a2026",
+  mutedInk: "rgba(26,32,38,0.55)",
+  onAccent: "#ffffff",
+  routeStyle: "poster",
+  veil: true,
 };
 const ASCENT_DUSK: CarouselLook = {
-  dark: true,
-  background: "#0c1116",
-  ink: "#f4f1ea",
-  mutedInk: "rgba(244,241,234,0.6)",
   accent: "#ff7a3c",
   accent2: "#5bc0d4",
-  onAccent: "#0c1116",
-  fontPair: "bold",
-  routeStyle: "poster",
-  elevation: { line: "#ff7a3c", fillFrom: "#ff7a3c", fillTo: "#0c1116" },
-  elevationAccent: true,
-  heroMetric: "elevation",
-  crossViz: "route",
+  background: "#0c1116",
   contentAnchor: "top",
-  veil: true,
-  detailViz: false,
+  crossViz: "route",
+  dark: true,
   defaultFilter: "noir",
   defaultGrain: false,
+  detailViz: false,
+  elevation: { fillFrom: "#ff7a3c", fillTo: "#0c1116", line: "#ff7a3c" },
+  elevationAccent: true,
+  fontPair: "bold",
+  heroMetric: "elevation",
+  ink: "#f4f1ea",
+  mutedInk: "rgba(244,241,234,0.6)",
+  onAccent: "#0c1116",
+  routeStyle: "poster",
+  veil: true,
 };
 
 /** STRATA's mood swaps the whole deck palette (background gradient, ink, the two
  *  ridge colours, light/dark) so it reads like the single card's moods, not a
  *  fixed look. */
-function strataResolveStyle(
+const strataResolveStyle = (
   base: EffectiveStyle,
-  config: Record<string, unknown>
-): EffectiveStyle {
-  const cfg = config as StrataConfig;
-  const m = STRATA_MOODS[cfg.mood ?? DEFAULT_STRATA_CONFIG.mood];
+  config: ThemeConfig
+): EffectiveStyle => {
+  const m = STRATA_MOODS[strataConfigOf(config).mood];
   return {
     ...base,
-    background: m.bg,
-    ink: m.text,
-    mutedInk: m.faint,
     accent: m.routeColor,
     accent2: m.elevColor,
-    onAccent: readableOn(m.routeColor),
+    background: m.bg,
     dark: !m.inkStat,
+    ink: m.text,
+    mutedInk: m.faint,
+    onAccent: readableOn(m.routeColor),
   };
-}
+};
 
 export const CAROUSEL_THEMES: Record<CarouselThemeId, CarouselTheme> = {
-  // Trace — route silhouette as an art-print; ATMOSPHERE picks Dawn or Dusk.
-  trace: defineCarouselTheme({
-    id: "trace",
-    label: "TRACE",
-    tagline: "route, on paper",
-    canvas: RouteCanvas,
-    panels: STANDARD_PANELS,
-    params: ATMOSPHERE_PARAMS,
-    defaults: DEFAULT_ATMOSPHERE_CONFIG,
-    resolveStyle: atmosphereResolveStyle(TRACE_DAWN, TRACE_DUSK),
-    look: TRACE_DAWN,
-  }),
   // Ascent — the elevation mountain-range; ATMOSPHERE picks Dawn or Dusk.
   ascent: defineCarouselTheme({
+    canvas: ElevationCanvas,
+    defaults: DEFAULT_ATMOSPHERE_CONFIG,
     id: "ascent",
     label: "ASCENT",
-    tagline: "the range, in relief",
-    canvas: ElevationCanvas,
+    look: ASCENT_DAWN,
     panels: STANDARD_PANELS,
     params: ATMOSPHERE_PARAMS,
-    defaults: DEFAULT_ATMOSPHERE_CONFIG,
     resolveStyle: atmosphereResolveStyle(ASCENT_DAWN, ASCENT_DUSK),
-    look: ASCENT_DAWN,
+    tagline: "the range, in relief",
   }),
   // Exposure — full-bleed photo panorama, magazine masthead. The route +
   // elevation appear as small graphics on the detail slide (the photo is hero).
   exposure: defineCarouselTheme({
     id: "exposure",
     label: "EXPOSURE",
-    tagline: "photo, full-bleed",
-    panels: STANDARD_PANELS,
     look: {
-      dark: true,
-      background: "#121212",
-      ink: "#ffffff",
-      mutedInk: "rgba(255,255,255,0.78)",
       accent: "#e8c39e",
       accent2: "#c89d6e",
-      onAccent: "#0a0a0a",
-      fontPair: "magazine",
-      routeStyle: "desaturated",
-      elevation: {
-        line: "#ffffff",
-        fillFrom: "#ffffff",
-        fillTo: "transparent",
-      },
-      heroMetric: "distance",
-      crossViz: "route",
+      background: "#121212",
       contentAnchor: "bottom",
-      veil: true,
-      detailViz: true,
+      crossViz: "route",
+      dark: true,
       defaultColorChoice: { kind: "photo", variant: "vibrant" },
       defaultFilter: "none",
       defaultGrain: false,
+      detailViz: true,
+      elevation: {
+        fillFrom: "#ffffff",
+        fillTo: "transparent",
+        line: "#ffffff",
+      },
+      fontPair: "magazine",
+      heroMetric: "distance",
+      ink: "#ffffff",
+      mutedInk: "rgba(255,255,255,0.78)",
+      onAccent: "#0a0a0a",
+      routeStyle: "desaturated",
+      veil: true,
     },
+    panels: STANDARD_PANELS,
+    tagline: "photo, full-bleed",
   }),
   // Frame — ultra-minimal, one big datum + sparkline per slide, hairline rules.
   // Type-led: protects its own text (shadows), so no veil.
   frame: defineCarouselTheme({
     id: "frame",
     label: "FRAME",
-    tagline: "one number at a time",
-    panels: FRAME_PANELS,
     look: {
-      dark: false,
-      background: "#f7f5f1",
-      ink: "#14110e",
-      mutedInk: "rgba(20,17,14,0.5)",
       accent: "#1a1714",
       accent2: "#c0341d",
-      onAccent: "#ffffff",
-      fontPair: "grotesk",
-      routeStyle: "poster",
-      elevation: { line: "#14110e", fillFrom: "#14110e", fillTo: "#f7f5f1" },
-      heroMetric: "distance",
+      background: "#f7f5f1",
       contentAnchor: "bottom",
-      veil: false,
-      detailViz: false,
+      dark: false,
       defaultFilter: "fade",
       defaultGrain: false,
+      detailViz: false,
+      elevation: { fillFrom: "#14110e", fillTo: "#f7f5f1", line: "#14110e" },
+      fontPair: "grotesk",
+      heroMetric: "distance",
+      ink: "#14110e",
+      mutedInk: "rgba(20,17,14,0.5)",
+      onAccent: "#ffffff",
+      routeStyle: "poster",
+      veil: false,
     },
+    panels: FRAME_PANELS,
+    tagline: "one number at a time",
   }),
   // Press — editorial newspaper, serif headline, opaque print boxes over photo.
   // Small print-style path/altitude cuts ride along the spreads. No veil — the
@@ -301,61 +286,73 @@ export const CAROUSEL_THEMES: Record<CarouselThemeId, CarouselTheme> = {
   press: defineCarouselTheme({
     id: "press",
     label: "PRESS",
-    tagline: "the broadsheet",
-    panels: PRESS_PANELS,
     look: {
-      dark: false,
-      background: "#f2ece1",
-      ink: "#14110d",
-      mutedInk: "rgba(20,17,13,0.58)",
       accent: "#b1281a",
       accent2: "#1d3a2e",
-      onAccent: "#ffffff",
-      fontPair: "magazine",
-      routeStyle: "poster",
-      elevation: { line: "#14110d", fillFrom: "#14110d", fillTo: "#f2ece1" },
-      heroMetric: "distance",
+      background: "#f2ece1",
       contentAnchor: "bottom",
-      veil: false,
-      detailViz: true,
+      dark: false,
       defaultFilter: "mono",
       defaultGrain: true,
+      detailViz: true,
+      elevation: { fillFrom: "#14110d", fillTo: "#f2ece1", line: "#14110d" },
+      fontPair: "magazine",
+      heroMetric: "distance",
+      ink: "#14110d",
+      mutedInk: "rgba(20,17,13,0.58)",
+      onAccent: "#ffffff",
+      routeStyle: "poster",
+      veil: false,
     },
+    panels: PRESS_PANELS,
+    tagline: "the broadsheet",
   }),
   // Strata — the generative woven morph-field is the spanning canvas: the route
   // ridge runs along the top, the elevation ridge along the bottom, the
   // abstraction fills the middle, and the swipe walks across the whole
   // topography. Mood (via resolveStyle), density and legend are adjustable.
   strata: defineCarouselTheme({
+    canvas: StrataCanvas,
+    defaults: DEFAULT_STRATA_CONFIG,
     id: "strata",
     label: "STRATA",
-    tagline: "woven topography",
-    canvas: StrataCanvas,
-    panels: STANDARD_PANELS,
-    params: STRATA_PARAMS,
-    defaults: DEFAULT_STRATA_CONFIG,
-    resolveStyle: strataResolveStyle,
     look: {
-      dark: true,
-      background:
-        "linear-gradient(180deg, #241335 0%, #5e2450 32%, #b1402c 64%, #ec8a3c 100%)",
-      ink: "#f8ead7",
-      mutedInk: "rgba(248,234,215,0.62)",
       accent: "#ffd98a",
       accent2: "#ff6a3a",
-      onAccent: "#241335",
-      fontPair: "syne",
-      routeStyle: "poster",
-      elevation: { line: "#ff6a3a", fillFrom: "#ff6a3a", fillTo: "#241335" },
-      heroMetric: "distance",
+      background:
+        "linear-gradient(180deg, #241335 0%, #5e2450 32%, #b1402c 64%, #ec8a3c 100%)",
       contentAnchor: "bottom",
-      veil: true,
-      detailViz: false,
+      dark: true,
       // A background photo is optional: the woven field rides over it, the
       // same way the single card composes the field on a photo.
       defaultFilter: "none",
       defaultGrain: false,
+      detailViz: false,
+      elevation: { fillFrom: "#ff6a3a", fillTo: "#241335", line: "#ff6a3a" },
+      fontPair: "syne",
+      heroMetric: "distance",
+      ink: "#f8ead7",
+      mutedInk: "rgba(248,234,215,0.62)",
+      onAccent: "#241335",
+      routeStyle: "poster",
+      veil: true,
     },
+    panels: STANDARD_PANELS,
+    params: STRATA_PARAMS,
+    resolveStyle: strataResolveStyle,
+    tagline: "woven topography",
+  }),
+  // Trace — route silhouette as an art-print; ATMOSPHERE picks Dawn or Dusk.
+  trace: defineCarouselTheme({
+    canvas: RouteCanvas,
+    defaults: DEFAULT_ATMOSPHERE_CONFIG,
+    id: "trace",
+    label: "TRACE",
+    look: TRACE_DAWN,
+    panels: STANDARD_PANELS,
+    params: ATMOSPHERE_PARAMS,
+    resolveStyle: atmosphereResolveStyle(TRACE_DAWN, TRACE_DUSK),
+    tagline: "route, on paper",
   }),
 };
 

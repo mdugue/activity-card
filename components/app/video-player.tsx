@@ -12,10 +12,15 @@ import {
 import { Player } from "@remotion/player";
 import type { PlayerRef } from "@remotion/player";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ComponentType } from "react";
+import type { ComponentType, CSSProperties } from "react";
 
 import { useCoarsePointer } from "@/hooks/use-coarse-pointer";
 import { cn } from "@/lib/utils";
+
+/** The scrubber fill, as a CSS custom property (percent). */
+interface ProgressStyle extends CSSProperties {
+  "--progress": string;
+}
 
 interface VideoPlayerProps {
   /** start from the top once the player scrolls into view (the landing hero) */
@@ -31,23 +36,56 @@ interface VideoPlayerProps {
   posterFrame?: number;
 }
 
-function reducedMotion(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
-  );
-}
+const reducedMotion = (): boolean =>
+  typeof window !== "undefined" &&
+  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-function clock(frames: number, fps: number): string {
+const clock = (frames: number, fps: number): string => {
   const total = Math.max(0, Math.round(frames / fps));
   const m = Math.floor(total / 60);
   const s = total % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
-}
+};
 
 const ICON = 22;
 
-export function VideoPlayer({
+// Effect cleanup for the branches that subscribed to nothing.
+const noCleanup = (): void => {
+  // Nothing was subscribed, so there is nothing to undo.
+};
+
+/** Ask for native fullscreen; `fallback` runs when the browser refuses. */
+const enterNativeFullscreen = async (
+  el: HTMLElement,
+  fallback: () => void
+): Promise<void> => {
+  try {
+    await el.requestFullscreen();
+  } catch {
+    fallback();
+  }
+};
+
+const ControlButton = ({
+  children,
+  label,
+  onClick,
+}: {
+  children: React.ReactNode;
+  label: string;
+  onClick: () => void;
+}) => (
+  <button
+    aria-label={label}
+    className="text-background/85 hover:text-background inline-flex size-9 items-center justify-center rounded-full transition-colors hover:bg-white/15"
+    onClick={onClick}
+    type="button"
+  >
+    {children}
+  </button>
+);
+
+export const VideoPlayer = ({
   autoPlayOnView = false,
   className,
   component,
@@ -57,7 +95,7 @@ export function VideoPlayer({
   fps,
   loop = false,
   posterFrame = 0,
-}: VideoPlayerProps) {
+}: VideoPlayerProps) => {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [player, setPlayer] = useState<PlayerRef | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -71,15 +109,24 @@ export function VideoPlayer({
 
   // Subscribe to the player's state once its ref is attached.
   useEffect(() => {
-    if (!player) {
-      return;
+    if (player === null) {
+      return noCleanup;
     }
-    const onPlay = () => setPlaying(true);
-    const onPause = () => setPlaying(false);
-    const onEnded = () => setPlaying(false);
-    const onFrame = (e: { detail: { frame: number } }) =>
+    const onPlay = () => {
+      setPlaying(true);
+    };
+    const onPause = () => {
+      setPlaying(false);
+    };
+    const onEnded = () => {
+      setPlaying(false);
+    };
+    const onFrame = (e: { detail: { frame: number } }) => {
       setFrame(e.detail.frame);
-    const onVolume = () => setMuted(player.isMuted());
+    };
+    const onVolume = () => {
+      setMuted(player.isMuted());
+    };
     player.addEventListener("play", onPlay);
     player.addEventListener("pause", onPause);
     player.addEventListener("ended", onEnded);
@@ -98,8 +145,8 @@ export function VideoPlayer({
   // pause when it leaves — so the hero opens at frame 0 exactly when you see it.
   useEffect(() => {
     const el = wrapRef.current;
-    if (!(player && el && autoPlayOnView) || reducedMotion()) {
-      return;
+    if (player === null || el === null || !autoPlayOnView || reducedMotion()) {
+      return noCleanup;
     }
     const io = new IntersectionObserver(
       ([entry]) => {
@@ -119,15 +166,20 @@ export function VideoPlayer({
       { threshold: [0, 0.15, 0.55, 1] }
     );
     io.observe(el);
-    return () => io.disconnect();
+    return () => {
+      io.disconnect();
+    };
   }, [player, autoPlayOnView]);
 
   // Native fullscreen can flip via the Escape key too — track the document.
   useEffect(() => {
-    const onChange = () =>
+    const onChange = () => {
       setNativeFullscreen(document.fullscreenElement === wrapRef.current);
+    };
     document.addEventListener("fullscreenchange", onChange);
-    return () => document.removeEventListener("fullscreenchange", onChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onChange);
+    };
   }, []);
 
   const restart = useCallback(() => {
@@ -137,11 +189,11 @@ export function VideoPlayer({
 
   const toggleFullscreen = useCallback(() => {
     const el = wrapRef.current;
-    if (!el) {
+    if (el === null) {
       return;
     }
     if (isFullscreen) {
-      if (document.fullscreenElement) {
+      if (document.fullscreenElement !== null) {
         void document.exitFullscreen?.();
       }
       setCssFullscreen(false);
@@ -149,8 +201,11 @@ export function VideoPlayer({
     }
     // Native where supported (desktop, Android, iPad); a fixed-overlay fallback
     // everywhere it isn't (notably iPhone Safari), so the button always works.
-    if (document.fullscreenEnabled && el.requestFullscreen) {
-      el.requestFullscreen().catch(() => setCssFullscreen(true));
+    // (iPhone Safari has no `requestFullscreen` on elements at all.)
+    if (document.fullscreenEnabled && "requestFullscreen" in el) {
+      void enterNativeFullscreen(el, () => {
+        setCssFullscreen(true);
+      });
     } else {
       setCssFullscreen(true);
     }
@@ -160,6 +215,7 @@ export function VideoPlayer({
   // on hover via CSS so the div needs no mouse handlers (keeps a11y happy).
   const forceShow = coarse || !playing;
   const progress = durationInFrames > 1 ? frame / (durationInFrames - 1) : 0;
+  const progressStyle: ProgressStyle = { "--progress": `${progress * 100}%` };
 
   return (
     <div
@@ -184,6 +240,7 @@ export function VideoPlayer({
         loop={loop}
         ref={setPlayer}
         spaceKeyToPlayOrPause
+        // oxlint-disable-next-line shadcn/no-inline-styles -- Remotion's Player writes its own inline width/height (the composition size) unless `style` sets them, so a class cannot size it
         style={{ height: "100%", width: "100%" }}
       />
 
@@ -209,10 +266,10 @@ export function VideoPlayer({
           }}
           type="button"
         >
-          <span className="block h-1 w-full rounded-full bg-white/25 transition-all group-hover/seek:h-1.5">
+          <span className="transition-height block h-1 w-full rounded-full bg-white/25 group-hover/seek:h-1.5">
             <span
-              className="bg-primary block h-full rounded-full"
-              style={{ width: `${progress * 100}%` }}
+              className="bg-primary block h-full w-(--progress) rounded-full"
+              style={progressStyle}
             />
           </span>
         </button>
@@ -233,9 +290,16 @@ export function VideoPlayer({
           </ControlButton>
           <ControlButton
             label={muted ? "Unmute" : "Mute"}
-            onClick={() =>
-              player?.isMuted() ? player.unmute() : player?.mute()
-            }
+            onClick={() => {
+              if (player === null) {
+                return;
+              }
+              if (player.isMuted()) {
+                player.unmute();
+              } else {
+                player.mute();
+              }
+            }}
           >
             {muted ? (
               <SpeakerSimpleSlashIcon size={ICON} weight="duotone" />
@@ -243,7 +307,7 @@ export function VideoPlayer({
               <SpeakerSimpleHighIcon size={ICON} weight="duotone" />
             )}
           </ControlButton>
-          <span className="text-background/80 ml-1 font-mono text-[11px] font-medium tracking-wide tabular-nums">
+          <span className="text-background/80 ml-1 font-mono text-xs font-medium tracking-wide tabular-nums">
             {clock(frame, fps)} / {clock(durationInFrames, fps)}
           </span>
           <span className="flex-1" />
@@ -261,26 +325,4 @@ export function VideoPlayer({
       </div>
     </div>
   );
-}
-
-function ControlButton({
-  children,
-  label,
-  onClick,
-}: {
-  children: React.ReactNode;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      aria-label={label}
-      className="text-background/85 hover:text-background inline-flex size-9 items-center justify-center rounded-full transition-colors hover:bg-white/15"
-      onClick={onClick}
-      title={label}
-      type="button"
-    >
-      {children}
-    </button>
-  );
-}
+};

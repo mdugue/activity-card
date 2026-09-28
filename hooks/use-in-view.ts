@@ -3,17 +3,22 @@
 import { useEffect, useState } from "react";
 import type { RefObject } from "react";
 
+// Effect cleanup for the branches that attached no observer.
+const noCleanup = (): void => {
+  // No observer was attached, so there is nothing to disconnect.
+};
+
 /**
  * One-shot viewport gate: flips to true the first time the element nears the
  * viewport, then stays true. Used to lazy-mount the Remotion players so their
  * chunk isn't fetched (and an autoplay loop isn't started) while offscreen.
  */
-export function useInView(ref: RefObject<Element | null>): boolean {
+export const useInView = (ref: RefObject<Element | null>): boolean => {
   const [inView, setInView] = useState(false);
   useEffect(() => {
     const el = ref.current;
-    if (!el || inView) {
-      return;
+    if (el === null || inView) {
+      return noCleanup;
     }
     // No IntersectionObserver (old browsers / some embedded webviews): skip the
     // lazy gate and just mount, so the section always renders. One-shot
@@ -21,7 +26,7 @@ export function useInView(ref: RefObject<Element | null>): boolean {
     if (typeof IntersectionObserver === "undefined") {
       // oxlint-disable-next-line react/set-state-in-effect
       setInView(true);
-      return;
+      return noCleanup;
     }
     const io = new IntersectionObserver(
       ([entry]) => {
@@ -33,7 +38,9 @@ export function useInView(ref: RefObject<Element | null>): boolean {
       { rootMargin: "200px" }
     );
     io.observe(el);
-    return () => io.disconnect();
+    return () => {
+      io.disconnect();
+    };
   }, [ref, inView]);
   return inView;
-}
+};
