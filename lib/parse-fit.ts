@@ -32,6 +32,7 @@ const FitRecordSchema = z.object({
   position_lat: z.optional(z.number()),
   position_long: z.optional(z.number()),
   altitude: z.optional(z.number()),
+  enhanced_altitude: z.optional(z.number()),
   timestamp: z.optional(DateLike),
   heart_rate: z.optional(z.number()),
   cadence: z.optional(z.number()),
@@ -53,7 +54,10 @@ export async function parseFit(
   const parser = new FitParser({
     force: true,
     speedUnit: "km/h",
-    lengthUnit: "km",
+    // `lengthUnit` converts EVERY length field — altitude and total_ascent as
+    // well as distance — so parse in metres and convert distance to km
+    // ourselves. With "km" a 450 m climb arrives as 0.45 and rounds to 0.
+    lengthUnit: "m",
     elapsedRecordField: true,
     mode: "list",
   });
@@ -67,6 +71,18 @@ export async function parseFit(
     throw new Error(`${filename} could not be read as FIT.`);
   }
 
+  return fitDataToParsed(data, filename);
+}
+
+/**
+ * Map fit-file-parser's `mode: "list"` output (lengths in metres, speeds in
+ * km/h) to a `ParsedActivity`. Split from `parseFit` so it can be tested
+ * without a binary fixture.
+ */
+export function fitDataToParsed(
+  data: unknown,
+  filename: string
+): ParsedActivity {
   const parsed = FitDataSchema.safeParse(data ?? {});
   if (!parsed.success) {
     throw new Error(`${filename} does not look like a valid FIT file.`);
@@ -81,7 +97,8 @@ export async function parseFit(
     .map((r) => ({
       lat: r.position_lat,
       lng: r.position_long,
-      elevation: r.altitude,
+      // Newer devices only write `enhanced_altitude`.
+      elevation: r.enhanced_altitude ?? r.altitude,
       time: r.timestamp ? timestampMs(r.timestamp) : undefined,
       heartRate: r.heart_rate,
       cadence: r.cadence,
@@ -93,7 +110,10 @@ export async function parseFit(
     sport,
     name: filename.replace(FIT_EXT_RE, ""),
     isoDate: session?.start_time || points[0]?.time,
-    sessionDistanceKm: session?.total_distance,
+    sessionDistanceKm:
+      session?.total_distance === undefined
+        ? undefined
+        : session.total_distance / 1000,
     sessionDurationSec: session?.total_elapsed_time,
     sessionElevationM: session?.total_ascent,
     sessionAvgSpeedKmh: session?.avg_speed,
