@@ -36,6 +36,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { useStravaConnection } from "@/hooks/use-strava-connection";
+import { formatDate, formatDuration } from "@/lib/format";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import { cn } from "@/lib/utils";
 
@@ -682,7 +683,7 @@ function ActivityItem({
 }: ActivityItemProps) {
   const distanceKm = (activity.distance / 1000).toFixed(1);
   const duration = formatDuration(activity.moving_time);
-  const startLabel = formatDate(activity.start_date);
+  const startLabel = formatDate(activity.start_date, { month: "short" });
   const elevation = activity.total_elevation_gain
     ? `${Math.round(activity.total_elevation_gain)} m`
     : null;
@@ -815,27 +816,6 @@ function SportIcon({ sportType }: { sportType: string }) {
       weight="duotone"
     />
   );
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) {
-    return "—";
-  }
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function formatDuration(sec: number): string {
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  if (h > 0) {
-    return `${h}h ${m}m`;
-  }
-  return `${m}m`;
 }
 
 interface StravaErrorAlertProps {
