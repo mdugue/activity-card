@@ -78,7 +78,7 @@ export const useCardPhoto = (activePolicy: ThemePhotoPolicy): UseCardPhoto => {
         URL.revokeObjectURL(url);
       }
     },
-    [url],
+    [url]
   );
 
   const adopt = async (file: File | null) => {

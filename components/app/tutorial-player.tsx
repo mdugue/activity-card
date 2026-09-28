@@ -11,11 +11,7 @@ import { FEATURE_VIDEOS } from "@/remotion/videos/catalog";
  * rests on a settled title frame.
  */
 const TutorialPlayer = ({ index }: { index: number }) => {
-  if (
-    !Number.isInteger(index) ||
-    index < 0 ||
-    index >= FEATURE_VIDEOS.length
-  ) {
+  if (!Number.isInteger(index) || index < 0 || index >= FEATURE_VIDEOS.length) {
     return null;
   }
   const video = FEATURE_VIDEOS[index];
