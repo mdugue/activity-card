@@ -18,6 +18,7 @@ import { resolveDeckStyle } from "@/theme/carousel/resolve";
 import { statOptsFor } from "@/theme/carousel/stats";
 import type { ColorScheme } from "@/theme/core/colors";
 import type { ExportFormat } from "@/theme/core/export-formats";
+import type { ThemeConfig } from "@/theme/core/params/kinds";
 import { DEFAULT_VISIBILITY } from "@/theme/core/visibility";
 import type { Visibility } from "@/theme/core/visibility";
 import { CoverPhoto } from "@/theme/shared/cover-photo";
@@ -31,7 +32,7 @@ interface CarouselDeckProps {
   colors: ColorScheme;
   /** the theme's coerced parameter config (STRATA mood / density / legend) —
    *  feeds both the spanning `canvas` and the theme's `resolveStyle` */
-  config?: Record<string, unknown>;
+  config?: ThemeConfig;
   data: ActivityData;
   /** Target export format. The strip renders directly at this size and feeds the
    *  geometry downward; falls back to the surrounding FormatContext (the 4:5 feed
@@ -48,20 +49,21 @@ interface CarouselDeckProps {
   visibility?: Visibility;
 }
 
-export function CarouselDeck({
+export const CarouselDeck = ({
   data,
   theme,
   colors,
-  // The theme's own defaults, NOT {} — a bare mount (story, test) must hand a
-  // param-driven canvas (STRATA's mood/density) a complete config.
-  config = theme.defaults,
+  config: configProp,
   photoUrl,
   imageTransform,
   imageSize = null,
   photoEffects = NO_EFFECTS,
   visibility = DEFAULT_VISIBILITY,
   format,
-}: CarouselDeckProps) {
+}: CarouselDeckProps) => {
+  // The theme's own defaults, NOT {} — a bare mount (story, test) must hand a
+  // param-driven canvas (STRATA's mood/density) a complete config.
+  const config = configProp ?? theme.defaults;
   const total = theme.panels.length;
   // Explicit prop wins, else inherit the ambient FormatContext (feed by default).
   const ctxFormat = useFormat();
@@ -80,6 +82,8 @@ export function CarouselDeck({
   // themes. The deck-wide "Use as background" switch gates it — the same flag as
   // the single card. (Data is already visibility-stripped upstream.)
   const showPhoto = Boolean(photoUrl) && visibility.photoBackdrop;
+  const coverPhotoUrl =
+    showPhoto && photoUrl !== undefined && photoUrl !== null ? photoUrl : null;
   const veiled = showPhoto && style.veil;
   const desaturate = showPhoto && style.routeStyle === "desaturated";
 
@@ -95,19 +99,19 @@ export function CarouselDeck({
       <PhotoFxProvider value={{ effects: photoEffects, imageSize }}>
         <div
           style={{
-            position: "relative",
-            width: stripW,
-            height: slideH,
-            overflow: "hidden",
             background: style.background,
             color: style.ink,
+            height: slideH,
+            overflow: "hidden",
+            position: "relative",
+            width: stripW,
           }}
         >
           {/* Draw the photo only once its natural size is known — the panorama is
             sized/clamped against it. Rendering a cover fallback before then (or on
             decode failure) would drop the rotate/flip/filter effects and use
             different geometry than the export, so preview and output diverge. */}
-          {showPhoto && photoUrl && imageSize ? (
+          {coverPhotoUrl !== null && imageSize ? (
             <CoverPhoto
               boxH={slideH}
               boxW={stripW}
@@ -116,7 +120,7 @@ export function CarouselDeck({
                 desaturate ? "saturate(0.6) brightness(1.05)" : undefined
               }
               imageSize={imageSize}
-              photoUrl={photoUrl}
+              photoUrl={coverPhotoUrl}
               transform={imageTransform}
             />
           ) : null}
@@ -127,11 +131,11 @@ export function CarouselDeck({
             <div
               aria-hidden
               style={{
-                position: "absolute",
-                inset: 0,
                 background: style.dark
                   ? "rgba(0,0,0,0.34)"
                   : "rgba(255,255,255,0.26)",
+                inset: 0,
+                position: "absolute",
               }}
             />
           ) : null}
@@ -154,13 +158,17 @@ export function CarouselDeck({
           {/* Per-panel foreground, one component per slide. */}
           {theme.panels.map((Panel, i) => (
             <div
+              // Slides are positional: a theme's panel list is fixed, never
+              // reordered or filtered, and one component may fill several
+              // slots (Frame, Press) — the slot index IS the slide's identity.
+              // oxlint-disable-next-line react-doctor/no-array-index-as-key -- positional slide slots (see above); no other stable id exists
               key={`slide-${i}`}
               style={{
-                position: "absolute",
+                height: slideH,
                 left: i * slideW,
+                position: "absolute",
                 top: 0,
                 width: slideW,
-                height: slideH,
               }}
             >
               {/* per-slide: reset to the SLIDE frame so panels inset via SafeArea */}
@@ -182,4 +190,4 @@ export function CarouselDeck({
       </PhotoFxProvider>
     </FormatProvider>
   );
-}
+};

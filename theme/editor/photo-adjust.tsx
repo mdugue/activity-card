@@ -8,7 +8,7 @@
 // the single card (format box) and the carousel (whole strip).
 
 import { ArrowsOutCardinalIcon } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
@@ -40,13 +40,13 @@ export interface PhotoAdjust {
   setAdjusting: (v: boolean) => void;
 }
 
-export function usePhotoAdjust({
+export const usePhotoAdjust = ({
   boxW,
   boxH,
   enabled,
   photoUrl,
   rotate,
-}: PhotoAdjustArgs): PhotoAdjust {
+}: PhotoAdjustArgs): PhotoAdjust => {
   const [adjusting, setAdjusting] = useState(false);
 
   // Natural photo size → a pan/zoom clamp that respects the photo's real cover
@@ -66,20 +66,19 @@ export function usePhotoAdjust({
 
   // Adjust only makes sense while the photo is shown AND its natural size is
   // known (the clamp derives from it); close it if either goes away.
+  // Adjusted during render (not in an effect) so the stale open overlay is
+  // never painted.
   const adjustAvailable = photoUrl !== null && enabled && imageSize !== null;
-  useEffect(() => {
-    if (adjusting && !adjustAvailable) {
-      // oxlint-disable-next-line react/set-state-in-effect
-      setAdjusting(false);
-    }
-  }, [adjusting, adjustAvailable]);
+  if (adjusting && !adjustAvailable) {
+    setAdjusting(false);
+  }
 
   return { adjustAvailable, adjusting, coverClamp, imageSize, setAdjusting };
-}
+};
 
 /** The in-place Adjust badge + the pan/zoom overlay, positioned against the
  *  preview's `relative` card box. */
-export function AdjustControls({
+export const AdjustControls = ({
   adjust,
   label,
   transform,
@@ -92,16 +91,22 @@ export function AdjustControls({
   label: string;
   onChange: (next: ImageTransform) => void;
   transform: ImageTransform;
-}) {
+}) => {
   const { adjustAvailable, adjusting, coverClamp, setAdjusting } = adjust;
   return (
     <>
       {adjustAvailable && !adjusting ? (
         <Badge
-          className="absolute top-3 right-3 z-10 rounded-full bg-black/55 px-3 py-1.5 font-mono text-[10px] text-white backdrop-blur-sm transition-colors hover:bg-black/75"
-          // The Badge children below label this button.
-          // oxlint-disable-next-line jsx-a11y/control-has-associated-label
-          render={<button onClick={() => setAdjusting(true)} type="button" />}
+          className="absolute top-3 right-3 z-10 rounded-full bg-black/55 px-3 py-1.5 font-mono text-xs text-white backdrop-blur-sm transition-colors hover:bg-black/75"
+          render={
+            <button
+              aria-label={label}
+              onClick={() => {
+                setAdjusting(true);
+              }}
+              type="button"
+            />
+          }
         >
           <ArrowsOutCardinalIcon
             aria-hidden
@@ -116,10 +121,12 @@ export function AdjustControls({
           clamp={coverClamp}
           contentWidth={contentWidth}
           onChange={onChange}
-          onDone={() => setAdjusting(false)}
+          onDone={() => {
+            setAdjusting(false);
+          }}
           transform={transform}
         />
       ) : null}
     </>
   );
-}
+};

@@ -2,6 +2,8 @@
 // Type: Cormorant Garamond (display) + Manrope (body)
 // Palette: warm off-white paper, deep ink, single rust accent
 
+import type { CSSProperties } from "react";
+
 import { abstractLanes, accentShades, routePath } from "@/lib/chart-helpers";
 import {
   formatDateUpper,
@@ -14,37 +16,244 @@ import {
 } from "@/lib/format";
 import { isMultiActivity, segmentRoutes } from "@/lib/multi-activity";
 import type { SegmentRoute } from "@/lib/multi-activity";
-import { defineTheme } from "@/theme/core/theme-contract";
+import { hasText } from "@/lib/text";
 import type { ThemeProps } from "@/theme/core/theme-contract";
 
 import { SafeArea, useFormat } from "../shared/format-context";
 import { OverlayRoute } from "../shared/overlay-route";
 import { PhotoBackdrop } from "../shared/photo-backdrop";
+import { PATH_ACCENT } from "./default-accents";
+import type { PathCapability } from "./path.theme";
 
 const INK = "#1a1714";
-const DEFAULT_ACCENT = "#c45a2c";
 const ROUTE_W = 900;
 const ROUTE_H = 720;
 
-const USES = [
-  "athleteName",
-  "elevation",
-  "location",
-  "pace",
-  "route",
-  "speed",
-] as const;
+const PoolLanes = ({ accent }: { accent: string }) => (
+  <g>
+    {abstractLanes(ROUTE_W, ROUTE_H, 6, 60).map((l, i) => (
+      <g key={`path-lane-${i}-${l.y}`}>
+        <line
+          stroke={INK}
+          strokeDasharray="4 14"
+          strokeOpacity={0.15}
+          strokeWidth={1}
+          x1={l.x}
+          x2={l.x + l.w}
+          y1={l.y + l.h / 2}
+          y2={l.y + l.h / 2}
+        />
+        <path
+          d={`M${l.x} ${l.y + l.h / 2} Q${l.x + l.w / 4} ${l.y + l.h / 2 - 18}, ${l.x + l.w / 2} ${l.y + l.h / 2} T${l.x + l.w} ${l.y + l.h / 2}`}
+          fill="none"
+          stroke={accent}
+          strokeOpacity={0.55 - i * 0.05}
+          strokeWidth={2.5}
+        />
+      </g>
+    ))}
+  </g>
+);
 
-export function ThemePath({
+const PathRoute = ({
+  accent,
+  coords,
+}: {
+  accent: string;
+  coords?: [number, number][];
+}) => {
+  if (!coords || coords.length === 0) {
+    return null;
+  }
+  const [first] = coords;
+  const last = coords.at(-1) ?? first;
+  const xs = coords.map((c) => c[0]);
+  const ys = coords.map((c) => c[1]);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const dx = maxX - minX || 1;
+  const dy = maxY - minY || 1;
+  const innerW = ROUTE_W - 120;
+  const innerH = ROUTE_H - 120;
+  const scale = Math.min(innerW / dx, innerH / dy);
+  const offX = 60 + (innerW - dx * scale) / 2;
+  const offY = 60 + (innerH - dy * scale) / 2;
+  const start: [number, number] = [
+    offX + (first[0] - minX) * scale,
+    offY + (first[1] - minY) * scale,
+  ];
+  const end: [number, number] = [
+    offX + (last[0] - minX) * scale,
+    offY + (last[1] - minY) * scale,
+  ];
+  const d = routePath(coords, ROUTE_W, ROUTE_H, 60);
+  return (
+    <g>
+      <path
+        d={d}
+        fill="none"
+        stroke={INK}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeOpacity={0.08}
+        strokeWidth={18}
+      />
+      <path
+        d={d}
+        fill="none"
+        stroke={INK}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={4}
+      />
+      <circle cx={start[0]} cy={start[1]} fill={accent} r={9} />
+      <circle cx={end[0]} cy={end[1]} fill={INK} r={9} />
+    </g>
+  );
+};
+
+// A multi-activity project (triathlon, brick, …): every leg's route drawn in
+// the SAME coordinate system — one shared bbox + uniform scale — so the legs
+// keep their true positions relative to one another, each tinted a different
+// shade of the accent so they read apart without leaving the palette. Delegates
+// the projection + per-leg draw to the shared OverlayRoute.
+const MultiPathRoute = ({
+  accent,
+  routes,
+}: {
+  accent: string;
+  routes: SegmentRoute[];
+}) => {
+  if (routes.length === 0) {
+    return null;
+  }
+  return (
+    <OverlayRoute
+      colors={accentShades(accent, routes.length)}
+      h={ROUTE_H}
+      // soft ink halo keeps every leg legible over a photo backdrop
+      halo={{ color: "rgba(26,23,20,0.07)", width: 16 }}
+      markerRadius={9}
+      markers
+      pad={60}
+      routes={routes.map((r) => r.coords)}
+      strokeWidth={4.5}
+      w={ROUTE_W}
+    />
+  );
+};
+
+// The route hero: pool lanes for a swim, every leg overlaid for a project,
+// otherwise a single silhouette.
+const RouteHero = ({
+  accent,
+  isPool,
+  multi,
+  routes,
+  coords,
+}: {
+  accent: string;
+  coords?: [number, number][];
+  isPool: boolean;
+  multi: boolean;
+  routes: SegmentRoute[];
+}) => {
+  if (isPool) {
+    return <PoolLanes accent={accent} />;
+  }
+  if (multi) {
+    return <MultiPathRoute accent={accent} routes={routes} />;
+  }
+  return <PathRoute accent={accent} coords={coords} />;
+};
+
+const SERIF = "var(--font-cormorant), serif";
+
+const ROOT_STYLE = {
+  background: "#ffffff",
+  color: "#1a1714",
+  // Named query container (`card`): big/fixed type sizes to the card box —
+  // narrow in a landscape column (cqi), short in a square card (cqb) — and
+  // the region grid's `@container card` width breakpoint keys on it to go
+  // 3-up at x-landscape. The name skips the nested per-stat containers.
+  containerName: "card",
+  containerType: "size",
+  fontFamily: "var(--font-manrope), sans-serif",
+  overflow: "hidden",
+  position: "relative",
+} satisfies CSSProperties;
+
+const TITLE_STYLE = {
+  fontFamily: SERIF,
+  // Fluid headline: shrinks with the card width (cqi → narrow
+  // landscape column) or height (cqb → short square card); caps
+  // at the original 76px so the feed master is unchanged.
+  fontSize: "clamp(40px, min(8cqi, 9cqb), 76px)",
+  fontStyle: "italic",
+  fontWeight: 400,
+  letterSpacing: "-0.01em",
+  lineHeight: 0.95,
+  margin: 0,
+  maxWidth: "90%",
+  textWrap: "pretty",
+} satisfies CSSProperties;
+
+const STAT_CELL_STYLE = {
+  // Inline-size container so the label sizes to THIS stat
+  // cell's width (narrow in a 3-up landscape stats column),
+  // while the value's cqb still resolves to the card height.
+  containerType: "inline-size",
+  minWidth: 0,
+} satisfies CSSProperties;
+
+const STAT_LABEL_STYLE = {
+  // Fluid label: stays 24px on roomy cards (feed cell ≈300px:
+  // 11cqi caps at 24) but shrinks enough in a narrow landscape
+  // cell (≈149px → ~16px) that 9-char labels like "ELEVATION"
+  // and "AVG SPEED" keep a gap instead of touching.
+  fontSize: "clamp(13px, 11cqi, 24px)",
+  fontWeight: 600,
+  letterSpacing: "0.18em",
+  opacity: 0.55,
+  whiteSpace: "nowrap",
+} satisfies CSSProperties;
+
+const STAT_VALUE_STYLE = {
+  fontFamily: SERIF,
+  // Fluid stat value: 21cqi reads THIS cell's width (feed cell
+  // ≈284px → 60px, master unchanged), shrinking in a narrow
+  // landscape cell; cqb caps it against a short card. Floor 28
+  // keeps it legible; wrapping handles the tightest cells.
+  fontSize: "clamp(28px, min(21cqi, 7cqb), 60px)",
+  fontWeight: 400,
+  lineHeight: 1.05,
+  marginTop: 10,
+} satisfies CSSProperties;
+
+const SIGNOFF_STYLE = {
+  alignItems: "center",
+  display: "flex",
+  fontSize: 24,
+  fontWeight: 600,
+  gap: 16,
+  justifyContent: "space-between",
+  letterSpacing: "0.2em",
+  marginTop: 32,
+  opacity: 0.55,
+} satisfies CSSProperties;
+
+export const ThemePath = ({
   data,
   photoUrl,
   imageTransform,
   colors,
-}: ThemeProps<(typeof USES)[number]>) {
+}: ThemeProps<PathCapability>) => {
   const { width, height } = useFormat();
-  const accent = colors?.primary ?? DEFAULT_ACCENT;
+  const accent = colors?.primary ?? PATH_ACCENT;
   const isPool = data.sport === "swim";
-  const sport = data.sport;
+  const { sport } = data;
   const multi = isMultiActivity(data);
   const routes = multi ? segmentRoutes(data) : [];
 
@@ -88,24 +297,8 @@ export function ThemePath({
   }
 
   return (
-    <div
-      style={{
-        width,
-        height,
-        background: "#ffffff",
-        color: "#1a1714",
-        fontFamily: "var(--font-manrope), sans-serif",
-        position: "relative",
-        overflow: "hidden",
-        // Named query container (`card`): big/fixed type sizes to the card box —
-        // narrow in a landscape column (cqi), short in a square card (cqb) — and
-        // the region grid's `@container card` width breakpoint keys on it to go
-        // 3-up at x-landscape. The name skips the nested per-stat containers.
-        containerType: "size",
-        containerName: "card",
-      }}
-    >
-      {photoUrl ? (
+    <div style={{ ...ROOT_STYLE, height, width }}>
+      {hasText(photoUrl) ? (
         <PhotoBackdrop
           imageTransform={imageTransform}
           photoUrl={photoUrl}
@@ -114,7 +307,7 @@ export function ThemePath({
       ) : null}
       {/* Content sits above the backdrop layer, inset by the safe area. */}
       <SafeArea
-        pad={{ top: 90, right: 90, bottom: 80, left: 90 }}
+        pad={{ bottom: 80, left: 90, right: 90, top: 90 }}
         style={{ flex: 1, zIndex: 1 }}
       >
         {/* One self-reflowing grid, ONE markup, holds the three regions —
@@ -130,21 +323,21 @@ export function ThemePath({
           {/* Region 1 — meta band + title */}
           <div
             style={{
-              minWidth: 0,
-              minHeight: 0,
               display: "flex",
               flexDirection: "column",
+              minHeight: 0,
+              minWidth: 0,
             }}
           >
             <div
               style={{
-                display: "flex",
-                justifyContent: "space-between",
                 alignItems: "baseline",
-                letterSpacing: "0.28em",
+                display: "flex",
                 fontSize: 24,
                 fontWeight: 600,
                 gap: 16,
+                justifyContent: "space-between",
+                letterSpacing: "0.28em",
               }}
             >
               <span>{sportLabel}</span>
@@ -154,37 +347,20 @@ export function ThemePath({
             </div>
             <div
               style={{
-                height: 1,
                 background: "#1a1714",
-                opacity: 0.35,
+                height: 1,
                 margin: "24px 0 0 0",
+                opacity: 0.35,
               }}
             />
             <div style={{ marginTop: 38 }}>
-              <h1
-                style={{
-                  fontFamily: "var(--font-cormorant), serif",
-                  fontWeight: 400,
-                  fontStyle: "italic",
-                  // Fluid headline: shrinks with the card width (cqi → narrow
-                  // landscape column) or height (cqb → short square card); caps
-                  // at the original 76px so the feed master is unchanged.
-                  fontSize: "clamp(40px, min(8cqi, 9cqb), 76px)",
-                  lineHeight: 0.95,
-                  letterSpacing: "-0.01em",
-                  margin: 0,
-                  textWrap: "pretty",
-                  maxWidth: "90%",
-                }}
-              >
-                {data.title}
-              </h1>
-              {data.location ? (
+              <h1 style={TITLE_STYLE}>{data.title}</h1>
+              {hasText(data.location) ? (
                 <div
                   style={{
-                    marginTop: 18,
                     fontSize: 26,
                     letterSpacing: "0.18em",
+                    marginTop: 18,
                     opacity: 0.62,
                   }}
                 >
@@ -203,17 +379,17 @@ export function ThemePath({
               neighbours. minHeight keeps it from collapsing in edge cases. */}
           <div
             style={{
-              minWidth: 0,
-              minHeight: 220,
-              position: "relative",
-              display: "flex",
               alignItems: "center",
+              display: "flex",
               justifyContent: "center",
+              minHeight: 220,
+              minWidth: 0,
+              position: "relative",
             }}
           >
             <svg
               aria-hidden="true"
-              style={{ width: "100%", height: "100%", minHeight: 0 }}
+              style={{ height: "100%", minHeight: 0, width: "100%" }}
               viewBox="0 0 900 720"
             >
               <title>Route silhouette</title>
@@ -243,19 +419,19 @@ export function ThemePath({
           {/* Region 3 — stats, quiet supporting characters */}
           <div
             style={{
-              minWidth: 0,
-              minHeight: 0,
               display: "flex",
               flexDirection: "column",
               justifyContent: "flex-end",
+              minHeight: 0,
+              minWidth: 0,
             }}
           >
             <div
               style={{
-                height: 1,
                 background: "#1a1714",
-                opacity: 0.35,
+                height: 1,
                 marginBottom: 22,
+                opacity: 0.35,
               }}
             />
             {/* Always three stat columns (not a reflow). `grid-cols-3` is the
@@ -263,65 +439,18 @@ export function ThemePath({
                 landscape stats column compresses instead of overflowing. */}
             <div className="grid grid-cols-3 gap-6">
               {statTrio.map(([k, v]) => (
-                <div
-                  key={k}
-                  style={{
-                    minWidth: 0,
-                    // Inline-size container so the label sizes to THIS stat
-                    // cell's width (narrow in a 3-up landscape stats column),
-                    // while the value's cqb still resolves to the card height.
-                    containerType: "inline-size",
-                  }}
-                >
-                  <div
-                    style={{
-                      // Fluid label: stays 24px on roomy cards (feed cell ≈300px:
-                      // 11cqi caps at 24) but shrinks enough in a narrow landscape
-                      // cell (≈149px → ~16px) that 9-char labels like "ELEVATION"
-                      // and "AVG SPEED" keep a gap instead of touching.
-                      fontSize: "clamp(13px, 11cqi, 24px)",
-                      letterSpacing: "0.18em",
-                      opacity: 0.55,
-                      fontWeight: 600,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {k}
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: "var(--font-cormorant), serif",
-                      // Fluid stat value: 21cqi reads THIS cell's width (feed cell
-                      // ≈284px → 60px, master unchanged), shrinking in a narrow
-                      // landscape cell; cqb caps it against a short card. Floor 28
-                      // keeps it legible; wrapping handles the tightest cells.
-                      fontSize: "clamp(28px, min(21cqi, 7cqb), 60px)",
-                      fontWeight: 400,
-                      marginTop: 10,
-                      lineHeight: 1.05,
-                    }}
-                  >
-                    {v}
-                  </div>
+                <div key={k} style={STAT_CELL_STYLE}>
+                  <div style={STAT_LABEL_STYLE}>{k}</div>
+                  <div style={STAT_VALUE_STYLE}>{v}</div>
                 </div>
               ))}
             </div>
-            <div
-              style={{
-                marginTop: 32,
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                fontSize: 24,
-                letterSpacing: "0.2em",
-                opacity: 0.55,
-                fontWeight: 600,
-                gap: 16,
-              }}
-            >
+            <div style={SIGNOFF_STYLE}>
               <span>№ 01 — EFFORT</span>
               <span>
-                {data.athleteName ? `— ${data.athleteName.toUpperCase()}` : ""}
+                {hasText(data.athleteName)
+                  ? `— ${data.athleteName.toUpperCase()}`
+                  : ""}
               </span>
             </div>
           </div>
@@ -329,155 +458,4 @@ export function ThemePath({
       </SafeArea>
     </div>
   );
-}
-
-// The route hero: pool lanes for a swim, every leg overlaid for a project,
-// otherwise a single silhouette.
-function RouteHero({
-  accent,
-  isPool,
-  multi,
-  routes,
-  coords,
-}: {
-  accent: string;
-  coords?: [number, number][];
-  isPool: boolean;
-  multi: boolean;
-  routes: SegmentRoute[];
-}) {
-  if (isPool) {
-    return <PoolLanes accent={accent} />;
-  }
-  if (multi) {
-    return <MultiPathRoute accent={accent} routes={routes} />;
-  }
-  return <PathRoute accent={accent} coords={coords} />;
-}
-
-function PoolLanes({ accent }: { accent: string }) {
-  return (
-    <g>
-      {abstractLanes(ROUTE_W, ROUTE_H, 6, 60).map((l, i) => (
-        <g key={`path-lane-${i}-${l.y}`}>
-          <line
-            stroke={INK}
-            strokeDasharray="4 14"
-            strokeOpacity={0.15}
-            strokeWidth={1}
-            x1={l.x}
-            x2={l.x + l.w}
-            y1={l.y + l.h / 2}
-            y2={l.y + l.h / 2}
-          />
-          <path
-            d={`M${l.x} ${l.y + l.h / 2} Q${l.x + l.w / 4} ${l.y + l.h / 2 - 18}, ${l.x + l.w / 2} ${l.y + l.h / 2} T${l.x + l.w} ${l.y + l.h / 2}`}
-            fill="none"
-            stroke={accent}
-            strokeOpacity={0.55 - i * 0.05}
-            strokeWidth={2.5}
-          />
-        </g>
-      ))}
-    </g>
-  );
-}
-
-function PathRoute({
-  accent,
-  coords,
-}: {
-  accent: string;
-  coords?: [number, number][];
-}) {
-  if (!coords || coords.length === 0) {
-    return null;
-  }
-  const xs = coords.map((c) => c[0]);
-  const ys = coords.map((c) => c[1]);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
-  const dx = maxX - minX || 1;
-  const dy = maxY - minY || 1;
-  const innerW = ROUTE_W - 120;
-  const innerH = ROUTE_H - 120;
-  const scale = Math.min(innerW / dx, innerH / dy);
-  const offX = 60 + (innerW - dx * scale) / 2;
-  const offY = 60 + (innerH - dy * scale) / 2;
-  const start: [number, number] = [
-    offX + (coords[0][0] - minX) * scale,
-    offY + (coords[0][1] - minY) * scale,
-  ];
-  const last = coords[coords.length - 1];
-  const end: [number, number] = [
-    offX + (last[0] - minX) * scale,
-    offY + (last[1] - minY) * scale,
-  ];
-  const d = routePath(coords, ROUTE_W, ROUTE_H, 60);
-  return (
-    <g>
-      <path
-        d={d}
-        fill="none"
-        stroke={INK}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeOpacity={0.08}
-        strokeWidth={18}
-      />
-      <path
-        d={d}
-        fill="none"
-        stroke={INK}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={4}
-      />
-      <circle cx={start[0]} cy={start[1]} fill={accent} r={9} />
-      <circle cx={end[0]} cy={end[1]} fill={INK} r={9} />
-    </g>
-  );
-}
-
-// A multi-activity project (triathlon, brick, …): every leg's route drawn in
-// the SAME coordinate system — one shared bbox + uniform scale — so the legs
-// keep their true positions relative to one another, each tinted a different
-// shade of the accent so they read apart without leaving the palette. Delegates
-// the projection + per-leg draw to the shared OverlayRoute.
-function MultiPathRoute({
-  accent,
-  routes,
-}: {
-  accent: string;
-  routes: SegmentRoute[];
-}) {
-  if (routes.length === 0) {
-    return null;
-  }
-  return (
-    <OverlayRoute
-      colors={accentShades(accent, routes.length)}
-      h={ROUTE_H}
-      // soft ink halo keeps every leg legible over a photo backdrop
-      halo={{ color: "rgba(26,23,20,0.07)", width: 16 }}
-      markerRadius={9}
-      markers
-      pad={60}
-      routes={routes.map((r) => r.coords)}
-      strokeWidth={4.5}
-      w={ROUTE_W}
-    />
-  );
-}
-
-export const pathTheme = defineTheme({
-  id: "path",
-  label: "PATH",
-  tagline: "route is the hero",
-  uses: USES,
-  colors: { default: { primary: DEFAULT_ACCENT }, userAdjustable: true },
-  photo: { defaultOn: true },
-  Component: ThemePath,
-});
+};

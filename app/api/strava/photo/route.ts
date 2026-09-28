@@ -10,7 +10,8 @@ import {
   limitBody,
 } from "@/lib/strava-photo-proxy";
 import { largestPhotoUrl, upscaledPhotoUrl } from "@/lib/strava-photos";
-import type { StravaPhotoListItem } from "@/lib/strava-types";
+import { StravaPhotoListSchema } from "@/lib/strava-schemas";
+import { hasText } from "@/lib/text";
 
 const NUMERIC_ID = /^\d+$/u;
 // Strava buckets photo sizes and silently serves a small variant for
@@ -34,36 +35,49 @@ type PhotoFailure =
 interface AcceptedPhoto {
   body: ReadableStream<Uint8Array>;
   contentType: string;
+  ok: true;
 }
+
+interface RejectedPhoto {
+  failure: PhotoFailure;
+  ok: false;
+}
+
+type PhotoOutcome = AcceptedPhoto | RejectedPhoto;
+
+const rejected = (failure: PhotoFailure): RejectedPhoto => ({
+  failure,
+  ok: false,
+});
 
 /** Fetch one candidate URL and apply every proxy guard. Redirects are not
  * followed (`redirect: "manual"` turns them into a non-ok response), so the
  * host check on `url` is the host the bytes actually come from. */
-async function fetchPhoto(url: string): Promise<AcceptedPhoto | PhotoFailure> {
+const fetchPhoto = async (url: string): Promise<PhotoOutcome> => {
   if (!isAllowedPhotoUrl(url, TRUSTED_PHOTO_ORIGIN)) {
-    return "photo_host_rejected";
+    return rejected("photo_host_rejected");
   }
   let res: Response;
   try {
     res = await fetch(url, { cache: "no-store", redirect: "manual" });
   } catch {
-    return "photo_fetch_failed";
+    return rejected("photo_fetch_failed");
   }
-  if (!(res.ok && res.body)) {
+  if (!(res.ok && res.body !== null)) {
     await res.body?.cancel();
-    return "photo_fetch_failed";
+    return rejected("photo_fetch_failed");
   }
   const contentType = allowedPhotoContentType(res.headers.get("content-type"));
-  if (!contentType) {
+  if (contentType === null) {
     await res.body.cancel();
-    return "photo_unsupported_type";
+    return rejected("photo_unsupported_type");
   }
   if (exceedsPhotoSizeCap(res.headers.get("content-length"))) {
     await res.body.cancel();
-    return "photo_too_large";
+    return rejected("photo_too_large");
   }
-  return { body: limitBody(res.body), contentType };
-}
+  return { body: limitBody(res.body), contentType, ok: true };
+};
 
 /**
  * Streams one of an activity's Strava photos through our origin. The image
@@ -74,7 +88,7 @@ async function fetchPhoto(url: string): Promise<AcceptedPhoto | PhotoFailure> {
  * Strava photo CDN host, and only image bodies up to `PHOTO_MAX_BYTES` are
  * relayed (`lib/strava-photo-proxy.ts`).
  */
-export async function GET(request: Request) {
+export const GET = async (request: Request) => {
   const url = new URL(request.url);
   const activity = url.searchParams.get("activity") ?? "";
   if (!NUMERIC_ID.test(activity)) {
@@ -83,11 +97,12 @@ export async function GET(request: Request) {
   const index = clampedIntParam(url.searchParams.get("index"), 0, 0, 100);
 
   try {
-    const list = await stravaFetch<StravaPhotoListItem[]>(
-      `/activities/${activity}/photos?size=${PHOTO_FULL_SIZE}&photo_sources=true`
+    const list = await stravaFetch(
+      `/activities/${activity}/photos?size=${PHOTO_FULL_SIZE}&photo_sources=true`,
+      StravaPhotoListSchema
     );
-    const src = largestPhotoUrl(list?.[index]?.urls);
-    if (!src) {
+    const src = largestPhotoUrl(list.at(index)?.urls ?? undefined);
+    if (!hasText(src)) {
       return NextResponse.json({ error: "photo_not_found" }, { status: 404 });
     }
     // The API frequently returns a mid-size rendition no matter what `size`
@@ -95,26 +110,24 @@ export async function GET(request: Request) {
     // path (it's what strava.com itself links). Try it first and fall back
     // to the URL the API actually gave us.
     const upgraded = upscaledPhotoUrl(src, PHOTO_TARGET_LONG_EDGE);
-    const candidates = upgraded ? [upgraded, src] : [src];
-    let failure: PhotoFailure = "photo_fetch_failed";
-    for (const candidate of candidates) {
-      // Sequential on purpose: the original URL is only fetched when the
-      // upgraded rendition doesn't exist.
-      const result = await fetchPhoto(candidate);
-      if (typeof result !== "string") {
-        return new NextResponse(result.body, {
-          headers: {
-            "content-type": result.contentType,
-            "content-disposition": "inline",
-            "x-content-type-options": "nosniff",
-            "cache-control": "private, max-age=3600",
-          },
-        });
-      }
-      failure = result;
+    // Sequential on purpose: the original URL is only fetched when the
+    // upgraded rendition doesn't exist.
+    let outcome = await fetchPhoto(upgraded ?? src);
+    if (!outcome.ok && upgraded !== null) {
+      outcome = await fetchPhoto(src);
     }
-    return NextResponse.json({ error: failure }, { status: 502 });
+    if (!outcome.ok) {
+      return NextResponse.json({ error: outcome.failure }, { status: 502 });
+    }
+    return new NextResponse(outcome.body, {
+      headers: {
+        "cache-control": "private, max-age=3600",
+        "content-disposition": "inline",
+        "content-type": outcome.contentType,
+        "x-content-type-options": "nosniff",
+      },
+    });
   } catch (error) {
     return stravaErrorResponse(error);
   }
-}
+};

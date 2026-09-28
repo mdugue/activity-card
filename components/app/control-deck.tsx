@@ -16,8 +16,8 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { DockActionButton, DockTab } from "@/components/app/primitives/dock";
+import { ScrollToggleGroup } from "@/components/app/primitives/toggle-group";
 import { cn } from "@/lib/utils";
 
 export interface ControlTool {
@@ -54,14 +54,19 @@ interface ControlDeckProps {
 // clickable) only AFTER they finish collapsing; visible again immediately on
 // open. Disabled under reduced motion via `motion-reduce:transition-none`.
 export const PANEL_MOTION =
-  "max-lg:transition-[max-height,max-width,opacity,visibility] max-lg:duration-300 max-lg:ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none";
+  "max-lg:transition-drawer max-lg:duration-300 max-lg:ease-drawer motion-reduce:transition-none";
 
-export function ControlDeck({
+// Layout-effect cleanup for the branch that attached nothing.
+const noCleanup = (): void => {
+  // Nothing was observed, so there is nothing to disconnect.
+};
+
+export const ControlDeck = ({
   tools,
   preview,
   previewControl,
   action,
-}: ControlDeckProps) {
+}: ControlDeckProps) => {
   // Lead with the first tool (THEME) open, so the theme rail is on screen the
   // moment the editor mounts. `active` is kept even while closed so its content
   // is still mounted to animate the collapse; `open` drives the size.
@@ -80,25 +85,36 @@ export function ControlDeck({
   useLayoutEffect(() => {
     const content = contentRef.current;
     const panel = panelRef.current;
-    if (!(content && panel)) {
-      return;
+    if (content === null || panel === null) {
+      return noCleanup;
     }
-    const setVar = (h: number) =>
+    const setVar = (h: number) => {
       panel.style.setProperty("--panel-content-h", `${h}px`);
-    setVar(content.offsetHeight); // initial measure, before first paint
+    };
+    // Initial measure, before first paint.
+    setVar(content.offsetHeight);
     const ro = new ResizeObserver(([entry]) => {
       // Use the box the observer already computed (off the main thread) rather
       // than reading offsetHeight again, which would force a synchronous reflow.
-      const box = entry.borderBoxSize?.[0];
-      setVar(box ? box.blockSize : content.offsetHeight);
+      // Older Safari doesn't report `borderBoxSize`; measure there instead.
+      const boxes: readonly ResizeObserverSize[] | undefined =
+        entry.borderBoxSize;
+      const box = boxes?.at(0);
+      setVar(box === undefined ? content.offsetHeight : box.blockSize);
     });
     ro.observe(content);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+    };
   }, []);
 
   // Tapping the active tab deselects it (value === null) → collapse. Tapping any
   // other tab selects that group and expands. Closing keeps `active` so the
   // panel still has content to animate down.
+  const handleAction = () => {
+    action.onAction();
+  };
+
   const handleTab = (next: string | null) => {
     if (next === null) {
       setOpen(false);
@@ -193,7 +209,7 @@ export function ControlDeck({
       <div
         className={cn(
           "flex items-stretch gap-2 [grid-area:dock]",
-          "max-lg:border-foreground/12 max-lg:bg-popover max-lg:border-t max-lg:p-2 max-lg:pb-[max(0.5rem,env(safe-area-inset-bottom))]",
+          "max-lg:border-foreground/12 max-lg:bg-popover max-lg:pb-safe max-lg:border-t max-lg:p-2",
           // Desktop: span the full right column (both grid rows) and sit at its
           // foot via `self-end`, so the sticky box has the whole column as its
           // containing block to range over — a one-row cell gives sticky no room.
@@ -202,56 +218,49 @@ export function ControlDeck({
           "lg:border-foreground/10 lg:bg-background lg:sticky lg:bottom-0 lg:z-20 lg:gap-2 lg:self-end lg:border-t lg:px-0 lg:pt-4 lg:pb-4 lg:[grid-area:1/2/-1/-1]"
         )}
       >
-        <ToggleGroup
+        <ScrollToggleGroup
           aria-label="Edit categories"
-          className="no-scrollbar flex w-auto min-w-0 flex-1 items-stretch gap-1 overflow-x-auto lg:hidden"
-          onValueChange={(vals) => handleTab(vals[0] ?? null)}
+          className="flex w-auto min-w-0 flex-1 items-stretch overflow-x-auto lg:hidden"
+          onValueChange={(vals) => {
+            handleTab(vals[0] ?? null);
+          }}
           spacing={1}
-          value={open && active ? [active] : []}
+          value={open && active !== null && active !== "" ? [active] : []}
         >
           {tools.map((tool) => (
-            <ToggleGroupItem
+            <DockTab
               aria-label={tool.label}
-              className={cn(
-                "text-foreground/55 hover:bg-foreground/5 h-auto w-14 shrink-0 flex-col gap-1 rounded-md border-0 bg-transparent px-1 py-2",
-                "aria-pressed:!bg-primary aria-pressed:!text-primary-foreground data-[pressed]:!bg-primary data-[pressed]:!text-primary-foreground"
-              )}
               data-testid={`tool-${tool.id}`}
               key={tool.id}
               value={tool.id}
             >
               {tool.icon}
-              <span className="font-mono text-[9px] font-semibold tracking-wide uppercase">
+              <span className="text-3xs font-mono font-semibold tracking-wide uppercase">
                 {tool.label}
               </span>
-            </ToggleGroupItem>
+            </DockTab>
           ))}
-        </ToggleGroup>
+        </ScrollToggleGroup>
 
         {/* Preview-level control (e.g. the format picker) — pinned beside the
             action, never part of the scrolling settings tabs. */}
         {previewControl}
 
-        <Button
-          className="h-auto w-14 shrink-0 flex-col gap-1 rounded-md px-1 py-2 lg:w-auto lg:flex-1 lg:flex-row lg:justify-between lg:px-8 lg:py-4"
-          data-testid="export-action"
-          onClick={action.onAction}
-          size="lg"
-        >
+        <DockActionButton data-testid="export-action" onClick={handleAction}>
           <span className="flex flex-col items-center gap-1 lg:flex-row lg:gap-2.5">
             {action.icon}
-            <span className="font-mono text-[8.5px] tracking-wide lg:hidden">
+            <span className="text-3xs font-mono tracking-wide lg:hidden">
               EXPORT
             </span>
             <span className="font-heading hidden text-lg lg:inline">
               {action.label}
             </span>
           </span>
-          <span className="hidden font-mono text-[10px] font-medium tracking-[0.18em] opacity-75 lg:inline">
+          <span className="text-2xs tracking-caps-md hidden font-mono font-medium opacity-75 lg:inline">
             {action.meta}
           </span>
-        </Button>
+        </DockActionButton>
       </div>
     </div>
   );
-}
+};

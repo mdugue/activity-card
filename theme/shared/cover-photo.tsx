@@ -30,7 +30,7 @@ interface CoverPhotoProps {
   transform?: ImageTransform | null;
 }
 
-export function CoverPhoto({
+export const CoverPhoto = ({
   photoUrl,
   imageSize,
   boxW,
@@ -39,7 +39,7 @@ export function CoverPhoto({
   effects,
   extraFilter,
   opacity = 1,
-}: CoverPhotoProps) {
+}: CoverPhotoProps) => {
   const t = transform ?? IDENTITY_TRANSFORM;
   const fx = effects ?? NO_EFFECTS;
   const quarter = isQuarterTurn(fx.rotate);
@@ -69,7 +69,7 @@ export function CoverPhoto({
       // engines that drop bitmaps from the rasterised SVG — see lib/photo-draw.
       {...{
         [PHOTO_LAYER_ATTR]: encodePhotoDraw({
-          box: { kind: "box", x: left, y: top, w: elW, h: elH },
+          box: { h: elH, kind: "box", w: elW, x: left, y: top },
           filter: filterParts,
           flipH: fx.flipH,
           flipV: fx.flipV,
@@ -82,31 +82,31 @@ export function CoverPhoto({
         }),
       }}
       style={{
-        position: "absolute",
         inset: 0,
-        overflow: "hidden",
         opacity,
+        overflow: "hidden",
         pointerEvents: "none",
+        position: "absolute",
       }}
     >
       <div
         {...{ [PHOTO_PAINT_ATTR]: "" }}
         style={{
-          position: "absolute",
-          width: elW,
-          height: elH,
-          left,
-          top,
           backgroundImage: `url(${photoUrl})`,
-          backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
+          backgroundSize: "cover",
           filter: filterParts || undefined,
+          height: elH,
+          left,
+          position: "absolute",
+          top,
           transform: `translate(${t.x.toFixed(2)}px, ${t.y.toFixed(2)}px) scale(${t.scale.toFixed(4)}) rotate(${fx.rotate}deg) scaleX(${fxScaleX}) scaleY(${fxScaleY})`,
           transformOrigin: "center center",
+          width: elW,
         }}
       />
       {fx.grain ? <GrainOverlay /> : null}
     </div>
   );
-}
+};

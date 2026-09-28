@@ -20,7 +20,8 @@ import { PreloadImg } from "../components/preload-img";
 import { PaletteChip, Pill } from "../components/stat-chip";
 import { ThemeCard } from "../components/theme-card";
 import { SPACE } from "../design/tokens";
-import { OutroScene, StepScene, TitleScene, WALK } from "./walkthrough";
+import { OutroScene, StepScene, TitleScene } from "./walkthrough";
+import { WALK } from "./walkthrough-pacing";
 
 const STEPS = 3;
 const STEP_DUR = [240, 260, 260];
@@ -35,7 +36,7 @@ export const PHOTOS_DURATION_IN_FRAMES =
   WALK.fade * (STEPS + 1);
 
 // Step 1 — the same card without, then with the photo backdrop.
-function BackdropStep({ durationInFrames }: { durationInFrames: number }) {
+const BackdropStep = ({ durationInFrames }: { durationInFrames: number }) => {
   const frame = useCurrentFrame();
   const { height } = useVideoConfig();
   const flipAt = Math.floor(durationInFrames * 0.4);
@@ -74,7 +75,7 @@ function BackdropStep({ durationInFrames }: { durationInFrames: number }) {
       </div>
     </div>
   );
-}
+};
 
 // Step 2 — the five photo-derived palette variants recolour the card.
 const VARIANT_BEATS: { label: string; scheme: ColorScheme }[] = [
@@ -85,7 +86,7 @@ const VARIANT_BEATS: { label: string; scheme: ColorScheme }[] = [
   { label: "Pure", scheme: { primary: "#f7f3ec" } },
 ];
 
-function PaletteStep({ durationInFrames }: { durationInFrames: number }) {
+const PaletteStep = ({ durationInFrames }: { durationInFrames: number }) => {
   const frame = useCurrentFrame();
   const { height } = useVideoConfig();
   const step = Math.floor(durationInFrames / VARIANT_BEATS.length);
@@ -121,17 +122,17 @@ function PaletteStep({ durationInFrames }: { durationInFrames: number }) {
       </div>
     </div>
   );
-}
+};
 
 // Step 3 — filter presets + grain, via the same context the app provides.
 const FILTER_BEATS = [
-  { filter: "none", grain: false, label: "Original" },
-  { filter: "warm", grain: false, label: "Warm" },
-  { filter: "noir", grain: false, label: "Noir" },
-  { filter: "mono", grain: true, label: "Mono + grain" },
+  { grain: false, label: "Original", preset: "none" },
+  { grain: false, label: "Warm", preset: "warm" },
+  { grain: false, label: "Noir", preset: "noir" },
+  { grain: true, label: "Mono + grain", preset: "mono" },
 ];
 
-function FiltersStep({ durationInFrames }: { durationInFrames: number }) {
+const FiltersStep = ({ durationInFrames }: { durationInFrames: number }) => {
   const frame = useCurrentFrame();
   const { height } = useVideoConfig();
   const step = Math.floor(durationInFrames / FILTER_BEATS.length);
@@ -149,7 +150,7 @@ function FiltersStep({ durationInFrames }: { durationInFrames: number }) {
       <PreloadImg src={staticFile(RIDE_PHOTO)} />
       <PhotoFxProvider
         value={{
-          effects: { ...NO_EFFECTS, filter: beat.filter, grain: beat.grain },
+          effects: { ...NO_EFFECTS, filter: beat.preset, grain: beat.grain },
           imageSize: RIDE_SIZE,
         }}
       >
@@ -170,9 +171,9 @@ function FiltersStep({ durationInFrames }: { durationInFrames: number }) {
       </div>
     </div>
   );
-}
+};
 
-export function FeaturePhotos() {
+export const FeaturePhotos = () => {
   const t = (
     <TransitionSeries.Transition
       presentation={fade()}
@@ -227,4 +228,4 @@ export function FeaturePhotos() {
       </TransitionSeries.Sequence>
     </TransitionSeries>
   );
-}
+};

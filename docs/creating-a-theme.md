@@ -31,68 +31,95 @@ exist in both (like STRATA) is two registrations sharing pure logic from
 
 ## A new single-card theme
 
-A single-card theme is **one file** in `theme/single-card/`
-exporting two things: the component and a `defineTheme` descriptor. The
+A single-card theme is **two sibling files** in `theme/single-card/`: the
+component (`<name>.tsx`) and its `defineTheme` descriptor (`<name>.theme.ts`).
+The split is what React Doctor's `only-export-components` asks for — a `.tsx`
+module exports only components, so Fast Refresh can keep its state. The
 descriptor is the entire interface to the app — registry, editor, dispatch all
 derive from it. There is nothing else to wire: no metadata table, no control
 component, no app-state field, no dispatcher branch.
 
-### Step 1 — create the file
+### Step 1 — create the files
 
-`theme/single-card/<name>.tsx` (kebab-case file, PascalCase
-component). Start from this skeleton:
+`theme/single-card/<name>.theme.ts` — the descriptor and the capability list:
 
-```tsx
-// <NAME> — one line on the design idea. Typeface choices. Palette idea.
+```ts
+// The <NAME> descriptor: identity, capability declaration, colour + photo
+// policy — the row `SINGLE_CARD_THEMES` collects.
 
-import { defineTheme, type ThemeProps } from "@/theme/core/theme-contract";
-import { PhotoLayer } from "../shared/photo-layer";
+import { defineTheme } from "@/theme/core/theme-contract";
+
+import { EXAMPLE_ACCENT } from "./default-accents";
+import { ThemeExample } from "./example";
 
 // The overlay elements this theme renders. This list is COMPILER-CHECKED:
 // `data` is narrowed to exactly these capabilities, so reading a field you
 // didn't declare is a type error — and each declared key gets a visibility
 // toggle in the editor automatically.
-const USES = ["route", "location", "elevation"] as const;
+const USES = ["elevation", "location", "route"] as const;
 
-const DEFAULT_ACCENT = "#c45a2c";
-
-export function ThemeExample({
-  data,
-  photoUrl,
-  imageTransform,
-  colors,
-}: ThemeProps<(typeof USES)[number]>) {
-  const accent = colors?.primary ?? DEFAULT_ACCENT;
-  return (
-    <div
-      style={{
-        width: 1080,
-        height: 1350,
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
-      {photoUrl ? (
-        <PhotoLayer imageTransform={imageTransform} photoUrl={photoUrl} />
-      ) : null}
-      {/* …layout: title, stats, route SVG via routePath()… */}
-    </div>
-  );
-}
+export type ExampleCapability = (typeof USES)[number];
 
 export const exampleTheme = defineTheme({
+  Component: ThemeExample,
+  colors: { default: { primary: EXAMPLE_ACCENT }, userAdjustable: true },
   id: "example",
   label: "EXAMPLE",
+  photo: { defaultOn: true },
   tagline: "three words, lowercase",
   uses: USES,
   // Sport-aware refinements: a declared capability that only renders for some
   // activities greys its toggle out for the rest.
   // usesWhen: { elevation: (d) => d.sport === "ride" },
-  colors: { default: { primary: DEFAULT_ACCENT }, userAdjustable: true },
-  photo: { defaultOn: true },
-  Component: ThemeExample,
 });
 ```
+
+`theme/single-card/<name>.tsx` (kebab-case file, PascalCase component) — the
+component only. It imports the capability type **type-only**, so there is no
+runtime cycle with the descriptor; a default accent both files need lives in
+`default-accents.ts` for the same reason:
+
+```tsx
+// <NAME> — one line on the design idea. Typeface choices. Palette idea.
+
+import type { CSSProperties } from "react";
+
+import type { ThemeProps } from "@/theme/core/theme-contract";
+
+import { hasText } from "../shared/has-text";
+import { PhotoLayer } from "../shared/photo-layer";
+import { EXAMPLE_ACCENT } from "./default-accents";
+import type { ExampleCapability } from "./example.theme";
+
+// Static styles are module-level constants; per-render values are spread in.
+const CANVAS = {
+  height: 1350,
+  overflow: "hidden",
+  position: "relative",
+  width: 1080,
+} satisfies CSSProperties;
+
+export const ThemeExample = ({
+  colors,
+  data,
+  imageTransform,
+  photoUrl,
+}: ThemeProps<ExampleCapability>) => {
+  const accent = colors?.primary ?? EXAMPLE_ACCENT;
+  return (
+    <div style={CANVAS}>
+      {hasText(photoUrl) ? (
+        <PhotoLayer imageTransform={imageTransform} photoUrl={photoUrl} />
+      ) : null}
+      {/* …layout: title, stats, route SVG via routePath()… */}
+    </div>
+  );
+};
+```
+
+The house style `bun lint` enforces shows up here: arrow-function components,
+sorted object keys, explicit checks instead of truthiness (`hasText`,
+`!== undefined`), and helpers declared **above** their first use.
 
 ### Step 2 — declare honestly (`uses` / `usesWhen`)
 
@@ -143,7 +170,8 @@ photo: { defaultOn: true, defaultFilter: "fade", defaultGrain: true }
 
 ### Step 5 — register
 
-In `theme/single-card/index.ts`: add the descriptor to `SINGLE_CARD_THEMES`
+In `theme/single-card/index.ts`: import the descriptor from `./<name>.theme`,
+add it to `SINGLE_CARD_THEMES`
 and the id to `THEME_ORDER`. Done — picker label, visibility toggles, colour
 control, photo defaults, dispatch and persistence all follow.
 
@@ -308,7 +336,8 @@ lib/activity.ts                           the ActivityData model
 lib/chart-helpers.ts                      route/elevation projection (uniform scale!)
 lib/<theme>.ts                            a theme's pure logic + *_PARAMS (bun-tested)
 theme/single-card/index.ts                SINGLE_CARD_THEMES registry + THEME_ORDER
-theme/single-card/<name>.tsx  a single-card theme (component + descriptor)
+theme/single-card/<name>.tsx       a single-card theme's component
+theme/single-card/<name>.theme.ts  its defineTheme descriptor
 theme/shared/                 PhotoLayer · PhotoBackdrop · PhotoUnderlay ·
                                           CoverPhoto · photo-fx context · OverlayRoute
 theme/carousel/define-theme.ts defineCarouselTheme · CarouselTheme · canvas/panels

@@ -18,14 +18,14 @@ export interface PickedProfile {
   signal: ProfileSignal["mode"];
 }
 
-export function pickProfile(data: ActivityData): PickedProfile {
+export const pickProfile = (data: ActivityData): PickedProfile => {
   const picked = profileSignal(data);
   return {
     mode: picked.mode === "elevation" ? "elevation" : "pace",
     profile: picked.series ?? undefined,
     signal: picked.mode,
   };
-}
+};
 
 /**
  * The effective band mode for a profile viz: for a multi-activity project the
@@ -33,12 +33,12 @@ export function pickProfile(data: ActivityData): PickedProfile {
  * single-activity `fallback` from `pickProfile`. Pass the already-resolved
  * `seg` (or `null`) so callers don't re-walk the segments.
  */
-export function bandModeFor(
+export const bandModeFor = (
   seg: { useElevation: boolean } | null,
   fallback: "elevation" | "pace"
-): "elevation" | "pace" {
+): "elevation" | "pace" => {
   if (seg) {
     return seg.useElevation ? "elevation" : "pace";
   }
   return fallback;
-}
+};

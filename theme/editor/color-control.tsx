@@ -8,11 +8,12 @@
 // for themes whose palette is fixed (`userAdjustable: false`).
 
 import { ArrowCounterClockwiseIcon } from "@phosphor-icons/react";
+import type { CSSProperties } from "react";
 
+import { SwatchToggleItem } from "@/components/app/primitives/toggle-group";
 import { Button } from "@/components/ui/button";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { ToggleGroup } from "@/components/ui/toggle-group";
 import type { ExtractedPalette } from "@/lib/palette";
-import { cn } from "@/lib/utils";
 import {
   colorChoiceId,
   PALETTE_VARIANTS,
@@ -22,25 +23,28 @@ import {
 } from "@/theme/core/colors";
 import type { ColorChoice, ColorScheme } from "@/theme/core/colors";
 
+/** The scheme's hues, read by `bg-(image:--swatch)`. */
+interface SwatchVars extends CSSProperties {
+  "--swatch": string;
+}
+
 /** A round swatch; pairs render as a two-hue split disc. */
-function Swatch({ scheme }: { scheme: ColorScheme }) {
-  const background = scheme.secondary
-    ? `linear-gradient(135deg, ${scheme.primary} 0 50%, ${scheme.secondary} 50% 100%)`
-    : scheme.primary;
+const Swatch = ({ scheme }: { scheme: ColorScheme }) => {
+  // A single hue is a flat gradient, so both cases paint as one image.
+  const swatchVars: SwatchVars = {
+    "--swatch":
+      scheme.secondary !== undefined && scheme.secondary !== ""
+        ? `linear-gradient(135deg, ${scheme.primary} 0 50%, ${scheme.secondary} 50% 100%)`
+        : `linear-gradient(${scheme.primary}, ${scheme.primary})`,
+  };
   return (
     <span
       aria-hidden
-      className="border-foreground/15 block size-8 rounded-full border"
-      style={{ background }}
+      className="border-foreground/15 block size-8 rounded-full border bg-(image:--swatch)"
+      style={swatchVars}
     />
   );
-}
-
-const SWATCH_ITEM_CLASSES = cn(
-  "size-9 rounded-full border-2 border-transparent p-0 transition-transform outline-none",
-  "ring-foreground ring-offset-background ring-offset-2",
-  "data-[pressed]:scale-110 data-[pressed]:ring-2"
-);
+};
 
 interface ColorControlProps {
   /** the effective choice (the theme's default until the user picks) */
@@ -53,12 +57,12 @@ interface ColorControlProps {
   palette: ExtractedPalette | null;
 }
 
-export function ColorControl({
+export const ColorControl = ({
   choice,
   isDefault,
   onChange,
   palette,
-}: ColorControlProps) {
+}: ColorControlProps) => {
   const selectedId = colorChoiceId(choice);
 
   const pick = (choices: ColorChoice[]) => (values: string[]) => {
@@ -87,7 +91,7 @@ export function ColorControl({
           </div>
           <ToggleGroup
             aria-label="Colours from your photo"
-            className="mb-3 flex flex-wrap gap-2"
+            className="mb-3 flex flex-wrap"
             onValueChange={pick(photoChoices)}
             spacing={2}
             value={[selectedId]}
@@ -95,20 +99,17 @@ export function ColorControl({
             {photoChoices.map((c) => {
               const variant = c.kind === "photo" ? c.variant : "vibrant";
               return (
-                <ToggleGroupItem
+                <SwatchToggleItem
                   aria-label={`${VARIANT_LABELS[variant]} — from your photo`}
-                  className={cn(
-                    SWATCH_ITEM_CLASSES,
-                    "h-auto w-auto flex-col gap-1 rounded-md px-1.5 py-1.5"
-                  )}
                   key={colorChoiceId(c)}
+                  look="tile"
                   value={colorChoiceId(c)}
                 >
                   <Swatch scheme={schemeFromPalette(palette, variant)} />
-                  <span className="font-mono text-[8px] font-medium tracking-wide uppercase">
+                  <span className="text-3xs font-mono font-medium tracking-wide uppercase">
                     {VARIANT_LABELS[variant]}
                   </span>
-                </ToggleGroupItem>
+                </SwatchToggleItem>
               );
             })}
           </ToggleGroup>
@@ -117,26 +118,27 @@ export function ColorControl({
       <div className="flex flex-wrap items-center gap-2">
         <ToggleGroup
           aria-label="Preset colours"
-          className="flex flex-wrap gap-2"
+          className="flex flex-wrap"
           onValueChange={pick(presetChoices)}
           spacing={2}
           value={[selectedId]}
         >
           {presetChoices.map((c) => (
-            <ToggleGroupItem
+            <SwatchToggleItem
               aria-label={`Colour ${c.kind === "preset" ? c.scheme.primary : ""}`}
-              className={SWATCH_ITEM_CLASSES}
               key={colorChoiceId(c)}
               value={colorChoiceId(c)}
             >
               {c.kind === "preset" ? <Swatch scheme={c.scheme} /> : null}
-            </ToggleGroupItem>
+            </SwatchToggleItem>
           ))}
         </ToggleGroup>
         <Button
           className="ml-auto"
           disabled={isDefault}
-          onClick={() => onChange(null)}
+          onClick={() => {
+            onChange(null);
+          }}
           size="sm"
           type="button"
           variant="ghost"
@@ -147,4 +149,4 @@ export function ColorControl({
       </div>
     </div>
   );
-}
+};

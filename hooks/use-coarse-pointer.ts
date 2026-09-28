@@ -10,7 +10,7 @@ import { useState } from "react";
  * Read once at mount: the players that use it are client-only (`next/dynamic`
  * ssr:false), so there's no hydration-mismatch risk.
  */
-export function useCoarsePointer(): boolean {
+export const useCoarsePointer = (): boolean => {
   // Read once at mount; there is deliberately no setter (see the note above).
   // oxlint-disable-next-line react/hook-use-state
   const [coarse] = useState(
@@ -19,4 +19,4 @@ export function useCoarsePointer(): boolean {
       window.matchMedia?.("(pointer: coarse)").matches
   );
   return coarse;
-}
+};

@@ -7,54 +7,54 @@ import {
 } from "@/lib/strava-token-response";
 
 const VALID = {
-  token_type: "Bearer",
   access_token: "access-placeholder",
-  refresh_token: "refresh-placeholder",
-  expires_at: 1_900_000_000,
-  expires_in: 21_600,
   athlete: {
-    id: 42,
     firstname: "Alex",
+    id: 42,
     lastname: "Tester",
     profile_medium: "https://example.com/a.png",
   },
+  expires_at: 1_900_000_000,
+  expires_in: 21_600,
+  refresh_token: "refresh-placeholder",
+  token_type: "Bearer",
 };
+
+/** `VALID` with `key` genuinely absent (not present-but-undefined). */
+const validWithout = (key: keyof typeof VALID) =>
+  Object.fromEntries(Object.entries(VALID).filter(([k]) => k !== key));
 
 describe("parseStravaTokenResponse", () => {
   test("accepts a full exchange payload and strips unknown fields", () => {
     expect(parseStravaTokenResponse(VALID)).toEqual({
       access_token: "access-placeholder",
-      refresh_token: "refresh-placeholder",
-      expires_at: 1_900_000_000,
       athlete: {
-        id: 42,
         firstname: "Alex",
+        id: 42,
         profile_medium: "https://example.com/a.png",
       },
+      expires_at: 1_900_000_000,
+      refresh_token: "refresh-placeholder",
     });
   });
 
   test("accepts a refresh payload without an athlete", () => {
-    const { athlete: _athlete, ...rest } = VALID;
-    expect(parseStravaTokenResponse(rest)?.athlete).toBeUndefined();
+    expect(
+      parseStravaTokenResponse(validWithout("athlete"))?.athlete
+    ).toBeUndefined();
   });
 
   test("normalises null athlete fields to undefined", () => {
     const parsed = parseStravaTokenResponse({
       ...VALID,
-      athlete: { id: 7, firstname: null, profile_medium: null },
+      athlete: { firstname: null, id: 7, profile_medium: null },
     });
-    expect(parsed?.athlete).toEqual({
-      id: 7,
-      firstname: undefined,
-      profile_medium: undefined,
-    });
+    // null fields come back absent/undefined (`toEqual` ignores undefined keys).
+    expect(parsed?.athlete).toEqual({ id: 7 });
   });
 
   test("rejects missing or empty tokens", () => {
-    expect(
-      parseStravaTokenResponse({ ...VALID, access_token: undefined })
-    ).toBeNull();
+    expect(parseStravaTokenResponse(validWithout("access_token"))).toBeNull();
     expect(
       parseStravaTokenResponse({ ...VALID, refresh_token: "" })
     ).toBeNull();
@@ -64,9 +64,7 @@ describe("parseStravaTokenResponse", () => {
   });
 
   test("rejects a missing, non-integer or non-positive expiry", () => {
-    expect(
-      parseStravaTokenResponse({ ...VALID, expires_at: undefined })
-    ).toBeNull();
+    expect(parseStravaTokenResponse(validWithout("expires_at"))).toBeNull();
     expect(
       parseStravaTokenResponse({ ...VALID, expires_at: "1900000000" })
     ).toBeNull();

@@ -9,34 +9,35 @@
 
 import type { Decorator } from "@storybook/nextjs-vite";
 import type { ReactNode } from "react";
+import type { Args, Globals } from "storybook/internal/types";
+import { z } from "zod";
 
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
 import type { ImageSize } from "@/hooks/use-image-natural-size";
 
-import { BACKGROUND_PRESETS } from "./backgrounds";
+import { BACKGROUND_ORDER, BACKGROUND_PRESETS } from "./backgrounds";
 
-function resolveUrl(
-  globals: Record<string, unknown>,
-  args: Record<string, unknown>
-): string | null {
-  // Storybook's `file` control yields an array of object URLs for the upload.
-  const uploaded = args.bgUpload;
-  if (
-    Array.isArray(uploaded) &&
-    uploaded.length > 0 &&
-    typeof uploaded[0] === "string"
-  ) {
-    return uploaded[0];
+// Storybook's `file` control yields an array of object URLs for the upload;
+// the first one is the photo.
+const UploadSchema = z.tuple([z.string()]).rest(z.unknown());
+const BackgroundIdSchema = z.enum(BACKGROUND_ORDER);
+
+/** The upload wins; otherwise the toolbar preset (unknown values = no photo). */
+const resolveUrl = (
+  background: Globals[string],
+  bgUpload: Args[string]
+): string | null => {
+  const uploaded = UploadSchema.safeParse(bgUpload);
+  if (uploaded.success) {
+    return uploaded.data[0];
   }
-  const preset = globals.background;
-  return typeof preset === "string"
-    ? (BACKGROUND_PRESETS[preset]?.url ?? null)
-    : null;
-}
+  const preset = BackgroundIdSchema.safeParse(background);
+  return preset.success ? BACKGROUND_PRESETS[preset.data].url : null;
+};
 
 /** Measures the photo asynchronously (as the app does) then renders the story
  *  with the resolved `photoUrl` + `imageSize`. A component so the hook is legal. */
-function WithBackgroundPhoto({
+const WithBackgroundPhoto = ({
   url,
   render,
 }: {
@@ -45,13 +46,13 @@ function WithBackgroundPhoto({
     photoUrl?: string;
     imageSize: ImageSize | null;
   }) => ReactNode;
-}) {
+}) => {
   const imageSize = useImageNaturalSize(url);
-  return <>{render({ photoUrl: url ?? undefined, imageSize })}</>;
-}
+  return <>{render({ imageSize, photoUrl: url ?? undefined })}</>;
+};
 
 export const withBackground: Decorator = (Story, context) => {
-  const url = resolveUrl(context.globals, context.args);
+  const url = resolveUrl(context.globals.background, context.args.bgUpload);
   return (
     <WithBackgroundPhoto
       render={(photo) => <Story args={{ ...context.args, ...photo }} />}

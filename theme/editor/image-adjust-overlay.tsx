@@ -2,7 +2,8 @@
 
 import { ArrowCounterClockwiseIcon, CheckIcon } from "@phosphor-icons/react";
 
-import { Badge } from "@/components/ui/badge";
+import { FilledBadge } from "@/components/app/primitives/badge";
+import { PhotoOverlayButton } from "@/components/app/primitives/button";
 import { Button } from "@/components/ui/button";
 import { useImageAdjust } from "@/hooks/use-image-adjust";
 import { IDENTITY_TRANSFORM, isIdentityTransform } from "@/lib/image-transform";
@@ -25,19 +26,19 @@ interface ImageAdjustOverlayProps {
  * never swipes underneath it. Controls sit above the surface so their clicks
  * land normally.
  */
-export function ImageAdjustOverlay({
+export const ImageAdjustOverlay = ({
   transform,
   onChange,
   onDone,
   clamp,
   contentWidth,
-}: ImageAdjustOverlayProps) {
+}: ImageAdjustOverlayProps) => {
   const { ref } = useImageAdjust({
-    enabled: true,
-    transform,
-    onChange,
     clamp,
     contentWidth,
+    enabled: true,
+    onChange,
+    transform,
   });
   const canReset = !isIdentityTransform(transform);
 
@@ -55,11 +56,11 @@ export function ImageAdjustOverlay({
       />
 
       {/* Frame + corner ticks (decorative). The huge-spread shadow is a scrim,
-          not an elevation — it dims the card *outside* the crop frame, so it
-          stays an arbitrary value rather than a Tailwind shadow-* class. */}
+          not an elevation — it dims the card *outside* the crop frame (the
+          `shadow-scrim` token, a 9999px spread). */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-3 z-[2] border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.18)]"
+        className="shadow-scrim pointer-events-none absolute inset-3 z-[2] border-2 border-white/80"
       >
         {(
           [
@@ -80,16 +81,20 @@ export function ImageAdjustOverlay({
       </div>
 
       {/* Hint chip */}
-      <Badge className="pointer-events-none absolute top-5 left-1/2 z-[3] -translate-x-1/2 rounded-full bg-black/55 px-3 py-1.5 font-mono text-[10px] text-white backdrop-blur-sm">
+      <FilledBadge
+        className="pointer-events-none absolute top-5 left-1/2 z-[3] -translate-x-1/2"
+        tone="scrim"
+      >
         Drag · pinch or scroll to zoom
-      </Badge>
+      </FilledBadge>
 
       {/* Controls */}
       <div className="absolute bottom-4 left-1/2 z-[3] flex -translate-x-1/2 items-center gap-2">
-        <Button
-          className="bg-white/90 text-black hover:bg-white"
+        <PhotoOverlayButton
           disabled={!canReset}
-          onClick={() => onChange(IDENTITY_TRANSFORM)}
+          onClick={() => {
+            onChange(IDENTITY_TRANSFORM);
+          }}
           size="sm"
         >
           <ArrowCounterClockwiseIcon
@@ -98,7 +103,7 @@ export function ImageAdjustOverlay({
             weight="duotone"
           />
           Reset
-        </Button>
+        </PhotoOverlayButton>
         <Button onClick={onDone} size="sm">
           <CheckIcon aria-hidden className="size-3.5" weight="duotone" />
           Done
@@ -106,4 +111,4 @@ export function ImageAdjustOverlay({
       </div>
     </div>
   );
-}
+};

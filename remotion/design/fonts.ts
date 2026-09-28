@@ -31,106 +31,108 @@ import { loadFont as loadManrope } from "@remotion/google-fonts/Manrope";
 import { loadFont as loadPlayfair } from "@remotion/google-fonts/PlayfairDisplay";
 import { loadFont as loadSpaceGrotesk } from "@remotion/google-fonts/SpaceGrotesk";
 import { loadFont as loadSyne } from "@remotion/google-fonts/Syne";
-import type { CSSProperties } from "react";
 import { getRemotionEnvironment } from "remotion";
 
 const LATIN = ["latin"] as const;
 
-function loadAll(): CSSProperties {
+/** The app's `--font-*` custom properties, ready to spread into a style. */
+export type FontVars = Partial<Record<`--font-${string}`, string>>;
+
+const loadAll = (): FontVars => {
   const inter = loadInter("normal", {
-    weights: ["400", "500", "600", "700"],
     subsets: [...LATIN],
+    weights: ["400", "500", "600", "700"],
   });
   const anton = loadAnton("normal", {
-    weights: ["400"],
     subsets: [...LATIN],
+    weights: ["400"],
   });
   const jetbrainsMono = loadJetBrainsMono("normal", {
-    weights: ["400", "500", "600", "700"],
     subsets: [...LATIN],
+    weights: ["400", "500", "600", "700"],
   });
   const cormorant = loadCormorant("normal", {
-    weights: ["400", "500", "600", "700"],
     subsets: [...LATIN],
+    weights: ["400", "500", "600", "700"],
   });
   loadCormorant("italic", {
-    weights: ["400", "500", "600", "700"],
     subsets: [...LATIN],
+    weights: ["400", "500", "600", "700"],
   });
   const manrope = loadManrope("normal", {
-    weights: ["400", "600", "700"],
     subsets: [...LATIN],
+    weights: ["400", "600", "700"],
   });
   const spaceGrotesk = loadSpaceGrotesk("normal", {
-    weights: ["400", "500", "600", "700"],
     subsets: [...LATIN],
+    weights: ["400", "500", "600", "700"],
   });
   const syne = loadSyne("normal", {
-    weights: ["600", "700", "800"],
     subsets: [...LATIN],
+    weights: ["600", "700", "800"],
   });
   const playfair = loadPlayfair("normal", {
-    weights: ["400", "500", "600", "700"],
     subsets: [...LATIN],
+    weights: ["400", "500", "600", "700"],
   });
   loadPlayfair("italic", {
-    weights: ["400", "500", "600", "700"],
     subsets: [...LATIN],
+    weights: ["400", "500", "600", "700"],
   });
   const dmSans = loadDmSans("normal", {
-    weights: ["400", "500", "700"],
     subsets: [...LATIN],
+    weights: ["400", "500", "700"],
   });
   const archivoNarrow = loadArchivoNarrow("normal", {
-    weights: ["400", "500", "600", "700"],
     subsets: [...LATIN],
+    weights: ["400", "500", "600", "700"],
   });
   const instrumentSerif = loadInstrumentSerif("normal", {
-    weights: ["400"],
     subsets: [...LATIN],
+    weights: ["400"],
   });
   loadInstrumentSerif("italic", {
-    weights: ["400"],
     subsets: [...LATIN],
+    weights: ["400"],
   });
   const bricolage = loadBricolage("normal", {
-    weights: ["400", "500", "600", "700", "800"],
     subsets: [...LATIN],
+    weights: ["400", "500", "600", "700", "800"],
   });
   const ibmPlexMono = loadIbmPlexMono("normal", {
-    weights: ["400", "500", "600", "700"],
     subsets: [...LATIN],
+    weights: ["400", "500", "600", "700"],
   });
   const geistMono = loadGeistMono("normal", {
-    weights: ["400", "500", "600", "700"],
     subsets: [...LATIN],
+    weights: ["400", "500", "600", "700"],
   });
 
   // The exact variable names from lib/fonts.ts — one list, every entry point.
   return {
-    "--font-sans": inter.fontFamily,
-    "--font-heading": anton.fontFamily,
-    "--font-mono": jetbrainsMono.fontFamily,
+    "--font-archivo-narrow": archivoNarrow.fontFamily,
+    "--font-bricolage": bricolage.fontFamily,
     "--font-cormorant": cormorant.fontFamily,
+    "--font-dm-sans": dmSans.fontFamily,
+    "--font-geist-mono": geistMono.fontFamily,
+    "--font-heading": anton.fontFamily,
+    "--font-ibm-plex-mono": ibmPlexMono.fontFamily,
+    "--font-instrument-serif": instrumentSerif.fontFamily,
     "--font-manrope": manrope.fontFamily,
+    "--font-mono": jetbrainsMono.fontFamily,
+    "--font-playfair": playfair.fontFamily,
+    "--font-sans": inter.fontFamily,
     "--font-space-grotesk": spaceGrotesk.fontFamily,
     "--font-syne": syne.fontFamily,
-    "--font-playfair": playfair.fontFamily,
-    "--font-dm-sans": dmSans.fontFamily,
-    "--font-archivo-narrow": archivoNarrow.fontFamily,
-    "--font-instrument-serif": instrumentSerif.fontFamily,
-    "--font-bricolage": bricolage.fontFamily,
-    "--font-ibm-plex-mono": ibmPlexMono.fontFamily,
-    "--font-geist-mono": geistMono.fontFamily,
-  } as CSSProperties;
-}
+  };
+};
 
-let cached: CSSProperties | null = null;
+let cached: FontVars | null = null;
 
-export function getFontVars(): CSSProperties {
+export const getFontVars = (): FontVars => {
   if (getRemotionEnvironment().isPlayer) {
     return {};
   }
   cached ??= loadAll();
   return cached;
-}
+};

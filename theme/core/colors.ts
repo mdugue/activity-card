@@ -4,6 +4,8 @@
 // old PhotoMood). One control serves both sources; the photo options show
 // their real computed swatches and are badged as coming from the photo.
 
+import { z } from "zod/mini";
+
 import type {
   ExtractedPalette,
   PaletteTheme,
@@ -61,29 +63,29 @@ export const PALETTE_VARIANTS: PaletteVariant[] = [
 ];
 
 export const VARIANT_LABELS: Record<PaletteVariant, string> = {
-  vibrant: "Vibrant",
-  muted: "Muted",
   complementary: "Complement",
-  spectrum: "Spectrum",
+  muted: "Muted",
   pure: "Pure",
+  spectrum: "Spectrum",
+  vibrant: "Vibrant",
 };
 
 /** The scheme a photo-derived variant produces from an extracted palette —
  *  drives the live swatches in the colour control. The "no palette yet" case
  *  is handled by callers (`resolveColors` falls back to the theme default), so
  *  this always returns a scheme. */
-export function schemeFromPalette(
+export const schemeFromPalette = (
   palette: ExtractedPalette,
   variant: PaletteVariant
-): ColorScheme {
+): ColorScheme => {
   const t = palette.themes[variant];
   return {
-    primary: t.accent,
-    secondary: t.accent2,
     onPrimary: t.onAccent,
+    primary: t.accent,
     roles: { background: t.background, body: t.body, headline: t.headline },
+    secondary: t.accent2,
   };
-}
+};
 
 /**
  * Resolve the user's choice to the scheme a theme renders with. A photo-kind
@@ -91,61 +93,76 @@ export function schemeFromPalette(
  * falls back to the theme's own default — the choice itself persists, so
  * re-adding a photo restores the dynamic colours.
  */
-export function resolveColors(
+export const resolveColors = (
   choice: ColorChoice,
   themeDefault: ColorScheme,
   palette: ExtractedPalette | null
-): ColorScheme {
+): ColorScheme => {
   if (choice.kind === "photo") {
     return palette ? schemeFromPalette(palette, choice.variant) : themeDefault;
   }
   return choice.scheme;
-}
+};
 
 const HEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/u;
 
-function isHex(v: unknown): v is string {
-  return typeof v === "string" && HEX.test(v);
-}
+const hexSchema = z.string().check(z.regex(HEX));
+/** An optional hue: a hex literal, else undefined (absent or invalid). */
+const optionalHexSchema = z.pipe(
+  z.unknown(),
+  z.transform((v) => hexSchema.safeParse(v).data)
+);
 
-function isVariant(v: unknown): v is PaletteVariant {
-  return typeof v === "string" && (PALETTE_VARIANTS as string[]).includes(v);
-}
+/** A persisted photo-derived choice: a known palette strategy. */
+const photoChoiceSchema = z.object({
+  kind: z.literal("photo"),
+  variant: z.enum(PALETTE_VARIANTS),
+});
+
+/** A persisted preset choice. Only `primary` must be a hex literal; the
+ *  optional hues are vetted one by one (a bad one is dropped, not fatal). */
+const presetChoiceSchema = z.object({
+  kind: z.literal("preset"),
+  scheme: z.object({
+    onPrimary: optionalHexSchema,
+    primary: hexSchema,
+    secondary: optionalHexSchema,
+  }),
+});
 
 /**
  * Coerce a raw (persisted / hand-edited) value to a valid `ColorChoice`, or
  * `null` (= "use the theme's default") when it isn't one. CSS-injection-safe:
  * preset colours must be hex literals.
  */
-export function coerceColorChoice(raw: unknown): ColorChoice | null {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return null;
+export const coerceColorChoice = (
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- this IS the I/O boundary parser: the persisted colour choice arrives untyped from localStorage
+  raw: unknown
+): ColorChoice | null => {
+  const photo = photoChoiceSchema.safeParse(raw);
+  if (photo.success) {
+    return { kind: "photo", variant: photo.data.variant };
   }
-  const r = raw as Record<string, unknown>;
-  if (r.kind === "photo" && isVariant(r.variant)) {
-    return { kind: "photo", variant: r.variant };
-  }
-  if (r.kind === "preset" && r.scheme && typeof r.scheme === "object") {
-    const s = r.scheme as Record<string, unknown>;
-    if (isHex(s.primary)) {
-      return {
-        kind: "preset",
-        scheme: {
-          primary: s.primary,
-          secondary: isHex(s.secondary) ? s.secondary : undefined,
-          onPrimary: isHex(s.onPrimary) ? s.onPrimary : undefined,
-        },
-      };
-    }
+  const preset = presetChoiceSchema.safeParse(raw);
+  if (preset.success) {
+    const s = preset.data.scheme;
+    return {
+      kind: "preset",
+      scheme: {
+        onPrimary: s.onPrimary,
+        primary: s.primary,
+        secondary: s.secondary,
+      },
+    };
   }
   return null;
-}
+};
 
 /** Stable identity for selection state in the colour control. */
-export function colorChoiceId(choice: ColorChoice): string {
+export const colorChoiceId = (choice: ColorChoice): string => {
   if (choice.kind === "photo") {
     return `photo:${choice.variant}`;
   }
   const s = choice.scheme;
   return `preset:${s.primary}:${s.secondary ?? ""}`;
-}
+};

@@ -51,9 +51,9 @@ test.describe("edit controls", () => {
     await selectTheme(page, "PHOTO");
     const photoInput = page.locator('input[type="file"][accept="image/*"]');
     await photoInput.setInputFiles({
-      name: "photo.png",
-      mimeType: "image/png",
       buffer: Buffer.from(TINY_PNG_BASE64, "base64"),
+      mimeType: "image/png",
+      name: "photo.png",
     });
     await expect(page.getByText(/Photo loaded/iu)).toBeVisible();
     await expect(page.getByRole("button", { name: /Remove/iu })).toBeVisible();

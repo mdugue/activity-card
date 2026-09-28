@@ -3,19 +3,11 @@
 // Generic renderer for a single theme parameter. Maps each `ParamDef.kind` to an
 // existing editor primitive, so a theme never writes its own control panel — it
 // declares `ParamDef`s (in `lib/`) and these render automatically. The value is
-// `unknown` at this boundary (the theme body stays strictly typed on its own
-// config); each kind narrows it as it reads.
+// any stored `ParamValue` at this boundary (the theme body stays strictly typed
+// on its own config); each kind parses its own shape as it reads.
 
-import {
-  CircleDashedIcon,
-  ClockIcon,
-  GaugeIcon,
-  LightningIcon,
-  MountainsIcon,
-  PathIcon,
-  TextAaIcon,
-  TimerIcon,
-} from "@phosphor-icons/react";
+import type { CSSProperties } from "react";
+import { z } from "zod/mini";
 
 import {
   ControlBlock,
@@ -23,57 +15,73 @@ import {
   ToggleRow,
 } from "@/components/app/control-primitives";
 import type { RichSelectOption } from "@/components/app/control-primitives";
+import { OptionToggleItem } from "@/components/app/primitives/toggle-group";
 import { Slider } from "@/components/ui/slider";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { ToggleGroup } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import type {
   ParamCtx,
   ParamDef,
   ParamOption,
+  ParamValue,
 } from "@/theme/core/params/kinds";
+
+import { isOptionGlyph, OPTION_GLYPHS } from "./option-glyphs";
 
 interface ParamControlProps {
   ctx: ParamCtx;
   def: ParamDef;
-  onChange: (value: unknown) => void;
-  value: unknown;
+  onChange: (value: ParamValue) => void;
+  /** the stored value — absent until the config carries this param */
+  value: ParamValue | undefined;
 }
 
-// Duotone glyph per option `glyph` id, sized to match the editor's other rich
-// selects (the sport picker). The map lives here — not on the `ParamOption` —
-// so param specs in `lib/` stay JSX-free.
+// Each kind reads its own shape out of the stored value, falling back to the
+// param's default when the stored value is absent or of another kind.
+const SLIDER_VALUE = z.number();
+const CHOICE_VALUE = z.string();
+
+// Sized to match the editor's other rich selects (the sport picker).
 const ICON_PROPS = {
   "aria-hidden": true,
   className: "size-5",
   weight: "duotone",
 } as const;
 
-export const OPTION_GLYPHS: Record<string, React.ReactNode> = {
-  elevation: <MountainsIcon {...ICON_PROPS} />,
-  distance: <PathIcon {...ICON_PROPS} />,
-  name: <TextAaIcon {...ICON_PROPS} />,
-  duration: <ClockIcon {...ICON_PROPS} />,
-  avgSpeed: <GaugeIcon {...ICON_PROPS} />,
-  maxSpeed: <LightningIcon {...ICON_PROPS} />,
-  pace: <TimerIcon {...ICON_PROPS} />,
-  none: <CircleDashedIcon {...ICON_PROPS} />,
+const isPresent = (text: string | undefined): text is string =>
+  text !== undefined && text !== "";
+
+/** A palette option's hex colour, read by `bg-(--swatch)`. */
+interface SwatchVars extends CSSProperties {
+  "--swatch": string;
+}
+
+const OptionSwatch = ({ color }: { color: string }) => {
+  const swatchVars: SwatchVars = { "--swatch": color };
+  return (
+    <span
+      aria-hidden
+      className="border-foreground/25 size-5 rounded-full border bg-(--swatch)"
+      style={swatchVars}
+    />
+  );
 };
 
 /** The option's semantic duotone icon, a colour swatch (palette picker), or a
  *  neutral disc — so option rows keep a consistent leading mark. */
-function OptionGlyph({ glyph, swatch }: { glyph?: string; swatch?: string }) {
-  const icon = glyph ? OPTION_GLYPHS[glyph] : undefined;
-  if (icon) {
-    return icon;
+const OptionGlyph = ({
+  glyph,
+  swatch,
+}: {
+  glyph?: string;
+  swatch?: string;
+}) => {
+  if (glyph !== undefined && isOptionGlyph(glyph)) {
+    const GlyphIcon = OPTION_GLYPHS[glyph];
+    return <GlyphIcon {...ICON_PROPS} />;
   }
-  if (swatch) {
-    return (
-      <span
-        aria-hidden
-        className="border-foreground/25 size-5 rounded-full border"
-        style={{ background: swatch }}
-      />
-    );
+  if (isPresent(swatch)) {
+    return <OptionSwatch color={swatch} />;
   }
   return (
     <span
@@ -81,38 +89,43 @@ function OptionGlyph({ glyph, swatch }: { glyph?: string; swatch?: string }) {
       className="border-foreground/30 size-4 rounded-full border"
     />
   );
-}
+};
 
-function toRichOption(o: ParamOption): RichSelectOption {
-  return {
-    value: o.id,
-    icon: <OptionGlyph glyph={o.glyph} swatch={o.swatch} />,
-    primary: o.value ?? o.label,
-    unit: o.unit,
-    hint: o.hint ?? (o.value ? undefined : o.blurb),
-  };
-}
+const toRichOption = (o: ParamOption): RichSelectOption => ({
+  hint: o.hint ?? (isPresent(o.value) ? undefined : o.blurb),
+  icon: <OptionGlyph glyph={o.glyph} swatch={o.swatch} />,
+  primary: o.value ?? o.label,
+  unit: o.unit,
+  value: o.id,
+});
 
-function resolveOptions(
+const resolveOptions = (
   def: Extract<ParamDef, { kind: "segmented" | "select" }>,
   ctx: ParamCtx
-): ParamOption[] {
-  return typeof def.options === "function" ? def.options(ctx) : def.options;
-}
+): ParamOption[] =>
+  Array.isArray(def.options) ? def.options : def.options(ctx);
 
-export function ParamControl({ def, value, onChange, ctx }: ParamControlProps) {
+export const ParamControl = ({
+  def,
+  value,
+  onChange,
+  ctx,
+}: ParamControlProps) => {
   if (def.kind === "toggle") {
     return (
       <ToggleRow
         checked={value === true}
         label={def.label}
-        onCheckedChange={(c) => onChange(c)}
+        onCheckedChange={(c) => {
+          onChange(c);
+        }}
       />
     );
   }
 
   if (def.kind === "slider") {
-    const n = typeof value === "number" ? value : def.default;
+    const stored = SLIDER_VALUE.safeParse(value);
+    const n = stored.success ? stored.data : def.default;
     return (
       <ControlBlock label={def.label}>
         <div className="mt-3 flex items-center gap-4">
@@ -122,9 +135,9 @@ export function ParamControl({ def, value, onChange, ctx }: ParamControlProps) {
             max={def.max}
             min={def.min}
             onValueChange={(v: number | readonly number[]) => {
-              // `Array.isArray` widens a readonly array to `any[]`, so narrow on
-              // the scalar side instead.
-              const next = typeof v === "number" ? v : (v[0] ?? 0);
+              // Flatten the scalar-or-array payload (`Array.isArray` would widen
+              // the readonly array to `any[]`) and take its first thumb.
+              const next = [v].flat()[0] ?? 0;
               onChange(Math.round(next));
             }}
             step={def.step ?? 1}
@@ -140,7 +153,8 @@ export function ParamControl({ def, value, onChange, ctx }: ParamControlProps) {
   }
 
   const options = resolveOptions(def, ctx);
-  const current = typeof value === "string" ? value : def.default;
+  const stored = CHOICE_VALUE.safeParse(value);
+  const current = stored.success ? stored.data : def.default;
 
   if (def.kind === "select") {
     return (
@@ -162,7 +176,7 @@ export function ParamControl({ def, value, onChange, ctx }: ParamControlProps) {
     <ControlBlock label={def.label}>
       <ToggleGroup
         aria-label={def.label}
-        className={cn("mt-2 grid w-full gap-2", cols)}
+        className={cn("mt-2 grid w-full", cols)}
         onValueChange={(values) => {
           if (values[0]) {
             onChange(values[0]);
@@ -173,21 +187,21 @@ export function ParamControl({ def, value, onChange, ctx }: ParamControlProps) {
         variant="outline"
       >
         {options.map((o) => (
-          <ToggleGroupItem
+          <OptionToggleItem
             aria-label={o.label}
-            className="flex h-auto flex-col items-start justify-start px-3 py-2.5 text-left"
             key={o.id}
+            look="tile"
             value={o.id}
           >
             <div className="font-heading text-base leading-none uppercase">
               {o.label}
             </div>
-            {o.blurb ? (
+            {isPresent(o.blurb) ? (
               <div className="caption-micro mt-1">{o.blurb}</div>
             ) : null}
-          </ToggleGroupItem>
+          </OptionToggleItem>
         ))}
       </ToggleGroup>
     </ControlBlock>
   );
-}
+};

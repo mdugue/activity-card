@@ -24,11 +24,9 @@
 export const MIN_PROFILE_POINTS = 2;
 
 /** Whether `series` has enough points to draw (see module doc). */
-export function isDrawableSeries(
+export const isDrawableSeries = (
   series: readonly number[] | null | undefined
-): series is number[] {
-  return (series?.length ?? 0) >= MIN_PROFILE_POINTS;
-}
+): series is number[] => (series?.length ?? 0) >= MIN_PROFILE_POINTS;
 
 /** The series a profile viz draws, in preference order. */
 export type ProfileMode = "elevation" | "pace" | "laps";
@@ -48,22 +46,22 @@ export interface ProfileSource {
 }
 
 export const NO_PROFILE_SIGNAL: ProfileSignal = {
+  label: null,
   mode: "none",
   series: null,
-  label: null,
 };
 
 const LABELS: Record<ProfileMode, ProfileLabel> = {
   elevation: "ELEVATION",
-  pace: "PACE",
   laps: "LAPS",
+  pace: "PACE",
 };
 
 /**
  * Pick a single activity's profile signal from its top-level series:
  * elevation, else pace, else laps — the first one that's drawable.
  */
-export function profileSignal(data: ProfileSource): ProfileSignal {
+export const profileSignal = (data: ProfileSource): ProfileSignal => {
   const candidates: [ProfileMode, number[] | undefined][] = [
     ["elevation", data.elevationProfile],
     ["pace", data.paceProfile],
@@ -71,11 +69,11 @@ export function profileSignal(data: ProfileSource): ProfileSignal {
   ];
   for (const [mode, series] of candidates) {
     if (isDrawableSeries(series)) {
-      return { mode, series, label: LABELS[mode] };
+      return { label: LABELS[mode], mode, series };
     }
   }
   return NO_PROFILE_SIGNAL;
-}
+};
 
 /** The profile inputs of one project leg. */
 export interface SegmentProfileSource {
@@ -90,20 +88,19 @@ export type SegmentProfileMetric = "elevation" | "pace";
  * The one metric every leg of a project is drawn in: elevation when any leg
  * has a drawable elevation profile, otherwise pace.
  */
-export function segmentProfileMetric(
+export const segmentProfileMetric = (
   segments: readonly SegmentProfileSource[]
-): SegmentProfileMetric {
-  return segments.some((s) => isDrawableSeries(s.elevationProfile))
+): SegmentProfileMetric =>
+  segments.some((s) => isDrawableSeries(s.elevationProfile))
     ? "elevation"
     : "pace";
-}
 
 /** A leg's series in `metric`, or `null` when it has nothing drawable. */
-export function legSeries(
+export const legSeries = (
   segment: SegmentProfileSource,
   metric: SegmentProfileMetric
-): number[] | null {
+): number[] | null => {
   const series =
     metric === "elevation" ? segment.elevationProfile : segment.paceProfile;
   return isDrawableSeries(series) ? series : null;
-}
+};

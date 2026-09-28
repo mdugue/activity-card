@@ -6,10 +6,6 @@ import ultracite from "ultracite/oxfmt";
 
 export default defineConfig({
   ...ultracite,
-  // Ultracite reflows Markdown onto single lines. The prose in this repo
-  // (AGENTS.md, SPEC.md, docs/, the skills) is hard-wrapped on purpose so
-  // diffs stay line-sized — keep the authored wrapping.
-  proseWrap: "preserve",
   ignorePatterns: [
     ...(ultracite.ignorePatterns ?? []),
     // Vendored agent skills installed via `npx skills add` and pinned by
@@ -22,4 +18,8 @@ export default defineConfig({
     "**/playwright-report",
     "**/test-results",
   ],
+  // Ultracite reflows Markdown onto single lines. The prose in this repo
+  // (AGENTS.md, SPEC.md, docs/, the skills) is hard-wrapped on purpose so
+  // diffs stay line-sized — keep the authored wrapping.
+  proseWrap: "preserve",
 });

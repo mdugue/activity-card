@@ -35,7 +35,7 @@ interface RouteLineProps {
 
 /** A small arrowhead at the first point, oriented along the initial heading —
  *  a quiet "started here, went this way" cue. */
-function StartArrow({
+const StartArrow = ({
   points,
   size,
   color,
@@ -43,19 +43,18 @@ function StartArrow({
   color: string;
   points: Coord[];
   size: number;
-}) {
+}) => {
   if (points.length < 2) {
     return null;
   }
-  const [sx, sy] = points[0];
+  const [[sx, sy], [nx, ny]] = points;
   // Look a little down the line for a stable heading (skip jitter at the start).
-  let [ax, ay] = points[1];
-  for (let i = 1; i < points.length; i++) {
-    const dx = points[i][0] - sx;
-    const dy = points[i][1] - sy;
-    if (Math.hypot(dx, dy) > size * 1.6) {
-      ax = points[i][0];
-      ay = points[i][1];
+  let ax = nx;
+  let ay = ny;
+  for (const [px, py] of points.slice(1)) {
+    if (Math.hypot(px - sx, py - sy) > size * 1.6) {
+      ax = px;
+      ay = py;
       break;
     }
   }
@@ -68,9 +67,9 @@ function StartArrow({
       <polygon fill={color} opacity={0.9} points={tri} />
     </g>
   );
-}
+};
 
-export function RouteLine({
+export const RouteLine = ({
   coords,
   routes,
   w,
@@ -83,7 +82,7 @@ export function RouteLine({
   overPhoto = false,
   strokeWidth = 7,
   showMarkers = true,
-}: RouteLineProps) {
+}: RouteLineProps) => {
   const shadow = overPhoto
     ? "drop-shadow(0 2px 12px rgba(0,0,0,0.55))"
     : "drop-shadow(0 3px 8px rgba(0,0,0,0.18))";
@@ -114,7 +113,7 @@ export function RouteLine({
       <svg
         aria-hidden="true"
         preserveAspectRatio="xMidYMid meet"
-        style={{ width: "100%", height: "100%", display: "block" }}
+        style={{ display: "block", height: "100%", width: "100%" }}
         viewBox={`0 0 ${w} ${h}`}
       >
         <title>Routes</title>
@@ -168,7 +167,7 @@ export function RouteLine({
     <svg
       aria-hidden="true"
       preserveAspectRatio="xMidYMid meet"
-      style={{ width: "100%", height: "100%", display: "block" }}
+      style={{ display: "block", height: "100%", width: "100%" }}
       viewBox={`0 0 ${w} ${h}`}
     >
       <title>Route</title>
@@ -202,4 +201,4 @@ export function RouteLine({
       ) : null}
     </svg>
   );
-}
+};

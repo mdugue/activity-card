@@ -16,6 +16,8 @@
 // while probing. Keeping the descriptor here — pure data + pure geometry — is
 // what makes the composite testable without a browser.
 
+import { z } from "zod/mini";
+
 import { coverSize } from "./image-transform";
 
 /** Marks the layer container: untransformed, and clipped exactly like the
@@ -58,14 +60,43 @@ export interface PhotoDraw {
   y: number;
 }
 
-export function encodePhotoDraw(draw: PhotoDraw): string {
-  return JSON.stringify(draw);
-}
+export const encodePhotoDraw = (draw: PhotoDraw): string =>
+  JSON.stringify(draw);
 
 /** Parse a `data-effort-photo` payload. Returns null for anything malformed —
  *  a broken descriptor must degrade to "no composite", never throw mid-export. */
-export function decodePhotoDraw(value: string | null): PhotoDraw | null {
-  if (!value) {
+const photoBoxSchema = z.discriminatedUnion("kind", [
+  z.object({
+    h: z.number(),
+    kind: z.literal("box"),
+    w: z.number(),
+    x: z.number(),
+    y: z.number(),
+  }),
+  z.object({ inset: z.number(), kind: z.literal("inset") }),
+]);
+
+// zod's `catch` (fall back on any validation failure, missing included) under
+// a name promise-lint rules don't mistake for `Promise#catch`.
+const { catch: orDefault } = z;
+
+/** Required: `src` + a well-formed `box`. Everything else falls back to its
+ *  neutral default when missing or of the wrong type. */
+const photoDrawSchema = z.object({
+  box: photoBoxSchema,
+  filter: orDefault(z.string(), ""),
+  flipH: orDefault(z.boolean(), false),
+  flipV: orDefault(z.boolean(), false),
+  opacity: orDefault(z.number(), 1),
+  rotate: orDefault(z.number(), 0),
+  scale: orDefault(z.number(), 1),
+  src: z.string(),
+  x: orDefault(z.number(), 0),
+  y: orDefault(z.number(), 0),
+});
+
+export const decodePhotoDraw = (value: string | null): PhotoDraw | null => {
+  if (value === null || value === "") {
     return null;
   }
   let parsed: unknown;
@@ -74,47 +105,26 @@ export function decodePhotoDraw(value: string | null): PhotoDraw | null {
   } catch {
     return null;
   }
-  if (!parsed || typeof parsed !== "object") {
-    return null;
-  }
-  const d = parsed as Partial<PhotoDraw>;
-  if (typeof d.src !== "string" || !d.box || typeof d.box !== "object") {
-    return null;
-  }
-  const box = d.box;
-  if (box.kind !== "box" && box.kind !== "inset") {
-    return null;
-  }
-  return {
-    box,
-    filter: typeof d.filter === "string" ? d.filter : "",
-    flipH: d.flipH === true,
-    flipV: d.flipV === true,
-    opacity: typeof d.opacity === "number" ? d.opacity : 1,
-    rotate: typeof d.rotate === "number" ? d.rotate : 0,
-    scale: typeof d.scale === "number" ? d.scale : 1,
-    src: d.src,
-    x: typeof d.x === "number" ? d.x : 0,
-    y: typeof d.y === "number" ? d.y : 0,
-  };
-}
+  const result = photoDrawSchema.safeParse(parsed);
+  return result.success ? result.data : null;
+};
 
 /** The painting element's box in container coordinates. */
-export function resolvePhotoBox(
+export const resolvePhotoBox = (
   box: PhotoBox,
   layerW: number,
   layerH: number
-): Rect {
+): Rect => {
   if (box.kind === "box") {
-    return { x: box.x, y: box.y, w: box.w, h: box.h };
+    return { h: box.h, w: box.w, x: box.x, y: box.y };
   }
   return {
+    h: layerH - 2 * box.inset,
+    w: layerW - 2 * box.inset,
     x: box.inset,
     y: box.inset,
-    w: layerW - 2 * box.inset,
-    h: layerH - 2 * box.inset,
   };
-}
+};
 
 /**
  * The image's `background-size: cover` footprint inside `box`, centred on it —
@@ -122,14 +132,14 @@ export function resolvePhotoBox(
  * `transform-origin`. Drawing at this rect and clipping to the box reproduces
  * `background-size: cover; background-position: center`.
  */
-export function coverRectAroundCentre(
+export const coverRectAroundCentre = (
   box: Rect,
   naturalW: number,
   naturalH: number
-): Rect {
+): Rect => {
   if (!(naturalW > 0 && naturalH > 0)) {
-    return { x: -box.w / 2, y: -box.h / 2, w: box.w, h: box.h };
+    return { h: box.h, w: box.w, x: -box.w / 2, y: -box.h / 2 };
   }
   const { w, h } = coverSize(box.w, box.h, naturalW, naturalH);
-  return { x: -w / 2, y: -h / 2, w, h };
-}
+  return { h, w, x: -w / 2, y: -h / 2 };
+};

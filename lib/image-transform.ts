@@ -9,9 +9,18 @@
  */
 
 export interface ImageTransform {
-  scale: number; // >= 1, relative to cover baseline
-  x: number; // translation in card px (1080-space)
-  y: number; // translation in card px (1350-space)
+  /** >= 1, relative to cover baseline */
+  scale: number;
+  /** translation in card px (1080-space) */
+  x: number;
+  /** translation in card px (1350-space) */
+  y: number;
+}
+
+/** Rendered size (px) of an image scaled to cover a box. */
+export interface CoverSize {
+  h: number;
+  w: number;
 }
 
 export const IDENTITY_TRANSFORM: ImageTransform = { scale: 1, x: 0, y: 0 };
@@ -26,11 +35,11 @@ export const MAX_SCALE = 4;
  * Clamp a transform so the scaled photo keeps covering the card. With a cover
  * baseline at scale 1, the slack on each axis is `(scale - 1) * dimension / 2`.
  */
-export function clampTransform(
+export const clampTransform = (
   t: ImageTransform,
   width = CARD_WIDTH,
   height = CARD_HEIGHT
-): ImageTransform {
+): ImageTransform => {
   const scale = Math.min(Math.max(t.scale, MIN_SCALE), MAX_SCALE);
   const maxX = ((scale - 1) * width) / 2;
   const maxY = ((scale - 1) * height) / 2;
@@ -39,26 +48,25 @@ export function clampTransform(
     x: Math.min(Math.max(t.x, -maxX), maxX),
     y: Math.min(Math.max(t.y, -maxY), maxY),
   };
-}
+};
 
-export function transformToCss(t: ImageTransform): string {
-  return `translate(${t.x.toFixed(2)}px, ${t.y.toFixed(2)}px) scale(${t.scale.toFixed(4)})`;
-}
+export const transformToCss = (t: ImageTransform): string =>
+  `translate(${t.x.toFixed(2)}px, ${t.y.toFixed(2)}px) scale(${t.scale.toFixed(4)})`;
 
 /**
  * The size an image is scaled to when it `cover`s a box, preserving aspect.
  * Used by the carousel panorama so the photo can be drawn at its true cover
  * size and panned within the real overflow.
  */
-export function coverSize(
+export const coverSize = (
   boxW: number,
   boxH: number,
   natW: number,
   natH: number
-): { h: number; w: number } {
+): CoverSize => {
   const scale = Math.max(boxW / natW, boxH / natH);
-  return { w: natW * scale, h: natH * scale };
-}
+  return { h: natH * scale, w: natW * scale };
+};
 
 /**
  * Clamp a transform against the actual cover overflow of an image in a box —
@@ -66,13 +74,13 @@ export function coverSize(
  * wide carousel strip and a normal photo there's real vertical slack at scale
  * 1, so this lets the user pan vertically (which `clampTransform` forbids).
  */
-export function clampCoverTransform(
+export const clampCoverTransform = (
   t: ImageTransform,
   boxW: number,
   boxH: number,
   natW: number,
   natH: number
-): ImageTransform {
+): ImageTransform => {
   const scale = Math.min(Math.max(t.scale, MIN_SCALE), MAX_SCALE);
   const base = coverSize(boxW, boxH, natW, natH);
   const maxX = Math.max(0, (base.w * scale - boxW) / 2);
@@ -82,13 +90,10 @@ export function clampCoverTransform(
     x: Math.min(Math.max(t.x, -maxX), maxX),
     y: Math.min(Math.max(t.y, -maxY), maxY),
   };
-}
+};
 
-export function isIdentityTransform(t: ImageTransform): boolean {
+export const isIdentityTransform = (t: ImageTransform): boolean =>
   // Pointer/wheel gestures leave tiny floating-point residuals, so compare with
   // small epsilons — sub-pixel translation and a <0.1% scale delta read as
   // "effectively reset" (e.g. keeps the Reset button disabled).
-  return (
-    Math.abs(t.scale - 1) < 1e-3 && Math.abs(t.x) < 0.5 && Math.abs(t.y) < 0.5
-  );
-}
+  Math.abs(t.scale - 1) < 1e-3 && Math.abs(t.x) < 0.5 && Math.abs(t.y) < 0.5;

@@ -16,37 +16,37 @@ interface ModeToggleProps {
 }
 
 const MODES: { id: CardMode; label: string; Icon: Icon }[] = [
-  { id: "single", label: "Single Card", Icon: ImageIcon },
-  { id: "carousel", label: "Carousel", Icon: PanoramaIcon },
+  { Icon: ImageIcon, id: "single", label: "Single Card" },
+  { Icon: PanoramaIcon, id: "carousel", label: "Carousel" },
 ];
 
-export function ModeToggle({ mode, onModeChange }: ModeToggleProps) {
-  return (
-    <fieldset className="border-foreground/15 m-0 inline-flex border p-0.5">
-      <legend className="sr-only">Card mode</legend>
-      {MODES.map((m) => {
-        const active = m.id === mode;
-        const { Icon } = m;
-        return (
-          <button
-            aria-pressed={active}
-            className={cn(
-              "flex items-center gap-1.5 px-2.5 py-1.5 transition-colors",
-              active
-                ? "bg-foreground text-background"
-                : "text-foreground/65 hover:text-foreground"
-            )}
-            key={m.id}
-            onClick={() => onModeChange(m.id)}
-            type="button"
-          >
-            <Icon aria-hidden className="size-4 shrink-0" weight="duotone" />
-            <span className="font-heading text-sm leading-none tracking-wide whitespace-nowrap uppercase">
-              {m.label}
-            </span>
-          </button>
-        );
-      })}
-    </fieldset>
-  );
-}
+export const ModeToggle = ({ mode, onModeChange }: ModeToggleProps) => (
+  <fieldset className="border-foreground/15 m-0 inline-flex border p-0.5">
+    <legend className="sr-only">Card mode</legend>
+    {MODES.map((m) => {
+      const active = m.id === mode;
+      const { Icon } = m;
+      return (
+        <button
+          aria-pressed={active}
+          className={cn(
+            "flex items-center gap-1.5 px-2.5 py-1.5 transition-colors",
+            active
+              ? "bg-foreground text-background"
+              : "text-foreground/65 hover:text-foreground"
+          )}
+          key={m.id}
+          onClick={() => {
+            onModeChange(m.id);
+          }}
+          type="button"
+        >
+          <Icon aria-hidden className="size-4 shrink-0" weight="duotone" />
+          <span className="font-heading text-sm leading-none tracking-wide whitespace-nowrap uppercase">
+            {m.label}
+          </span>
+        </button>
+      );
+    })}
+  </fieldset>
+);

@@ -79,12 +79,12 @@ No map tiles. The route is an SVG polyline drawn from `routeCoordinates: [lat, l
 ### Coordinate projection
 
 ```ts
-export function projectRoute(
+export const projectRoute = (
   coords: Array<[number, number]>,
   width: number,
   height: number,
   padding = 16,
-): string {
+): string => {
   if (coords.length === 0) return ''
 
   const lats = coords.map(([lat]) => lat)
@@ -135,12 +135,12 @@ The polyline should never look like a generic mapping line. Each theme styles it
 Same pattern: project an array of numbers to an SVG path.
 
 ```ts
-export function projectProfile(
+export const projectProfile = (
   values: number[],
   width: number,
   height: number,
   padding = 8,
-): { area: string; line: string } {
+): { area: string; line: string } => {
   const min = Math.min(...values)
   const max = Math.max(...values)
   const range = max - min || 1
@@ -180,7 +180,7 @@ interface ThemeProps<K extends CapabilityKey, C> {
 }
 ```
 
-A theme file exports its component plus a **`defineTheme` descriptor** declaring
+A theme is a component (`<name>.tsx`) plus a **`defineTheme` descriptor** (`<name>.theme.ts`) declaring
 `uses` (the overlay capabilities it renders — this narrows `data`'s type, so
 reading an undeclared field is a compile error), sport-aware `usesWhen`
 refinements, a colour policy, a photo policy, and its params. Descriptors are

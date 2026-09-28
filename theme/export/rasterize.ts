@@ -10,12 +10,13 @@ import { snapdom } from "@zumer/snapdom";
 
 import { canRasterizeEmbeddedImages } from "@/lib/svg-raster-support";
 
+import { fromCallback } from "./export-shared";
 import { rasterizeWithPhotoComposite } from "./photo-composite";
 import type { RasterSize } from "./photo-composite";
 
 /** `?photoComposite=force` / `=off` overrides the probe — for e2e coverage of
  *  the fallback on engines that don't need it, and as a field escape hatch. */
-function override(): "force" | "off" | null {
+const override = (): "force" | "off" | null => {
   if (typeof window === "undefined") {
     return null;
   }
@@ -23,15 +24,15 @@ function override(): "force" | "off" | null {
     "photoComposite"
   );
   return value === "force" || value === "off" ? value : null;
-}
+};
 
-async function needsComposite(): Promise<boolean> {
+const needsComposite = async (): Promise<boolean> => {
   const forced = override();
   if (forced) {
     return forced === "force";
   }
   return !(await canRasterizeEmbeddedImages());
-}
+};
 
 /**
  * Rasterise a card / strip node to a canvas of exactly `size`.
@@ -44,16 +45,16 @@ async function needsComposite(): Promise<boolean> {
  * - `dpr: 1` pins the output to the requested size; left at its default it
  *   tracks the viewer's screen density and a Retina display doubles it again.
  */
-export async function rasterizeNode(
+export const rasterizeNode = async (
   node: HTMLElement,
   size: RasterSize
-): Promise<HTMLCanvasElement> {
-  const capture = (s: RasterSize) =>
-    snapdom.toCanvas(node, {
-      width: s.width,
-      height: s.height,
+): Promise<HTMLCanvasElement> => {
+  const capture = async (s: RasterSize) =>
+    await snapdom.toCanvas(node, {
       dpr: 1,
       embedFonts: true,
+      height: s.height,
+      width: s.width,
     });
 
   if (await needsComposite()) {
@@ -70,15 +71,15 @@ export async function rasterizeNode(
     }
   }
   return await capture(size);
-}
+};
 
 /** Encode a rasterised canvas as PNG bytes. */
-export async function canvasToPng(canvas: HTMLCanvasElement): Promise<Blob> {
-  const blob = await new Promise<Blob | null>((resolve) => {
+export const canvasToPng = async (canvas: HTMLCanvasElement): Promise<Blob> => {
+  const blob = await fromCallback<Blob | null>((resolve) => {
     canvas.toBlob(resolve, "image/png");
   });
   if (!blob) {
     throw new Error("The card could not be encoded as a PNG");
   }
   return blob;
-}
+};

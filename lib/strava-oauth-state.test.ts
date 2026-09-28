@@ -14,20 +14,18 @@ import type { OAuthStatePayload } from "@/lib/strava-oauth-state";
 describe("encode/decode OAuth state", () => {
   test("round-trips a full payload", () => {
     const payload: OAuthStatePayload = {
-      r: "nonce-123",
       b: "https://preview.example.app",
       p: "/?strava=connected",
+      r: "nonce-123",
     };
     expect(decodeOAuthState(encodeOAuthState(payload))).toEqual(payload);
   });
 
   test("round-trips a minimal payload, omitting absent fields", () => {
     const encoded = encodeOAuthState({ r: "only-nonce" });
-    expect(decodeOAuthState(encoded)).toEqual({
-      r: "only-nonce",
-      b: undefined,
-      p: undefined,
-    });
+    // `toEqual` treats a missing key and an `undefined` one alike, so this
+    // pins b/p as absent.
+    expect(decodeOAuthState(encoded)).toEqual({ r: "only-nonce" });
   });
 
   test("produces URL-safe base64 (no +, /, or = padding)", () => {
@@ -49,13 +47,10 @@ describe("encode/decode OAuth state", () => {
 
   test("drops non-string b/p fields rather than trusting them", () => {
     const encoded = Buffer.from(
-      JSON.stringify({ r: "n", b: 42, p: { evil: true } })
+      JSON.stringify({ b: 42, p: { evil: true }, r: "n" })
     ).toString("base64url");
-    expect(decodeOAuthState(encoded)).toEqual({
-      r: "n",
-      b: undefined,
-      p: undefined,
-    });
+    // b/p must come back absent (`toEqual` ignores undefined keys).
+    expect(decodeOAuthState(encoded)).toEqual({ r: "n" });
   });
 });
 
@@ -65,8 +60,8 @@ describe("isAllowedBounceOrigin", () => {
   const originalHttp = process.env.STRAVA_ALLOW_HTTP_BOUNCE;
 
   beforeEach(() => {
-    process.env.STRAVA_BOUNCE_ALLOWED_HOST_SUFFIX = undefined;
-    process.env.STRAVA_ALLOW_HTTP_BOUNCE = undefined;
+    delete process.env.STRAVA_BOUNCE_ALLOWED_HOST_SUFFIX;
+    delete process.env.STRAVA_ALLOW_HTTP_BOUNCE;
   });
 
   afterEach(() => {
@@ -149,7 +144,7 @@ describe("safeRelativePath", () => {
   test("rejects control characters to block header smuggling", () => {
     expect(safeRelativePath("/foo\r\nLocation: https://evil")).toBeNull();
     expect(safeRelativePath("/foo\u0000bar")).toBeNull();
-    expect(safeRelativePath("/foo\x7Fbar")).toBeNull();
+    expect(safeRelativePath("/foo\u007Fbar")).toBeNull();
   });
 });
 
@@ -185,14 +180,14 @@ describe("bounce signature", () => {
 
   test("s survives the state round-trip; a non-string s is dropped", () => {
     const s = signBounce(B, R, KEY);
-    expect(decodeOAuthState(encodeOAuthState({ r: R, b: B, s }))).toEqual({
-      r: R,
+    // p stays absent (`toEqual` ignores undefined keys).
+    expect(decodeOAuthState(encodeOAuthState({ b: B, r: R, s }))).toEqual({
       b: B,
-      p: undefined,
+      r: R,
       s,
     });
     const encoded = Buffer.from(
-      JSON.stringify({ r: R, b: B, s: 123 })
+      JSON.stringify({ b: B, r: R, s: 123 })
     ).toString("base64url");
     expect(decodeOAuthState(encoded)?.s).toBeUndefined();
   });

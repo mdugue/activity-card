@@ -10,37 +10,45 @@ export interface ImageSize {
   w: number;
 }
 
-export function useImageNaturalSize(
+// Effect cleanup for the branch that started no load.
+const noCleanup = (): void => {
+  // No image load was started, so there is nothing to cancel.
+};
+
+export const useImageNaturalSize = (
   src: string | null | undefined
-): ImageSize | null {
+): ImageSize | null => {
   const [size, setSize] = useState<ImageSize | null>(null);
 
   // Re-measure whenever the photo changes — synchronising state to the `src`
   // prop, the legitimate setState-in-effect case.
-  /* oxlint-disable react/set-state-in-effect */
   useEffect(() => {
-    if (!src) {
+    if (src === null || src === undefined || src === "") {
+      // oxlint-disable-next-line react/set-state-in-effect -- synchronising state to the `src` prop: no photo means no size
       setSize(null);
-      return;
+      return noCleanup;
     }
     let cancelled = false;
     const img = new Image();
-    img.addEventListener("load", () => {
+    const onLoad = () => {
       if (!cancelled && img.naturalWidth > 0) {
-        setSize({ w: img.naturalWidth, h: img.naturalHeight });
+        setSize({ h: img.naturalHeight, w: img.naturalWidth });
       }
-    });
-    img.addEventListener("error", () => {
+    };
+    const onError = () => {
       if (!cancelled) {
         setSize(null);
       }
-    });
+    };
+    img.addEventListener("load", onLoad);
+    img.addEventListener("error", onError);
     img.src = src;
     return () => {
       cancelled = true;
+      img.removeEventListener("load", onLoad);
+      img.removeEventListener("error", onError);
     };
   }, [src]);
-  /* oxlint-enable react/set-state-in-effect */
 
   return size;
-}
+};

@@ -22,6 +22,7 @@ import { stripGeometry } from "@/theme/carousel/geometry";
 import type { ColorScheme } from "@/theme/core/colors";
 import { FORMAT_ORDER, getFormat } from "@/theme/core/export-formats";
 import type { ExportFormat } from "@/theme/core/export-formats";
+import type { ThemeConfig } from "@/theme/core/params/kinds";
 import type { Visibility } from "@/theme/core/visibility";
 
 import {
@@ -33,20 +34,21 @@ import {
 import type { TileBox } from "./export-sheet";
 
 // The slicing export pulls snapdom, so it loads on demand (warmed on mount).
-const loadExportCarousel = () => import("@/theme/export/export-carousel");
+const loadExportCarousel = async () =>
+  await import("@/theme/export/export-carousel");
 
 // Wide-strip tile box (vs the single card's portrait one): a strip is several
 // slides across, so it wants a wider, shorter footprint to stay legible.
 const CAROUSEL_TILE: TileBox = {
-  floorW: 220,
-  capW: 520,
   aspect: 0.56,
+  capW: 520,
   factor: 0.34,
+  floorW: 220,
 };
 
 interface CarouselExportSheetProps {
   colors: ColorScheme;
-  config: Record<string, unknown>;
+  config: ThemeConfig;
   count: number;
   /** visibility-applied data, for rendering the previews */
   data: ActivityData;
@@ -60,7 +62,7 @@ interface CarouselExportSheetProps {
   visibility: Visibility;
 }
 
-export function CarouselExportSheet({
+export const CarouselExportSheet = ({
   colors,
   config,
   count,
@@ -73,7 +75,7 @@ export function CarouselExportSheet({
   routeCoordinates,
   theme,
   visibility,
-}: CarouselExportSheetProps) {
+}: CarouselExportSheetProps) => {
   const tileMax = useTileMax(CAROUSEL_TILE);
   // The deck needs the photo's natural size for the pannable panorama — the same
   // dependency the editor's deck has.
@@ -115,7 +117,9 @@ export function CarouselExportSheet({
       busy={busy}
       colors={colors}
       disabled={photoNotReady}
-      onDownloadAll={handleAll}
+      onDownloadAll={() => {
+        void handleAll();
+      }}
       onKeepEditing={onKeepEditing}
       onNew={onNew}
       routeCoordinates={routeCoordinates ?? data.routeCoordinates}
@@ -138,7 +142,9 @@ export function CarouselExportSheet({
               label={format.label}
               nativeH={slideH}
               nativeW={stripW}
-              onDownload={() => handleOne(format)}
+              onDownload={() => {
+                void handleOne(format);
+              }}
               registerMount={(node) => {
                 mounts.current[id] = node;
               }}
@@ -163,4 +169,4 @@ export function CarouselExportSheet({
       </div>
     </ExportShell>
   );
-}
+};

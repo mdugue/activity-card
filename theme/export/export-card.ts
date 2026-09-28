@@ -20,10 +20,10 @@ export interface ExportOptions {
  * then either share via the Web Share API (mobile) or trigger a download
  * (desktop).
  */
-export async function exportCard(
+export const exportCard = async (
   node: HTMLElement,
   opts: ExportOptions = {}
-): Promise<void> {
+): Promise<void> => {
   const {
     width = 1080,
     height = 1350,
@@ -38,32 +38,31 @@ export async function exportCard(
   // The pixel ratio is baked into the requested size (1080×1350 → 2160×2700);
   // `rasterizeNode` owns the snapdom options and the WebKit photo fallback.
   const canvas = await rasterizeNode(node, {
-    width: width * pixelRatio,
     height: height * pixelRatio,
+    width: width * pixelRatio,
   });
   const blob = await canvasToPng(canvas);
 
   // Inject Effort metadata into the raw PNG bytes (canvas output carries none).
   const raw = new Uint8Array(await blob.arrayBuffer());
   const bytes = metadata ? applyMetadata(raw, metadata, metadataOptions) : raw;
-  // reason: BlobPart typing predates ArrayBufferView<ArrayBuffer> narrowing.
-  const out = new Blob([bytes as BlobPart], { type: "image/png" });
+  // BlobPart wants an ArrayBuffer-backed view; `applyMetadata` is typed over
+  // ArrayBufferLike, so hand the Blob a byte-identical ArrayBuffer-backed copy.
+  const out = new Blob([new Uint8Array(bytes)], { type: "image/png" });
   const file = new File([out], filename, { type: "image/png" });
 
   await deliverFiles([file], { title: "My Effort card" });
-}
+};
 
 /** Map an activity to the metadata baked into its export (GPS gated by opts). */
-export function activityMetadata(
+export const activityMetadata = (
   data: ActivityData,
   url?: string
-): MetadataInput {
-  return {
-    athleteName: data.athleteName || undefined,
-    date: data.date,
-    location: data.location || undefined,
-    point: routeCentroid(data.routeCoordinates),
-    title: data.title || undefined,
-    url,
-  };
-}
+): MetadataInput => ({
+  athleteName: data.athleteName || undefined,
+  date: data.date,
+  location: data.location || undefined,
+  point: routeCentroid(data.routeCoordinates),
+  title: data.title || undefined,
+  url,
+});

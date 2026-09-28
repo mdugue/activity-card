@@ -19,12 +19,12 @@ import { carouselArgs } from "./story-support";
 const meta = preview
   .type<{ args: ComponentProps<typeof CarouselDeck> & BackgroundArgs }>()
   .meta({
-    component: CarouselDeck,
-    title: "Carousel/Exposure",
-    tags: ["ai-generated"],
-    parameters: { layout: "fullscreen" },
     argTypes: { data: activityArgType, ...backgroundArgTypes },
     args: { data: SAMPLE_RIDE, ...carouselArgs("exposure") },
+    component: CarouselDeck,
+    parameters: { layout: "fullscreen" },
+    tags: ["ai-generated"],
+    title: "Carousel/Exposure",
   });
 
 export const Default = meta.story({ args: { data: SAMPLE_RIDE } });

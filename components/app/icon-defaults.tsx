@@ -10,15 +10,11 @@ import { IconContext } from "@phosphor-icons/react";
 
 const ICON_DEFAULTS = {
   color: "currentColor",
+  mirrored: false,
   size: "1em",
   weight: "duotone",
-  mirrored: false,
 } as const;
 
-export function IconDefaults({ children }: { children: React.ReactNode }) {
-  return (
-    <IconContext.Provider value={ICON_DEFAULTS}>
-      {children}
-    </IconContext.Provider>
-  );
-}
+export const IconDefaults = ({ children }: { children: React.ReactNode }) => (
+  <IconContext.Provider value={ICON_DEFAULTS}>{children}</IconContext.Provider>
+);

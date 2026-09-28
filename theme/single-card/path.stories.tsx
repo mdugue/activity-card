@@ -27,13 +27,6 @@ const THEME = SINGLE_CARD_THEMES.path;
 type PathArgs = ComponentProps<typeof ThemePath> & ThemeStoryExtras;
 
 const meta = preview.type<{ args: PathArgs }>().meta({
-  component: ThemePath,
-  tags: ["ai-generated"],
-  parameters: {
-    layout: "fullscreen",
-    controls: { exclude: THEME_PROP_CONTROLS_EXCLUDE },
-  },
-  decorators: [withFormatMatrix],
   argTypes: {
     data: activityArgType,
     ...colorArgTypes,
@@ -41,7 +34,14 @@ const meta = preview.type<{ args: PathArgs }>().meta({
     ...backgroundArgTypes,
   },
   args: { color: "Theme default", data: SAMPLE_RIDE },
+  component: ThemePath,
+  decorators: [withFormatMatrix],
+  parameters: {
+    controls: { exclude: THEME_PROP_CONTROLS_EXCLUDE },
+    layout: "fullscreen",
+  },
   render: (args) => <ThemeStoryView args={args} theme={THEME} />,
+  tags: ["ai-generated"],
 });
 
 const RIDE_TITLE = /Elbsandstein/u;

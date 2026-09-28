@@ -16,7 +16,10 @@ import {
   THEME_PROP_CONTROLS_EXCLUDE,
   ThemeStoryView,
 } from "../../.storybook/theme-controls";
-import type { ThemeStoryExtras } from "../../.storybook/theme-controls";
+import type {
+  ParamArgs,
+  ThemeStoryExtras,
+} from "../../.storybook/theme-controls";
 import { withFormatMatrix } from "../../.storybook/with-format-matrix";
 import { ThemeAltitude } from "./altitude";
 
@@ -29,16 +32,9 @@ const THEME = SINGLE_CARD_THEMES.altitude;
 
 type AltitudeArgs = ComponentProps<typeof ThemeAltitude> &
   ThemeStoryExtras &
-  AltitudeConfig;
+  ParamArgs<AltitudeConfig>;
 
 const meta = preview.type<{ args: AltitudeArgs }>().meta({
-  component: ThemeAltitude,
-  tags: ["ai-generated"],
-  parameters: {
-    layout: "fullscreen",
-    controls: { exclude: THEME_PROP_CONTROLS_EXCLUDE },
-  },
-  decorators: [withFormatMatrix],
   argTypes: {
     data: activityArgType,
     ...colorArgTypes,
@@ -51,7 +47,14 @@ const meta = preview.type<{ args: AltitudeArgs }>().meta({
     data: SAMPLE_RIDE,
     ...DEFAULT_ALTITUDE_CONFIG,
   },
+  component: ThemeAltitude,
+  decorators: [withFormatMatrix],
+  parameters: {
+    controls: { exclude: THEME_PROP_CONTROLS_EXCLUDE },
+    layout: "fullscreen",
+  },
   render: (args) => <ThemeStoryView args={args} theme={THEME} />,
+  tags: ["ai-generated"],
 });
 
 // Altitude renders the activity's location (its hero is the elevation claim);
@@ -75,8 +78,8 @@ export const TopDistance = meta.story({
 export const NoClaim = meta.story({ args: { claim: "none" } });
 export const Triathlon = meta.story({ args: { data: SAMPLE_TRI } });
 export const TriathlonStacked = meta.story({
-  args: { data: SAMPLE_TRI, claimStyle: "stacked" },
+  args: { claimStyle: "stacked", data: SAMPLE_TRI },
 });
 export const TriathlonNoClaim = meta.story({
-  args: { data: SAMPLE_TRI, claim: "none" },
+  args: { claim: "none", data: SAMPLE_TRI },
 });

@@ -14,10 +14,7 @@ import { RiseIn } from "../components/rise-in";
 import { VideoFrame } from "../components/video-frame";
 import { FONT, PAPER_DIM, RUST_BRIGHT, TRACKING, TYPE } from "../design/tokens";
 
-/** Walkthrough pacing norms (frames @30fps) — slower than the hero's cuts. */
-export const WALK = { fade: 12, outro: 110, title: 100 } as const;
-
-export function TitleScene({
+export const TitleScene = ({
   blurb,
   kicker,
   lines,
@@ -26,60 +23,58 @@ export function TitleScene({
   /** rust mono overline, e.g. "Tutorial · Quick start" */
   kicker: string;
   lines: string[];
-}) {
-  return (
-    <VideoFrame>
-      <Backdrop grain variant="ink" />
-      <AbsoluteFill
-        style={{
-          alignItems: "center",
-          flexDirection: "column",
-          gap: 34,
-          justifyContent: "center",
-        }}
-      >
-        <RiseIn delay={2}>
-          <div
-            style={{
-              color: RUST_BRIGHT,
-              fontFamily: FONT.mono,
-              fontSize: TYPE.caption,
-              fontWeight: 600,
-              letterSpacing: TRACKING.label,
-              textTransform: "uppercase",
-            }}
-          >
-            {kicker}
-          </div>
-        </RiseIn>
-        <KineticTitle
-          delay={8}
-          lines={lines.map((text) => ({ text }))}
-          size={TYPE.claim * 0.82}
-        />
-        <RiseIn delay={20}>
-          <div
-            style={{
-              color: PAPER_DIM,
-              fontFamily: FONT.sans,
-              fontSize: TYPE.body,
-              maxWidth: 900,
-              textAlign: "center",
-            }}
-          >
-            {blurb}
-          </div>
-        </RiseIn>
-      </AbsoluteFill>
-    </VideoFrame>
-  );
-}
+}) => (
+  <VideoFrame>
+    <Backdrop grain variant="ink" />
+    <AbsoluteFill
+      style={{
+        alignItems: "center",
+        flexDirection: "column",
+        gap: 34,
+        justifyContent: "center",
+      }}
+    >
+      <RiseIn delay={2}>
+        <div
+          style={{
+            color: RUST_BRIGHT,
+            fontFamily: FONT.mono,
+            fontSize: TYPE.caption,
+            fontWeight: 600,
+            letterSpacing: TRACKING.label,
+            textTransform: "uppercase",
+          }}
+        >
+          {kicker}
+        </div>
+      </RiseIn>
+      <KineticTitle
+        delay={8}
+        lines={lines.map((text) => ({ text }))}
+        size={TYPE.claim * 0.82}
+      />
+      <RiseIn delay={20}>
+        <div
+          style={{
+            color: PAPER_DIM,
+            fontFamily: FONT.sans,
+            fontSize: TYPE.body,
+            maxWidth: 900,
+            textAlign: "center",
+          }}
+        >
+          {blurb}
+        </div>
+      </RiseIn>
+    </AbsoluteFill>
+  </VideoFrame>
+);
 
 /**
  * One numbered walkthrough beat: the visual sits centred above the safe-area
  * caption ("STEP n/m · label · sentence"). `children` is the demonstration.
  */
-export function StepScene({
+export const StepScene = ({
   children,
   label,
   step,
@@ -91,7 +86,7 @@ export function StepScene({
   step: number;
   text: string;
   total: number;
-}) {
+}) => {
   const { height } = useVideoConfig();
   return (
     <VideoFrame>
@@ -114,15 +109,13 @@ export function StepScene({
       />
     </VideoFrame>
   );
-}
+};
 
-export function OutroScene({ sub }: { sub?: string }) {
-  return (
-    <VideoFrame>
-      <Backdrop grain variant="ink" />
-      <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
-        <LogoSting sub={sub ?? "Free · No account · In your browser"} />
-      </AbsoluteFill>
-    </VideoFrame>
-  );
-}
+export const OutroScene = ({ sub }: { sub?: string }) => (
+  <VideoFrame>
+    <Backdrop grain variant="ink" />
+    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
+      <LogoSting sub={sub ?? "Free · No account · In your browser"} />
+    </AbsoluteFill>
+  </VideoFrame>
+);

@@ -7,7 +7,7 @@ import { CAROUSEL_THEMES } from "@/theme/carousel/registry";
 import { resolveDeckStyle } from "@/theme/carousel/resolve";
 import { coerceConfig } from "@/theme/core/params/resolve";
 import type { ThemeBase } from "@/theme/core/theme-contract";
-import { OPTION_GLYPHS } from "@/theme/editor/param-control";
+import { isOptionGlyph } from "@/theme/editor/option-glyphs";
 import { SINGLE_CARD_THEMES } from "@/theme/single-card";
 
 // Both families express a theme through the same descriptor core (ThemeBase),
@@ -18,44 +18,47 @@ const ALL_THEMES: ThemeBase[] = [
 ];
 
 describe("theme registries", () => {
-  for (const theme of ALL_THEMES) {
-    test(`${theme.id}: param ids are unique and present in defaults`, () => {
-      const ids = theme.params.map((p) => p.id);
-      expect(new Set(ids).size).toBe(ids.length);
-      for (const id of ids) {
-        expect(id in theme.defaults).toBe(true);
-      }
-    });
+  describe.each(ALL_THEMES.map((theme) => [theme.id, theme] as const))(
+    "%s",
+    (_id, theme) => {
+      test("param ids are unique and present in defaults", () => {
+        const ids = theme.params.map((p) => p.id);
+        expect(new Set(ids).size).toBe(ids.length);
+        for (const id of ids) {
+          expect(id in theme.defaults).toBe(true);
+        }
+      });
 
-    test(`${theme.id}: defaults round-trip through coerceConfig`, () => {
-      expect(
-        coerceConfig(theme.defaults, theme.params, theme.defaults)
-      ).toEqual(theme.defaults);
-    });
+      test("defaults round-trip through coerceConfig", () => {
+        expect(
+          coerceConfig(theme.defaults, theme.params, theme.defaults)
+        ).toEqual(theme.defaults);
+      });
 
-    test(`${theme.id}: each param default is a valid option / in range`, () => {
-      for (const p of theme.params) {
-        if (p.kind === "slider") {
-          expect(p.default).toBeGreaterThanOrEqual(p.min);
-          expect(p.default).toBeLessThanOrEqual(p.max);
-        } else if (p.kind === "segmented" || p.kind === "select") {
-          let ids: string[] | null = null;
-          if (p.optionIds) {
-            ids = [...p.optionIds];
-          } else if (Array.isArray(p.options)) {
-            ids = p.options.map((o) => o.id);
-          }
-          if (ids) {
-            expect(ids).toContain(p.default);
+      test("each param default is a valid option / in range", () => {
+        for (const p of theme.params) {
+          if (p.kind === "slider") {
+            expect(p.default).toBeGreaterThanOrEqual(p.min);
+            expect(p.default).toBeLessThanOrEqual(p.max);
+          } else if (p.kind === "segmented" || p.kind === "select") {
+            let ids: string[] | null = null;
+            if (p.optionIds) {
+              ids = [...p.optionIds];
+            } else if (Array.isArray(p.options)) {
+              ids = p.options.map((o) => o.id);
+            }
+            if (ids) {
+              expect(ids).toContain(p.default);
+            }
           }
         }
-      }
-    });
+      });
 
-    test(`${theme.id}: colour policy has a valid default scheme`, () => {
-      expect(theme.colors.default.primary).toMatch(/^#/u);
-    });
-  }
+      test("colour policy has a valid default scheme", () => {
+        expect(theme.colors.default.primary).toMatch(/^#/u);
+      });
+    }
+  );
 
   test("the two families' id spaces are tracked independently", () => {
     // STRATA deliberately exists in both (shared config key); no accidental
@@ -68,7 +71,7 @@ describe("theme registries", () => {
   // Trace and Ascent carry the Dawn/Dusk pairing as an ATMOSPHERE param: dusk
   // swaps the whole deck (palette, light/dark, fonts) via `resolveStyle`, but a
   // user-picked accent must survive the swap.
-  for (const id of ["trace", "ascent"] as const) {
+  describe.each(["trace", "ascent"] as const)("%s", (id) => {
     const theme = CAROUSEL_THEMES[id];
     const base = resolveDeckStyle(
       theme.look,
@@ -76,11 +79,11 @@ describe("theme registries", () => {
       theme.colors.default
     );
 
-    test(`${id}: dawn atmosphere keeps the base style untouched`, () => {
+    test("dawn atmosphere keeps the base style untouched", () => {
       expect(theme.resolveStyle?.(base, { atmosphere: "dawn" })).toEqual(base);
     });
 
-    test(`${id}: dusk atmosphere swaps onto the dark look`, () => {
+    test("dusk atmosphere swaps onto the dark look", () => {
       const dusk = theme.resolveStyle?.(base, { atmosphere: "dusk" });
       expect(dusk?.dark).toBe(true);
       expect(dusk?.background).not.toBe(base.background);
@@ -88,22 +91,22 @@ describe("theme registries", () => {
       expect(dusk?.fonts).not.toEqual(base.fonts);
     });
 
-    test(`${id}: a user-picked accent survives the dusk swap`, () => {
+    test("a user-picked accent survives the dusk swap", () => {
       const userStyle = resolveDeckStyle(theme.look, theme.label, {
+        onPrimary: "#fafafa",
         primary: "#123456",
         secondary: "#654321",
-        onPrimary: "#fafafa",
       });
       const dusk = theme.resolveStyle?.(userStyle, { atmosphere: "dusk" });
       expect(dusk?.accent).toBe("#123456");
       expect(dusk?.accent2).toBe("#654321");
       expect(dusk?.onAccent).toBe("#fafafa");
     });
-  }
+  });
 
   test("altitude headline offers only available metrics + none", () => {
     const p = ALTITUDE_PARAMS.find((x) => x.id === "claim");
-    if (p && p.kind === "select" && typeof p.options === "function") {
+    if (p && p.kind === "select" && !Array.isArray(p.options)) {
       const ids = p
         .options({ data: SAMPLE_RIDE, palette: null })
         .map((o) => o.id);
@@ -116,10 +119,10 @@ describe("theme registries", () => {
   // each option must name a glyph the param control's icon map covers.
   test("altitude headline options carry editor-renderable glyphs", () => {
     const p = ALTITUDE_PARAMS.find((x) => x.id === "claim");
-    if (p && p.kind === "select" && typeof p.options === "function") {
+    if (p && p.kind === "select" && !Array.isArray(p.options)) {
       for (const o of p.options({ data: SAMPLE_RIDE, palette: null })) {
         expect(o.glyph).toBeDefined();
-        expect(OPTION_GLYPHS[o.glyph as string]).toBeDefined();
+        expect(isOptionGlyph(o.glyph ?? "")).toBe(true);
       }
     }
   });

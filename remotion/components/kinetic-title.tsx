@@ -12,7 +12,7 @@ export interface KineticLine {
  * the empty-state hero uses, sized for the video canvas. Lines are uppercase
  * by construction; mark one `accent: true` for the rust pay-off line.
  */
-export function KineticTitle({
+export const KineticTitle = ({
   align = "center",
   color = PAPER,
   delay = 0,
@@ -26,36 +26,34 @@ export function KineticTitle({
   lines: KineticLine[];
   size?: number;
   stagger?: number;
-}) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: align === "center" ? "center" : "flex-start",
-        textAlign: align,
-      }}
-    >
-      {lines.map((line, i) => (
-        <RiseIn
-          delay={delay + i * stagger}
-          distance={Math.round(size * 0.16)}
-          key={line.text}
+}) => (
+  <div
+    style={{
+      alignItems: align === "center" ? "center" : "flex-start",
+      display: "flex",
+      flexDirection: "column",
+      textAlign: align,
+    }}
+  >
+    {lines.map((line, i) => (
+      <RiseIn
+        delay={delay + i * stagger}
+        distance={Math.round(size * 0.16)}
+        key={line.text}
+      >
+        <div
+          style={{
+            color: line.accent === true ? RUST_BRIGHT : color,
+            fontFamily: FONT.heading,
+            fontSize: size,
+            letterSpacing: TRACKING.heading,
+            lineHeight: 0.98,
+            textTransform: "uppercase",
+          }}
         >
-          <div
-            style={{
-              color: line.accent ? RUST_BRIGHT : color,
-              fontFamily: FONT.heading,
-              fontSize: size,
-              letterSpacing: TRACKING.heading,
-              lineHeight: 0.98,
-              textTransform: "uppercase",
-            }}
-          >
-            {line.text}
-          </div>
-        </RiseIn>
-      ))}
-    </div>
-  );
-}
+          {line.text}
+        </div>
+      </RiseIn>
+    ))}
+  </div>
+);

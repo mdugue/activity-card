@@ -11,9 +11,7 @@ export interface CutSlicesProps extends Record<string, unknown> {
   slices?: number;
 }
 
-function clamp01(v: number): number {
-  return Math.min(1, Math.max(0, v));
-}
+const clamp01 = (v: number): number => Math.min(1, Math.max(0, v));
 
 /**
  * The brand's guillotine cut as a scene transition: the entering scene is
@@ -21,12 +19,12 @@ function clamp01(v: number): number {
  * polygon, so the scene renders once. Seam hairlines flash mid-cut, echoing
  * the landing intro's gutter bars.
  */
-function SlicePresentation({
+const SlicePresentation = ({
   children,
   passedProps,
   presentationDirection,
   presentationProgress,
-}: TransitionPresentationComponentProps<CutSlicesProps>) {
+}: TransitionPresentationComponentProps<CutSlicesProps>) => {
   if (presentationDirection === "exiting") {
     return <AbsoluteFill>{children}</AbsoluteFill>;
   }
@@ -38,7 +36,7 @@ function SlicePresentation({
   const overdrive = 1 + (slices - 1) * stagger;
 
   const points: string[] = ["0% 0%"];
-  for (let i = 0; i < slices; i++) {
+  for (let i = 0; i < slices; i += 1) {
     const local = clamp01(presentationProgress * overdrive - i * stagger);
     const drop = EASE_CUT(local) * 100;
     const x0 = (i / slices) * 100;
@@ -73,11 +71,12 @@ function SlicePresentation({
       })}
     </AbsoluteFill>
   );
-}
+};
 
 /** Use with `TransitionSeries.Transition` as the `presentation`. */
-export function cutSlices(
+export const cutSlices = (
   props: CutSlicesProps = {}
-): TransitionPresentation<CutSlicesProps> {
-  return { component: SlicePresentation, props };
-}
+): TransitionPresentation<CutSlicesProps> => ({
+  component: SlicePresentation,
+  props,
+});

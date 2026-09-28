@@ -21,13 +21,10 @@ const noop = () => {
 const meta = preview
   .type<{ args: ComponentProps<typeof ExportSheet> & BackgroundArgs }>()
   .meta({
-    component: ExportSheet,
-    tags: ["ai-generated"],
-    parameters: { layout: "fullscreen" },
     argTypes: {
       theme: {
-        name: "Theme",
         control: { type: "select" },
+        name: "Theme",
         options: THEME_ORDER,
       },
       ...backgroundArgTypes,
@@ -44,6 +41,9 @@ const meta = preview
       photoUrl: null,
       routeCoordinates: SAMPLE_RIDE.routeCoordinates,
     },
+    component: ExportSheet,
+    parameters: { layout: "fullscreen" },
+    tags: ["ai-generated"],
   });
 
 export const Default = meta.story({ args: { theme: "altitude" } });

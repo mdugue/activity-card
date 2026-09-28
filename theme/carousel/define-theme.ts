@@ -24,7 +24,7 @@ import type { EffectiveStyle } from "@/theme/carousel/resolve";
 import type { StatOpts } from "@/theme/carousel/stats";
 import { CAROUSEL_CAPABILITIES } from "@/theme/carousel/theme-tokens";
 import type { CarouselLook } from "@/theme/carousel/theme-tokens";
-import type { ParamDef } from "@/theme/core/params/kinds";
+import type { ParamDef, ThemeConfig } from "@/theme/core/params/kinds";
 import type {
   CapabilityKey,
   ThemeBase,
@@ -36,7 +36,7 @@ import type {
  *  edges. `data` is capability-narrowed (`ThemeData<K>`; see the file header). */
 export interface CanvasProps<K extends CapabilityKey = CapabilityKey> {
   /** the theme's coerced config (e.g. STRATA mood / density / legend) */
-  config: Record<string, unknown>;
+  config: ThemeConfig;
   data: ThemeData<K>;
   /** strip height = one slide's height (1350 at feed) */
   h: number;
@@ -78,7 +78,7 @@ export type PanelComponent<K extends CapabilityKey = CapabilityKey> = FC<
  *  mood swaps the whole palette). Default is identity. */
 export type ResolveStyle = (
   base: EffectiveStyle,
-  config: Record<string, unknown>
+  config: ThemeConfig
 ) => EffectiveStyle;
 
 export interface CarouselTheme extends ThemeBase {
@@ -100,11 +100,11 @@ export interface CarouselTheme extends ThemeBase {
  * and components, plus params/`resolveStyle` only when it has knobs. `uses` also
  * narrows the canvas/panel `data` type (see the file header).
  */
-export function defineCarouselTheme<
+export const defineCarouselTheme = <
   const Caps extends readonly CapabilityKey[] = readonly CapabilityKey[],
 >(d: {
   canvas?: CanvasComponent<Caps[number]>;
-  defaults?: Record<string, unknown>;
+  defaults?: ThemeConfig;
   id: string;
   label: string;
   look: CarouselLook;
@@ -113,39 +113,41 @@ export function defineCarouselTheme<
   resolveStyle?: ResolveStyle;
   tagline: string;
   uses?: Caps;
-}): CarouselTheme {
+}): CarouselTheme => {
   const { look } = d;
   return {
-    id: d.id,
-    label: d.label,
-    tagline: d.tagline,
-    uses: d.uses ?? CAROUSEL_CAPABILITIES,
+    // SAFETY: the registry stores every carousel theme under one widened
+    // signature; the narrow `Caps` generic is fully checked above, at the
+    // definition site (mirrors `defineTheme`'s `Component as FC<ThemeProps>`).
+    canvas: d.canvas as CanvasComponent | undefined,
     colors: {
       default: {
+        onPrimary: look.onAccent,
         primary: look.accent,
         secondary: look.accent2,
-        onPrimary: look.onAccent,
       },
       defaultChoice: look.defaultColorChoice,
       userAdjustable: true,
     },
-    photo: {
-      defaultOn: true,
-      defaultFilter: look.defaultFilter,
-      defaultGrain: look.defaultGrain,
-    },
+    defaults: { ...CAROUSEL_MARK_DEFAULTS, ...d.defaults },
+    id: d.id,
+    label: d.label,
+    look,
+    // SAFETY: same generic erasure as `canvas` above — each panel's narrow
+    // `Caps` data type was checked at the definition site.
+    panels: d.panels as PanelComponent[],
     // The two universal carousel marks (effort / page numbers) are appended to
     // every theme as MARKS params, so the editor renders them generically and
     // they persist in the per-theme config — no carousel-only flags in the
     // shared `Visibility`. Theme-specific marks (STRATA's legend) follow them.
     params: [...CAROUSEL_MARK_PARAMS, ...(d.params ?? [])],
-    defaults: { ...CAROUSEL_MARK_DEFAULTS, ...d.defaults },
-    look,
-    // reason: the registry stores every carousel theme under one widened
-    // signature; the narrow `Caps` generic is fully checked above, at the
-    // definition site (mirrors `defineTheme`'s `Component as FC<ThemeProps>`).
-    canvas: d.canvas as CanvasComponent | undefined,
-    panels: d.panels as PanelComponent[],
+    photo: {
+      defaultFilter: look.defaultFilter,
+      defaultGrain: look.defaultGrain,
+      defaultOn: true,
+    },
     resolveStyle: d.resolveStyle,
+    tagline: d.tagline,
+    uses: d.uses ?? CAROUSEL_CAPABILITIES,
   };
-}
+};

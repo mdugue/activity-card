@@ -3,13 +3,19 @@ import { describe, expect, test } from "bun:test";
 
 import { parseGpx } from "@/lib/parse-gpx";
 
-function gpx(body: string): string {
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1">${body}</gpx>`;
-}
+const gpx = (body: string): string =>
+  `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1">${body}</gpx>`;
 
-function trkpt(lat: string, lon: string, ele: number, time: string): string {
-  return `<trkpt lat="${lat}" lon="${lon}"><ele>${ele}</ele><time>${time}</time></trkpt>`;
-}
+const trkpt = (lat: string, lon: string, ele: number, time: string): string =>
+  `<trkpt lat="${lat}" lon="${lon}"><ele>${ele}</ele><time>${time}</time></trkpt>`;
+
+/** Track point with HR/cadence under a non-gpxtpx (`ns3:`) prefix. */
+const ns3Trkpt = (lat: string, time: string): string =>
+  `<trkpt lat="${lat}" lon="11.0"><ele>500</ele><time>${time}</time><extensions><ns3:TrackPointExtension><ns3:hr>150</ns3:hr><ns3:cad>85</ns3:cad></ns3:TrackPointExtension></extensions></trkpt>`;
+
+/** Track point with HR/cadence in an unprefixed (default-namespace) extension. */
+const defaultNsTrkpt = (lat: string, time: string): string =>
+  `<trkpt lat="${lat}" lon="11.0"><ele>500</ele><time>${time}</time><extensions><TrackPointExtension xmlns="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"><hr>142</hr><cad>80</cad></TrackPointExtension></extensions></trkpt>`;
 
 const THREE_POINT_RIDE = gpx(
   `<trk><name>Morning Ride</name><type>cycling</type><trkseg>${[
@@ -131,12 +137,10 @@ describe("parseGpx", () => {
   });
 
   test("reads heart rate from a non-gpxtpx extension prefix (ns3:)", () => {
-    const pt = (lat: string, time: string) =>
-      `<trkpt lat="${lat}" lon="11.0"><ele>500</ele><time>${time}</time><extensions><ns3:TrackPointExtension><ns3:hr>150</ns3:hr><ns3:cad>85</ns3:cad></ns3:TrackPointExtension></extensions></trkpt>`;
     const text = gpx(
       `<trk><name>Garmin</name><trkseg>${[
-        pt("47.0", "2026-05-18T07:00:00Z"),
-        pt("47.001", "2026-05-18T07:01:00Z"),
+        ns3Trkpt("47.0", "2026-05-18T07:00:00Z"),
+        ns3Trkpt("47.001", "2026-05-18T07:01:00Z"),
       ].join("")}</trkseg></trk>`
     );
     const parsed = parseGpx(text, "garmin.gpx");
@@ -145,12 +149,10 @@ describe("parseGpx", () => {
   });
 
   test("reads heart rate from an unprefixed (default-namespace) extension", () => {
-    const pt = (lat: string, time: string) =>
-      `<trkpt lat="${lat}" lon="11.0"><ele>500</ele><time>${time}</time><extensions><TrackPointExtension xmlns="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"><hr>142</hr><cad>80</cad></TrackPointExtension></extensions></trkpt>`;
     const text = gpx(
       `<trk><name>Default ns</name><trkseg>${[
-        pt("47.0", "2026-05-18T07:00:00Z"),
-        pt("47.001", "2026-05-18T07:01:00Z"),
+        defaultNsTrkpt("47.0", "2026-05-18T07:00:00Z"),
+        defaultNsTrkpt("47.001", "2026-05-18T07:01:00Z"),
       ].join("")}</trkseg></trk>`
     );
     const parsed = parseGpx(text, "default-ns.gpx");

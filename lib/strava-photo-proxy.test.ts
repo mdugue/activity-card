@@ -24,9 +24,10 @@ describe("isAllowedPhotoUrl", () => {
   });
 
   test("rejects plain http, even on an allowed host", () => {
-    expect(isAllowedPhotoUrl("http://dgtzuqphqg23d.cloudfront.net/a.jpg")).toBe(
-      false
-    );
+    const plainHttp =
+      // The test asserts that a clear-text http URL is rejected
+      "http://dgtzuqphqg23d.cloudfront.net/a.jpg";
+    expect(isAllowedPhotoUrl(plainHttp)).toBe(false);
   });
 
   test("rejects other hosts and look-alike suffixes", () => {
@@ -90,18 +91,17 @@ describe("exceedsPhotoSizeCap", () => {
   });
 });
 
-describe("limitBody", () => {
-  function streamOf(...chunks: number[]): ReadableStream<Uint8Array> {
-    return new ReadableStream({
-      start(controller) {
-        for (const size of chunks) {
-          controller.enqueue(new Uint8Array(size));
-        }
-        controller.close();
-      },
-    });
-  }
+const streamOf = (...chunks: number[]): ReadableStream<Uint8Array> =>
+  new ReadableStream({
+    start(controller) {
+      for (const size of chunks) {
+        controller.enqueue(new Uint8Array(size));
+      }
+      controller.close();
+    },
+  });
 
+describe("limitBody", () => {
   test("passes a body within the cap through unchanged", async () => {
     const out = await new Response(limitBody(streamOf(4, 6), 10)).arrayBuffer();
     expect(out.byteLength).toBe(10);

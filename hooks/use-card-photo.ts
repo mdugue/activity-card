@@ -18,16 +18,14 @@ import { capPhotoResolution } from "@/lib/photo-resize";
 import type { ThemePhotoPolicy } from "@/theme/core/theme-contract";
 
 /** A theme's photo effects (its signature filter + grain) over a base. */
-function policyEffects(
+const policyEffects = (
   policy: ThemePhotoPolicy,
   base: PhotoEffects
-): PhotoEffects {
-  return {
-    ...base,
-    filter: policy.defaultFilter ?? "none",
-    grain: policy.defaultGrain ?? false,
-  };
-}
+): PhotoEffects => ({
+  ...base,
+  filter: policy.defaultFilter ?? "none",
+  grain: policy.defaultGrain ?? false,
+});
 
 export interface UseCardPhoto {
   /** Swap in a new photo file (or remove with `null`). Oversized photos are
@@ -51,7 +49,7 @@ export interface UseCardPhoto {
 
 /** @param activePolicy the active theme's photo policy — read when a capped
  *  photo lands, not when it was picked, so a theme switch mid-resize wins. */
-export function useCardPhoto(activePolicy: ThemePhotoPolicy): UseCardPhoto {
+export const useCardPhoto = (activePolicy: ThemePhotoPolicy): UseCardPhoto => {
   const [url, setUrl] = useState<string | null>(null);
   const policyRef = useRef(activePolicy);
   // Layout effect, not passive: it runs synchronously in the commit, so a
@@ -74,12 +72,14 @@ export function useCardPhoto(activePolicy: ThemePhotoPolicy): UseCardPhoto {
   // Object URLs need cleanup or they leak into memory. This cleanup is the
   // single owner of revocation — swap, removal and unmount all funnel here,
   // and it runs only after the render that stopped referencing the old URL.
-  useEffect(() => {
-    if (!url) {
-      return;
-    }
-    return () => URL.revokeObjectURL(url);
-  }, [url]);
+  useEffect(
+    () => () => {
+      if (url !== null && url !== "") {
+        URL.revokeObjectURL(url);
+      }
+    },
+    [url]
+  );
 
   const adopt = async (file: File | null) => {
     requestRef.current += 1;
@@ -117,4 +117,4 @@ export function useCardPhoto(activePolicy: ThemePhotoPolicy): UseCardPhoto {
     transform,
     url,
   };
-}
+};

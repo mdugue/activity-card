@@ -26,15 +26,16 @@ interface EditStateProps {
   theme: ThemeId;
 }
 
-export function EditState({
+export const EditState = ({
   session,
   theme,
   format,
   onFormatChange,
   onThemeChange,
   onExport,
-}: EditStateProps) {
+}: EditStateProps) => {
   const { data, visibility, color, config, photo } = session;
+  const { onTransformChange: handlePhotoTransformChange } = photo;
   // The safe-zone guide is an editor-only preview overlay; the FORMAT control
   // toggles it and the preview reads it.
   const [showSafe, setShowSafe] = useState(false);
@@ -70,7 +71,7 @@ export function EditState({
             data={data}
             format={format}
             imageTransform={photo.transform}
-            onImageTransformChange={photo.onTransformChange}
+            onImageTransformChange={handlePhotoTransformChange}
             photoBackdropEnabled={visibility.photoBackdrop}
             photoEffects={photo.effects}
             photoUrl={photo.url}
@@ -90,4 +91,4 @@ export function EditState({
       />
     </TooltipProvider>
   );
-}
+};

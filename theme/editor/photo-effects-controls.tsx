@@ -22,24 +22,30 @@ import {
 } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
 
+import {
+  OptionToggle,
+  OptionToggleItem,
+} from "@/components/app/primitives/toggle-group";
 import { Button } from "@/components/ui/button";
-import { Toggle } from "@/components/ui/toggle";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { ToggleGroup } from "@/components/ui/toggle-group";
 import { FILTER_PRESETS, nextRotation } from "@/lib/photo-effects";
 import type { PhotoEffects } from "@/lib/photo-effects";
 
 // A glyph per preset that hints at its look — sun for warm, snowflake for cool,
 // moon for moody noir, film strip for vintage sepia, half-circle for grayscale.
-const FILTER_ICONS: Record<string, Icon> = {
-  none: ImageSquareIcon,
-  noir: MoonIcon,
-  mono: CircleHalfIcon,
-  vivid: SparkleIcon,
-  warm: SunIcon,
+const FILTER_ICONS = {
   cool: SnowflakeIcon,
   fade: CloudFogIcon,
+  mono: CircleHalfIcon,
+  noir: MoonIcon,
+  none: ImageSquareIcon,
   sepia: FilmStripIcon,
-};
+  vivid: SparkleIcon,
+  warm: SunIcon,
+} satisfies Record<string, Icon>;
+
+const hasFilterIcon = (id: string): id is keyof typeof FILTER_ICONS =>
+  Object.hasOwn(FILTER_ICONS, id);
 
 interface PhotoControlProps {
   effects: PhotoEffects;
@@ -47,88 +53,94 @@ interface PhotoControlProps {
 }
 
 /** Filter-preset row. Its section label is supplied by the FILTER category. */
-export function PhotoFilterControl({ effects, onChange }: PhotoControlProps) {
-  return (
-    <ToggleGroup
-      aria-label="Photo filter"
-      className="mt-2 flex flex-wrap gap-1.5"
-      onValueChange={(values) => {
-        if (values[0]) {
-          onChange({ ...effects, filter: values[0] });
-        }
-      }}
-      spacing={2}
-      value={[effects.filter]}
-      variant="outline"
-    >
-      {FILTER_PRESETS.map((p) => {
-        const FilterIcon = FILTER_ICONS[p.id];
-        return (
-          <ToggleGroupItem
-            aria-label={p.label}
-            className="data-[pressed]:!border-foreground data-[pressed]:!bg-foreground data-[pressed]:!text-background flex h-auto items-center gap-1.5 px-2.5 py-1.5 font-mono text-[10px] font-medium tracking-wide uppercase"
-            key={p.id}
-            value={p.id}
-          >
-            {FilterIcon ? (
-              <FilterIcon aria-hidden className="size-3" weight="duotone" />
-            ) : null}
-            {p.label}
-          </ToggleGroupItem>
-        );
-      })}
-    </ToggleGroup>
-  );
-}
-
-/** Rotate / mirror / flip / grain row, shown inside the PHOTO category. */
-export function PhotoTransformControls({
+export const PhotoFilterControl = ({
   effects,
   onChange,
-}: PhotoControlProps) {
-  return (
-    <div className="mt-3 flex flex-wrap items-center gap-2">
-      <Button
-        onClick={() =>
-          onChange({ ...effects, rotate: nextRotation(effects.rotate) })
-        }
-        size="sm"
-        type="button"
-        variant="outline"
-      >
-        <ArrowClockwiseIcon className="size-3.5" weight="duotone" />
-        Rotate
-      </Button>
-      <Toggle
-        className="data-[pressed]:!border-foreground data-[pressed]:!bg-foreground data-[pressed]:!text-background gap-1.5"
-        onPressedChange={(p) => onChange({ ...effects, flipH: p })}
-        pressed={effects.flipH}
-        size="sm"
-        variant="outline"
-      >
-        <FlipHorizontalIcon className="size-3.5" weight="duotone" />
-        Mirror
-      </Toggle>
-      <Toggle
-        className="data-[pressed]:!border-foreground data-[pressed]:!bg-foreground data-[pressed]:!text-background gap-1.5"
-        onPressedChange={(p) => onChange({ ...effects, flipV: p })}
-        pressed={effects.flipV}
-        size="sm"
-        variant="outline"
-      >
-        <FlipVerticalIcon className="size-3.5" weight="duotone" />
-        Flip
-      </Toggle>
-      <Toggle
-        className="data-[pressed]:!border-foreground data-[pressed]:!bg-foreground data-[pressed]:!text-background gap-1.5"
-        onPressedChange={(p) => onChange({ ...effects, grain: p })}
-        pressed={effects.grain}
-        size="sm"
-        variant="outline"
-      >
-        <DotsNineIcon className="size-3.5" weight="duotone" />
-        Grain
-      </Toggle>
-    </div>
-  );
-}
+}: PhotoControlProps) => (
+  <ToggleGroup
+    aria-label="Photo filter"
+    className="mt-2 flex flex-wrap"
+    onValueChange={(values) => {
+      if (values[0]) {
+        onChange({ ...effects, filter: values[0] });
+      }
+    }}
+    spacing={1.5}
+    value={[effects.filter]}
+    variant="outline"
+  >
+    {FILTER_PRESETS.map((p) => {
+      const FilterIcon = hasFilterIcon(p.id) ? FILTER_ICONS[p.id] : null;
+      return (
+        <OptionToggleItem
+          aria-label={p.label}
+          key={p.id}
+          look="chip"
+          tone="invert"
+          value={p.id}
+        >
+          {FilterIcon === null ? null : (
+            <FilterIcon aria-hidden className="size-3" weight="duotone" />
+          )}
+          {p.label}
+        </OptionToggleItem>
+      );
+    })}
+  </ToggleGroup>
+);
+
+/** Rotate / mirror / flip / grain row, shown inside the PHOTO category. */
+export const PhotoTransformControls = ({
+  effects,
+  onChange,
+}: PhotoControlProps) => (
+  <div className="mt-3 flex flex-wrap items-center gap-2">
+    <Button
+      onClick={() => {
+        onChange({ ...effects, rotate: nextRotation(effects.rotate) });
+      }}
+      size="sm"
+      type="button"
+      variant="outline"
+    >
+      <ArrowClockwiseIcon className="size-3.5" weight="duotone" />
+      Rotate
+    </Button>
+    <OptionToggle
+      onPressedChange={(p) => {
+        onChange({ ...effects, flipH: p });
+      }}
+      pressed={effects.flipH}
+      size="sm"
+      tone="invert"
+      variant="outline"
+    >
+      <FlipHorizontalIcon className="size-3.5" weight="duotone" />
+      Mirror
+    </OptionToggle>
+    <OptionToggle
+      onPressedChange={(p) => {
+        onChange({ ...effects, flipV: p });
+      }}
+      pressed={effects.flipV}
+      size="sm"
+      tone="invert"
+      variant="outline"
+    >
+      <FlipVerticalIcon className="size-3.5" weight="duotone" />
+      Flip
+    </OptionToggle>
+    <OptionToggle
+      onPressedChange={(p) => {
+        onChange({ ...effects, grain: p });
+      }}
+      pressed={effects.grain}
+      size="sm"
+      tone="invert"
+      variant="outline"
+    >
+      <DotsNineIcon className="size-3.5" weight="duotone" />
+      Grain
+    </OptionToggle>
+  </div>
+);

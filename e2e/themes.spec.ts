@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-import { enterEditViaUpload, selectSingleCard, selectTheme } from "./helpers";
+import {
+  enterEditViaUpload,
+  selectSingleCard,
+  selectTheme,
+  waitForRenderSettled,
+} from "./helpers";
 
 const THEMES = [
   "ALTITUDE",
@@ -32,9 +37,9 @@ test.describe("themes", () => {
 
       await selectTheme(page, theme);
 
-      // Give the theme a beat to render so a runtime error inside a deferred
-      // useEffect or font fallback has time to surface.
-      await page.waitForTimeout(200);
+      // Let the render settle so a runtime error inside a deferred useEffect or
+      // font fallback has time to surface.
+      await waitForRenderSettled(page);
       expect(errors).toEqual([]);
     });
   }

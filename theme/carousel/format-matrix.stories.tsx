@@ -21,13 +21,13 @@ type MatrixArgs = ComponentProps<typeof CarouselDeck> & BackgroundArgs;
 
 const TILE_W = 540;
 
-function Matrix({
+const Matrix = ({
   themeId,
   args,
 }: {
   args: MatrixArgs;
   themeId: CarouselThemeId;
-}) {
+}) => {
   const descriptor = CAROUSEL_THEMES[themeId];
   const base = carouselArgs(themeId);
   const count = descriptor.panels.length;
@@ -41,14 +41,14 @@ function Matrix({
           <div className="flex flex-col gap-2" key={id}>
             <div
               className="relative overflow-hidden rounded-lg shadow-lg"
-              style={{ width: stripW * scale, height: f.height * scale }}
+              style={{ height: f.height * scale, width: stripW * scale }}
             >
               <div
                 style={{
-                  width: stripW,
                   height: f.height,
                   transform: `scale(${scale})`,
                   transformOrigin: "top left",
+                  width: stripW,
                 }}
               >
                 <CarouselDeck
@@ -68,15 +68,15 @@ function Matrix({
       })}
     </div>
   );
-}
+};
 
 const meta = preview.type<{ args: MatrixArgs }>().meta({
-  component: CarouselDeck,
-  title: "Carousel/Format matrix",
-  tags: ["ai-generated"],
-  parameters: { layout: "fullscreen" },
   argTypes: { data: activityArgType, ...backgroundArgTypes },
   args: { data: SAMPLE_RIDE, ...carouselArgs("trace") },
+  component: CarouselDeck,
+  parameters: { layout: "fullscreen" },
+  tags: ["ai-generated"],
+  title: "Carousel/Format matrix",
 });
 
 // The route-led art print across feed / square / story / landscape.

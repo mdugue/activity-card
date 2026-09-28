@@ -21,7 +21,10 @@ import {
   THEME_PROP_CONTROLS_EXCLUDE,
   ThemeStoryView,
 } from "../../.storybook/theme-controls";
-import type { ThemeStoryExtras } from "../../.storybook/theme-controls";
+import type {
+  ParamArgs,
+  ThemeStoryExtras,
+} from "../../.storybook/theme-controls";
 import { withFormatMatrix } from "../../.storybook/with-format-matrix";
 import { ThemeStrata } from "./strata";
 
@@ -33,16 +36,9 @@ const THEME = SINGLE_CARD_THEMES.strata;
 
 type StrataArgs = ComponentProps<typeof ThemeStrata> &
   ThemeStoryExtras &
-  StrataConfig;
+  ParamArgs<StrataConfig>;
 
 const meta = preview.type<{ args: StrataArgs }>().meta({
-  component: ThemeStrata,
-  tags: ["ai-generated"],
-  parameters: {
-    layout: "fullscreen",
-    controls: { exclude: THEME_PROP_CONTROLS_EXCLUDE },
-  },
-  decorators: [withFormatMatrix],
   argTypes: {
     data: activityArgType,
     ...colorArgTypes,
@@ -51,7 +47,14 @@ const meta = preview.type<{ args: StrataArgs }>().meta({
     ...backgroundArgTypes,
   },
   args: { color: "Theme default", data: SAMPLE_RIDE, ...DEFAULT_STRATA_CONFIG },
+  component: ThemeStrata,
+  decorators: [withFormatMatrix],
+  parameters: {
+    controls: { exclude: THEME_PROP_CONTROLS_EXCLUDE },
+    layout: "fullscreen",
+  },
   render: (args) => <ThemeStoryView args={args} theme={THEME} />,
+  tags: ["ai-generated"],
 });
 
 const RIDE_TITLE = /Elbsandstein/u;

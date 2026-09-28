@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 
 import { stravaErrorResponse, stravaFetch } from "@/lib/strava-client";
 import { clampedIntParam } from "@/lib/strava-params";
-import type { StravaSummary } from "@/lib/strava-types";
+import { StravaActivitySummaryListSchema } from "@/lib/strava-schemas";
 
-export async function GET(request: Request) {
+export const GET = async (request: Request) => {
   const url = new URL(request.url);
   // 100 is Strava's documented per_page ceiling; clamping (rather than
   // rejecting) keeps the picker resilient to odd query strings.
@@ -13,25 +13,35 @@ export async function GET(request: Request) {
 
   try {
     const qs = new URLSearchParams({
-      per_page: String(perPage),
       page: String(page),
+      per_page: String(perPage),
     });
-    const list = await stravaFetch<StravaSummary[]>(
-      `/athlete/activities?${qs}`
+    const list = await stravaFetch(
+      `/athlete/activities?${qs}`,
+      StravaActivitySummaryListSchema
     );
     return NextResponse.json({
-      activities: list.map((a) => ({
-        id: a.id,
-        name: a.name,
-        sport_type: a.sport_type,
-        start_date: a.start_date,
-        distance: a.distance,
-        moving_time: a.moving_time,
-        total_elevation_gain: a.total_elevation_gain,
-        summary_polyline: a.map?.summary_polyline ?? null,
-      })),
+      // A row without a numeric id can never be picked (the detail route is
+      // keyed by it), so drop it here rather than let one bad row fail the
+      // picker's parse of the whole page.
+      activities: list.flatMap(({ id, ...a }) =>
+        id === null
+          ? []
+          : [
+              {
+                distance: a.distance,
+                id,
+                moving_time: a.moving_time,
+                name: a.name,
+                sport_type: a.sport_type,
+                start_date: a.start_date,
+                summary_polyline: a.map?.summary_polyline ?? null,
+                total_elevation_gain: a.total_elevation_gain,
+              },
+            ]
+      ),
     });
   } catch (error) {
     return stravaErrorResponse(error);
   }
-}
+};

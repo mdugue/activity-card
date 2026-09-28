@@ -18,24 +18,24 @@ import { carouselArgs } from "./story-support";
 const meta = preview
   .type<{ args: ComponentProps<typeof CarouselDeck> & BackgroundArgs }>()
   .meta({
-    component: CarouselDeck,
-    title: "Carousel/Strata",
-    tags: ["ai-generated"],
-    parameters: { layout: "fullscreen" },
     argTypes: { data: activityArgType, ...backgroundArgTypes },
     args: {
       data: SAMPLE_RIDE,
       ...carouselArgs("strata"),
       config: DEFAULT_STRATA_CONFIG,
     },
+    component: CarouselDeck,
+    parameters: { layout: "fullscreen" },
+    tags: ["ai-generated"],
+    title: "Carousel/Strata",
   });
 
 export const Default = meta.story({ args: { data: SAMPLE_RIDE } });
 export const Paper = meta.story({
-  args: { config: { mood: "paper", density: "fine", legend: true } },
+  args: { config: { density: "fine", legend: true, mood: "paper" } },
 });
 export const MidnightClean = meta.story({
-  args: { config: { mood: "midnight", density: "bold", legend: false } },
+  args: { config: { density: "bold", legend: false, mood: "midnight" } },
 });
 // Multi-activity project: the woven field draws from every leg's route +
 // elevation.

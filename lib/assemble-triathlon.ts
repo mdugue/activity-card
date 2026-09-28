@@ -1,18 +1,49 @@
 import type { ActivityData, Transition, TriSegment } from "@/lib/activity";
 
 import type { ParsedActivity } from "./parse-activity";
+import { round } from "./parse-shared";
+
+const triSportFor = (s: ParsedActivity["sport"]): TriSegment["sport"] => {
+  if (s === "ride") {
+    return "bike";
+  }
+  if (s === "swim") {
+    return "swim";
+  }
+  return "run";
+};
+
+const deriveTriName = (sorted: ParsedActivity[]): string => {
+  const sports = sorted.map((p) => p.sport);
+  const isSwimBikeRun =
+    sports.length === 3 &&
+    sports[0] === "swim" &&
+    sports[1] === "ride" &&
+    sports[2] === "run";
+  if (isSwimBikeRun) {
+    return "Triathlon";
+  }
+  if (
+    sports.length === 2 &&
+    sports.includes("ride") &&
+    sports.includes("run")
+  ) {
+    return "Brick session";
+  }
+  return "Multi-sport effort";
+};
 
 /**
  * Combine 2+ single-sport parsed activities into one triathlon ActivityData.
  * Segments are sorted by start time when known; transitions are the time
  * gaps between consecutive segments. Distances and durations are summed.
  */
-export function assembleTriathlon(parts: ParsedActivity[]): ActivityData {
+export const assembleTriathlon = (parts: ParsedActivity[]): ActivityData => {
   if (parts.length < 2) {
     throw new Error("Need at least two activities to assemble a triathlon");
   }
 
-  const sorted = [...parts].sort((a, b) => {
+  const sorted = parts.toSorted((a, b) => {
     if (a.startTimeMs !== undefined && b.startTimeMs !== undefined) {
       return a.startTimeMs - b.startTimeMs;
     }
@@ -20,25 +51,25 @@ export function assembleTriathlon(parts: ParsedActivity[]): ActivityData {
   });
 
   const segments: TriSegment[] = sorted.map((p) => ({
-    sport: triSportFor(p.sport),
-    distanceKm: p.distanceKm,
-    durationSec: p.durationSec,
+    avgPaceMinPerKm: p.avgPaceMinPerKm,
     avgPacePer100m: p.avgPacePer100m,
     avgSpeedKmh: p.avgSpeedKmh,
-    avgPaceMinPerKm: p.avgPaceMinPerKm,
+    distanceKm: p.distanceKm,
+    durationSec: p.durationSec,
     elevationGainM: p.elevationGainM,
-    routeCoordinates: p.routeCoordinates,
     elevationProfile: p.elevationProfile,
     paceProfile: p.paceProfile,
+    routeCoordinates: p.routeCoordinates,
+    sport: triSportFor(p.sport),
   }));
 
   const transitions: Transition[] = [];
-  for (let i = 0; i + 1 < sorted.length; i++) {
+  for (let i = 0; i + 1 < sorted.length; i += 1) {
     const end = sorted[i].endTimeMs;
     const next = sorted[i + 1].startTimeMs;
     if (end !== undefined && next !== undefined && next > end) {
       const gapSec = Math.round((next - end) / 1000);
-      transitions.push({ name: `T${i + 1}`, durationSec: gapSec });
+      transitions.push({ durationSec: gapSec, name: `T${i + 1}` });
     }
   }
 
@@ -52,7 +83,7 @@ export function assembleTriathlon(parts: ParsedActivity[]): ActivityData {
     0
   );
 
-  const first = sorted[0];
+  const [first] = sorted;
   const avgHrs = sorted
     .map((p) => p.avgHeartRate)
     .filter((n): n is number => n !== undefined);
@@ -71,53 +102,18 @@ export function assembleTriathlon(parts: ParsedActivity[]): ActivityData {
   const stravaPhotos = sorted.flatMap((p) => p.stravaPhotos ?? []);
 
   return {
-    sport: "triathlon",
-    title: deriveTriName(sorted),
-    date: first.date,
-    location: first.location || "",
     athleteName: first.athleteName || "",
+    avgHeartRate,
+    date: first.date,
     distanceKm: totalDistance,
     durationSec: totalDurationSec,
     elevationGainM: totalElevation > 0 ? totalElevation : undefined,
-    avgHeartRate,
+    location: first.location || "",
     segments,
-    transitions: transitions.length ? transitions : undefined,
+    sport: "triathlon",
     stravaActivityIds: anyStrava ? stravaActivityIds : undefined,
     stravaPhotos: stravaPhotos.length ? stravaPhotos : undefined,
+    title: deriveTriName(sorted),
+    transitions: transitions.length ? transitions : undefined,
   };
-}
-
-function triSportFor(s: ParsedActivity["sport"]): TriSegment["sport"] {
-  if (s === "ride") {
-    return "bike";
-  }
-  if (s === "swim") {
-    return "swim";
-  }
-  return "run";
-}
-
-function deriveTriName(sorted: ParsedActivity[]): string {
-  const sports = sorted.map((p) => p.sport);
-  const triathlonShape =
-    sports.length === 3 &&
-    sports[0] === "swim" &&
-    sports[1] === "ride" &&
-    sports[2] === "run";
-  if (triathlonShape) {
-    return "Triathlon";
-  }
-  if (
-    sports.length === 2 &&
-    sports.includes("ride") &&
-    sports.includes("run")
-  ) {
-    return "Brick session";
-  }
-  return "Multi-sport effort";
-}
-
-function round(n: number, digits: number): number {
-  const f = 10 ** digits;
-  return Math.round(n * f) / f;
-}
+};

@@ -19,6 +19,7 @@ import type { ActivityData } from "@/lib/activity";
 import { formatDate } from "@/lib/format";
 import { parseActivityFiles } from "@/lib/parse-activity";
 import type { ParsedActivity } from "@/lib/parse-activity";
+import { cn } from "@/lib/utils";
 
 interface ActivitySourceProps {
   data: ActivityData;
@@ -26,11 +27,64 @@ interface ActivitySourceProps {
   onOpenStravaPicker: () => void;
 }
 
-export function ActivitySource({
+/**
+ * "View on Strava" anchors per Strava brand guidelines §3 (weight 700,
+ * underline, brand orange `#FC5200`). Single activity → one link; a combined
+ * triathlon with segment-aligned ids → one labelled link per Strava segment.
+ */
+const ViewOnStravaLinks = ({ data }: { data: ActivityData }) => {
+  const ids = data.stravaActivityIds;
+  if (ids === undefined || ids.length === 0) {
+    return null;
+  }
+  if (ids.length === 1 && ids[0] !== null) {
+    return (
+      <a
+        className="tracking-caps-sm text-strava inline-flex items-center gap-1 font-mono text-xs font-bold uppercase underline-offset-4 hover:underline"
+        href={`https://www.strava.com/activities/${ids[0]}/overview`}
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        View on Strava
+        <ArrowSquareOutIcon aria-hidden className="size-3" weight="duotone" />
+      </a>
+    );
+  }
+  const segments = data.segments ?? [];
+  const links = ids
+    .map((id, i) => ({ id, sport: segments[i]?.sport }))
+    .filter(
+      (x): x is { id: number; sport: NonNullable<typeof x.sport> } =>
+        x.id !== null && x.sport !== undefined
+    );
+  if (links.length === 0) {
+    return null;
+  }
+  return (
+    <div className="text-2xs tracking-caps-sm flex flex-wrap items-center gap-x-2 gap-y-1 font-mono uppercase opacity-80">
+      <span>View on Strava:</span>
+      {links.map(({ id, sport }, i) => (
+        <span key={id}>
+          <a
+            className="text-strava font-bold underline-offset-4 hover:underline"
+            href={`https://www.strava.com/activities/${id}/overview`}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            {sport.toUpperCase()}
+          </a>
+          {i < links.length - 1 ? <span aria-hidden> ·</span> : null}
+        </span>
+      ))}
+    </div>
+  );
+};
+
+export const ActivitySource = ({
   data,
   onFilesLoaded,
   onOpenStravaPicker,
-}: ActivitySourceProps) {
+}: ActivitySourceProps) => {
   const strava = useStravaConnection();
   const fromStrava = data.source === "strava";
   const segCount = data.segments?.length ?? 0;
@@ -40,11 +94,16 @@ export function ActivitySource({
     friendlyDate.replaceAll(/\s|,/gu, "").toLowerCase() || "activity";
 
   // One Strava mention in the source line. Uploads show a file-style label.
+  const athleteName = strava.athlete?.firstname;
+  const athleteSuffix =
+    athleteName === null || athleteName === undefined || athleteName === ""
+      ? ""
+      : ` · ${athleteName}`;
   let sourceLabel: string;
-  if (fromStrava) {
-    sourceLabel = isMulti
-      ? `Strava · ${segCount} activities combined`
-      : `Strava${strava.athlete?.firstname ? ` · ${strava.athlete.firstname}` : ""}`;
+  if (fromStrava && isMulti) {
+    sourceLabel = `Strava · ${segCount} activities combined`;
+  } else if (fromStrava) {
+    sourceLabel = `Strava${athleteSuffix}`;
   } else if (isMulti) {
     sourceLabel = `${segCount} files · assembled`;
   } else {
@@ -63,13 +122,14 @@ export function ActivitySource({
     setIsSwapping(true);
     try {
       onFilesLoaded(await parseActivityFiles(fileList));
-    } catch (err) {
+    } catch (parseError) {
       setError(
-        err instanceof Error ? err.message : "Could not read that file."
+        parseError instanceof Error
+          ? parseError.message
+          : "Could not read that file."
       );
-    } finally {
-      setIsSwapping(false);
     }
+    setIsSwapping(false);
   };
 
   const handleSwap = () => {
@@ -85,8 +145,10 @@ export function ActivitySource({
       <div className="caption-micro flex items-center gap-1.5">
         <span
           aria-hidden
-          className="size-1.5 rounded-full"
-          style={{ background: fromStrava ? "#FC5200" : "var(--primary)" }}
+          className={cn(
+            "size-1.5 rounded-full",
+            fromStrava ? "bg-strava" : "bg-primary"
+          )}
         />
         {isSwapping ? "Reading…" : sourceLabel}
       </div>
@@ -129,8 +191,8 @@ export function ActivitySource({
         ) : null}
       </div>
 
-      {error ? (
-        <div className="text-destructive flex items-center gap-1.5 font-mono text-[10px]">
+      {error !== null && error !== "" ? (
+        <div className="text-destructive flex items-center gap-1.5 font-mono text-xs">
           <WarningCircleIcon
             aria-hidden
             className="size-3.5"
@@ -141,57 +203,4 @@ export function ActivitySource({
       ) : null}
     </div>
   );
-}
-
-/**
- * "View on Strava" anchors per Strava brand guidelines §3 (weight 700,
- * underline, brand orange `#FC5200`). Single activity → one link; a combined
- * triathlon with segment-aligned ids → one labelled link per Strava segment.
- */
-function ViewOnStravaLinks({ data }: { data: ActivityData }) {
-  const ids = data.stravaActivityIds;
-  if (!ids?.length) {
-    return null;
-  }
-  if (ids.length === 1 && ids[0] !== null) {
-    return (
-      <a
-        className="inline-flex items-center gap-1 font-mono text-[11px] font-bold tracking-[0.14em] text-[#FC5200] uppercase underline-offset-4 hover:underline"
-        href={`https://www.strava.com/activities/${ids[0]}/overview`}
-        rel="noopener noreferrer"
-        target="_blank"
-      >
-        View on Strava
-        <ArrowSquareOutIcon aria-hidden className="size-3" weight="duotone" />
-      </a>
-    );
-  }
-  const segments = data.segments ?? [];
-  const links = ids
-    .map((id, i) => ({ id, sport: segments[i]?.sport }))
-    .filter(
-      (x): x is { id: number; sport: NonNullable<typeof x.sport> } =>
-        x.id !== null && x.sport !== undefined
-    );
-  if (links.length === 0) {
-    return null;
-  }
-  return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[10px] tracking-[0.14em] uppercase opacity-80">
-      <span>View on Strava:</span>
-      {links.map(({ id, sport }, i) => (
-        <span key={id}>
-          <a
-            className="font-bold text-[#FC5200] underline-offset-4 hover:underline"
-            href={`https://www.strava.com/activities/${id}/overview`}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            {sport.toUpperCase()}
-          </a>
-          {i < links.length - 1 ? <span aria-hidden> ·</span> : null}
-        </span>
-      ))}
-    </div>
-  );
-}
+};

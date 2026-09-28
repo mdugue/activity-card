@@ -18,17 +18,17 @@ const SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
-  reactCompiler: true,
-  reactStrictMode: true,
   experimental: {
     // Phosphor's barrel re-exports every icon; tree-shake to per-icon imports
     // so dev compile times and the client bundle stay small (lucide-react is on
     // Next's default optimize list, @phosphor-icons/react is not).
     optimizePackageImports: ["@phosphor-icons/react"],
   },
-  headers() {
-    return Promise.resolve([{ source: "/:path*", headers: SECURITY_HEADERS }]);
-  },
+  // Next's contract is async; the header list itself is static.
+  headers: async () =>
+    await Promise.resolve([{ headers: SECURITY_HEADERS, source: "/:path*" }]),
+  reactCompiler: true,
+  reactStrictMode: true,
 };
 
 export default nextConfig;

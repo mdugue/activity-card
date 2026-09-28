@@ -16,11 +16,11 @@ import { RenderTheme } from "./render-theme";
 type RenderThemeArgs = ComponentProps<typeof RenderTheme> & BackgroundArgs;
 
 const meta = preview.type<{ args: RenderThemeArgs }>().meta({
-  component: RenderTheme,
-  tags: ["ai-generated"],
-  parameters: { layout: "fullscreen" },
   argTypes: { data: activityArgType, ...backgroundArgTypes },
   args: { data: SAMPLE_RIDE },
+  component: RenderTheme,
+  parameters: { layout: "fullscreen" },
+  tags: ["ai-generated"],
 });
 
 const RIDE_TITLE = /Elbsandstein/u;
@@ -36,12 +36,12 @@ export const Path = meta.story({
 });
 
 export const Altitude = meta.story({
-  args: { theme: "altitude", data: SAMPLE_RUN },
+  args: { data: SAMPLE_RUN, theme: "altitude" },
 });
 export const Data = meta.story({ args: { theme: "data" } });
 export const Editorial = meta.story({
-  args: { theme: "editorial", data: SAMPLE_RUN },
+  args: { data: SAMPLE_RUN, theme: "editorial" },
 });
 export const Triathlon = meta.story({
-  args: { theme: "triathlon", data: SAMPLE_TRI },
+  args: { data: SAMPLE_TRI, theme: "triathlon" },
 });

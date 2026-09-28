@@ -11,7 +11,7 @@ import type { ExtractedPalette } from "@/lib/palette";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import type { PhotoEffects } from "@/lib/photo-effects";
 import type { ColorChoice, ColorScheme } from "@/theme/core/colors";
-import type { ParamDef } from "@/theme/core/params/kinds";
+import type { ParamDef, ThemeConfig } from "@/theme/core/params/kinds";
 import type { Visibility } from "@/theme/core/visibility";
 
 export interface EditorSession {
@@ -33,13 +33,13 @@ export interface EditorSession {
     scheme: ColorScheme;
   };
   config: {
-    onChange: (next: Record<string, unknown>) => void;
+    onChange: (next: ThemeConfig) => void;
     /** extracted photo palette — colour swatches + calculated param options */
     palette: ExtractedPalette | null;
     /** the active theme's parameter schema */
     params: ParamDef[];
     /** the active theme's coerced config */
-    value: Record<string, unknown>;
+    value: ThemeConfig;
   };
   /** visibility-stripped activity the cards render */
   data: ActivityData;

@@ -4,6 +4,19 @@ import { describe, expect, test } from "bun:test";
 import { detectSport, finalise } from "@/lib/parse-shared";
 import type { TrackPoint } from "@/lib/parse-shared";
 
+// A short straight eastward run, one point per minute, ~1.85 km total.
+const linePoints = (): TrackPoint[] => {
+  const start = Date.parse("2026-05-18T07:00:00Z");
+  return Array.from({ length: 11 }, (_, i): TrackPoint => ({
+    elevation: 100 + i,
+    heartRate: 140 + i,
+    lat: 0,
+    // ~111 m per 0.001° at the equator
+    lng: i * 0.001,
+    time: start + i * 60_000,
+  }));
+};
+
 describe("detectSport", () => {
   test("splits camelCase names into words", () => {
     expect(detectSport(undefined, "MorningRun.gpx")).toBe("run");
@@ -50,24 +63,12 @@ describe("detectSport", () => {
 });
 
 describe("finalise", () => {
-  // A short straight eastward run, one point per minute, ~1.85 km total.
-  function linePoints(): TrackPoint[] {
-    const start = Date.parse("2026-05-18T07:00:00Z");
-    return Array.from({ length: 11 }, (_, i): TrackPoint => ({
-      lat: 0,
-      lng: i * 0.001, // ~111 m per 0.001° at the equator
-      elevation: 100 + i,
-      heartRate: 140 + i,
-      time: start + i * 60_000,
-    }));
-  }
-
   test("derives distance and duration from track points", () => {
     const a = finalise({
+      isoDate: "2026-05-18T07:00:00Z",
+      name: "test",
       points: linePoints(),
       sport: "run",
-      name: "test",
-      isoDate: "2026-05-18T07:00:00Z",
     });
     // 10 hops × ~111 m ≈ 1.11 km; duration is exactly 10 minutes.
     expect(a.distanceKm).toBeGreaterThan(1);
@@ -77,21 +78,22 @@ describe("finalise", () => {
 
   test("prefers session-level totals over derived values", () => {
     const a = finalise({
-      points: linePoints(),
-      sport: "ride",
       name: "test",
+      points: linePoints(),
+      sessionAvgSpeedKmh: 42.195,
       sessionDistanceKm: 42.195,
       sessionDurationSec: 3600,
-      sessionAvgSpeedKmh: 42.195,
+      sport: "ride",
     });
-    expect(a.distanceKm).toBe(42.2);
+    // Rounded to one decimal: 42.195 → 42.2 (the precision rules out 42.195).
+    expect(a.distanceKm).toBeCloseTo(42.2, 10);
     expect(a.durationSec).toBe(3600);
-    expect(a.avgSpeedKmh).toBe(42.2);
+    expect(a.avgSpeedKmh).toBeCloseTo(42.2, 10);
   });
 
   test("derives pace for runs and speed for rides from the same data", () => {
-    const run = finalise({ points: linePoints(), sport: "run", name: "r" });
-    const ride = finalise({ points: linePoints(), sport: "ride", name: "b" });
+    const run = finalise({ name: "r", points: linePoints(), sport: "run" });
+    const ride = finalise({ name: "b", points: linePoints(), sport: "ride" });
     expect(run.avgPaceMinPerKm).toBeGreaterThan(0);
     expect(run.avgSpeedKmh).toBeUndefined();
     expect(ride.avgSpeedKmh).toBeGreaterThan(0);
@@ -99,7 +101,7 @@ describe("finalise", () => {
   });
 
   test("rounds heart rate and builds an elevation profile", () => {
-    const a = finalise({ points: linePoints(), sport: "run", name: "r" });
+    const a = finalise({ name: "r", points: linePoints(), sport: "run" });
     expect(a.avgHeartRate).toBe(145);
     expect(a.elevationProfile?.length).toBeGreaterThan(0);
     expect(a.elevationGainM).toBe(10);
@@ -107,35 +109,35 @@ describe("finalise", () => {
 
   test("prettifies the activity name", () => {
     const a = finalise({
+      name: "morning_trail-run  ",
       points: linePoints(),
       sport: "run",
-      name: "morning_trail-run  ",
     });
     expect(a.title).toBe("Morning Trail Run");
   });
 
   test("uses the declared ISO date, ignoring junk metadata", () => {
     const valid = finalise({
+      isoDate: "2026-05-18T07:00:00Z",
+      name: "r",
       points: linePoints(),
       sport: "run",
-      name: "r",
-      isoDate: "2026-05-18T07:00:00Z",
     });
     expect(valid.date).toBe("2026-05-18");
   });
 
   test("keeps a bare calendar date unchanged in every timezone", () => {
     const a = finalise({
+      isoDate: "2026-05-18",
+      name: "r",
       points: linePoints(),
       sport: "run",
-      name: "r",
-      isoDate: "2026-05-18",
     });
     expect(a.date).toBe("2026-05-18");
   });
 
   test("omits splits for swims", () => {
-    const a = finalise({ points: linePoints(), sport: "swim", name: "s" });
+    const a = finalise({ name: "s", points: linePoints(), sport: "swim" });
     expect(a.splits).toBeUndefined();
   });
 });

@@ -8,9 +8,26 @@ import {
   PersonSimpleRunIcon,
   PersonSimpleSwimIcon,
 } from "@phosphor-icons/react";
-import { useEffect, useId, useState } from "react";
+import { Suspense, use, useEffect, useId, useRef, useState } from "react";
 
+import { ControlLabel } from "@/components/app/primitives/label";
+import {
+  Pager,
+  PagerNext,
+  PagerPrevious,
+} from "@/components/app/primitives/pager";
 import { StravaFooter } from "@/components/app/strava-footer";
+import {
+  fetchActivities,
+  fetchDetail,
+  fetchTotalPages,
+  PER_PAGE,
+} from "@/components/app/strava-picker-api";
+import type {
+  LoadResult,
+  StravaFetchError,
+  StravaSummaryActivity,
+} from "@/components/app/strava-picker-api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -23,32 +40,19 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@/components/ui/item";
-import { Label } from "@/components/ui/label";
 import {
-  Pagination,
   PaginationContent,
   PaginationEllipsis,
   PaginationItem,
   PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { useStravaConnection } from "@/hooks/use-strava-connection";
 import { formatDate, formatDuration } from "@/lib/format";
 import type { ParsedActivity } from "@/lib/parse-activity";
+import { hasText } from "@/lib/text";
 import { cn } from "@/lib/utils";
-
-interface StravaSummaryActivity {
-  distance: number;
-  id: number;
-  moving_time: number;
-  name: string;
-  sport_type: string;
-  start_date: string;
-  total_elevation_gain?: number;
-}
 
 interface StravaPickerProps {
   /** Rendered inside the onboarding wizard's dialog (vs. the full-screen
@@ -59,25 +63,19 @@ interface StravaPickerProps {
   onReauth: () => void;
 }
 
-const PER_PAGE = 30;
-
 /** Connection status + the central Disconnect control, shown in the picker
  * header. This is the single home for "Connected as … / Disconnect" now that
  * the app chrome no longer carries it. */
-function PickerConnection() {
+const PickerConnection = () => {
   const strava = useStravaConnection();
   if (!strava.connected) {
     return null;
   }
   return (
-    <div className="flex shrink-0 items-center gap-2 font-mono text-[10px] tracking-[0.18em] uppercase opacity-70">
-      <span
-        aria-hidden
-        className="size-1.5 rounded-full"
-        style={{ background: "#FC5200" }}
-      />
+    <div className="tracking-caps-md flex shrink-0 items-center gap-2 font-mono text-xs uppercase opacity-70">
+      <span aria-hidden className="bg-strava size-1.5 rounded-full" />
       <span className="hidden sm:inline">
-        {strava.athlete?.firstname
+        {hasText(strava.athlete?.firstname)
           ? `Connected as ${strava.athlete.firstname}`
           : "Connected"}
       </span>
@@ -95,140 +93,7 @@ function PickerConnection() {
       </button>
     </div>
   );
-}
-
-/** Discriminated error shape mirrored from `stravaErrorResponse` on the
- * server. Lets the picker show actionable per-kind copy instead of a
- * generic "couldn't reach Strava (NNN)". */
-export type StravaFetchError =
-  | { kind: "reauth" }
-  | { kind: "rate_limited"; retryAfter: number }
-  | { kind: "upstream"; status: number }
-  | { kind: "network"; message: string }
-  | { kind: "empty_activity" };
-
-type LoadResult =
-  | { kind: "ok"; activities: StravaSummaryActivity[] }
-  | { kind: "err"; error: StravaFetchError };
-
-interface ServerErrorEnvelope {
-  error?: string;
-  retryAfter?: number;
-  status?: number;
-}
-
-async function readErrorEnvelope(res: Response): Promise<ServerErrorEnvelope> {
-  try {
-    return (await res.json()) as ServerErrorEnvelope;
-  } catch {
-    return {};
-  }
-}
-
-/** `Retry-After` in seconds, or undefined when the header is absent or junk —
- *  `Number(null)` is 0, which would otherwise read as a valid delay. */
-function retryAfterHeader(headers: Headers): number | undefined {
-  const raw = headers.get("retry-after");
-  if (!raw) {
-    return undefined;
-  }
-  const seconds = Number(raw);
-  return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
-}
-
-function toFetchError(
-  res: Response,
-  envelope: ServerErrorEnvelope
-): StravaFetchError {
-  if (res.status === 401 || envelope.error === "not_connected") {
-    return { kind: "reauth" };
-  }
-  if (res.status === 429 || envelope.error === "rate_limited") {
-    return {
-      kind: "rate_limited",
-      // Server may compute a fresh retryAfter; fall back to the response
-      // header if it didn't set one.
-      retryAfter: envelope.retryAfter ?? retryAfterHeader(res.headers) ?? 60,
-    };
-  }
-  return {
-    kind: "upstream",
-    status: envelope.status ?? res.status,
-  };
-}
-
-async function fetchActivities(page: number): Promise<LoadResult> {
-  try {
-    const res = await fetch(
-      `/api/strava/activities?page=${page}&per_page=${PER_PAGE}`,
-      { cache: "no-store" }
-    );
-    if (!res.ok) {
-      return {
-        kind: "err",
-        error: toFetchError(res, await readErrorEnvelope(res)),
-      };
-    }
-    const data = (await res.json()) as {
-      activities: StravaSummaryActivity[];
-    };
-    return { kind: "ok", activities: data.activities };
-  } catch (error) {
-    return {
-      kind: "err",
-      error: {
-        kind: "network",
-        message: error instanceof Error ? error.message : "Network error.",
-      },
-    };
-  }
-}
-
-type DetailResult =
-  | { kind: "ok"; parts: ParsedActivity[] }
-  | { kind: "err"; error: StravaFetchError };
-
-async function fetchDetail(id: number): Promise<DetailResult> {
-  try {
-    const res = await fetch(`/api/strava/activity/${id}`, {
-      cache: "no-store",
-    });
-    if (!res.ok) {
-      return {
-        kind: "err",
-        error: toFetchError(res, await readErrorEnvelope(res)),
-      };
-    }
-    const data = (await res.json()) as { parts: ParsedActivity[] };
-    if (!data.parts?.length) {
-      return { kind: "err", error: { kind: "empty_activity" } };
-    }
-    return { kind: "ok", parts: data.parts };
-  } catch (error) {
-    return {
-      kind: "err",
-      error: {
-        kind: "network",
-        message: error instanceof Error ? error.message : "Network error.",
-      },
-    };
-  }
-}
-
-async function fetchTotalPages(): Promise<number | null> {
-  // Stats is a hint, not load-bearing — silently fall back to the
-  // page-is-full heuristic when it fails (rate-limit or upstream).
-  try {
-    const res = await fetch("/api/strava/stats", { cache: "no-store" });
-    if (!res.ok) {
-      return null;
-    }
-    const data = (await res.json()) as { totalPages?: number };
-    return typeof data.totalPages === "number" ? data.totalPages : null;
-  } catch {
-    return null;
-  }
-}
+};
 
 type LoadState =
   | { kind: "loading" }
@@ -238,272 +103,13 @@ type LoadState =
 
 const SKELETON_KEYS = ["a", "b", "c", "d", "e", "f"] as const;
 
-export function StravaPicker({
-  embedded = false,
-  onActivityLoaded,
-  onCancel,
-  onReauth,
-}: StravaPickerProps) {
-  const [state, setState] = useState<LoadState>({ kind: "loading" });
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState<number | null>(null);
-  const [multiSelect, setMultiSelect] = useState(false);
-  const [selected, setSelected] = useState<Set<number>>(() => new Set());
-  const [pickingId, setPickingId] = useState<number | null>(null);
-  const [isCombining, setIsCombining] = useState(false);
-  const [pickError, setPickError] = useState<StravaFetchError | null>(null);
-  const multiId = useId();
-
-  // One-shot fetch for the lifetime activity count. Best-effort: if it
-  // fails we just hide the "of Y" suffix and fall back to canGoNext.
-  useEffect(() => {
-    let cancelled = false;
-    void fetchTotalPages().then((tp) => {
-      if (!cancelled) {
-        setTotalPages(tp);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // The effect syncs UI state to the result of an external request keyed by
-  // `page`. setState-in-effect is the right tool here — same pattern as the
-  // localStorage hydration in page.tsx.
-  useEffect(() => {
-    let cancelled = false;
-    /* oxlint-disable react/set-state-in-effect */
-    setState({ kind: "loading" });
-    void fetchActivities(page).then((result) => {
-      if (cancelled) {
-        return;
-      }
-      if (result.kind === "err") {
-        if (result.error.kind === "reauth") {
-          onReauth();
-          return;
-        }
-        setState({ kind: "error", error: result.error });
-        return;
-      }
-      setState(
-        result.activities.length === 0
-          ? { kind: "empty" }
-          : { kind: "ready", activities: result.activities }
-      );
-    });
-    /* oxlint-enable react/set-state-in-effect */
-    return () => {
-      cancelled = true;
-    };
-  }, [page, onReauth]);
-
-  const toggleSelect = (id: number) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
-
-  const handleMultiToggle = (next: boolean) => {
-    setMultiSelect(next);
-    setSelected(new Set());
-    setPickError(null);
-  };
-
-  const handlePick = async (id: number) => {
-    setPickingId(id);
-    setPickError(null);
-    const result = await fetchDetail(id);
-    setPickingId(null);
-    if (result.kind === "err") {
-      if (result.error.kind === "reauth") {
-        onReauth();
-        return;
-      }
-      setPickError(result.error);
-      return;
-    }
-    onActivityLoaded(result.parts);
-  };
-
-  const handleCombine = async () => {
-    const ids = [...selected];
-    if (ids.length < 2) {
-      return;
-    }
-    setIsCombining(true);
-    setPickError(null);
-    const results = await Promise.all(ids.map((id) => fetchDetail(id)));
-    setIsCombining(false);
-    // If any of the parallel fetches expired the grant, jump to reauth so
-    // the user doesn't see a confusing per-error message.
-    if (results.some((r) => r.kind === "err" && r.error.kind === "reauth")) {
-      onReauth();
-      return;
-    }
-    const firstError = results.find(
-      (r): r is { kind: "err"; error: StravaFetchError } => r.kind === "err"
-    );
-    if (firstError) {
-      setPickError(firstError.error);
-      return;
-    }
-    const allParts = results.flatMap((r) => (r.kind === "ok" ? r.parts : []));
-    onActivityLoaded(allParts);
-  };
-
-  const activities = state.kind === "ready" ? state.activities : [];
-  // Strava's stats endpoint only counts ride/run/swim, so totalPages can
-  // undercount. Trust totalPages when known AND it would block paging,
-  // otherwise fall back to the page-is-full heuristic.
-  const reachedEndByCount = totalPages !== null && page >= totalPages;
-  const canGoNext = activities.length === PER_PAGE && !reachedEndByCount;
-  const canGoPrev = page > 1;
-  const selectedCount = selected.size;
-
-  return (
-    <div
-      className={cn(
-        "flex w-full flex-col",
-        embedded
-          ? "px-6 py-6"
-          : "mx-auto max-w-2xl flex-1 px-6 pt-20 pb-32 md:px-10 lg:pt-24"
-      )}
-    >
-      <div className="flex items-center justify-between gap-4">
-        <div className="font-mono text-xs font-medium tracking-[0.32em] opacity-55">
-          PICK FROM STRAVA
-        </div>
-        <PickerConnection />
-      </div>
-      <h1
-        className={cn(
-          "font-heading mt-5 leading-[0.92] tracking-tight uppercase",
-          embedded ? "text-3xl sm:text-4xl" : "mt-7 text-5xl sm:text-6xl"
-        )}
-      >
-        Your recent <span className="text-primary">efforts.</span>
-      </h1>
-      <p className="mt-4 max-w-lg text-base leading-relaxed opacity-65">
-        Pick one to turn into a card — or flip the switch to combine 2+ into a
-        triathlon / multi-sport effort.
-      </p>
-
-      <div className="border-foreground/15 mt-8 flex items-center justify-between border-y py-3">
-        <Label className="flex items-center gap-3 text-sm" htmlFor={multiId}>
-          <Switch
-            checked={multiSelect}
-            id={multiId}
-            onCheckedChange={handleMultiToggle}
-          />
-          Multi-select
-        </Label>
-        {multiSelect ? (
-          <span className="font-mono text-[11px] tracking-wide opacity-60">
-            {selectedCount} selected
-          </span>
-        ) : null}
-      </div>
-
-      <div className="mt-6 flex flex-col">
-        <ActivityList
-          activities={activities}
-          isCombining={isCombining}
-          multiSelect={multiSelect}
-          onPick={handlePick}
-          onReauth={onReauth}
-          onToggleSelect={toggleSelect}
-          page={page}
-          pickingId={pickingId}
-          selected={selected}
-          state={state}
-        />
-      </div>
-
-      {pickError ? (
-        <StravaErrorAlert
-          className="mt-4"
-          error={pickError}
-          onReauth={onReauth}
-        />
-      ) : null}
-
-      <PickerPagination
-        canGoNext={canGoNext}
-        canGoPrev={canGoPrev}
-        onPageChange={setPage}
-        page={page}
-        show={state.kind === "ready" || (state.kind === "empty" && page > 1)}
-        totalPages={totalPages}
-      />
-
-      <div className="border-foreground/15 mt-8 flex justify-between border-t pt-6">
-        <Button onClick={onCancel} variant="ghost">
-          Back
-        </Button>
-      </div>
-
-      {/* §4 "Compatible with Strava" attribution. The full-screen surface gets
-          it from the page chrome; the embedded (in-dialog) picker carries its
-          own, since the page footer is inert behind the modal. */}
-      {embedded ? <StravaFooter /> : null}
-
-      {multiSelect && selectedCount > 0 ? (
-        <div
-          className={cn(
-            "border-foreground/15 bg-background/95 inset-x-0 bottom-0 z-20 border-t px-6 py-4 shadow-lg backdrop-blur md:px-10",
-            embedded ? "sticky" : "fixed"
-          )}
-        >
-          <div className="mx-auto flex max-w-2xl items-center justify-between gap-4">
-            <div className="font-mono text-xs font-medium tracking-wide opacity-80">
-              {selectedCount === 1
-                ? "Select one more to combine"
-                : `${selectedCount} activities selected`}
-            </div>
-            <Button
-              disabled={selectedCount < 2 || isCombining}
-              onClick={handleCombine}
-              size="lg"
-            >
-              {isCombining
-                ? "Combining…"
-                : `Combine ${selectedCount} activities`}
-            </Button>
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-interface PickerPaginationProps {
-  canGoNext: boolean;
-  canGoPrev: boolean;
-  onPageChange: (updater: (p: number) => number) => void;
-  page: number;
-  show: boolean;
-  totalPages: number | null;
-}
-
-type RangeItem =
-  | { kind: "page"; n: number }
-  | { kind: "ellipsis"; side: "left" | "right" };
-
 /**
  * Build the page-number sequence following the shadcn pattern: always pin
  * page 1 and the last page, show three numbers around the current page,
  * and collapse anything else into ellipses. Short ranges (≤ 7 pages)
  * render every number so the UI doesn't show useless ellipses.
  */
-function paginationRange(page: number, total: number): RangeItem[] {
+const paginationRange = (page: number, total: number): RangeItem[] => {
   if (total <= 7) {
     return Array.from({ length: total }, (_, i) => ({
       kind: "page" as const,
@@ -526,7 +132,7 @@ function paginationRange(page: number, total: number): RangeItem[] {
   if (start > 2) {
     items.push({ kind: "ellipsis", side: "left" });
   }
-  for (let p = start; p <= end; p++) {
+  for (let p = start; p <= end; p += 1) {
     items.push({ kind: "page", n: p });
   }
   if (end < total - 1) {
@@ -534,31 +140,39 @@ function paginationRange(page: number, total: number): RangeItem[] {
   }
   items.push({ kind: "page", n: total });
   return items;
-}
+};
 
-function PickerPagination({
-  canGoNext,
-  canGoPrev,
+const PickerPagination = ({
+  activityCount,
   onPageChange,
   page,
   show,
   totalPages,
-}: PickerPaginationProps) {
+}: PickerPaginationProps) => {
   if (!show) {
     return null;
   }
+  // Strava's stats endpoint only counts ride/run/swim, so totalPages can
+  // undercount. Trust totalPages when known AND it would block paging,
+  // otherwise fall back to the page-is-full heuristic.
+  const reachedEndByCount = totalPages !== null && page >= totalPages;
+  const canGoNext = activityCount === PER_PAGE && !reachedEndByCount;
+  const canGoPrev = page > 1;
   // Until we know the total page count we can't render a meaningful list —
   // fall back to Prev / current / Next so the user can still page forward.
   const range: RangeItem[] | null =
     totalPages === null ? null : paginationRange(page, totalPages);
   return (
-    <Pagination className="mt-8 font-mono text-[11px] tracking-[0.18em] uppercase">
+    <Pager className="mt-8">
       <PaginationContent>
         <PaginationItem>
-          <PaginationPrevious
-            aria-disabled={!canGoPrev}
-            className={canGoPrev ? "" : "pointer-events-none opacity-40"}
-            onClick={() => canGoPrev && onPageChange((p) => p - 1)}
+          <PagerPrevious
+            disabled={!canGoPrev}
+            onClick={() => {
+              if (canGoPrev) {
+                onPageChange(page - 1);
+              }
+            }}
           />
         </PaginationItem>
         {range ? (
@@ -571,7 +185,9 @@ function PickerPagination({
               <PaginationItem key={`page-${item.n}`}>
                 <PaginationLink
                   isActive={item.n === page}
-                  onClick={() => onPageChange(() => item.n)}
+                  onClick={() => {
+                    onPageChange(item.n);
+                  }}
                 >
                   {item.n}
                 </PaginationLink>
@@ -584,95 +200,91 @@ function PickerPagination({
           </PaginationItem>
         )}
         <PaginationItem>
-          <PaginationNext
-            aria-disabled={!canGoNext}
-            className={canGoNext ? "" : "pointer-events-none opacity-40"}
-            onClick={() => canGoNext && onPageChange((p) => p + 1)}
+          <PagerNext
+            disabled={!canGoNext}
+            onClick={() => {
+              if (canGoNext) {
+                onPageChange(page + 1);
+              }
+            }}
           />
         </PaginationItem>
       </PaginationContent>
-    </Pagination>
+    </Pager>
   );
-}
+};
 
-interface ActivityListProps {
-  activities: StravaSummaryActivity[];
-  isCombining: boolean;
-  multiSelect: boolean;
-  onPick: (id: number) => void;
-  onReauth: () => void;
-  onToggleSelect: (id: number) => void;
-  page: number;
-  pickingId: number | null;
-  selected: Set<number>;
-  state: LoadState;
-}
-
-function ActivityList({
-  activities,
-  isCombining,
+const PickAffordance = ({
+  isPicking,
   multiSelect,
-  onPick,
-  onReauth,
-  onToggleSelect,
-  page,
-  pickingId,
-  selected,
-  state,
-}: ActivityListProps) {
-  if (state.kind === "loading") {
+}: {
+  isPicking: boolean;
+  multiSelect: boolean;
+}) => {
+  if (isPicking) {
     return (
-      <ItemGroup>
-        {SKELETON_KEYS.map((k) => (
-          <Skeleton className="h-[72px] w-full" key={`strava-skel-${k}`} />
-        ))}
-      </ItemGroup>
+      <CircleNotchIcon
+        aria-label="Loading"
+        className="size-4 animate-spin opacity-60"
+        weight="duotone"
+      />
     );
   }
-  if (state.kind === "empty") {
-    return (
-      <Alert>
-        <AlertTitle>No activities on this page.</AlertTitle>
-        <AlertDescription>
-          {page > 1
-            ? "You've reached the end of your activity history."
-            : "Record an activity in Strava, then come back."}
-        </AlertDescription>
-      </Alert>
-    );
-  }
-  if (state.kind === "error") {
-    return <StravaErrorAlert error={state.error} onReauth={onReauth} />;
+  if (multiSelect) {
+    return null;
   }
   return (
-    <ItemGroup>
-      {activities.map((a) => (
-        <ActivityItem
-          activity={a}
-          disabled={pickingId !== null || isCombining}
-          isPicking={pickingId === a.id}
-          isSelected={selected.has(a.id)}
-          key={a.id}
-          multiSelect={multiSelect}
-          onPick={() => onPick(a.id)}
-          onToggleSelect={() => onToggleSelect(a.id)}
-        />
-      ))}
-    </ItemGroup>
+    <span className="tracking-caps-md flex items-center gap-1 font-mono text-xs opacity-50">
+      PICK
+      <ArrowRightIcon aria-hidden className="size-3" weight="duotone" />
+    </span>
   );
-}
+};
 
-interface ActivityItemProps {
-  activity: StravaSummaryActivity;
-  disabled: boolean;
-  isPicking: boolean;
-  isSelected: boolean;
-  multiSelect: boolean;
-  onPick: () => void;
-  onToggleSelect: () => void;
-}
+const SportIcon = ({ sportType }: { sportType: string }) => {
+  const s = sportType.toLowerCase();
+  const cls = "size-5 shrink-0 opacity-70";
+  if (s.includes("swim")) {
+    return (
+      <PersonSimpleSwimIcon
+        aria-hidden
+        className={cls}
+        data-sport="swim"
+        weight="duotone"
+      />
+    );
+  }
+  if (s.includes("ride") || s.includes("bike") || s.includes("cycl")) {
+    return (
+      <PersonSimpleBikeIcon
+        aria-hidden
+        className={cls}
+        data-sport="ride"
+        weight="duotone"
+      />
+    );
+  }
+  if (s.includes("run")) {
+    return (
+      <PersonSimpleRunIcon
+        aria-hidden
+        className={cls}
+        data-sport="run"
+        weight="duotone"
+      />
+    );
+  }
+  return (
+    <MapPinIcon
+      aria-hidden
+      className={cls}
+      data-sport="other"
+      weight="duotone"
+    />
+  );
+};
 
-function ActivityItem({
+const ActivityItem = ({
   activity,
   disabled,
   isPicking,
@@ -680,13 +292,14 @@ function ActivityItem({
   multiSelect,
   onPick,
   onToggleSelect,
-}: ActivityItemProps) {
+}: ActivityItemProps) => {
   const distanceKm = (activity.distance / 1000).toFixed(1);
   const duration = formatDuration(activity.moving_time);
   const startLabel = formatDate(activity.start_date, { month: "short" });
-  const elevation = activity.total_elevation_gain
-    ? `${Math.round(activity.total_elevation_gain)} m`
-    : null;
+  // No reading, zero, or NaN all mean "no elevation to show".
+  const gain = activity.total_elevation_gain ?? 0;
+  const elevation =
+    gain === 0 || Number.isNaN(gain) ? null : `${Math.round(gain)} m`;
 
   const handleClick = () => {
     if (disabled) {
@@ -735,9 +348,9 @@ function ActivityItem({
       <ItemContent>
         <ItemTitle>{activity.name}</ItemTitle>
         <ItemDescription>
-          <span className="font-mono text-[11px] tracking-wide">
+          <span className="font-mono text-xs tracking-wide">
             {startLabel} · {distanceKm} km · {duration}
-            {elevation ? ` · ${elevation}` : ""}
+            {elevation === null ? "" : ` · ${elevation}`}
           </span>
         </ItemDescription>
       </ItemContent>
@@ -746,83 +359,51 @@ function ActivityItem({
       </ItemActions>
     </Item>
   );
-}
+};
 
-function PickAffordance({
-  isPicking,
-  multiSelect,
+const RateLimitAlert = ({
+  className,
+  retryAfter,
 }: {
-  isPicking: boolean;
-  multiSelect: boolean;
-}) {
-  if (isPicking) {
-    return (
-      <CircleNotchIcon
-        aria-label="Loading"
-        className="size-4 animate-spin opacity-60"
-        weight="duotone"
-      />
-    );
-  }
-  if (multiSelect) {
-    return null;
-  }
-  return (
-    <span className="flex items-center gap-1 font-mono text-[10px] tracking-[0.18em] opacity-50">
-      PICK
-      <ArrowRightIcon aria-hidden className="size-3" weight="duotone" />
-    </span>
-  );
-}
-
-function SportIcon({ sportType }: { sportType: string }) {
-  const s = sportType.toLowerCase();
-  const cls = "size-5 shrink-0 opacity-70";
-  if (s.includes("swim")) {
-    return (
-      <PersonSimpleSwimIcon
-        aria-hidden
-        className={cls}
-        data-sport="swim"
-        weight="duotone"
-      />
-    );
-  }
-  if (s.includes("ride") || s.includes("bike") || s.includes("cycl")) {
-    return (
-      <PersonSimpleBikeIcon
-        aria-hidden
-        className={cls}
-        data-sport="ride"
-        weight="duotone"
-      />
-    );
-  }
-  if (s.includes("run")) {
-    return (
-      <PersonSimpleRunIcon
-        aria-hidden
-        className={cls}
-        data-sport="run"
-        weight="duotone"
-      />
-    );
-  }
-  return (
-    <MapPinIcon
-      aria-hidden
-      className={cls}
-      data-sport="other"
-      weight="duotone"
-    />
-  );
-}
-
-interface StravaErrorAlertProps {
   className?: string;
-  error: StravaFetchError;
-  onReauth: () => void;
-}
+  retryAfter: number;
+}) => {
+  const [seconds, setSeconds] = useState(retryAfter);
+  // Reset + tick the countdown whenever the parent hands us a fresh
+  // retryAfter (legit external-prop sync).
+  useEffect(() => {
+    /* oxlint-disable-next-line react/set-state-in-effect */
+    setSeconds(retryAfter);
+    const id = window.setInterval(() => {
+      setSeconds((s) => (s > 0 ? s - 1 : 0));
+    }, 1000);
+    return () => {
+      window.clearInterval(id);
+    };
+  }, [retryAfter]);
+  return (
+    <Alert className={className} variant="destructive">
+      <AlertTitle>Strava is rate-limiting us</AlertTitle>
+      <AlertDescription>
+        <p>
+          We hit Strava&apos;s 15-minute request quota. Try again in{" "}
+          <span className="font-mono">{seconds}s</span>.
+        </p>
+        <Button
+          className="mt-3"
+          disabled={seconds > 0}
+          onClick={() => {
+            window.location.reload();
+          }}
+          size="sm"
+          variant="outline"
+        >
+          Retry
+        </Button>
+      </AlertDescription>
+    </Alert>
+  );
+};
 
 /**
  * One Alert component for every Strava failure mode. Each kind gets
@@ -830,11 +411,11 @@ interface StravaErrorAlertProps {
  * instead of a generic "couldn't reach Strava (NNN)". Rate-limit shows
  * a live countdown so the user knows when Retry will work.
  */
-function StravaErrorAlert({
+const StravaErrorAlert = ({
   className,
   error,
   onReauth,
-}: StravaErrorAlertProps) {
+}: StravaErrorAlertProps) => {
   if (error.kind === "reauth") {
     return (
       <Alert className={className} variant="destructive">
@@ -866,7 +447,9 @@ function StravaErrorAlert({
           <p>HTTP {error.status} from Strava. Try again in a moment.</p>
           <Button
             className="mt-3"
-            onClick={() => window.location.reload()}
+            onClick={() => {
+              window.location.reload();
+            }}
             size="sm"
             variant="outline"
           >
@@ -894,7 +477,9 @@ function StravaErrorAlert({
         <p>{error.message}</p>
         <Button
           className="mt-3"
-          onClick={() => window.location.reload()}
+          onClick={() => {
+            window.location.reload();
+          }}
           size="sm"
           variant="outline"
         >
@@ -903,44 +488,419 @@ function StravaErrorAlert({
       </AlertDescription>
     </Alert>
   );
+};
+
+const ActivitySkeletons = () => (
+  <ItemGroup>
+    {SKELETON_KEYS.map((k) => (
+      <Skeleton className="h-[72px] w-full" key={`strava-skel-${k}`} />
+    ))}
+  </ItemGroup>
+);
+
+const toLoadState = (result: LoadResult): LoadState => {
+  if (result.kind === "err") {
+    return result.error.kind === "reauth"
+      ? { kind: "loading" }
+      : { error: result.error, kind: "error" };
+  }
+  return result.activities.length === 0
+    ? { kind: "empty" }
+    : { activities: result.activities, kind: "ready" };
+};
+
+/** Pagination once the lifetime page count has resolved (it is a hint: until
+ *  then — or if it fails — the page-is-full heuristic alone gates Next). */
+const CountedPagination = ({
+  activityCount,
+  onPageChange,
+  page,
+  show,
+  totalPagesRequest,
+}: {
+  activityCount: number;
+  onPageChange: (page: number) => void;
+  page: number;
+  show: boolean;
+  totalPagesRequest: Promise<number | null>;
+}) => {
+  const totalPages = use(totalPagesRequest);
+  return (
+    <PickerPagination
+      activityCount={activityCount}
+      onPageChange={onPageChange}
+      page={page}
+      show={show}
+      totalPages={totalPages}
+    />
+  );
+};
+
+/** The fetched page: the list (or its empty / error state), any pick error,
+ *  and the pagination. Suspends on `request` — the picker's boundary shows
+ *  the loading skeletons meanwhile. */
+const ActivityResults = ({
+  isCombining,
+  multiSelect,
+  onPageChange,
+  onPick,
+  onReauth,
+  onToggleSelect,
+  page,
+  pickError,
+  pickingId,
+  request,
+  selected,
+  totalPagesRequest,
+}: ActivityResultsProps) => {
+  const result = use(request);
+  const state = toLoadState(result);
+  // A lapsed grant hands straight off to the reconnect flow (the list stays in
+  // its loading state meanwhile). Fired from an effect, never from the fetch
+  // itself, so a request started twice (StrictMode) can't navigate twice;
+  // the ref keeps StrictMode's effect re-run from redirecting again.
+  const needsReauth = result.kind === "err" && result.error.kind === "reauth";
+  const reauthStartedRef = useRef(false);
+  useEffect(() => {
+    if (needsReauth && !reauthStartedRef.current) {
+      reauthStartedRef.current = true;
+      onReauth();
+    }
+  }, [needsReauth, onReauth]);
+  if (state.kind === "loading") {
+    return <ActivitySkeletons />;
+  }
+  const activities = state.kind === "ready" ? state.activities : [];
+  const paginationProps = {
+    activityCount: activities.length,
+    onPageChange,
+    page,
+    show: state.kind === "ready" || (state.kind === "empty" && page > 1),
+  };
+  return (
+    <>
+      <div className="mt-6 flex flex-col">
+        {state.kind === "empty" ? (
+          <Alert>
+            <AlertTitle>No activities on this page.</AlertTitle>
+            <AlertDescription>
+              {page > 1
+                ? "You've reached the end of your activity history."
+                : "Record an activity in Strava, then come back."}
+            </AlertDescription>
+          </Alert>
+        ) : null}
+        {state.kind === "error" ? (
+          <StravaErrorAlert error={state.error} onReauth={onReauth} />
+        ) : null}
+        {state.kind === "ready" ? (
+          <ItemGroup>
+            {activities.map((a) => (
+              <ActivityItem
+                activity={a}
+                disabled={pickingId !== null || isCombining}
+                isPicking={pickingId === a.id}
+                isSelected={selected.has(a.id)}
+                key={a.id}
+                multiSelect={multiSelect}
+                onPick={() => {
+                  onPick(a.id);
+                }}
+                onToggleSelect={() => {
+                  onToggleSelect(a.id);
+                }}
+              />
+            ))}
+          </ItemGroup>
+        ) : null}
+      </div>
+
+      {pickError === null ? null : (
+        <StravaErrorAlert
+          className="mt-4"
+          error={pickError}
+          onReauth={onReauth}
+        />
+      )}
+
+      <Suspense
+        fallback={<PickerPagination {...paginationProps} totalPages={null} />}
+      >
+        <CountedPagination
+          {...paginationProps}
+          totalPagesRequest={totalPagesRequest}
+        />
+      </Suspense>
+    </>
+  );
+};
+
+/** The sticky "Combine N activities" bar shown while multi-selecting. */
+const CombineBar = ({
+  embedded,
+  isCombining,
+  onCombine,
+  selectedCount,
+}: {
+  embedded: boolean;
+  isCombining: boolean;
+  onCombine: () => void;
+  selectedCount: number;
+}) => (
+  <div
+    className={cn(
+      "border-foreground/15 bg-background/95 inset-x-0 bottom-0 z-20 border-t px-6 py-4 shadow-lg backdrop-blur md:px-10",
+      embedded ? "sticky" : "fixed"
+    )}
+  >
+    <div className="mx-auto flex max-w-2xl items-center justify-between gap-4">
+      <div className="font-mono text-xs font-medium tracking-wide opacity-80">
+        {selectedCount === 1
+          ? "Select one more to combine"
+          : `${selectedCount} activities selected`}
+      </div>
+      <Button
+        disabled={selectedCount < 2 || isCombining}
+        onClick={onCombine}
+        size="lg"
+      >
+        {isCombining ? "Combining…" : `Combine ${selectedCount} activities`}
+      </Button>
+    </div>
+  </div>
+);
+
+export const StravaPicker = ({
+  embedded = false,
+  onActivityLoaded,
+  onCancel,
+  onReauth,
+}: StravaPickerProps) => {
+  const [page, setPage] = useState(1);
+  // The requests live in state, created by the events that need them (mount,
+  // a page change) and read with `use()` under a Suspense boundary — the
+  // rendered page is always the latest request's, so a slow earlier page can
+  // never overwrite it. The lifetime activity count is a one-shot,
+  // best-effort fetch: if it fails we just fall back to the page-is-full
+  // heuristic for Next.
+  const [requests, setRequests] = useState(() => ({
+    page: fetchActivities(1),
+    totalPages: fetchTotalPages(),
+  }));
+  const [multiSelect, setMultiSelect] = useState(false);
+  const [selected, setSelected] = useState<Set<number>>(() => new Set());
+  const [pickingId, setPickingId] = useState<number | null>(null);
+  const [isCombining, setIsCombining] = useState(false);
+  const [pickError, setPickError] = useState<StravaFetchError | null>(null);
+  const multiId = useId();
+
+  const handlePageChange = (next: number) => {
+    if (next === page) {
+      return;
+    }
+    setPage(next);
+    const pageRequest = fetchActivities(next);
+    setRequests((prev) => ({ ...prev, page: pageRequest }));
+  };
+
+  const toggleSelect = (id: number) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleMultiToggle = (next: boolean) => {
+    setMultiSelect(next);
+    setSelected(new Set());
+    setPickError(null);
+  };
+
+  const handlePick = async (id: number) => {
+    setPickingId(id);
+    setPickError(null);
+    const result = await fetchDetail(id);
+    setPickingId(null);
+    if (result.kind === "err") {
+      if (result.error.kind === "reauth") {
+        onReauth();
+        return;
+      }
+      setPickError(result.error);
+      return;
+    }
+    onActivityLoaded(result.parts);
+  };
+
+  const handleCombine = async () => {
+    const ids = [...selected];
+    if (ids.length < 2) {
+      return;
+    }
+    setIsCombining(true);
+    setPickError(null);
+    const results = await Promise.all(
+      ids.map(async (id) => await fetchDetail(id))
+    );
+    setIsCombining(false);
+    // If any of the parallel fetches expired the grant, jump to reauth so
+    // the user doesn't see a confusing per-error message.
+    if (results.some((r) => r.kind === "err" && r.error.kind === "reauth")) {
+      onReauth();
+      return;
+    }
+    const firstError = results.find(
+      (r): r is { kind: "err"; error: StravaFetchError } => r.kind === "err"
+    );
+    if (firstError !== undefined) {
+      setPickError(firstError.error);
+      return;
+    }
+    const allParts = results.flatMap((r) => (r.kind === "ok" ? r.parts : []));
+    onActivityLoaded(allParts);
+  };
+
+  const selectedCount = selected.size;
+
+  return (
+    <div
+      className={cn(
+        "flex w-full flex-col",
+        embedded
+          ? "px-6 py-6"
+          : "mx-auto max-w-2xl flex-1 px-6 pt-20 pb-32 md:px-10 lg:pt-24"
+      )}
+    >
+      <div className="flex items-center justify-between gap-4">
+        <div className="tracking-caps-display font-mono text-xs font-medium opacity-55">
+          PICK FROM STRAVA
+        </div>
+        <PickerConnection />
+      </div>
+      <h1
+        className={cn(
+          "font-heading leading-display mt-5 tracking-tight uppercase",
+          embedded ? "text-3xl sm:text-4xl" : "mt-7 text-5xl sm:text-6xl"
+        )}
+      >
+        Your recent <span className="text-primary">efforts.</span>
+      </h1>
+      <p className="mt-4 max-w-lg text-base leading-relaxed opacity-65">
+        Pick one to turn into a card — or flip the switch to combine 2+ into a
+        triathlon / multi-sport effort.
+      </p>
+
+      <div className="border-foreground/15 mt-8 flex items-center justify-between border-y py-3">
+        <ControlLabel htmlFor={multiId} variant="switch">
+          <Switch
+            checked={multiSelect}
+            id={multiId}
+            onCheckedChange={handleMultiToggle}
+          />
+          Multi-select
+        </ControlLabel>
+        {multiSelect ? (
+          <span className="font-mono text-xs tracking-wide opacity-60">
+            {selectedCount} selected
+          </span>
+        ) : null}
+      </div>
+
+      <Suspense
+        fallback={
+          <div className="mt-6 flex flex-col">
+            <ActivitySkeletons />
+          </div>
+        }
+      >
+        <ActivityResults
+          isCombining={isCombining}
+          multiSelect={multiSelect}
+          onPageChange={handlePageChange}
+          onPick={(id) => {
+            void handlePick(id);
+          }}
+          onReauth={onReauth}
+          onToggleSelect={toggleSelect}
+          page={page}
+          pickError={pickError}
+          pickingId={pickingId}
+          request={requests.page}
+          selected={selected}
+          totalPagesRequest={requests.totalPages}
+        />
+      </Suspense>
+
+      <div className="border-foreground/15 mt-8 flex justify-between border-t pt-6">
+        <Button onClick={onCancel} variant="ghost">
+          Back
+        </Button>
+      </div>
+
+      {/* §4 "Compatible with Strava" attribution. The full-screen surface gets
+          it from the page chrome; the embedded (in-dialog) picker carries its
+          own, since the page footer is inert behind the modal. */}
+      {embedded ? <StravaFooter /> : null}
+
+      {multiSelect && selectedCount > 0 ? (
+        <CombineBar
+          embedded={embedded}
+          isCombining={isCombining}
+          onCombine={() => {
+            void handleCombine();
+          }}
+          selectedCount={selectedCount}
+        />
+      ) : null}
+    </div>
+  );
+};
+
+interface PickerPaginationProps {
+  /** rows on the current page (a full page suggests there's a next one) */
+  activityCount: number;
+  onPageChange: (page: number) => void;
+  page: number;
+  show: boolean;
+  totalPages: number | null;
 }
 
-function RateLimitAlert({
-  className,
-  retryAfter,
-}: {
+type RangeItem =
+  | { kind: "page"; n: number }
+  | { kind: "ellipsis"; side: "left" | "right" };
+
+interface ActivityResultsProps {
+  isCombining: boolean;
+  multiSelect: boolean;
+  onPageChange: (page: number) => void;
+  onPick: (id: number) => void;
+  onReauth: () => void;
+  onToggleSelect: (id: number) => void;
+  page: number;
+  pickError: StravaFetchError | null;
+  pickingId: number | null;
+  request: Promise<LoadResult>;
+  selected: Set<number>;
+  totalPagesRequest: Promise<number | null>;
+}
+
+interface ActivityItemProps {
+  activity: StravaSummaryActivity;
+  disabled: boolean;
+  isPicking: boolean;
+  isSelected: boolean;
+  multiSelect: boolean;
+  onPick: () => void;
+  onToggleSelect: () => void;
+}
+
+interface StravaErrorAlertProps {
   className?: string;
-  retryAfter: number;
-}) {
-  const [seconds, setSeconds] = useState(retryAfter);
-  // Reset + tick the countdown whenever the parent hands us a fresh
-  // retryAfter (legit external-prop sync).
-  useEffect(() => {
-    /* oxlint-disable-next-line react/set-state-in-effect */
-    setSeconds(retryAfter);
-    const id = window.setInterval(() => {
-      setSeconds((s) => (s > 0 ? s - 1 : 0));
-    }, 1000);
-    return () => window.clearInterval(id);
-  }, [retryAfter]);
-  return (
-    <Alert className={className} variant="destructive">
-      <AlertTitle>Strava is rate-limiting us</AlertTitle>
-      <AlertDescription>
-        <p>
-          We hit Strava&apos;s 15-minute request quota. Try again in{" "}
-          <span className="font-mono">{seconds}s</span>.
-        </p>
-        <Button
-          className="mt-3"
-          disabled={seconds > 0}
-          onClick={() => window.location.reload()}
-          size="sm"
-          variant="outline"
-        >
-          Retry
-        </Button>
-      </AlertDescription>
-    </Alert>
-  );
+  error: StravaFetchError;
+  onReauth: () => void;
 }

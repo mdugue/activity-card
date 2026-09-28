@@ -10,7 +10,7 @@ const STRAVA_ORANGE = "#fc5200";
  * works" beat. Drawn (not a chip) so a GPX and a .fit sheet read as real
  * files sitting in the 3D room.
  */
-export function FileIcon({
+export const FileIcon = ({
   accent = RUST_BRIGHT,
   ext,
   width = 220,
@@ -18,14 +18,14 @@ export function FileIcon({
   accent?: string;
   ext: string;
   width?: number;
-}) {
+}) => {
   const height = width * 1.3;
   return (
     <svg
       height={height}
       style={{
-        filter: "drop-shadow(0 40px 60px rgba(0,0,0,0.55))",
         display: "block",
+        filter: "drop-shadow(0 40px 60px rgba(0,0,0,0.55))",
       }}
       viewBox="0 0 100 130"
       width={width}
@@ -71,7 +71,7 @@ export function FileIcon({
       </text>
     </svg>
   );
-}
+};
 
 /**
  * A Strava activity chip — an orange tile carrying a stylised "S" and the
@@ -81,13 +81,13 @@ export function FileIcon({
  * Deliberately a generic stylised mark in the app's own typeface (not a
  * reproduction of Strava's logo / wordmark) — see docs/strava.md §2.
  */
-export function StravaChip({
+export const StravaChip = ({
   coords,
   width = 220,
 }: {
   coords: Coord[];
   width?: number;
-}) {
+}) => {
   const height = width * 1.3;
   return (
     <svg
@@ -137,4 +137,4 @@ export function StravaChip({
       </g>
     </svg>
   );
-}
+};

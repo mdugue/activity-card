@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 import { FORMAT_ORDER, getFormat } from "@/theme/core/export-formats";
 import type { ExportFormatId } from "@/theme/core/export-formats";
 
@@ -8,34 +10,39 @@ import { SafeZoneOverlay } from "./safe-zone-overlay";
 // a fixed preview — the same overlay the editor preview and export sheet use.
 const PREVIEW_W = 280;
 
-function OverlayDemo({ formatId }: { formatId: ExportFormatId }) {
+/** The scaled placeholder card size, as CSS custom properties. */
+interface PreviewStyle extends CSSProperties {
+  "--preview-h": string;
+  "--preview-w": string;
+}
+
+const OverlayDemo = ({ formatId }: { formatId: ExportFormatId }) => {
   const f = getFormat(formatId);
   const scale = PREVIEW_W / f.width;
+  const style: PreviewStyle = {
+    "--preview-h": `${f.height * scale}px`,
+    "--preview-w": `${f.width * scale}px`,
+  };
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 28, padding: 28 }}>
+    <div className="flex flex-wrap gap-7 p-7">
       <div
-        style={{
-          position: "relative",
-          width: f.width * scale,
-          height: f.height * scale,
-          overflow: "hidden",
-          background: "linear-gradient(135deg, #c45a2c 0%, #1d3a2e 100%)",
-        }}
+        className="from-primary to-foreground relative h-(--preview-h) w-(--preview-w) overflow-hidden bg-linear-135"
+        style={style}
       >
         <SafeZoneOverlay format={f} scale={scale} />
       </div>
     </div>
   );
-}
+};
 
 const meta = preview.meta({
-  component: OverlayDemo,
-  tags: ["ai-generated"],
-  parameters: { layout: "centered" },
   argTypes: {
     formatId: { control: "select", options: FORMAT_ORDER },
   },
   args: { formatId: "instagram-story" },
+  component: OverlayDemo,
+  parameters: { layout: "centered" },
+  tags: ["ai-generated"],
 });
 
 export const Story9x16 = meta.story({ args: { formatId: "instagram-story" } });

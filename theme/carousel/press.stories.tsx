@@ -15,12 +15,12 @@ import { carouselArgs } from "./story-support";
 const meta = preview
   .type<{ args: ComponentProps<typeof CarouselDeck> & BackgroundArgs }>()
   .meta({
-    component: CarouselDeck,
-    title: "Carousel/Press",
-    tags: ["ai-generated"],
-    parameters: { layout: "fullscreen" },
     argTypes: { data: activityArgType, ...backgroundArgTypes },
     args: { data: SAMPLE_RIDE, ...carouselArgs("press") },
+    component: CarouselDeck,
+    parameters: { layout: "fullscreen" },
+    tags: ["ai-generated"],
+    title: "Carousel/Press",
   });
 
 export const Default = meta.story({ args: { data: SAMPLE_RIDE } });

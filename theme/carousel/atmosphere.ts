@@ -6,13 +6,13 @@
  * Pure data (mirrors `lib/strata.ts`' mood param) so it stays unit-testable.
  */
 
-import type { ParamDef } from "@/theme/core/params/kinds";
+import type { ParamDef, ThemeConfig } from "@/theme/core/params/kinds";
 
 export type CarouselAtmosphere = "dawn" | "dusk";
 
-// Extends Record so the config flows through the generic param registry /
+// Extends ThemeConfig so the config flows through the generic param registry /
 // coercer without casts; the declared key keeps its precise type.
-export interface AtmosphereConfig extends Record<string, unknown> {
+export interface AtmosphereConfig extends ThemeConfig {
   /** The light the deck is bathed in: palette, type, light/dark. */
   atmosphere: CarouselAtmosphere;
 }
@@ -36,15 +36,15 @@ const ATMOSPHERE_ORDER: CarouselAtmosphere[] = ["dawn", "dusk"];
 
 export const ATMOSPHERE_PARAMS: ParamDef[] = [
   {
-    id: "atmosphere",
-    group: "style",
-    label: "ATMOSPHERE",
-    kind: "segmented",
     default: DEFAULT_ATMOSPHERE_CONFIG.atmosphere,
+    group: "style",
+    id: "atmosphere",
+    kind: "segmented",
+    label: "ATMOSPHERE",
     options: ATMOSPHERE_ORDER.map((a) => ({
+      blurb: ATMOSPHERE_BLURBS[a],
       id: a,
       label: ATMOSPHERE_LABELS[a],
-      blurb: ATMOSPHERE_BLURBS[a],
     })),
   },
 ];

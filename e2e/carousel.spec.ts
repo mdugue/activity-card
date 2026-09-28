@@ -1,7 +1,11 @@
 import { expect, test } from "@playwright/test";
 
 import { TINY_PNG_BASE64 } from "./fixtures";
-import { enterEditViaUpload, selectCarousel } from "./helpers";
+import {
+  enterEditViaUpload,
+  selectCarousel,
+  waitForRenderSettled,
+} from "./helpers";
 
 /**
  * Carousel Post mode (seamless, deck-wide). Runs against the production build,
@@ -29,7 +33,9 @@ test.describe("carousel mode", () => {
       page.getByRole("button", { name: /^Slide \d+:/iu })
     ).toHaveCount(3);
 
-    await page.waitForTimeout(200);
+    // Let the render settle so a runtime error inside a deferred useEffect or
+    // font fallback has time to surface.
+    await waitForRenderSettled(page);
     expect(errors).toEqual([]);
   });
 
@@ -63,9 +69,9 @@ test.describe("carousel mode", () => {
     page,
   }) => {
     await page.locator('input[type="file"][accept="image/*"]').setInputFiles({
-      name: "photo.png",
-      mimeType: "image/png",
       buffer: Buffer.from(TINY_PNG_BASE64, "base64"),
+      mimeType: "image/png",
+      name: "photo.png",
     });
     await expect(page.getByText(/Photo loaded/iu)).toBeVisible();
     await expect(
@@ -79,9 +85,9 @@ test.describe("carousel mode", () => {
     await page.getByRole("button", { name: /^FRAME\b/iu }).click();
     await expect(page.getByText(/no room for a photo/iu)).toHaveCount(0);
     await page.locator('input[type="file"][accept="image/*"]').setInputFiles({
-      name: "photo.png",
-      mimeType: "image/png",
       buffer: Buffer.from(TINY_PNG_BASE64, "base64"),
+      mimeType: "image/png",
+      name: "photo.png",
     });
     await expect(page.getByText(/Photo loaded/iu)).toBeVisible();
   });
@@ -115,9 +121,9 @@ test.describe("carousel photo backdrop", () => {
     page,
   }) => {
     await page.locator('input[type="file"][accept="image/*"]').setInputFiles({
-      name: "photo.png",
-      mimeType: "image/png",
       buffer: Buffer.from(TINY_PNG_BASE64, "base64"),
+      mimeType: "image/png",
+      name: "photo.png",
     });
     await expect(page.getByText(/Photo loaded/iu)).toBeVisible();
 
