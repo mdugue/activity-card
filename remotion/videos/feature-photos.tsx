@@ -126,10 +126,10 @@ const PaletteStep = ({ durationInFrames }: { durationInFrames: number }) => {
 
 // Step 3 — filter presets + grain, via the same context the app provides.
 const FILTER_BEATS = [
-  { filter: "none", grain: false, label: "Original" },
-  { filter: "warm", grain: false, label: "Warm" },
-  { filter: "noir", grain: false, label: "Noir" },
-  { filter: "mono", grain: true, label: "Mono + grain" },
+  { grain: false, label: "Original", preset: "none" },
+  { grain: false, label: "Warm", preset: "warm" },
+  { grain: false, label: "Noir", preset: "noir" },
+  { grain: true, label: "Mono + grain", preset: "mono" },
 ];
 
 const FiltersStep = ({ durationInFrames }: { durationInFrames: number }) => {
@@ -150,7 +150,8 @@ const FiltersStep = ({ durationInFrames }: { durationInFrames: number }) => {
       <PreloadImg src={staticFile(RIDE_PHOTO)} />
       <PhotoFxProvider
         value={{
-          effects: { ...NO_EFFECTS, filter: beat.filter, grain: beat.grain },
+          // oxlint-disable-next-line remotion/slow-css-property -- not CSS: `PhotoEffects.filter` is the app's filter-preset id, fed to the real theme's photo layer
+          effects: { ...NO_EFFECTS, filter: beat.preset, grain: beat.grain },
           imageSize: RIDE_SIZE,
         }}
       >

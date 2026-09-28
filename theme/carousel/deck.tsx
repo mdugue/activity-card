@@ -82,6 +82,8 @@ export const CarouselDeck = ({
   // themes. The deck-wide "Use as background" switch gates it — the same flag as
   // the single card. (Data is already visibility-stripped upstream.)
   const showPhoto = Boolean(photoUrl) && visibility.photoBackdrop;
+  const coverPhotoUrl =
+    showPhoto && photoUrl !== undefined && photoUrl !== null ? photoUrl : null;
   const veiled = showPhoto && style.veil;
   const desaturate = showPhoto && style.routeStyle === "desaturated";
 
@@ -109,10 +111,7 @@ export const CarouselDeck = ({
             sized/clamped against it. Rendering a cover fallback before then (or on
             decode failure) would drop the rotate/flip/filter effects and use
             different geometry than the export, so preview and output diverge. */}
-          {showPhoto &&
-          photoUrl !== undefined &&
-          photoUrl !== null &&
-          imageSize ? (
+          {coverPhotoUrl !== null && imageSize ? (
             <CoverPhoto
               boxH={slideH}
               boxW={stripW}
@@ -121,7 +120,7 @@ export const CarouselDeck = ({
                 desaturate ? "saturate(0.6) brightness(1.05)" : undefined
               }
               imageSize={imageSize}
-              photoUrl={photoUrl}
+              photoUrl={coverPhotoUrl}
               transform={imageTransform}
             />
           ) : null}

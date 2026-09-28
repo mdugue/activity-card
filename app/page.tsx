@@ -2,48 +2,36 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 import { EffortWordmark } from "@/components/app/effort-wordmark";
 import { EmptyState } from "@/components/app/empty-state";
 import { ModeToggle } from "@/components/app/mode-toggle";
 import type { CardMode } from "@/components/app/mode-toggle";
 import type { OnboardingResult } from "@/components/app/onboarding-wizard";
-import {
-  loadPersistedUi,
-  migrateCarouselTheme,
-  migrateColorChoice,
-  migrateThemeConfigs,
-  savePersistedUi,
-} from "@/components/app/persisted-ui";
 import { StravaFooter } from "@/components/app/strava-footer";
 import { useCardPhoto } from "@/hooks/use-card-photo";
 import { useCarousel } from "@/hooks/use-carousel";
+import type { CarouselController } from "@/hooks/use-carousel";
+import { useEditorPrefs } from "@/hooks/use-editor-prefs";
 import { useImagePalette } from "@/hooks/use-image-palette";
 import { useStravaReturnToast } from "@/hooks/use-strava-return-toast";
 import type { ActivityData, ActivitySource, Sport } from "@/lib/activity";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
-import { createDebouncedWriter } from "@/lib/debounced-writer";
 import { formatDateUpper } from "@/lib/format";
 import type { ParsedActivity } from "@/lib/parse-activity";
 import { cn } from "@/lib/utils";
-import {
-  CAROUSEL_THEMES,
-  DEFAULT_CAROUSEL_THEME,
-} from "@/theme/carousel/registry";
+import { CAROUSEL_THEMES } from "@/theme/carousel/registry";
 import type { CarouselThemeId } from "@/theme/carousel/registry";
 import { resolveColors } from "@/theme/core/colors";
-import type { ColorChoice, ColorScheme } from "@/theme/core/colors";
+import type { ColorScheme } from "@/theme/core/colors";
 import { DEFAULT_FORMAT_ID, getFormat } from "@/theme/core/export-formats";
 import type { ExportFormatId } from "@/theme/core/export-formats";
+import type { ThemeConfig } from "@/theme/core/params/kinds";
 import { coerceConfig } from "@/theme/core/params/resolve";
 import { effectiveChoiceFor } from "@/theme/core/theme-contract";
 import type { ThemeBase, ThemePhotoPolicy } from "@/theme/core/theme-contract";
-import {
-  applyVisibility,
-  DEFAULT_VISIBILITY,
-  themeAvailability,
-} from "@/theme/core/visibility";
+import { applyVisibility, themeAvailability } from "@/theme/core/visibility";
 import type { Visibility } from "@/theme/core/visibility";
 import type { EditorSession } from "@/theme/editor/editor-session";
 import type { ThemeId } from "@/theme/editor/render-theme";
@@ -75,53 +63,76 @@ const preloadExport = (): void => {
   void loadCarouselExportSheet();
 };
 
-// UI prefs are written at most once per quiet period (and flushed when the
-// page is hidden — see the effects in `Home`). One writer for the one page.
-const PERSIST_DEBOUNCE_MS = 300;
-const persistUi = createDebouncedWriter(savePersistedUi, PERSIST_DEBOUNCE_MS);
+const handleConnectStrava = (): void => {
+  if (typeof window !== "undefined") {
+    window.location.href = "/api/strava/authorize";
+  }
+};
 
 /** Holds the state's flex slot while its chunk loads — no collapse/jump. */
 const StateFallback = () => <div aria-busy className="flex flex-1 flex-col" />;
 
-const EditState = dynamic(
-  async () => await loadEditState().then((m) => m.EditState),
-  {
-    loading: StateFallback,
-    ssr: false,
-  }
-);
+const EditState = dynamic(async () => (await loadEditState()).EditState, {
+  loading: StateFallback,
+  ssr: false,
+});
 const CarouselEditState = dynamic(
-  async () => await loadCarouselEditState().then((m) => m.CarouselEditState),
+  async () => (await loadCarouselEditState()).CarouselEditState,
   { loading: StateFallback, ssr: false }
 );
-const ExportSheet = dynamic(
-  async () => await loadExportSheet().then((m) => m.ExportSheet),
-  { loading: StateFallback, ssr: false }
-);
+const ExportSheet = dynamic(async () => (await loadExportSheet()).ExportSheet, {
+  loading: StateFallback,
+  ssr: false,
+});
 const CarouselExportSheet = dynamic(
-  async () =>
-    await loadCarouselExportSheet().then((m) => m.CarouselExportSheet),
+  async () => (await loadCarouselExportSheet()).CarouselExportSheet,
   { loading: StateFallback, ssr: false }
 );
 const StravaPicker = dynamic(
-  async () =>
-    await import("@/components/app/strava-picker").then((m) => m.StravaPicker),
+  async () => (await import("@/components/app/strava-picker")).StravaPicker,
   { loading: StateFallback, ssr: false }
 );
 
+/** `s` when it holds text, `undefined` when it's empty — so `??` chains fall
+ *  through blank names the way a truthiness check would. */
+const nonEmpty = (s: string | undefined): string | undefined =>
+  s === "" ? undefined : s;
+
 const adoptParsed = (
   parsed: ParsedActivity,
-  persistedAthleteName?: string,
-  source: ActivitySource = "upload"
+  persistedAthleteName: string,
+  source: ActivitySource
 ): ActivityData =>
   // A real activity carries ONLY what its file contains — never sample
   // fixtures. Themes render conditionally on optional fields, so anything the
   // parser couldn't compute (splits, zones, streams) simply doesn't appear.
   ({
     ...parsed,
-    athleteName: parsed.athleteName || persistedAthleteName || "",
+    athleteName: nonEmpty(parsed.athleteName) ?? persistedAthleteName,
     source,
   });
+
+/** Adopt one parsed file as-is, or several as an assembled triathlon. */
+const adoptParts = (
+  parts: ParsedActivity[],
+  source: ActivitySource,
+  persistedAthleteName: string
+): ActivityData => {
+  if (parts.length === 1) {
+    return adoptParsed(parts[0], persistedAthleteName, source);
+  }
+  const tri = assembleTriathlon(parts);
+  // Seed athlete name on assembled triathlons too, since assembleTriathlon
+  // pulls from the first parsed file which may be blank.
+  return {
+    ...tri,
+    athleteName:
+      nonEmpty(tri.athleteName) ??
+      nonEmpty(persistedAthleteName) ??
+      tri.athleteName,
+    source,
+  };
+};
 
 /**
  * The export overview, picked by mode. Both modes are reached the same way (the
@@ -144,7 +155,7 @@ const ExportView = ({
 }: {
   carouselTheme: CarouselThemeId;
   colors: ColorScheme;
-  config: Record<string, unknown>;
+  config: ThemeConfig;
   count: number;
   data: ActivityData;
   mode: CardMode;
@@ -218,465 +229,72 @@ const EditTopBar = ({
 );
 
 const Header = ({ date, status }: { date?: string; status?: string }) => {
-  const upper = date ? formatDateUpper(date) : "";
+  const upper =
+    date === undefined || date === "" ? "" : formatDateUpper(date);
   return (
     <header className="absolute top-0 right-0 left-0 z-10 flex items-start justify-between px-6 pt-7 md:px-10">
       <EffortWordmark />
-      {status ? (
-        <div className="font-mono text-[10px] font-medium tracking-[0.22em] opacity-55 sm:text-[11px]">
+      {status !== undefined && status !== "" ? (
+        <div className="font-mono text-xs font-medium tracking-[0.22em] opacity-55">
           {status}
         </div>
       ) : (
-        <div className="hidden font-mono text-[11px] font-medium tracking-[0.22em] opacity-55 sm:block">
-          ACTIVITY CARD{upper ? ` · ${upper}` : ""}
+        <div className="hidden font-mono text-xs font-medium tracking-[0.22em] opacity-55 sm:block">
+          ACTIVITY CARD{upper === "" ? "" : ` · ${upper}`}
         </div>
       )}
     </header>
   );
 };
 
-const Home = () => {
-  const [state, setState] = useState<AppState>("empty");
-  // Set after the Strava OAuth round-trip so the empty state opens the wizard
-  // with the Strava picker showing (instead of a separate full-screen state).
-  const [autoStravaPicker, setAutoStravaPicker] = useState(false);
-  const [data, setData] = useState<ActivityData | null>(null);
-  const [theme, setTheme] = useState<ThemeId>("altitude");
-  // Which platform format the single-card stage previews (the export sheet
-  // still offers the full set); the 4:5 master is the default.
-  const [previewFormat, setPreviewFormat] =
-    useState<ExportFormatId>(DEFAULT_FORMAT_ID);
-  // Carousel themes have their own id space (Trace, Ascent, …), so the
-  // carousel keeps its own selection separate from the single-card theme.
-  const [carouselTheme, setCarouselTheme] = useState<CarouselThemeId>(
-    DEFAULT_CAROUSEL_THEME
-  );
-  // The user's colour choice — a preset scheme or a photo-derived strategy.
-  // `null` means "the active theme's default", so each theme keeps its own
-  // signature colours until the user explicitly picks.
-  const [colorChoice, setColorChoice] = useState<ColorChoice | null>(null);
-  const [visibility, setVisibility] = useState<Visibility>(DEFAULT_VISIBILITY);
-  // Per-theme parameter configs, keyed by theme/config key (e.g. "altitude",
-  // "strata", "photo"). One generic slot replaces the per-theme config states;
-  // `resolveThemeConfig` coerces each read so stale/garbage values are safe.
-  const [themeConfigs, setThemeConfigs] = useState<Record<string, unknown>>({});
+/** The editor screen: the top bar over the mode's editor. */
+const EditView = ({
+  carousel,
+  carouselTheme,
+  mode,
+  onCarouselThemeChange,
+  onExport,
+  onModeChange,
+  onPreviewFormatChange,
+  onSingleThemeChange,
+  previewFormat,
+  session,
+  theme,
+}: {
+  carousel: CarouselController;
+  carouselTheme: CarouselThemeId;
+  mode: CardMode;
+  onCarouselThemeChange: (id: CarouselThemeId) => void;
+  onExport: () => void;
+  onModeChange: (mode: CardMode) => void;
+  onPreviewFormatChange: (id: ExportFormatId) => void;
+  onSingleThemeChange: (id: ThemeId) => void;
+  previewFormat: ExportFormatId;
+  session: EditorSession;
+  theme: ThemeId;
+}) => (
+  <div className="flex flex-1 flex-col max-lg:min-h-0">
+    <EditTopBar mode={mode} onModeChange={onModeChange} />
+    {mode === "carousel" ? (
+      <CarouselEditState
+        carousel={carousel}
+        format={getFormat(previewFormat)}
+        onExport={onExport}
+        onFormatChange={onPreviewFormatChange}
+        onThemeChange={onCarouselThemeChange}
+        session={session}
+        theme={carouselTheme}
+      />
+    ) : (
+      <EditState
+        format={getFormat(previewFormat)}
+        onExport={onExport}
+        onFormatChange={onPreviewFormatChange}
+        onThemeChange={onSingleThemeChange}
+        session={session}
+        theme={theme}
+      />
+    )}
+  </div>
+);
 
-  const [mode, setMode] = useState<CardMode>("single");
-  const carousel = useCarousel(CAROUSEL_THEMES[carouselTheme].panels.length);
-  // Held outside `data` so it survives between activities and can seed
-  // `adoptParsed` when the parsed file lacks an athlete name.
-  // React 19 requires an explicit initial value.
-  // oxlint-disable-next-line unicorn/no-useless-undefined
-  const persistedAthleteNameRef = useRef<string | undefined>(undefined);
-
-  // Both families express a theme through the same descriptor core
-  // (`ThemeBase`): one lookup supplies identity, params, colour and photo
-  // policy for whichever mode is editing. The single-card `strata` and the
-  // carousel `strata` share the id, so they share one config slot.
-  const activeTheme: ThemeBase =
-    mode === "carousel"
-      ? CAROUSEL_THEMES[carouselTheme]
-      : SINGLE_CARD_THEMES[theme];
-  // The background photo cluster: object URL + pan/zoom + filter effects,
-  // the resize-on-adopt (stale results dropped) and the object-URL revocation
-  // lifecycle (see the hook). A new photo adopts the active theme's policy.
-  const photo = useCardPhoto(activeTheme.photo);
-  const activeConfig = coerceConfig(
-    activeTheme.defaults,
-    activeTheme.params,
-    themeConfigs[activeTheme.id]
-  );
-  // Merge over the existing slot rather than replace it: single-card and carousel
-  // "strata" share one config id, but their param sets differ (the carousel adds
-  // MARKS keys the single card doesn't declare). A bare replace with the active
-  // theme's coerced config would drop the sibling family's keys; merging keeps
-  // them (each family's read coerces away what it doesn't use).
-  const setActiveConfig = (next: Record<string, unknown>) => {
-    setThemeConfigs((prev) => {
-      const slot = prev[activeTheme.id];
-      const base = slot && typeof slot === "object" ? slot : {};
-      return { ...prev, [activeTheme.id]: { ...base, ...next } };
-    });
-  };
-
-  // Colour resolution: the active theme's policy supplies the default scheme
-  // and (for photo-first themes like Exposure) a default photo-derived choice;
-  // the user's explicit choice overrides. A photo-kind choice resolves through
-  // the extracted palette and falls back to the theme default while none is
-  // available. One palette extraction serves the whole app (the colour
-  // control's swatches + any photo-derived choice).
-  const effectiveColorChoice = effectiveChoiceFor(activeTheme, colorChoice);
-  const photoPalette = useImagePalette(photo.url);
-  const colors = resolveColors(
-    effectiveColorChoice,
-    activeTheme.colors.default,
-    photoPalette
-  );
-
-  // Restore UI prefs (theme, accent, visibility, moods, athleteName) on mount.
-  // Hydrating from localStorage is a legitimate cold-start sync; the
-  // setState-in-effect rule's "fix" (useSyncExternalStore + a custom write
-  // path) buys nothing over this small, one-shot read.
-  useEffect(() => {
-    const persisted = loadPersistedUi();
-    /* oxlint-disable react/set-state-in-effect */
-    // Validate both ids against the current theme sets: a stale id from an
-    // older build or hand-edited storage would otherwise throw downstream on
-    // the registry lookup.
-    if (persisted.theme && persisted.theme in SINGLE_CARD_THEMES) {
-      setTheme(persisted.theme);
-    }
-    const migratedCarousel = migrateCarouselTheme(persisted);
-    if (migratedCarousel) {
-      setCarouselTheme(migratedCarousel.id);
-    }
-    const migratedChoice = migrateColorChoice(persisted);
-    if (migratedChoice) {
-      setColorChoice(migratedChoice);
-    }
-    if (persisted.visibility) {
-      setVisibility({ ...DEFAULT_VISIBILITY, ...persisted.visibility });
-    }
-    const configs = migrateThemeConfigs(persisted, migratedCarousel);
-    if (Object.keys(configs).length > 0) {
-      setThemeConfigs(configs);
-    }
-    if (persisted.mode) {
-      setMode(persisted.mode);
-    }
-    if (persisted.athleteName) {
-      persistedAthleteNameRef.current = persisted.athleteName;
-    }
-    /* oxlint-enable react/set-state-in-effect */
-  }, []);
-
-  // Persist on change — debounced, since a slider drag changes `themeConfigs`
-  // every tick and each save is a JSON.stringify + synchronous localStorage
-  // write. Athlete name comes from `data` (which the user edits in-place), so
-  // it shares this effect rather than getting its own.
-  useEffect(() => {
-    persistUi.schedule({
-      athleteName: data?.athleteName || persistedAthleteNameRef.current,
-      carouselTheme,
-      colorChoice: colorChoice ?? undefined,
-      mode,
-      theme,
-      themeConfigs,
-      visibility,
-    });
-  }, [
-    theme,
-    carouselTheme,
-    colorChoice,
-    visibility,
-    themeConfigs,
-    mode,
-    data?.athleteName,
-  ]);
-
-  // The debounce timer never fires if the tab is closed or backgrounded (and
-  // then discarded) inside the quiet period, so write the pending prefs out
-  // as soon as the page is hidden — the last change is never lost.
-  useEffect(() => {
-    const flush = () => {
-      persistUi.flush();
-    };
-    const onVisibilityChange = () => {
-      if (document.visibilityState === "hidden") {
-        flush();
-      }
-    };
-    window.addEventListener("pagehide", flush);
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    return () => {
-      window.removeEventListener("pagehide", flush);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-      flush();
-    };
-  }, []);
-
-  // In the editor the next stop is the export sheet: warm its chunk (and,
-  // through it, the export pipeline) while the user edits.
-  useEffect(() => {
-    if (state === "edit") {
-      preloadExport();
-    }
-  }, [state]);
-
-  // After the Strava OAuth round-trip we land on `/?strava=...` — toast the
-  // outcome and, on success, open the wizard with the Strava picker showing.
-  useStravaReturnToast(() => {
-    setAutoStravaPicker(true);
-  });
-
-  const adoptParts = (
-    parts: ParsedActivity[],
-    source: ActivitySource
-  ): ActivityData => {
-    if (parts.length === 1) {
-      return adoptParsed(parts[0], persistedAthleteNameRef.current, source);
-    }
-    const tri = assembleTriathlon(parts);
-    // Seed athlete name on assembled triathlons too, since assembleTriathlon
-    // pulls from the first parsed file which may be blank.
-    return {
-      ...tri,
-      athleteName:
-        tri.athleteName || persistedAthleteNameRef.current || tri.athleteName,
-      source,
-    };
-  };
-
-  const handleFilesLoaded = (parts: ParsedActivity[]) => {
-    setData(adoptParts(parts, "upload"));
-    carousel.regenerate();
-    setState("edit");
-  };
-
-  const handleStravaActivityLoaded = (parts: ParsedActivity[]) => {
-    setData(adoptParts(parts, "strava"));
-    carousel.regenerate();
-    setState("edit");
-  };
-
-  const handleConnectStrava = () => {
-    if (typeof window !== "undefined") {
-      window.location.href = "/api/strava/authorize";
-    }
-  };
-
-  const handleOpenStravaPicker = () => {
-    setState("picking-strava");
-  };
-
-  const handleCancelStravaPicker = () => {
-    setAutoStravaPicker(false);
-    setState("empty");
-  };
-
-  const handleTitleChange = (title: string) => {
-    setData((prev) => (prev ? { ...prev, title } : prev));
-  };
-
-  const handleSportChange = (sport: Sport) => {
-    setData((prev) => (prev ? { ...prev, sport } : prev));
-  };
-
-  const handleAthleteNameChange = (name: string) => {
-    persistedAthleteNameRef.current = name;
-    setData((prev) => (prev ? { ...prev, athleteName: name } : prev));
-  };
-
-  const handleLocationChange = (location: string) => {
-    setData((prev) => (prev ? { ...prev, location } : prev));
-  };
-
-  // Selecting a theme (either family) applies its photo policy: its default
-  // backdrop state (STRATA / Data / Triathlon default OFF; the photo-led
-  // themes default ON) and — when there's a photo to affect — its signature
-  // filter + grain. The user can still change both afterwards.
-  const applyThemePhotoPolicy = (policy: ThemePhotoPolicy) => {
-    setVisibility((v) => ({ ...v, photoBackdrop: policy.defaultOn }));
-    if (photo.url) {
-      photo.applyPolicyEffects(policy);
-    }
-  };
-
-  const handlePhotoChange = async (file: File | null) => {
-    // A new (or removed) photo invalidates any previous pan/zoom. A fresh photo
-    // adopts the active theme's photo policy from scratch (effects reset, not
-    // carried over from the previous photo). The hook caps oversized photos
-    // first, reads the policy once the capped photo lands, and drops a result
-    // a newer pick/removal has superseded (`null`).
-    const policy = await photo.adopt(file);
-    if (file && policy) {
-      setVisibility((v) => ({ ...v, photoBackdrop: policy.defaultOn }));
-    }
-  };
-
-  const handleSingleThemeChange = (next: ThemeId) => {
-    setTheme(next);
-    applyThemePhotoPolicy(SINGLE_CARD_THEMES[next].photo);
-  };
-
-  // The onboarding wizard hands back a parsed upload or a sample, plus an
-  // optional background photo, then drops the user into the editor pre-filled.
-  const handleOnboardingComplete = ({
-    parts,
-    photo: onboardingPhoto,
-    sample,
-    source,
-  }: OnboardingResult) => {
-    const next = parts ? adoptParts(parts, source) : sample;
-    if (!next) {
-      return;
-    }
-    setData(next);
-    if (onboardingPhoto) {
-      // Fire-and-forget: capping the photo is asynchronous, and the editor
-      // opens on the activity alone — the photo lands a frame later.
-      void handlePhotoChange(onboardingPhoto);
-    }
-    carousel.regenerate();
-    setState("edit");
-  };
-
-  const handleCarouselThemeChange = (id: CarouselThemeId) => {
-    setCarouselTheme(id);
-    applyThemePhotoPolicy(CAROUSEL_THEMES[id].photo);
-  };
-
-  const handleDownload = () => {
-    setState("download");
-  };
-
-  const handleKeepEditing = () => {
-    setState("edit");
-  };
-
-  const handleNew = () => {
-    setData(null);
-    // The hook's effect cleanup revokes the dropped object URL.
-    photo.clear();
-    setAutoStravaPicker(false);
-    setState("empty");
-  };
-
-  const visibleData = data ? applyVisibility(data, visibility) : data;
-
-  // Everything the editors share, in one object (see EditorSession). Built
-  // per render with the mode-appropriate availability + colour policy.
-  const session: EditorSession | null =
-    visibleData && data
-      ? {
-          athleteName: data.athleteName,
-          available:
-            mode === "carousel"
-              ? themeAvailability(data, CAROUSEL_THEMES[carouselTheme])
-              : themeAvailability(data, SINGLE_CARD_THEMES[theme]),
-          color: {
-            adjustable: activeTheme.colors.userAdjustable,
-            choice: effectiveColorChoice,
-            isDefault: colorChoice === null,
-            onChange: setColorChoice,
-            scheme: colors,
-          },
-          config: {
-            onChange: setActiveConfig,
-            palette: photoPalette,
-            params: activeTheme.params,
-            value: activeConfig,
-          },
-          data: visibleData,
-          location: data.location,
-          onAthleteNameChange: handleAthleteNameChange,
-          onFilesLoaded: handleFilesLoaded,
-          onLocationChange: handleLocationChange,
-          onOpenStravaPicker: handleOpenStravaPicker,
-          onSportChange: handleSportChange,
-          onTitleChange: handleTitleChange,
-          onVisibilityChange: setVisibility,
-          photo: {
-            effects: photo.effects,
-            onChange: handlePhotoChange,
-            onEffectsChange: photo.setEffects,
-            onTransformChange: photo.setTransform,
-            transform: photo.transform,
-            url: photo.url,
-          },
-          title: data.title,
-          visibility,
-        }
-      : null;
-
-  return (
-    <div
-      className={cn(
-        "bg-background text-foreground relative flex flex-col overflow-hidden",
-        // The editor is a non-scrolling app-shell pinned to the dynamic viewport
-        // on mobile (panels scroll internally, the page doesn't). The empty
-        // state is a scroll-snap landing that owns its own internal scroller, so
-        // it's pinned to the viewport too. Every other screen keeps its natural,
-        // scrollable height.
-        // Desktop: drop the app-shell's `overflow-hidden` (a scroll container
-        // that never scrolls — the window does) so descendant `position:sticky`
-        // (the preview and the export dock) resolves against the viewport
-        // instead of being trapped and pinned-to-nothing.
-        state === "edit" &&
-          "h-dvh lg:h-auto lg:min-h-screen lg:overflow-visible",
-        state === "empty" && "h-dvh",
-        state !== "edit" && state !== "empty" && "min-h-screen"
-      )}
-    >
-      {/* The empty-state landing renders its own wordmark header per section,
-          the editor has its own top bar, and the export sheet carries its own
-          heading — so the shared (absolute) header would overlap there. Show it
-          only on the remaining non-editor screens (e.g. the Strava picker). */}
-      {state === "edit" || state === "empty" || state === "download" ? null : (
-        <Header date={data?.date} />
-      )}
-      {state === "empty" ? (
-        <EmptyState
-          autoStravaPicker={autoStravaPicker}
-          onComplete={handleOnboardingComplete}
-          onIntent={preloadEditor}
-        />
-      ) : null}
-      {state === "picking-strava" ? (
-        <StravaPicker
-          onActivityLoaded={handleStravaActivityLoaded}
-          onCancel={handleCancelStravaPicker}
-          onReauth={handleConnectStrava}
-        />
-      ) : null}
-      {state === "edit" && session ? (
-        <div className="flex flex-1 flex-col max-lg:min-h-0">
-          <EditTopBar mode={mode} onModeChange={setMode} />
-          {mode === "carousel" ? (
-            <CarouselEditState
-              carousel={carousel}
-              format={getFormat(previewFormat)}
-              onExport={handleDownload}
-              onFormatChange={setPreviewFormat}
-              onThemeChange={handleCarouselThemeChange}
-              session={session}
-              theme={carouselTheme}
-            />
-          ) : (
-            <EditState
-              format={getFormat(previewFormat)}
-              onExport={handleDownload}
-              onFormatChange={setPreviewFormat}
-              onThemeChange={handleSingleThemeChange}
-              session={session}
-              theme={theme}
-            />
-          )}
-        </div>
-      ) : null}
-      {state === "download" && visibleData ? (
-        <ExportView
-          carouselTheme={carouselTheme}
-          colors={colors}
-          config={activeConfig}
-          count={carousel.count}
-          data={visibleData}
-          mode={mode}
-          onKeepEditing={handleKeepEditing}
-          onNew={handleNew}
-          photo={photo}
-          routeCoordinates={data?.routeCoordinates}
-          theme={theme}
-          visibility={visibility}
-        />
-      ) : null}
-      {/* "Compatible with Strava" (§4) on the Strava-facing surfaces. The empty
-          landing carries the mark in its own footer section; the picker uses the
-          standalone footer. The editor/download stay clean — the card carries no
-          Strava mark by brand rule. */}
-      {state === "picking-strava" ? <StravaFooter /> : null}
-    </div>
-  );
-};
-
-export default Home;

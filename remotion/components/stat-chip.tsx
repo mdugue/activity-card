@@ -101,9 +101,11 @@ export const PaletteChip = ({
     <div
       style={{
         borderRadius: RADIUS.md,
-        boxShadow: active
-          ? `0 0 0 3px ${RUST_BRIGHT}`
-          : "0 0 0 1px rgba(247,243,236,0.18)",
+        // A solid, blur-free ring outside the border box — drawn as an outline
+        // (which follows the radius) rather than a spread-only box-shadow.
+        outline: active
+          ? `3px solid ${RUST_BRIGHT}`
+          : "1px solid rgba(247,243,236,0.18)",
         display: "flex",
         overflow: "hidden",
       }}
