@@ -174,35 +174,55 @@ function sportSpecificStats(
   return {};
 }
 
+/**
+ * Filename / activity-name hints, matched as whole words and checked in this
+ * order (run → swim → ride → triathlon): the first hit wins.
+ */
+const NAME_SPORT_WORDS: readonly [ParsedSport, readonly string[]][] = [
+  ["run", ["run", "running"]],
+  ["swim", ["swim", "swimming"]],
+  ["ride", ["ride", "bike", "cycling"]],
+  ["triathlon", ["triathlon"]],
+];
+
+/**
+ * Map a declared sport type (GPX `<type>`, FIT `sport`, Strava `sport_type`)
+ * to our sport. The declared type always wins; the filename (for Strava, the
+ * activity name) is only consulted when the type is missing or unrecognised,
+ * and then by whole words so "brunch" is not a run and "strides" not a ride.
+ * Defaults to ride.
+ */
 export function detectSport(
   raw: string | undefined,
   filename: string
 ): ParsedSport {
-  const s = (raw || "").toLowerCase();
-  const f = filename.toLowerCase();
-  if (
-    s.includes("cycl") ||
-    s.includes("bike") ||
-    s.includes("ride") ||
-    f.includes("ride") ||
-    f.includes("bike")
-  ) {
-    return "ride";
+  const declared = sportFromDeclaredType((raw || "").toLowerCase());
+  if (declared) {
+    return declared;
   }
-  if (s.includes("run") || f.includes("run")) {
-    return "run";
-  }
-  if (s.includes("swim") || f.includes("swim")) {
-    return "swim";
-  }
-  if (
-    s.includes("triathlon") ||
-    s.includes("multisport") ||
-    f.includes("triathlon")
-  ) {
-    return "triathlon";
+  const words = new Set(filename.toLowerCase().split(/[^a-z]+/u));
+  for (const [sport, hints] of NAME_SPORT_WORDS) {
+    if (hints.some((w) => words.has(w))) {
+      return sport;
+    }
   }
   return "ride";
+}
+
+function sportFromDeclaredType(s: string): ParsedSport | undefined {
+  if (s.includes("cycl") || s.includes("bike") || s.includes("ride")) {
+    return "ride";
+  }
+  if (s.includes("run")) {
+    return "run";
+  }
+  if (s.includes("swim")) {
+    return "swim";
+  }
+  if (s.includes("triathlon") || s.includes("multisport")) {
+    return "triathlon";
+  }
+  return undefined;
 }
 
 function cumulativeDistanceKm(points: TrackPoint[]): number {

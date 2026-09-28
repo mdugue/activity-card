@@ -12,7 +12,8 @@ import type { ParsedActivity, TrackPoint } from "./parse-shared";
 
 const GPX_EXT_RE = /\.gpx$/iu;
 
-// fast-xml-parser may yield numbers or strings depending on input; accept both
+// fast-xml-parser may yield numbers or strings depending on input (a
+// `<name>2024</name>` or `<type>9</type>` arrives as a number); accept both
 // and coerce in the mapping below.
 const Numeric = z.union([z.string(), z.number()]);
 
@@ -21,20 +22,19 @@ const TrkPtSchema = z.object({
   "@_lon": Numeric,
   ele: z.optional(Numeric),
   time: z.optional(z.string()),
-  extensions: z.optional(
-    z.object({
-      "gpxtpx:TrackPointExtension": z.optional(
-        z.object({
-          "gpxtpx:hr": z.optional(Numeric),
-          "gpxtpx:cad": z.optional(Numeric),
-        })
-      ),
-    })
-  ),
+  // The TrackPointExtension namespace prefix varies by exporter (`gpxtpx:`,
+  // Garmin's `ns3:`, …), so keep every key and pick by suffix in the mapping.
+  extensions: z.optional(z.record(z.string(), z.unknown())),
 });
 
 const TrkSegSchema = z.object({
   trkpt: z.union([TrkPtSchema, z.array(TrkPtSchema)]),
+});
+
+const TrkSchema = z.object({
+  name: z.optional(Numeric),
+  type: z.optional(Numeric),
+  trkseg: z.optional(z.union([TrkSegSchema, z.array(TrkSegSchema)])),
 });
 
 const GpxSchema = z.object({
@@ -42,21 +42,18 @@ const GpxSchema = z.object({
     z.object({
       metadata: z.optional(
         z.object({
-          name: z.optional(z.string()),
+          name: z.optional(Numeric),
           time: z.optional(z.string()),
         })
       ),
-      trk: z.optional(
-        z.object({
-          name: z.optional(z.string()),
-          type: z.optional(z.string()),
-          trkseg: z.optional(z.union([TrkSegSchema, z.array(TrkSegSchema)])),
-        })
-      ),
+      // Several `<trk>` elements parse to an array.
+      trk: z.optional(z.union([TrkSchema, z.array(TrkSchema)])),
     })
   ),
 });
 
+type GpxTrk = z.infer<typeof TrkSchema>;
+type GpxTrkSeg = z.infer<typeof TrkSegSchema>;
 type GpxTrkPt = z.infer<typeof TrkPtSchema>;
 
 /**
@@ -71,6 +68,27 @@ function toFiniteNumber(v: unknown): number | undefined {
   }
   const n = typeof v === "number" ? v : Number(v);
   return Number.isFinite(n) ? n : undefined;
+}
+
+/** A string/number XML text value as a string, or `undefined` if empty. */
+function toText(v: string | number | undefined): string | undefined {
+  return v === undefined || v === "" ? undefined : String(v);
+}
+
+/** The value of the first key in `obj` ending with `suffix`, whatever its namespace prefix. */
+function pickBySuffix(obj: unknown, suffix: string): unknown {
+  if (typeof obj !== "object" || obj === null) {
+    return;
+  }
+  const key = Object.keys(obj).find((k) => k.endsWith(suffix));
+  return key === undefined ? undefined : (obj as Record<string, unknown>)[key];
+}
+
+function asArray<T>(v: T | T[] | undefined): T[] {
+  if (v === undefined) {
+    return [];
+  }
+  return Array.isArray(v) ? v : [v];
 }
 
 export function parseGpx(text: string, filename: string): ParsedActivity {
@@ -92,41 +110,34 @@ export function parseGpx(text: string, filename: string): ParsedActivity {
   }
   const xml = result.data;
 
-  const trk = xml.gpx?.trk;
-  let segs: { trkpt: GpxTrkPt | GpxTrkPt[] }[] = [];
-  if (Array.isArray(trk?.trkseg)) {
-    segs = trk.trkseg;
-  } else if (trk?.trkseg) {
-    segs = [trk.trkseg];
-  }
-  const flatPts: GpxTrkPt[] = [];
-  for (const seg of segs) {
-    const pts = seg.trkpt;
-    if (Array.isArray(pts)) {
-      flatPts.push(...pts);
-    } else if (pts) {
-      flatPts.push(pts);
-    }
-  }
+  // Multiple tracks are concatenated in document order; name and type come
+  // from the first track that declares them.
+  const trks: GpxTrk[] = asArray(xml.gpx?.trk);
+  const segs: GpxTrkSeg[] = trks.flatMap((t) => asArray(t.trkseg));
+  const flatPts: GpxTrkPt[] = segs.flatMap((seg) => asArray(seg.trkpt));
+  const trkName = trks.map((t) => toText(t.name)).find(Boolean);
+  const trkType = trks.map((t) => toText(t.type)).find(Boolean);
 
   const points: TrackPoint[] = flatPts.map((p) => {
-    const ext = p.extensions?.["gpxtpx:TrackPointExtension"];
+    const ext = pickBySuffix(p.extensions, ":TrackPointExtension");
     return {
       lat: toFiniteNumber(p["@_lat"]),
       lng: toFiniteNumber(p["@_lon"]),
       elevation: toFiniteNumber(p.ele),
       time: p.time ? toFiniteNumber(Date.parse(p.time)) : undefined,
-      heartRate: toFiniteNumber(ext?.["gpxtpx:hr"]),
-      cadence: toFiniteNumber(ext?.["gpxtpx:cad"]),
+      heartRate: toFiniteNumber(pickBySuffix(ext, ":hr")),
+      cadence: toFiniteNumber(pickBySuffix(ext, ":cad")),
     };
   });
 
-  const sport = detectSport(trk?.type, filename);
+  const sport = detectSport(trkType, filename);
   return finalise({
     points,
     sport,
     name:
-      trk?.name || xml.gpx?.metadata?.name || filename.replace(GPX_EXT_RE, ""),
+      trkName ||
+      toText(xml.gpx?.metadata?.name) ||
+      filename.replace(GPX_EXT_RE, ""),
     isoDate: xml.gpx?.metadata?.time || points[0]?.time,
   });
 }

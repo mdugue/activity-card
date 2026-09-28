@@ -28,6 +28,16 @@ describe("detectSport", () => {
     expect(detectSport("", "weekend_bike_ride.fit")).toBe("ride");
   });
 
+  test("the declared type wins over hints in the name", () => {
+    expect(detectSport("Run", "Bike commute home")).toBe("run");
+    expect(detectSport("Swim", "Swim before brunch")).toBe("swim");
+  });
+
+  test("name hints match whole words only", () => {
+    expect(detectSport(undefined, "tempo-strides-run.gpx")).toBe("run");
+    expect(detectSport(undefined, "brunch-ride.gpx")).toBe("ride");
+  });
+
   test("defaults to ride for unrecognised input", () => {
     expect(detectSport("Yoga", "session.gpx")).toBe("ride");
     expect(detectSport(undefined, "activity.gpx")).toBe("ride");

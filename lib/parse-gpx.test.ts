@@ -102,4 +102,45 @@ describe("parseGpx", () => {
     expect(parsed.sport).toBe("run");
     expect(parsed.title.toLowerCase()).toContain("run");
   });
+
+  test("numeric track name and type still parse", () => {
+    const text = gpx(
+      `<trk><name>2024</name><type>9</type><trkseg>${[
+        trkpt("47.0", "11.0", 500, "2026-05-18T07:00:00Z"),
+        trkpt("47.001", "11.0", 505, "2026-05-18T07:01:00Z"),
+      ].join("")}</trkseg></trk>`
+    );
+    const parsed = parseGpx(text, "numeric.gpx");
+    expect(parsed.title).toContain("2024");
+  });
+
+  test("concatenates the points of several <trk> elements", () => {
+    const first = `<trk><name>Leg one</name><trkseg>${[
+      trkpt("47.0", "11.0", 500, "2026-05-18T07:00:00Z"),
+      trkpt("47.001", "11.0", 505, "2026-05-18T07:01:00Z"),
+    ].join("")}</trkseg></trk>`;
+    const second = `<trk><name>Leg two</name><trkseg>${[
+      trkpt("47.002", "11.0", 510, "2026-05-18T07:02:00Z"),
+      trkpt("47.003", "11.0", 515, "2026-05-18T07:03:00Z"),
+    ].join("")}</trkseg></trk>`;
+    const single = parseGpx(gpx(first), "one.gpx");
+    const both = parseGpx(gpx(first + second), "two.gpx");
+    expect(both.routeCoordinates?.length).toBeGreaterThan(0);
+    expect(both.distanceKm).toBeGreaterThan(single.distanceKm);
+    expect(both.title).toBe("Leg One");
+  });
+
+  test("reads heart rate from a non-gpxtpx extension prefix (ns3:)", () => {
+    const pt = (lat: string, time: string) =>
+      `<trkpt lat="${lat}" lon="11.0"><ele>500</ele><time>${time}</time><extensions><ns3:TrackPointExtension><ns3:hr>150</ns3:hr><ns3:cad>85</ns3:cad></ns3:TrackPointExtension></extensions></trkpt>`;
+    const text = gpx(
+      `<trk><name>Garmin</name><trkseg>${[
+        pt("47.0", "2026-05-18T07:00:00Z"),
+        pt("47.001", "2026-05-18T07:01:00Z"),
+      ].join("")}</trkseg></trk>`
+    );
+    const parsed = parseGpx(text, "garmin.gpx");
+    expect(parsed.avgHeartRate).toBe(150);
+    expect(parsed.avgCadence).toBe(85);
+  });
 });
