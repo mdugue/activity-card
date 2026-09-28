@@ -57,7 +57,7 @@ Videos star the actual theme components with the app's sample fixtures:
 
 - Fixtures: `SAMPLE_RIDE/RUN/SWIM/TRI/BRICK` from `components/app/sample-data.ts`.
 - Photos: `staticFile("images/ride.jpg")` (2200×3301) and `staticFile("images/dunes.webp")` (1600×2400). Carousel decks need that natural size as `imageSize: { w, h }` — pass it as a constant.
-- Photo filters/grain on a single card: wrap in `PhotoFxProvider` (`components/themes/shared/photo-fx.tsx`).
+- Photo filters/grain on a single card: wrap in `PhotoFxProvider` (`theme/shared/photo-fx.tsx`).
 - Strava beats use ONLY the official asset `public/strava/btn-connect-with-strava-orange.svg`, unmodified (`docs/strava.md` brand rules).
 
 ## Brand + motion conventions

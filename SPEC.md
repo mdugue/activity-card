@@ -18,7 +18,7 @@ Reward someone who did a beautiful workout with something beautiful in return. T
 
 - Fully client-side, no backend, no auth
 - GPX + .fit upload
-- Six themes (see below), sport-aware stat rendering
+- Seven single-card and six carousel themes (see below), sport-aware stat rendering
 - Optional background photo upload
 - Live preview, theme picker, minimal customisation (accent colour, stat visibility toggles — heart-rate visibility defaults to **on** as of Phase 2A so Strava-sourced cards show HR without an extra click; the toggle can hide it for privacy)
 - Download PNG (1080×1350, Instagram portrait)

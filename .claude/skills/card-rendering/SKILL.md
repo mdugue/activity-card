@@ -124,7 +124,7 @@ matches the real route; keep it geographically faithful and centre it instead.
 
 ### Simplification
 
-Raw GPX often has 5000+ points. Simplify to ~150 with Ramer–Douglas–Peucker before storing on `Activity.routeCoordinates`. Implement in `lib/metrics/simplify.ts`. If you reach for `turf` for this, that's fine — but RDP is ~30 lines and avoids a dependency.
+Raw GPX often has 5000+ points. Simplify to ~150 with Ramer–Douglas–Peucker before storing on `Activity.routeCoordinates`. RDP lives in `lib/simplify.ts` (`simplifyToCount`, run once at parse time in `lib/parse-shared.ts`). If you reach for `turf` for this, that's fine — but RDP is ~30 lines and avoids a dependency.
 
 ### Path styling
 

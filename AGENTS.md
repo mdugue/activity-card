@@ -45,7 +45,7 @@ If a decision is in SPEC.md, follow it. If you want to deviate, raise it and ask
 ```bash
 bun install
 bun dev          # local dev server
-bun build        # production build
+bun run build    # production build
 bun lint         # oxlint --type-aware + oxfmt --check (one pass, via ultracite)
 bun run fix      # autofix what oxlint can, then format with oxfmt
 bun run format   # oxfmt only
@@ -63,16 +63,21 @@ configuration.
 Two layers, two runners — keep them separate:
 
 - **Unit tests** use the built-in **`bun:test`** runner. They live colocated
-  next to the code they cover as `lib/<name>.test.ts` and assert pure logic
-  (formatters, geometry, parsing, OAuth-state encode/validate). Run with
-  `bun run test` (scoped to `./lib` so it never picks up the e2e specs),
-  `bun run test:watch`, or `bun run test:coverage`.
-  `playwright.config.ts` and [`docs/strava.md`](./docs/strava.md).
+  next to the code they cover as `lib/<name>.test.ts` or
+  `theme/**/<name>.test.ts` and assert pure logic (formatters, geometry,
+  parsing, OAuth-state encode/validate). Run with `bun run test` (scoped to
+  `./lib ./theme` so it never picks up the e2e specs), `bun run test:watch`,
+  or `bun run test:coverage`.
+- **E2E tests** use **Playwright**: specs live in `e2e/*.spec.ts` and run with
+  `bun run test:e2e`. The Strava flow runs against a local mock
+  (`e2e/strava-mock.ts`) wired through env vars in `playwright.config.ts` —
+  see [`docs/strava.md`](./docs/strava.md).
 
 Why scoped: Playwright owns `*.spec.ts` under `e2e/`; bun unit tests use
-`*.test.ts`. The `test` script passes `./lib` explicitly so a bare run can't
-try to execute Playwright specs through the wrong runner. Add new unit-test
-roots to that script (and `bunfig.toml`'s note) if tests grow beyond `lib/`.
+`*.test.ts`. The `test` script passes `./lib ./theme` explicitly so a bare run
+can't try to execute Playwright specs through the wrong runner. Add new
+unit-test roots to that script (and `bunfig.toml`'s note) if tests grow beyond
+`lib/` and `theme/`.
 
 ## Themes — two families
 
@@ -122,7 +127,7 @@ add-a-theme walkthrough (both families, with checklists).
 ## Storybook
 
 Stories live **colocated** with the component as `<name>.stories.tsx`
-(`.storybook/main.ts` globs `components/**/*.stories.tsx`). The shared preview
+(`.storybook/main.ts` globs `components/**` and `theme/**` for `*.stories.tsx`). The shared preview
 imports `app/globals.css` so stories render with the real Tailwind layer + theme
 tokens; a **Background** toolbar dropdown (free sport photos) plus a per-story
 **Background upload** control let you preview any photo-capable theme over an
@@ -279,7 +284,7 @@ Ask before:
 
 - Introducing a backend / API route with state
 - Changing the data model in SPEC.md
-- Adding a seventh theme or removing one of the six
+- Adding or removing a theme (currently 7 single-card and 6 carousel themes)
 - Bringing in a map library
 
 Small refactors, bug fixes, styling iteration, theme polish — proceed.

@@ -72,7 +72,7 @@ Show overall summary plus per-segment breakdown. Each segment carries its own sp
 
 ## Formatting
 
-Centralise in `/metrics/format.ts`. Always format at render time, never store formatted strings on `Activity`.
+Formatting is centralised in `lib/format.ts`. Always format at render time, never store formatted strings on `Activity`.
 
 ```ts
 // Distance — round to 1 decimal under 100km, integer above

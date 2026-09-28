@@ -139,5 +139,5 @@ Full walkthrough with skeletons and checklists: `docs/creating-a-theme.md`.
    descriptor (`defineTheme` `params`/`defaults`, or the carousel token row's
    `params`/`defaults`). Nothing else to wire.
 3. **Tests** — pure logic in `lib/<theme>.test.ts`; registry/contract
-   invariants live in `lib/theme-registry.test.ts`,
+   invariants live in `theme/core/theme-registry.test.ts`,
    `theme/core/theme-contract.test.ts`, `theme/core/colors.test.ts`.
