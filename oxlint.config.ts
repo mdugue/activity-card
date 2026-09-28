@@ -4,8 +4,9 @@
  * tweaks. When a rule fires, change the code; a single line that genuinely
  * cannot comply gets `oxlint-disable-next-line <rule> -- <reason>`.
  *
- * The sonarjs and github plugins need the TypeScript compiler API, which TS 7
- * no longer ships — see the TypeScript note in AGENTS.md.
+ * Of Ultracite's JS-plugin preset only React Doctor is loaded: its sonarjs
+ * and github plugins need the TypeScript compiler API, which TypeScript 7 no
+ * longer ships. Re-add them via `selectJsPlugins` once they support TS 7.
  */
 import remotion from "@remotion/eslint-plugin";
 import { configs as storybookConfigs } from "eslint-plugin-storybook";
@@ -14,11 +15,13 @@ import type { DummyRule, DummyRuleMap, OxlintOverride } from "oxlint";
 import antiSlop from "ultracite/oxlint/anti-slop";
 import core from "ultracite/oxlint/core";
 import jest from "ultracite/oxlint/jest";
-import jsPlugins, { jsPluginSettings } from "ultracite/oxlint/js-plugins";
+import { jsPluginSettings, selectJsPlugins } from "ultracite/oxlint/js-plugins";
 import next from "ultracite/oxlint/next";
 import nextJsPlugins from "ultracite/oxlint/next/js-plugins";
 import react from "ultracite/oxlint/react";
 import shadcn from "ultracite/oxlint/shadcn";
+
+const jsPlugins = selectJsPlugins(["react-doctor"]);
 
 /** A plugin preset's own rules — the entries for other plugins (it switches
  *  off `react-hooks` / `import-x` rules oxlint doesn't load) dropped. */
@@ -96,11 +99,6 @@ export default defineConfig({
       ...override,
       files: ["components/app/primitives/**"],
     })),
-    {
-      // Next.js dispatches Route Handlers by their HTTP-verb name (`GET`).
-      files: ["app/**/route.ts"],
-      rules: { "sonarjs/function-name": "off" },
-    },
   ],
   // oxlint does not merge `settings` from extended configs.
   settings: jsPluginSettings,

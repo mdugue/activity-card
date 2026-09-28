@@ -40,7 +40,7 @@ bun dev              # local dev server
 bun run build        # production build
 bun lint             # oxlint (type-aware) + oxfmt --check, via ultracite
 bun run fix          # autofix lint findings, then format
-bun typecheck        # tsc --noEmit (TypeScript 7, via @typescript/native)
+bun typecheck        # tsc --noEmit (TypeScript 7)
 bun run test         # unit tests (bun:test, scoped to ./lib ./theme)
 bun run test:e2e     # Playwright e2e
 bun run storybook    # theme/component workbench

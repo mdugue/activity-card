@@ -25,7 +25,7 @@ describe("isAllowedPhotoUrl", () => {
 
   test("rejects plain http, even on an allowed host", () => {
     const plainHttp =
-      // oxlint-disable-next-line sonarjs/no-clear-text-protocols -- the test asserts that a clear-text http URL is rejected
+      // The test asserts that a clear-text http URL is rejected
       "http://dgtzuqphqg23d.cloudfront.net/a.jpg";
     expect(isAllowedPhotoUrl(plainHttp)).toBe(false);
   });

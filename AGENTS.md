@@ -30,12 +30,7 @@ If a decision is in SPEC.md, follow it. If you want to deviate, raise it and ask
 
 ## Tech stack
 
-- Next.js (App Router) + TypeScript 7, checked with `tsc` (the native compiler).
-  TS 7 is installed as `@typescript/native` (it owns the `tsc` binary);
-  `typescript` itself is aliased to `@typescript/typescript6`, the TS 6 API,
-  for tools that still need the compiler API (the sonarjs / github lint
-  plugins, Next's build, Storybook's docgen) — the side-by-side setup the TS 7
-  release notes recommend. Don't "fix" the alias back to plain `typescript`.
+- Next.js (App Router) + TypeScript 7, checked with `tsc` (the native compiler)
 - Bun 1.4 as package manager, script runner and unit-test runner
   (pinned in `.bun-version`, which CI reads)
 - oxlint (type-aware, via `oxlint-tsgolint`) + oxfmt, configured through
@@ -172,15 +167,16 @@ appear.
   `bun lint` is one command for both halves — `oxfmt --check` then `oxlint` with
   `--type-aware`, so the promise, deprecation and assertion rules that need type
   information run too. `oxlint.config.ts` takes every applicable Ultracite
-  preset as shipped (core, react, next, jest, js-plugins — github, sonarjs,
-  React Doctor — next/js-plugins, anti-slop, shadcn) plus the recommended sets
+  preset as shipped (core, react, next, jest, React Doctor from js-plugins,
+  next/js-plugins, anti-slop, shadcn) plus the recommended sets
   of eslint-plugin-storybook and @remotion/eslint-plugin, read from the
   plugins themselves — **no rule tweaks**. The config only decides _where_
   presets apply: generated code (`components/ui`, `hooks/use-mobile.ts`) is
   ignored, shadcn/lint covers the app UI but not theme canvases / Remotion
   frames (pixel-exact inline-styled output), `components/app/primitives` gets
-  the preset's own components/ui exemptions, and Next's verb-named Route
-  Handlers skip `sonarjs/function-name`. When a rule fires, change the code. A targeted
+  the preset's own components/ui exemptions. (js-plugins' sonarjs and github
+  plugins stay out until they run on TypeScript 7 — they need the compiler
+  API TS 7 no longer ships.) When a rule fires, change the code. A targeted
   `// oxlint-disable-next-line <rule> -- <reason>` is the escape hatch for a
   single line that genuinely cannot comply (a framework contract, a pixel-exact
   poster size); never a config switch, never a file-level disable.

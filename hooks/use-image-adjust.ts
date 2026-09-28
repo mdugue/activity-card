@@ -184,7 +184,7 @@ export const useImageAdjust = ({
     el.addEventListener("pointerup", endPointer);
     el.addEventListener("pointercancel", endPointer);
     // Non-passive so we can cancel the page's scroll/zoom while adjusting.
-    // oxlint-disable-next-line github/require-passive-events -- onWheel calls preventDefault() to stop page scroll/zoom while adjusting, which a passive listener cannot do
+    // onWheel calls preventDefault() to stop page scroll/zoom while adjusting, which a passive listener cannot do
     el.addEventListener("wheel", onWheel, { passive: false });
     el.addEventListener("dblclick", onDoubleClick);
 
