@@ -55,6 +55,35 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* App-chrome type scale below the Tailwind defaults — the letter-spaced
+     mono / caps captions of the editor and landing. Named here so class
+     strings stay on tokens (shadcn/lint no-arbitrary-values). */
+  --tracking-caps-xs: 0.12em;
+  --tracking-caps-sm: 0.14em;
+  --tracking-caps: 0.16em;
+  --tracking-caps-md: 0.18em;
+  --tracking-caps-lg: 0.2em;
+  --tracking-caps-xl: 0.22em;
+  --tracking-caps-display: 0.32em;
+  --leading-display-tight: 0.9;
+  --leading-display: 0.92;
+  --leading-display-loose: 0.95;
+  /* Micro text for dense chrome (swatch captions, slide numbers) where 12px
+     does not fit; prefer text-xs everywhere else. */
+  --text-2xs: 0.625rem;
+  --text-2xs--line-height: 1rem;
+
+  /* Strava's brand orange (docs/strava.md brand guidelines). */
+  --color-strava: #fc5200;
+
+  --shadow-lift: 0 24px 50px -14px rgb(26 23 20 / 0.3);
+  /* Dims everything around a focused element (image-adjust overlay). */
+  --shadow-scrim: 0 0 0 9999px rgb(0 0 0 / 0.18);
+
+  /* The mobile control deck's drawer easing. */
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --animate-scroll-cue: effort-scroll-cue 1.6s ease-in-out infinite;
 }
 
 :root {
@@ -160,6 +189,26 @@
 
 @utility caption-micro {
   @apply font-mono text-[10px] font-medium tracking-[0.18em] uppercase opacity-60;
+}
+
+/* Transition only the properties a component animates (never
+   transition-all). */
+@utility transition-drawer {
+  transition-property: max-height, max-width, opacity, visibility;
+}
+@utility transition-outline {
+  transition-property: outline-color, outline-width;
+}
+@utility transition-size-colors {
+  transition-property: width, background-color;
+}
+@utility transition-height {
+  transition-property: height;
+}
+
+/* Bottom padding that clears the iOS home indicator. */
+@utility pb-safe {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
 }
 
 /* Hide the scrollbar on touch-swipe rails (the claim-panel carousel) while

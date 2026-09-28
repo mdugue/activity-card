@@ -35,9 +35,19 @@ import jsPlugins, { jsPluginSettings } from "ultracite/oxlint/js-plugins";
 import next from "ultracite/oxlint/next";
 import nextJsPlugins from "ultracite/oxlint/next/js-plugins";
 import react from "ultracite/oxlint/react";
+import shadcn from "ultracite/oxlint/shadcn";
 
 export default defineConfig({
-  extends: [core, react, next, jest, jsPlugins, nextJsPlugins, antiSlop],
+  extends: [
+    core,
+    react,
+    next,
+    jest,
+    jsPlugins,
+    nextJsPlugins,
+    antiSlop,
+    shadcn,
+  ],
   ignorePatterns: [
     ...(core.ignorePatterns ?? []),
     // Vendored agent skills (`.agents/skills`, `.claude/skills`), installed
@@ -53,6 +63,7 @@ export default defineConfig({
   jsPlugins: [
     ...(jsPlugins.jsPlugins ?? []),
     ...(antiSlop.jsPlugins ?? []),
+    ...(shadcn.jsPlugins ?? []),
     { name: "storybook", specifier: "eslint-plugin-storybook" },
     { name: "remotion", specifier: "@remotion/eslint-plugin" },
   ],
@@ -116,6 +127,39 @@ export default defineConfig({
       },
     },
     {
+      // shadcn/lint enforces the Tailwind design system on app UI. Theme
+      // canvases and Remotion frames are not design-system UI: they are
+      // pixel-exact 1080-wide posters / video frames whose layout is inline
+      // styles by design (AGENTS.md — they rasterise to PNG), and moving them
+      // to classes would only trade no-inline-styles for no-arbitrary-values.
+      files: [
+        "theme/single-card/**",
+        "theme/carousel/**",
+        "theme/shared/**",
+        "remotion/**",
+      ],
+      rules: {
+        "shadcn/no-arbitrary-values": "off",
+        "shadcn/no-inline-styles": "off",
+        "shadcn/no-raw-colors": "off",
+        "shadcn/no-restyle": "off",
+        "shadcn/no-unknown-classes": "off",
+        "shadcn/require-static-classes": "off",
+      },
+    },
+    {
+      // Our own design-system layer next to the vendored components/ui: the
+      // styled wrappers that own a treatment (so call sites don't restyle
+      // vendor primitives). Same shape as the shadcn preset's override for
+      // components/ui — components own their appearance.
+      files: ["components/app/primitives/**"],
+      rules: {
+        "shadcn/no-arbitrary-values": "off",
+        "shadcn/no-restyle": "off",
+        "shadcn/require-static-classes": "off",
+      },
+    },
+    {
       // Generated code, not ours: `components/ui/**` and `hooks/use-mobile.ts`
       // are scaffolded by the shadcn CLI and re-added with `bunx shadcn add` —
       // never hand-edited (AGENTS.md). Lint them at the level the generator
@@ -157,6 +201,8 @@ export default defineConfig({
         "react/no-danger": "off",
         "react/no-unstable-nested-components": "off",
         "react/set-state-in-effect": "off",
+        "shadcn/no-inline-styles": "off",
+        "shadcn/no-unknown-classes": "off",
         "sonarjs/expression-complexity": "off",
         "sonarjs/function-name": "off",
         "sonarjs/max-union-size": "off",
