@@ -4,8 +4,26 @@ import { leadingInt } from "./strava-params";
 
 // Strava's photo CDN encodes the rendition's pixel size in the filename,
 // e.g. `…-576x768.jpg` (portrait) / `…-2048x1536.jpg` (landscape).
-const CDN_SIZE_SUFFIX_RE =
-  /-(?<width>\d+)x(?<height>\d+)(?<ext>\.(?:jpe?g|png|webp))$/iu;
+// Matched without capture groups (named groups need an ES2018 target; the
+// tsconfig is ES2017): `sizeSuffix` splits the matched suffix instead.
+const CDN_SIZE_SUFFIX_RE = /-\d+x\d+\.(?:jpe?g|png|webp)$/iu;
+
+interface SizeSuffix {
+  ext: string;
+  height: number;
+  width: number;
+}
+
+/** Split a matched `-WxH.ext` suffix into its parts. */
+const sizeSuffix = (suffix: string): SizeSuffix => {
+  const dot = suffix.indexOf(".");
+  const [width, height] = suffix.slice(1, dot).toLowerCase().split("x");
+  return {
+    ext: suffix.slice(dot),
+    height: Number(height),
+    width: Number(width),
+  };
+};
 
 /**
  * Pick the largest rendition from a Strava photo's `urls` record (keyed by
@@ -47,13 +65,12 @@ export const upscaledPhotoUrl = (
   src: string,
   target: number
 ): string | null => {
-  const groups = CDN_SIZE_SUFFIX_RE.exec(src)?.groups;
-  if (groups === undefined) {
+  const match = CDN_SIZE_SUFFIX_RE.exec(src);
+  if (match === null) {
     return null;
   }
-  // The groups are all-digit, so `Number` reads them as `parseInt` would.
-  const w = Number(groups.width);
-  const h = Number(groups.height);
+  // The size parts are all-digit, so `Number` reads them as `parseInt` would.
+  const { ext, height: h, width: w } = sizeSuffix(match[0]);
   const long = Math.max(w, h);
   if (!(Number.isFinite(long) && long > 0) || long >= target) {
     return null;
@@ -61,7 +78,7 @@ export const upscaledPhotoUrl = (
   const scale = target / long;
   return src.replace(
     CDN_SIZE_SUFFIX_RE,
-    `-${Math.round(w * scale)}x${Math.round(h * scale)}${groups.ext}`
+    `-${Math.round(w * scale)}x${Math.round(h * scale)}${ext}`
   );
 };
 

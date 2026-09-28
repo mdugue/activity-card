@@ -94,9 +94,10 @@ const atmosphereResolveStyle =
       accent2,
       background: dusk.background,
       dark: dusk.dark,
-      elevation: dusk.elevationAccent === true
-        ? { fillFrom: accent, fillTo: dusk.background, line: accent }
-        : dusk.elevation,
+      elevation:
+        dusk.elevationAccent === true
+          ? { fillFrom: accent, fillTo: dusk.background, line: accent }
+          : dusk.elevation,
       fonts: FONT_PAIRS[dusk.fontPair],
       ink: dusk.ink,
       mutedInk: dusk.mutedInk,

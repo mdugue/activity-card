@@ -15,7 +15,7 @@ import { SafeArea } from "@/theme/shared/format-context";
 import type { PanelProps } from "../define-theme";
 import { CAROUSEL_NATURAL_PAD } from "../geometry";
 import { MiniViz } from "../mini-viz";
-import { slideNumber } from "../templates/shared";
+import { slideNumber, statWithUnit } from "../templates/shared";
 import { vizHasKind } from "../viz-kind";
 
 const SLAB_SHADOW = "0 10px 34px rgba(0,0,0,0.3)";
@@ -119,10 +119,6 @@ interface SpreadProps {
   style: EffectiveStyle;
 }
 
-/** A stat as running text: "42.1 km", or just the value when unitless. */
-const withUnit = (s: StatItem): string =>
-  s.unit ? `${s.value} ${s.unit}` : s.value;
-
 const FrontPage = ({
   data,
   style,
@@ -137,10 +133,10 @@ const FrontPage = ({
   // so the lead value is never printed twice, and a deck with no lead stat (e.g.
   // Distance + Time both hidden) degrades to a clean sentence instead of
   // "undefined undefined logged".
-  const extras = stats.slice(1, 3).map(withUnit).join(", ");
+  const extras = stats.slice(1, 3).map(statWithUnit).join(", ");
   const extrasClause = extras ? ` — ${extras}` : "";
   const ledePrefix =
-    lead === undefined ? "" : `${withUnit(lead)} logged${extrasClause}. `;
+    lead === undefined ? "" : `${statWithUnit(lead)} logged${extrasClause}. `;
   const lede = `${ledePrefix}A ${data.sport} worth printing.`;
   return (
     <Slab

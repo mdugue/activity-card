@@ -8,6 +8,8 @@
 // (cartographic labels / data). Renders to plain inline SVG (no CSS filters) so
 // it rasterises cleanly via snapdom.
 
+import type { CSSProperties } from "react";
+
 import { mixHex } from "@/lib/chart-helpers";
 import {
   formatDateUpper,
@@ -33,6 +35,7 @@ import type { ActivityView, ThemeProps } from "@/theme/core/theme-contract";
 
 import { CoverPhoto } from "../shared/cover-photo";
 import { useFormat, useSafeInsets } from "../shared/format-context";
+import { hasText } from "../shared/has-text";
 import {
   CssCoverImage,
   usePhotoEffects,
@@ -82,7 +85,7 @@ const StrataField = ({
   if (curves.length < 2) {
     return null;
   }
-  const hero0 = curves[0];
+  const [hero0] = curves;
   const heroN = curves.at(-1);
   if (!heroN) {
     return null;
@@ -271,6 +274,44 @@ const statRow = (data: ActivityView): [string, string, string][] => {
   return row;
 };
 
+const ROOT_STYLE = {
+  boxSizing: "border-box",
+  display: "flex",
+  flexDirection: "column",
+  fontFamily: MONO,
+  // Own stacking context so the z-index:-1 photo/scrim paint above this
+  // background (not behind it) yet below all content.
+  isolation: "isolate",
+  overflow: "hidden",
+  position: "relative",
+} satisfies CSSProperties;
+
+const TITLE_STYLE = {
+  fontFamily: DISPLAY,
+  fontSize: 82,
+  fontWeight: 800,
+  letterSpacing: "-0.02em",
+  lineHeight: 0.94,
+  marginBottom: "14px",
+  marginTop: "34px",
+  maxWidth: "94%",
+  textWrap: "pretty",
+} satisfies CSSProperties;
+
+const STAT_VALUE_STYLE = {
+  fontFamily: DISPLAY,
+  fontSize: 56,
+  fontWeight: 700,
+  lineHeight: 1,
+  marginTop: 8,
+  // A stat value is atomic — never break "3h 42m" at the space.
+  // The strip is a space-between flex row sitting near its content
+  // width; a sub-pixel font-metric shift in the rasterised snapshot
+  // would otherwise tip a cell into flex-shrink + wrap, so the
+  // export wraps where the live preview doesn't.
+  whiteSpace: "nowrap",
+} satisfies CSSProperties;
+
 export const ThemeStrata = ({
   data,
   photoUrl,
@@ -295,25 +336,17 @@ export const ThemeStrata = ({
   return (
     <div
       style={{
-        width,
-        height,
+        ...ROOT_STYLE,
         background: tokens.bg,
         color: tokens.text,
-        fontFamily: MONO,
-        position: "relative",
-        // Own stacking context so the z-index:-1 photo/scrim paint above this
-        // background (not behind it) yet below all content.
-        isolation: "isolate",
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-        boxSizing: "border-box",
+        height,
+        width,
       }}
     >
       {/* Optional background photo + a mood-tinted legibility scrim. Both sit at
           z-index -1 (above the solid mood background, below all content) so the
           woven field and type ride on top without rewrapping the layout. */}
-      {photoUrl ? (
+      {hasText(photoUrl) ? (
         <>
           <div
             aria-hidden
@@ -378,20 +411,12 @@ export const ThemeStrata = ({
       {/* Title + place / date. */}
       <h1
         style={{
-          fontFamily: DISPLAY,
-          fontSize: 82,
-          fontWeight: 800,
-          letterSpacing: "-0.02em",
-          lineHeight: 0.94,
-          marginBottom: "14px",
+          ...TITLE_STYLE,
           marginLeft: insets.left,
           marginRight: insets.right,
-          marginTop: "34px",
-          maxWidth: "94%",
           textShadow: overPhoto
             ? `0 2px 30px rgba(${tokens.scrim},0.6)`
             : undefined,
-          textWrap: "pretty",
         }}
       >
         {data.title}
@@ -424,21 +449,20 @@ export const ThemeStrata = ({
       {/* Stat strip. */}
       <div
         style={{
+          alignItems: "flex-end",
           background: tokens.statBg,
           borderTop: `1.5px solid ${tokens.statBorder}`,
-          paddingTop: 30,
+          color: statText,
+          display: "flex",
+          gap: 24,
+          justifyContent: "space-between",
           // The coloured footer keeps its own base thickness; the rest of the
           // platform safe-bottom is margin below it (background bleeds through),
           // so a tall keep-out lifts the strip clear instead of stretching it.
           paddingBottom: Math.min(insets.bottom, STAT_FOOTER_BASE),
           paddingLeft: insets.left,
           paddingRight: insets.right,
-
-          display: "flex",
-          justifyContent: "space-between",
-          gap: 24,
-          color: statText,
-          alignItems: "flex-end",
+          paddingTop: 30,
         }}
       >
         {stats.map(([k, v, u]) => (
@@ -453,21 +477,7 @@ export const ThemeStrata = ({
             >
               {k}
             </div>
-            <div
-              style={{
-                marginTop: 8,
-                fontFamily: DISPLAY,
-                fontSize: 56,
-                fontWeight: 700,
-                lineHeight: 1,
-                // A stat value is atomic — never break "3h 42m" at the space.
-                // The strip is a space-between flex row sitting near its content
-                // width; a sub-pixel font-metric shift in the rasterised snapshot
-                // would otherwise tip a cell into flex-shrink + wrap, so the
-                // export wraps where the live preview doesn't.
-                whiteSpace: "nowrap",
-              }}
-            >
+            <div style={STAT_VALUE_STYLE}>
               {v}
               {u ? (
                 <span

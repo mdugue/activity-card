@@ -439,7 +439,7 @@ export const detectSport = (
   // Split camelCase ("MorningRun") before lowercasing so it yields whole words.
   const words = new Set(
     filename
-      .replaceAll(/(?<lower>[a-z])(?<upper>[A-Z])/gu, "$<lower> $<upper>")
+      .replaceAll(/[a-z][A-Z]/gu, (pair) => `${pair[0]} ${pair[1]}`)
       .toLowerCase()
       .split(/[^a-z]+/u)
   );

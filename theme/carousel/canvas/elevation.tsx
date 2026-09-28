@@ -23,13 +23,16 @@ export const ElevationCanvas = ({
   const { profile, mode } = pickProfile(data);
   const ink = heroInk(style, overPhoto);
 
+  const segElevation = segProf?.useElevation === true;
+  const segCount = segProf?.profiles.length ?? 0;
+  const profileLen = profile?.length ?? 0;
   const hasElevation = multi
-    ? Boolean(segProf?.useElevation) && (segProf?.profiles.length ?? 0) > 0
-    : mode === "elevation" && (profile?.length ?? 0) > 1;
+    ? segElevation && segCount > 0
+    : mode === "elevation" && profileLen > 1;
   if (!hasElevation) {
     return null;
   }
-  const heroBandMode = segProf?.useElevation ? "elevation" : "pace";
+  const heroBandMode = segElevation ? "elevation" : "pace";
 
   return (
     <div

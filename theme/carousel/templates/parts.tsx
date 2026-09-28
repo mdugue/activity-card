@@ -61,7 +61,8 @@ export const Signature = ({
   showEffort,
   athleteName,
 }: SignatureProps) => {
-  if (!(showEffort || athleteName)) {
+  const hasName = athleteName !== undefined && athleteName !== "";
+  if (!(showEffort || hasName)) {
     return null;
   }
   return (
@@ -94,7 +95,7 @@ export const Signature = ({
       ) : (
         <span />
       )}
-      {athleteName ? <span>— {athleteName.toUpperCase()}</span> : null}
+      {hasName ? <span>— {athleteName.toUpperCase()}</span> : null}
     </div>
   );
 };

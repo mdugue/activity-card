@@ -368,9 +368,11 @@ const Home = () => {
   );
 
   // After the Strava OAuth round-trip we land on `/?strava=...` — toast the
-  // outcome and, on success, open the wizard with the Strava picker showing.
+  // outcome and, on success, open the wizard with the Strava picker showing
+  // (and warm the editor chunk, as any wizard opening does).
   useStravaReturnToast(() => {
     setAutoStravaPicker(true);
+    preloadEditor();
   });
 
   // Into the editor. Its next stop is the export sheet, so warm that chunk

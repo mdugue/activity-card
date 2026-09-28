@@ -44,6 +44,23 @@ const clock = (frames: number, fps: number): string => {
 
 const ICON = 22;
 
+// Effect cleanup for the branches that subscribed to nothing.
+const noCleanup = (): void => {
+  // Nothing was subscribed, so there is nothing to undo.
+};
+
+/** Ask for native fullscreen; `fallback` runs when the browser refuses. */
+const enterNativeFullscreen = async (
+  el: HTMLElement,
+  fallback: () => void
+): Promise<void> => {
+  try {
+    await el.requestFullscreen();
+  } catch {
+    fallback();
+  }
+};
+
 const ControlButton = ({
   children,
   label,
@@ -57,7 +74,6 @@ const ControlButton = ({
     aria-label={label}
     className="text-background/85 hover:text-background inline-flex size-9 items-center justify-center rounded-full transition-colors hover:bg-white/15"
     onClick={onClick}
-    title={label}
     type="button"
   >
     {children}
@@ -88,8 +104,8 @@ export const VideoPlayer = ({
 
   // Subscribe to the player's state once its ref is attached.
   useEffect(() => {
-    if (!player) {
-      return;
+    if (player === null) {
+      return noCleanup;
     }
     const onPlay = () => {
       setPlaying(true);
@@ -124,8 +140,8 @@ export const VideoPlayer = ({
   // pause when it leaves — so the hero opens at frame 0 exactly when you see it.
   useEffect(() => {
     const el = wrapRef.current;
-    if (!(player && el && autoPlayOnView) || reducedMotion()) {
-      return;
+    if (player === null || el === null || !autoPlayOnView || reducedMotion()) {
+      return noCleanup;
     }
     const io = new IntersectionObserver(
       ([entry]) => {
@@ -168,11 +184,11 @@ export const VideoPlayer = ({
 
   const toggleFullscreen = useCallback(() => {
     const el = wrapRef.current;
-    if (!el) {
+    if (el === null) {
       return;
     }
     if (isFullscreen) {
-      if (document.fullscreenElement) {
+      if (document.fullscreenElement !== null) {
         void document.exitFullscreen?.();
       }
       setCssFullscreen(false);
@@ -180,8 +196,9 @@ export const VideoPlayer = ({
     }
     // Native where supported (desktop, Android, iPad); a fixed-overlay fallback
     // everywhere it isn't (notably iPhone Safari), so the button always works.
-    if (document.fullscreenEnabled && el.requestFullscreen) {
-      el.requestFullscreen().catch(() => {
+    // (iPhone Safari has no `requestFullscreen` on elements at all.)
+    if (document.fullscreenEnabled && "requestFullscreen" in el) {
+      void enterNativeFullscreen(el, () => {
         setCssFullscreen(true);
       });
     } else {
@@ -242,7 +259,7 @@ export const VideoPlayer = ({
           }}
           type="button"
         >
-          <span className="block h-1 w-full rounded-full bg-white/25 transition-all group-hover/seek:h-1.5">
+          <span className="block h-1 w-full rounded-full bg-white/25 transition-[height] group-hover/seek:h-1.5">
             <span
               className="bg-primary block h-full rounded-full"
               style={{ width: `${progress * 100}%` }}
@@ -267,7 +284,14 @@ export const VideoPlayer = ({
           <ControlButton
             label={muted ? "Unmute" : "Mute"}
             onClick={() => {
-              player?.isMuted() ? player.unmute() : player?.mute();
+              if (player === null) {
+                return;
+              }
+              if (player.isMuted()) {
+                player.unmute();
+              } else {
+                player.mute();
+              }
             }}
           >
             {muted ? (

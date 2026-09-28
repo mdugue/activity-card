@@ -23,7 +23,7 @@ import {
   profileSignal,
   segmentProfileMetric,
 } from "@/lib/profile-signal";
-import type { ParamDef } from "@/theme/core/params/kinds";
+import type { ParamDef, ThemeConfig } from "@/theme/core/params/kinds";
 import type { ActivityView } from "@/theme/core/theme-contract";
 
 /* ----------------------------- configuration ----------------------------- */
@@ -36,7 +36,7 @@ export type StrataDensity = "fine" | "woven" | "bold";
 
 // Extends Record so the config flows through the generic param registry /
 // coercer without casts; declared keys keep their precise types.
-export interface StrataConfig extends Record<string, unknown> {
+export interface StrataConfig extends ThemeConfig {
   /** How finely the field is woven — the number of strata layers. */
   density: StrataDensity;
   /** Mark the peak height + a direction arrow on the field. */

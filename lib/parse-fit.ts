@@ -42,19 +42,50 @@ const FitDataSchema = z.object({
   // `mode: "list"` puts sessions at the top level; only `cascade` / `both`
   // nest them under `activity`. Accept both so the mode can't silently drop
   // every session field again.
-  sessions: z.optional(z.array(FitSessionSchema)),
   activity: z.optional(
     z.object({
       sessions: z.optional(z.array(FitSessionSchema)),
     })
   ),
   records: z.optional(z.array(FitRecordSchema)),
+  sessions: z.optional(z.array(FitSessionSchema)),
 });
+
 
 /** FIT timestamps arrive as a Date or an ISO string; drop unparseable ones. */
 const timestampMs = (value: string | Date): number | undefined => {
   const t = new Date(value).getTime();
   return Number.isFinite(t) ? t : undefined;
+};
+
+type FitRecord = z.infer<typeof FitRecordSchema>;
+type FitSession = z.infer<typeof FitSessionSchema>;
+
+/** Positioned records become track points; the rest carry no route. */
+const recordPoints = (records: FitRecord[]): TrackPoint[] =>
+  records.flatMap((r) =>
+    r.position_lat === undefined || r.position_long === undefined
+      ? []
+      : [
+          {
+            cadence: r.cadence,
+            // Newer devices only write `enhanced_altitude`.
+            elevation: r.enhanced_altitude ?? r.altitude,
+            heartRate: r.heart_rate,
+            lat: r.position_lat,
+            lng: r.position_long,
+            time:
+              r.timestamp === undefined ? undefined : timestampMs(r.timestamp),
+          },
+        ]
+  );
+
+/** Cycling cadence, else running cadence: a `0` means "not recorded". */
+const sessionCadence = (session: FitSession | undefined): number | undefined => {
+  const cadence = session?.avg_cadence;
+  return cadence === undefined || cadence === 0
+    ? session?.avg_running_cadence
+    : cadence;
 };
 
 /**
@@ -63,6 +94,7 @@ const timestampMs = (value: string | Date): number | undefined => {
  * tested without a binary fixture.
  */
 export const fitDataToParsed = (
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- this IS the I/O-boundary parser: it takes fit-file-parser's raw output (whose own types promise more than a malformed file delivers) and decodes it with `FitDataSchema`.
   data: unknown,
   filename: string
 ): ParsedActivity => {
@@ -72,27 +104,16 @@ export const fitDataToParsed = (
   }
   const fit = parsed.data;
   const session = fit.sessions?.[0] ?? fit.activity?.sessions?.[0];
-  const records = fit.records || [];
-  const points: TrackPoint[] = records
-    .filter(
-      (r) => r.position_lat !== undefined && r.position_long !== undefined
-    )
-    .map((r) => ({
-      lat: r.position_lat,
-      lng: r.position_long,
-      // Newer devices only write `enhanced_altitude`.
-      elevation: r.enhanced_altitude ?? r.altitude,
-      time: r.timestamp ? timestampMs(r.timestamp) : undefined,
-      heartRate: r.heart_rate,
-      cadence: r.cadence,
-    }));
+  const points = recordPoints(fit.records ?? []);
+  const startTime = session?.start_time;
 
   const sport = detectSport(session?.sport, filename);
   return finalise({
-    isoDate: session?.start_time || points[0]?.time,
+    isoDate:
+      startTime === undefined || startTime === "" ? points[0]?.time : startTime,
     name: filename.replace(FIT_EXT_RE, ""),
     points,
-    sessionAvgCadence: session?.avg_cadence || session?.avg_running_cadence,
+    sessionAvgCadence: sessionCadence(session),
     sessionAvgHr: session?.avg_heart_rate,
     sessionAvgSpeedKmh: session?.avg_speed,
     sessionDistanceKm:

@@ -77,7 +77,7 @@ export const StrataField = ({
   if (curves.length < 2) {
     return null;
   }
-  const hero0 = curves[0];
+  const [hero0] = curves;
   const heroN = curves.at(-1);
   if (!heroN) {
     return null;

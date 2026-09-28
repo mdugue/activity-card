@@ -4,7 +4,7 @@ import { ArrowRightIcon, CaretDownIcon } from "@phosphor-icons/react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { EffortMark, EffortWordmark } from "@/components/app/effort-wordmark";
 import {
@@ -27,10 +27,10 @@ import { cn } from "@/lib/utils";
 // nothing until opened, so it stays out of the landing's first load and is
 // fetched right after hydration — in cache before anyone reaches the CTA.
 const OnboardingWizard = dynamic(
-  async () =>
-    await import("@/components/app/onboarding-wizard").then(
-      (m) => m.OnboardingWizard
-    ),
+  async () => {
+    const m = await import("@/components/app/onboarding-wizard");
+    return m.OnboardingWizard;
+  },
   { ssr: false }
 );
 
@@ -173,7 +173,7 @@ const ClaimPanel = ({
     />
 
     <div
-      className="text-background/55 relative z-20 flex justify-between font-mono text-[11px] tracking-[0.18em]"
+      className="text-background/55 relative z-20 flex justify-between font-mono text-xs tracking-[0.18em]"
       style={panelPartStyle(stage, "num", index)}
     >
       <span>{String(index + 1).padStart(2, "0")}</span>
@@ -204,27 +204,40 @@ export const EmptyState = ({
   const railRef = useRef<HTMLDivElement>(null);
   const [activeSlide, setActiveSlide] = useState(0);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const { replay: handleReplay } = intro;
 
   // The OAuth round-trip lands back here already connected; open the wizard so
   // its Strava picker (auto-opened via initialStravaPickerOpen) is visible.
-  useEffect(() => {
+  // Adjusted during render when the prop flips on (the page warms the editor
+  // chunk itself on that path).
+  const [prevAutoStravaPicker, setPrevAutoStravaPicker] = useState(false);
+  if (autoStravaPicker !== prevAutoStravaPicker) {
+    setPrevAutoStravaPicker(autoStravaPicker);
     if (autoStravaPicker) {
-      // oxlint-disable-next-line react/set-state-in-effect
       setWizardOpen(true);
     }
-  }, [autoStravaPicker]);
+  }
 
-  useEffect(() => {
-    if (wizardOpen) {
-      onIntent?.();
+  // Opening the wizard is the user's intent to make a card: tell the page, so
+  // it warms the editor chunk while the wizard is up.
+  const openWizard = () => {
+    setWizardOpen(true);
+    onIntent?.();
+  };
+
+  const handleWizardOpenChange = (open: boolean) => {
+    if (open) {
+      openWizard();
+    } else {
+      setWizardOpen(false);
     }
-  }, [wizardOpen, onIntent]);
+  };
 
   // Track the centred slide on the touch rail so the dots reflect the swipe.
   // (No-op on desktop, where the grid doesn't scroll and the dots are hidden.)
   const handleRailScroll = () => {
     const el = railRef.current;
-    if (!el) {
+    if (el === null) {
       return;
     }
     const max = el.scrollWidth - el.clientWidth;
@@ -242,7 +255,7 @@ export const EmptyState = ({
       <section className="relative flex min-h-dvh snap-start flex-col px-6 pt-7 pb-10 lg:pt-9">
         <div className="mx-auto flex w-full max-w-[64rem] items-start justify-between">
           <EffortWordmark />
-          <p className="font-mono text-[10px] font-medium tracking-[0.22em] opacity-55 sm:text-[11px]">
+          <p className="font-mono text-xs font-medium tracking-[0.22em] opacity-55">
             TURN ANY EFFORT INTO A CARD
           </p>
         </div>
@@ -282,7 +295,7 @@ export const EmptyState = ({
             {PANELS.map((p, i) => (
               <span
                 className={cn(
-                  "h-1.5 rounded-full transition-all",
+                  "h-1.5 rounded-full transition-[width,background-color]",
                   i === activeSlide
                     ? "bg-primary w-4"
                     : "bg-foreground/25 w-1.5"
@@ -295,7 +308,7 @@ export const EmptyState = ({
           {/* Action bar — a single GET STARTED CTA opens the two-step wizard. */}
           <div className="bg-foreground text-background shadow-foreground/20 flex w-full max-w-[64rem] flex-col gap-4 p-5 shadow-2xl lg:mx-auto lg:flex-row lg:items-center lg:gap-8 lg:px-8 lg:py-7">
             <div className="hidden lg:block">
-              <p className="text-background/55 font-mono text-[11px] font-medium tracking-[0.2em] uppercase">
+              <p className="text-background/55 font-mono text-xs font-medium tracking-[0.2em] uppercase">
                 Ready in two steps
               </p>
               <p className="font-heading mt-1.5 text-3xl leading-none uppercase">
@@ -305,9 +318,7 @@ export const EmptyState = ({
 
             <Button
               className="font-heading shadow-primary/50 h-auto justify-center px-8 py-4 text-2xl tracking-wide uppercase shadow-xl hover:-translate-y-0.5"
-              onClick={() => {
-                setWizardOpen(true);
-              }}
+              onClick={openWizard}
               size="lg"
             >
               Get started
@@ -315,11 +326,11 @@ export const EmptyState = ({
             </Button>
 
             <div className="flex items-center justify-between gap-4 lg:ml-auto lg:block lg:text-right">
-              <div className="text-background/60 flex items-center gap-2 font-mono text-[11px] font-medium tracking-[0.14em] uppercase lg:justify-end">
+              <div className="text-background/60 flex items-center gap-2 font-mono text-xs font-medium tracking-[0.14em] uppercase lg:justify-end">
                 <span className="bg-primary size-1.5" />
                 Add activity
               </div>
-              <div className="text-background/60 flex items-center gap-2 font-mono text-[11px] font-medium tracking-[0.14em] uppercase lg:mt-2 lg:justify-end">
+              <div className="text-background/60 flex items-center gap-2 font-mono text-xs font-medium tracking-[0.14em] uppercase lg:mt-2 lg:justify-end">
                 <span className="bg-primary size-1.5" />
                 Add a photo
               </div>
@@ -331,12 +342,12 @@ export const EmptyState = ({
         <div className="text-foreground/40 pointer-events-none flex flex-col items-center gap-1">
           <span className="caption-micro">Scroll</span>
           <CaretDownIcon
-            className="size-4 motion-safe:animate-bounce"
+            className="size-4 motion-safe:animate-[effort-scroll-cue_1.6s_ease-in-out_infinite]"
             weight="duotone"
           />
         </div>
 
-        {intro.showReplay ? <IntroReplay onReplay={intro.replay} /> : null}
+        {intro.showReplay ? <IntroReplay onReplay={handleReplay} /> : null}
       </section>
 
       {/* ───── Section 2 · Intro video (dark) ───── */}
@@ -353,7 +364,7 @@ export const EmptyState = ({
               numbers that matter. Here’s the gist.
             </p>
             <Link
-              className="text-background/60 hover:text-background mt-6 inline-flex items-center gap-2 font-mono text-[11px] font-medium tracking-[0.16em] uppercase transition-colors"
+              className="text-background/60 hover:text-background mt-6 inline-flex items-center gap-2 font-mono text-xs font-medium tracking-[0.16em] uppercase transition-colors"
               href="/tutorials"
             >
               Watch the tutorials
@@ -377,9 +388,7 @@ export const EmptyState = ({
           </p>
           <Button
             className="font-heading shadow-primary/50 h-auto justify-center px-8 py-4 text-2xl tracking-wide uppercase shadow-xl hover:-translate-y-0.5"
-            onClick={() => {
-              setWizardOpen(true);
-            }}
+            onClick={openWizard}
             size="lg"
           >
             Get started
@@ -388,10 +397,10 @@ export const EmptyState = ({
         </div>
 
         <div className="border-foreground/10 mx-auto mt-16 flex w-full max-w-[64rem] flex-col items-center gap-5 border-t pt-8 sm:flex-row sm:justify-between">
-          <span className="font-mono text-[11px] tracking-[0.16em] uppercase opacity-80">
+          <span className="font-mono text-xs tracking-[0.16em] uppercase opacity-80">
             <StravaCompatLink />
           </span>
-          <nav className="flex items-center gap-5 font-mono text-[11px] font-medium tracking-[0.16em] uppercase">
+          <nav className="flex items-center gap-5 font-mono text-xs font-medium tracking-[0.16em] uppercase">
             <Link
               className="opacity-60 transition-opacity hover:opacity-100"
               href="/tutorials"
@@ -412,7 +421,7 @@ export const EmptyState = ({
             </Link>
           </nav>
           <a
-            className="group text-foreground/60 hover:text-foreground font-mono text-[11px] font-medium tracking-[0.16em] uppercase transition-colors"
+            className="group text-foreground/60 hover:text-foreground font-mono text-xs font-medium tracking-[0.16em] uppercase transition-colors"
             href="https://manuel.fyi/"
             rel="noopener noreferrer"
             target="_blank"
@@ -426,7 +435,7 @@ export const EmptyState = ({
       <OnboardingWizard
         initialStravaPickerOpen={autoStravaPicker}
         onComplete={onComplete}
-        onOpenChange={setWizardOpen}
+        onOpenChange={handleWizardOpenChange}
         open={wizardOpen}
       />
     </div>

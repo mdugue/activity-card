@@ -17,7 +17,11 @@ import {
   formatPaceMin,
   formatPaceSec,
 } from "@/lib/format";
-import type { ParamDef, ParamOption } from "@/theme/core/params/kinds";
+import type {
+  ParamDef,
+  ParamOption,
+  ThemeConfig,
+} from "@/theme/core/params/kinds";
 import type { ActivityView } from "@/theme/core/theme-contract";
 
 /** Display typeface for the claim. */
@@ -46,7 +50,7 @@ export type AltitudeClaimStyle = "cutout" | "stacked";
 
 // Extends Record so the config flows through the generic param registry /
 // coercer without casts; declared keys keep their precise types.
-export interface AltitudeConfig extends Record<string, unknown> {
+export interface AltitudeConfig extends ThemeConfig {
   /** The hero metric, or `"none"` to show no claim (line + supporting stats only). */
   claim: AltitudeHeadline;
   claimStyle: AltitudeClaimStyle;

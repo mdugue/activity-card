@@ -9,7 +9,7 @@ import { CrossViz } from "../cross-viz";
 import type { PanelProps } from "../define-theme";
 import { MetaBand, Signature } from "./parts";
 import { SlideScaffold } from "./scaffold";
-import { slideText } from "./shared";
+import { slideText, statWithUnit } from "./shared";
 
 export const EditorialSlide = ({
   data,
@@ -24,7 +24,7 @@ export const EditorialSlide = ({
   const colors = slideText(style, hasPhoto);
   const summary = buildStats(data, statOpts)
     .slice(0, 3)
-    .map((s) => `${s.value}${s.unit ? ` ${s.unit}` : ""}`)
+    .map(statWithUnit)
     .join("  ·  ");
 
   return (

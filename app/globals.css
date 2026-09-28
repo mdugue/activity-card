@@ -183,6 +183,17 @@
   }
 }
 
+/* Landing scroll cue — a gentle ease-in-out nudge down and back. */
+@keyframes effort-scroll-cue {
+  0%,
+  100% {
+    transform: translateY(-15%);
+  }
+  50% {
+    transform: translateY(15%);
+  }
+}
+
 @keyframes effort-aura {
   0%,
   100% {
