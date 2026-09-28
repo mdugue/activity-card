@@ -21,20 +21,21 @@ const TrkPtSchema = z.object({
   "@_lon": Numeric,
   ele: z.optional(Numeric),
   time: z.optional(z.string()),
-  extensions: z.optional(
-    z.object({
-      "gpxtpx:TrackPointExtension": z.optional(
-        z.object({
-          "gpxtpx:hr": z.optional(Numeric),
-          "gpxtpx:cad": z.optional(Numeric),
-        })
-      ),
-    })
-  ),
+  // Left open: the namespace prefix is whatever the file declares (`gpxtpx:`
+  // from most devices, `ns3:` from some Garmin exports). `trackPointExtension`
+  // `fieldBySuffix` picks the fields out whatever the prefix.
+  extensions: z.optional(z.unknown()),
 });
 
 const TrkSegSchema = z.object({
   trkpt: z.union([TrkPtSchema, z.array(TrkPtSchema)]),
+});
+
+// `<name>2024</name>` or `<type>9</type>` arrive as numbers.
+const TrkSchema = z.object({
+  name: z.optional(Numeric),
+  type: z.optional(Numeric),
+  trkseg: z.optional(z.union([TrkSegSchema, z.array(TrkSegSchema)])),
 });
 
 const GpxSchema = z.object({
@@ -42,21 +43,17 @@ const GpxSchema = z.object({
     z.object({
       metadata: z.optional(
         z.object({
-          name: z.optional(z.string()),
+          name: z.optional(Numeric),
           time: z.optional(z.string()),
         })
       ),
-      trk: z.optional(
-        z.object({
-          name: z.optional(z.string()),
-          type: z.optional(z.string()),
-          trkseg: z.optional(z.union([TrkSegSchema, z.array(TrkSegSchema)])),
-        })
-      ),
+      // A file with several `<trk>` elements parses to an array.
+      trk: z.optional(z.union([TrkSchema, z.array(TrkSchema)])),
     })
   ),
 });
 
+type GpxTrk = z.infer<typeof TrkSchema>;
 type GpxTrkPt = z.infer<typeof TrkPtSchema>;
 
 /**
@@ -92,41 +89,56 @@ export function parseGpx(text: string, filename: string): ParsedActivity {
   }
   const xml = result.data;
 
-  const trk = xml.gpx?.trk;
-  let segs: { trkpt: GpxTrkPt | GpxTrkPt[] }[] = [];
-  if (Array.isArray(trk?.trkseg)) {
-    segs = trk.trkseg;
-  } else if (trk?.trkseg) {
-    segs = [trk.trkseg];
-  }
-  const flatPts: GpxTrkPt[] = [];
-  for (const seg of segs) {
-    const pts = seg.trkpt;
-    if (Array.isArray(pts)) {
-      flatPts.push(...pts);
-    } else if (pts) {
-      flatPts.push(pts);
-    }
-  }
+  const rawTrk = xml.gpx?.trk;
+  const tracks: GpxTrk[] = Array.isArray(rawTrk)
+    ? rawTrk
+    : [rawTrk].filter((t) => t !== undefined);
+  const flatPts: GpxTrkPt[] = tracks.flatMap((trk) =>
+    [trk.trkseg ?? []].flat().flatMap((seg) => [seg.trkpt].flat())
+  );
 
   const points: TrackPoint[] = flatPts.map((p) => {
-    const ext = p.extensions?.["gpxtpx:TrackPointExtension"];
+    const ext = fieldBySuffix(p.extensions, "TrackPointExtension");
     return {
       lat: toFiniteNumber(p["@_lat"]),
       lng: toFiniteNumber(p["@_lon"]),
       elevation: toFiniteNumber(p.ele),
       time: p.time ? toFiniteNumber(Date.parse(p.time)) : undefined,
-      heartRate: toFiniteNumber(ext?.["gpxtpx:hr"]),
-      cadence: toFiniteNumber(ext?.["gpxtpx:cad"]),
+      heartRate: toFiniteNumber(fieldBySuffix(ext, "hr")),
+      cadence: toFiniteNumber(fieldBySuffix(ext, "cad")),
     };
   });
 
-  const sport = detectSport(trk?.type, filename);
+  // Name and type come from the first track that has them.
+  const trkName = tracks.find((t) => hasText(t.name))?.name;
+  const trkType = tracks.find((t) => hasText(t.type))?.type;
+  const metaName = xml.gpx?.metadata?.name;
+  const sport = detectSport(
+    trkType === undefined ? undefined : String(trkType),
+    filename
+  );
   return finalise({
     points,
     sport,
     name:
-      trk?.name || xml.gpx?.metadata?.name || filename.replace(GPX_EXT_RE, ""),
+      [trkName, metaName].find(hasText)?.toString() ??
+      filename.replace(GPX_EXT_RE, ""),
     isoDate: xml.gpx?.metadata?.time || points[0]?.time,
   });
+}
+
+function hasText(v: string | number | undefined): v is string | number {
+  return v !== undefined && String(v) !== "";
+}
+
+/** Read `<prefix:key>` (or an unprefixed `<key>`) from a parsed element. */
+function fieldBySuffix(element: unknown, key: string): unknown {
+  if (!element || typeof element !== "object") {
+    return;
+  }
+  for (const [name, value] of Object.entries(element)) {
+    if (name === key || name.endsWith(`:${key}`)) {
+      return value;
+    }
+  }
 }

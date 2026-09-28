@@ -174,35 +174,73 @@ function sportSpecificStats(
   return {};
 }
 
+/**
+ * Classify an activity. The declared type (GPX `<type>`, FIT `sport`, Strava
+ * `sport_type`) is authoritative; the file or activity name is only a
+ * fallback when that type is missing or unrecognised — otherwise a Strava
+ * `Run` titled "Bike commute home" would become a ride.
+ */
 export function detectSport(
   raw: string | undefined,
   filename: string
 ): ParsedSport {
-  const s = (raw || "").toLowerCase();
-  const f = filename.toLowerCase();
-  if (
-    s.includes("cycl") ||
-    s.includes("bike") ||
-    s.includes("ride") ||
-    f.includes("ride") ||
-    f.includes("bike")
-  ) {
+  return (
+    sportFromDeclaredType((raw || "").toLowerCase()) ??
+    sportFromName(filename) ??
+    "ride"
+  );
+}
+
+/** Declared types are vocabularies ("VirtualRide", "TrailRun", "cycling"),
+ * so substrings are safe here. */
+function sportFromDeclaredType(s: string): ParsedSport | undefined {
+  if (s.includes("cycl") || s.includes("bike") || s.includes("ride")) {
     return "ride";
   }
-  if (s.includes("run") || f.includes("run")) {
+  if (s.includes("run")) {
     return "run";
   }
-  if (s.includes("swim") || f.includes("swim")) {
+  if (s.includes("swim")) {
     return "swim";
   }
-  if (
-    s.includes("triathlon") ||
-    s.includes("multisport") ||
-    f.includes("triathlon")
-  ) {
+  if (s.includes("triathlon") || s.includes("multisport")) {
     return "triathlon";
   }
-  return "ride";
+}
+
+const NAME_SPORT_WORDS = new Map<string, ParsedSport>([
+  ["ride", "ride"],
+  ["riding", "ride"],
+  ["bike", "ride"],
+  ["biking", "ride"],
+  ["cycling", "ride"],
+  ["run", "run"],
+  ["running", "run"],
+  ["swim", "swim"],
+  ["swimming", "swim"],
+]);
+
+/**
+ * Names are free text, so match whole words only ("brunch" is not a run,
+ * "strides" is not a ride). camelCase is split first so "MorningRun" still
+ * reads as a run. "triathlon" wins wherever it appears — triathlon titles
+ * tend to name their legs too; otherwise the first sport word in reading
+ * order wins.
+ */
+function sportFromName(name: string): ParsedSport | undefined {
+  const words = name
+    .replaceAll(/[a-z][A-Z]/gu, (pair) => `${pair[0]} ${pair[1]}`)
+    .toLowerCase()
+    .split(/[^a-z]+/u);
+  if (words.includes("triathlon")) {
+    return "triathlon";
+  }
+  for (const word of words) {
+    const sport = NAME_SPORT_WORDS.get(word);
+    if (sport) {
+      return sport;
+    }
+  }
 }
 
 function cumulativeDistanceKm(points: TrackPoint[]): number {

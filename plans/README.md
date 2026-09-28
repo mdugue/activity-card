@@ -18,7 +18,7 @@ is listed under "Findings not yet planned" so it can be picked later
 | 001  | [FIT uploads keep their elevation](./001-fit-elevation-in-metres.md)           | P1       | S      | —          | DONE   |
 | 002  | [Local calendar date in every timezone](./002-local-calendar-date.md)          | P1       | S      | —          | DONE   |
 | 003  | [Sign the OAuth bounce target](./003-sign-oauth-bounce-target.md)              | P1       | S      | —          | DONE   |
-| 004  | [Declared sport wins; robust GPX](./004-sport-detection-and-gpx-robustness.md) | P2       | S      | —          | TODO   |
+| 004  | [Declared sport wins; robust GPX](./004-sport-detection-and-gpx-robustness.md) | P2       | S      | —          | DONE   |
 | 005  | [Agent-facing doc drift](./005-fix-agent-facing-doc-drift.md)                  | P2       | S      | —          | TODO   |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
