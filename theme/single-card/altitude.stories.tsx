@@ -16,7 +16,10 @@ import {
   THEME_PROP_CONTROLS_EXCLUDE,
   ThemeStoryView,
 } from "../../.storybook/theme-controls";
-import type { ThemeStoryExtras } from "../../.storybook/theme-controls";
+import type {
+  ParamArgs,
+  ThemeStoryExtras,
+} from "../../.storybook/theme-controls";
 import { withFormatMatrix } from "../../.storybook/with-format-matrix";
 import { ThemeAltitude } from "./altitude";
 
@@ -29,7 +32,7 @@ const THEME = SINGLE_CARD_THEMES.altitude;
 
 type AltitudeArgs = ComponentProps<typeof ThemeAltitude> &
   ThemeStoryExtras &
-  AltitudeConfig;
+  ParamArgs<AltitudeConfig>;
 
 const meta = preview.type<{ args: AltitudeArgs }>().meta({
   argTypes: {

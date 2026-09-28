@@ -234,6 +234,13 @@ export const paramArgTypes = (params: ParamDef[]) =>
 
 /* --------------------------- shared render --------------------------- */
 
+/** A theme config's declared params without `ThemeConfig`'s string index
+ *  signature — so it can be intersected with the story's non-param args
+ *  (`data`, `color`, …) in a story's `Meta` type. */
+export type ParamArgs<C> = {
+  [K in keyof C as string extends K ? never : K]: C[K];
+};
+
 /** Extra (non-component) args every single-card theme story shares: the colour
  *  pick, the activity-tuning overrides, and the background photo args. Intersect
  *  with the component's props (and the theme's Config) in the story `Meta`. */

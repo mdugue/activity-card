@@ -21,7 +21,10 @@ import {
   THEME_PROP_CONTROLS_EXCLUDE,
   ThemeStoryView,
 } from "../../.storybook/theme-controls";
-import type { ThemeStoryExtras } from "../../.storybook/theme-controls";
+import type {
+  ParamArgs,
+  ThemeStoryExtras,
+} from "../../.storybook/theme-controls";
 import { withFormatMatrix } from "../../.storybook/with-format-matrix";
 import { ThemeStrata } from "./strata";
 
@@ -33,7 +36,7 @@ const THEME = SINGLE_CARD_THEMES.strata;
 
 type StrataArgs = ComponentProps<typeof ThemeStrata> &
   ThemeStoryExtras &
-  StrataConfig;
+  ParamArgs<StrataConfig>;
 
 const meta = preview.type<{ args: StrataArgs }>().meta({
   argTypes: {
