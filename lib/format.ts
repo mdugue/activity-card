@@ -88,7 +88,8 @@ export function formatNumber(n?: number, digits = 0): string {
   return n.toFixed(digits);
 }
 
-const CALENDAR_DATE_RE = /^\d{4}-\d{2}-\d{2}$/u;
+/** A bare `YYYY-MM-DD` calendar date (no time, no zone). */
+export const CALENDAR_DATE_RE = /^\d{4}-\d{2}-\d{2}$/u;
 
 export interface FormatDateOptions {
   /** "long" → "September 3, 2026" (default); "short" → "Sep 3, 2026". */

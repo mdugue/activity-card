@@ -148,8 +148,8 @@ equivalence is **canvas : panel :: full-bleed : SafeArea**:
   platform keep-out on taller formats via `mergeSafe`. Never pad a panel by a
   bare constant — that's a dead safe zone.
 
-All sizing flows from `theme/carousel/geometry.ts` (`stripGeometry` /
-`useStripGeometry`, `stripFormat`, `CAROUSEL_NATURAL_MARGIN`), never a parallel
+All sizing flows from `theme/carousel/geometry.ts` (`stripGeometry`,
+`stripFormat`, `CAROUSEL_NATURAL_MARGIN`), never a parallel
 size table. The deck, the editor preview/strip and the slicing export all read it.
 
 The carousel offers the **same formats as the single card** — the full

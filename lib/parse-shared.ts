@@ -7,6 +7,7 @@
  */
 
 import type { Coord, Split, StravaPhotoRef } from "@/lib/activity";
+import { CALENDAR_DATE_RE } from "@/lib/format";
 import { resampleTo, simplifyToCount, smooth } from "@/lib/simplify";
 
 export type ParsedSport = "ride" | "run" | "swim" | "triathlon";
@@ -396,8 +397,6 @@ function round(n: number, digits: number): number {
   const f = 10 ** digits;
   return Math.round(n * f) / f;
 }
-
-const CALENDAR_DATE_RE = /^\d{4}-\d{2}-\d{2}$/u;
 
 /**
  * The activity's calendar date as `YYYY-MM-DD`. A bare calendar date passes
