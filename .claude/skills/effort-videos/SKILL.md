@@ -41,7 +41,7 @@ Renders land in the gitignored `out/`.
 - `theme-card.tsx` — `ThemeCard`: renders a REAL single-card theme from the registry with `pickThemeData`, exactly as the app exports it.
 - `route-draw.tsx` — a route silhouette drawing itself via the app's `routePath` projection (geographically faithful — never stretch).
 - `preload-img.tsx` — `PreloadImg`: REQUIRED next to anything that paints a photo via CSS background (the app's photo layers do); the renderer only waits for Remotion `<Img>`.
-- `remotion/videos/walkthrough.tsx` — `TitleScene` / `StepScene` / `OutroScene` + `WALK` pacing: the scaffolding every tutorial is assembled from.
+- `remotion/videos/walkthrough.tsx` — `TitleScene` / `StepScene` / `OutroScene`: the scaffolding every tutorial is assembled from; their `WALK` pacing lives in `walkthrough-pacing.ts`.
 
 ## Real product, not mockups
 
@@ -73,7 +73,7 @@ Videos star the actual theme components with the app's sample fixtures:
 
 - 30 fps (`FPS`). Landscape 1920×1080; the hero also ships a 1080×1920 cut (scenes read `useVideoConfig()` and lay out per orientation — see `hero-scenes.tsx`).
 - Hero ≈ 30–45s; walkthroughs 30–60s.
-- Durations are exported per video as `*_DURATION_IN_FRAMES`, derived from scene constants minus transition overlaps (transitions shorten a `TransitionSeries`).
+- Durations are exported per video as `*_DURATION_IN_FRAMES`, derived from scene constants minus transition overlaps (transitions shorten a `TransitionSeries`). The hero videos keep this metadata (fps, size, beats, duration) in a sibling `<name>-meta.ts` so the `.tsx` exports only components (React Doctor's `only-export-components`).
 
 ## Adding a new video
 

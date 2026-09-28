@@ -130,8 +130,8 @@ Full walkthrough with skeletons and checklists: `docs/creating-a-theme.md`.
 
 ## Adding a theme / a knob
 
-1. **New single-card theme** — one file in `theme/single-card/`
-   exporting the component + `defineTheme` descriptor; add it to
+1. **New single-card theme** — `theme/single-card/<name>.tsx` (the component)
+   + `<name>.theme.ts` (its `defineTheme` descriptor); add it to
    `SINGLE_CARD_THEMES` and `THEME_ORDER`; colocate a story. The compiler
    verifies the `uses` list against what the component reads.
 2. **New knob** — add a `ParamDef` to the theme's `*_PARAMS` spec (pure data in

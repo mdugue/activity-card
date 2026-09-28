@@ -99,7 +99,7 @@ strip).
 | ------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
 | Output        | one 1080×1350 poster                                                                 | an n×1080 × 1350 seamless strip, sliced into slides                        |
 | A theme is…   | **a `defineTheme` descriptor** (component + declaration)                             | **a `defineCarouselTheme` descriptor** (`canvas?` + `panels[]`)            |
-| Lives in      | `theme/single-card/<name>.tsx`                                                       | `theme/carousel/registry.ts` (descriptor incl. its `look`)                 |
+| Lives in      | `theme/single-card/<name>.tsx` + `<name>.theme.ts` (descriptor)                      | `theme/carousel/registry.ts` (descriptor incl. its `look`)                 |
 | Id space      | `ThemeId` (`theme/single-card/index.ts`)                                             | `CarouselThemeId` (`theme/carousel/registry.ts`)                           |
 | Registered in | `SINGLE_CARD_THEMES` (descriptor registry)                                           | `CAROUSEL_THEMES` (`registry.ts`) · `CAROUSEL_THEME_ORDER`                 |
 | Renderer      | the theme component itself                                                           | one shared `theme/carousel/deck.tsx` (`CarouselDeck`)                      |
@@ -198,8 +198,9 @@ theme/                THE theme feature module — everything that IS a theme, o
   shared/             Rendering utilities both card kinds build on: photo layers
                       (cover-photo, photo-backdrop/layer/fx/underlay), overlay-route,
                       and `format-context.tsx` (`FormatProvider` / `SafeArea`).
-  single-card/        SINGLE-CARD themes — one file per theme, each exporting its
-                      component plus a `defineTheme` descriptor; collected in
+  single-card/        SINGLE-CARD themes — per theme, `<name>.tsx` (the component
+                      only) + `<name>.theme.ts` (its `defineTheme` descriptor);
+                      shared fallback accents in `default-accents.ts`; collected in
                       `index.ts` (`SINGLE_CARD_THEMES` / `ThemeId`).
   carousel/           CAROUSEL ("accordion") themes — descriptors (`registry.ts`, built
                       via `define-theme.ts`) composed by one shared renderer (`deck.tsx`,
@@ -246,8 +247,8 @@ public/               Static assets.
 ### Where new code goes
 
 - **A new screen or state of the app** → `components/app/<name>.tsx`, wired from `app/page.tsx`.
-- **A new single-card theme** → one `theme/single-card/<name>.tsx`
-  exporting the component and a `defineTheme` descriptor (capabilities, colour +
+- **A new single-card theme** → `theme/single-card/<name>.tsx` (the component)
+  plus `theme/single-card/<name>.theme.ts` (its `defineTheme` descriptor: capabilities, colour +
   photo policy, params); add it to `SINGLE_CARD_THEMES` + `THEME_ORDER`
   (`theme/single-card/index.ts`), **plus a colocated
   `theme/single-card/<name>.stories.tsx`**.
