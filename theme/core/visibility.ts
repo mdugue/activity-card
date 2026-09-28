@@ -112,6 +112,9 @@ export function applyVisibility(
     avgPaceMinPerKm: vis.pace ? data.avgPaceMinPerKm : undefined,
     avgPacePer100m: vis.pace ? data.avgPacePer100m : undefined,
     paceProfile: vis.pace ? data.paceProfile : undefined,
+    // Swim laps are a pace series too (the `pace` capability declares them) and
+    // the shared profile signal falls back to them, so they hide with pace.
+    lapPacesPer100m: vis.pace ? data.lapPacesPer100m : undefined,
     elevationGainM: vis.elevation ? data.elevationGainM : undefined,
     elevationProfile: vis.elevationViz ? data.elevationProfile : undefined,
     routeCoordinates: vis.route ? data.routeCoordinates : undefined,
