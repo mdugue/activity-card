@@ -303,10 +303,10 @@ test.describe("strava OAuth + picker", () => {
   test("callback rejects a crafted bounce origin (open-redirect defence)", async ({
     page,
   }) => {
-    // Mint a state payload claiming to come from `attacker.example`. Since
-    // the bounce-origin allowlist only accepts the registered prod host or
-    // `*.vercel.app`, the callback should redirect to /?strava=bounce_rejected
-    // rather than relaying the code to the attacker.
+    // Mint a state payload claiming to come from `attacker.example`. It has
+    // no bounce signature (`s`, an HMAC only our own authorize route can
+    // mint), so the callback must redirect to /?strava=bounce_rejected rather
+    // than relaying the code to the attacker.
     const payload = JSON.stringify({
       r: "x".repeat(48),
       b: "https://attacker.example",
