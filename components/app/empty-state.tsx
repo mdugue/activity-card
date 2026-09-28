@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRightIcon, CaretDownIcon } from "@phosphor-icons/react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -17,11 +18,21 @@ import {
 } from "@/components/app/empty-state-intro";
 import type { IntroStage } from "@/components/app/empty-state-intro";
 import { IntroVideo } from "@/components/app/intro-video";
-import { OnboardingWizard } from "@/components/app/onboarding-wizard";
 import type { OnboardingResult } from "@/components/app/onboarding-wizard";
 import { StravaCompatLink } from "@/components/app/strava-footer";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+// The wizard (and the Strava picker inside it) is a separate chunk: it renders
+// nothing until opened, so it stays out of the landing's first load and is
+// fetched right after hydration — in cache before anyone reaches the CTA.
+const OnboardingWizard = dynamic(
+  () =>
+    import("@/components/app/onboarding-wizard").then(
+      (m) => m.OnboardingWizard
+    ),
+  { ssr: false }
+);
 
 const PANEL_COUNT = 3;
 // Keep in sync with the rail's `gap-4` (16px) so the sliced panorama lines up
@@ -33,6 +44,9 @@ interface EmptyStateProps {
    * this opens the wizard with the Strava picker showing. */
   autoStravaPicker?: boolean;
   onComplete: (result: OnboardingResult) => void;
+  /** fired once the user shows intent to make a card (the wizard opens) — the
+   *  page warms the editor chunk so it's ready when the wizard completes */
+  onIntent?: () => void;
 }
 
 /** Abstract route squiggle — the "drop" slide's footer glyph. */
@@ -190,6 +204,7 @@ function ClaimPanel({
 export function EmptyState({
   autoStravaPicker = false,
   onComplete,
+  onIntent,
 }: EmptyStateProps) {
   const intro = useEmptyStateIntro();
   const railRef = useRef<HTMLDivElement>(null);
@@ -204,6 +219,12 @@ export function EmptyState({
       setWizardOpen(true);
     }
   }, [autoStravaPicker]);
+
+  useEffect(() => {
+    if (wizardOpen) {
+      onIntent?.();
+    }
+  }, [wizardOpen, onIntent]);
 
   // Track the centred slide on the touch rail so the dots reflect the swipe.
   // (No-op on desktop, where the grid doesn't scroll and the dots are hidden.)

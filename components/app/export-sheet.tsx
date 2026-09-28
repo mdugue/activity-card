@@ -34,7 +34,6 @@ import type { ExportFormat } from "@/theme/core/export-formats";
 import { RenderTheme } from "@/theme/editor/render-theme";
 import type { ThemeId } from "@/theme/editor/render-theme";
 import { SafeZoneOverlay } from "@/theme/editor/safe-zone-overlay";
-import { activityMetadata, exportCard } from "@/theme/export/export-card";
 import { effortDateSlug } from "@/theme/export/export-shared";
 
 import { ToggleRow } from "./control-primitives";
@@ -94,6 +93,11 @@ export function useTileMax(box: TileBox = SINGLE_TILE): TileMax {
 
   return tileMax;
 }
+
+// The export pipeline (snapdom + the PNG metadata writer) only runs on a
+// download tap, so it's loaded on demand rather than with the sheet. The sheet
+// warms it on mount so the first tap never waits on the network.
+const loadExportCard = () => import("@/theme/export/export-card");
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -338,7 +342,9 @@ export function ExportSheet(props: ExportSheetProps) {
   // source. The same node is shown scaled-to-fit in the tile.
   const mounts = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const metadata = activityMetadata(data);
+  useEffect(() => {
+    void loadExportCard();
+  }, []);
 
   const exportOne = useCallback(
     async (format: ExportFormat) => {
@@ -349,18 +355,19 @@ export function ExportSheet(props: ExportSheetProps) {
       // Errors are surfaced here (not bubbled) so a failed format in the
       // download-all loop never aborts the rest of the set.
       try {
+        const { activityMetadata, exportCard } = await loadExportCard();
         await exportCard(node, {
           filename: fileFor(data, format),
           width: format.width,
           height: format.height,
-          metadata,
+          metadata: activityMetadata(data),
           metadataOptions: { gps },
         });
       } catch {
         toast.error("Export failed — please try again.");
       }
     },
-    [data, metadata, gps]
+    [data, gps]
   );
 
   const { busy, handleOne, handleAll } = useFormatExports(exportOne);

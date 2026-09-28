@@ -3,12 +3,12 @@
 // them is the colour model's job (`resolveColors` over a photo-kind
 // `ColorChoice` — see `lib/colors.ts`), not this hook's.
 //
-// For heavy photos, buildPaletteFromImage can move into a Web Worker without
-// changing this hook's shape — see the note at the bottom of palette.ts.
+// `lib/palette` (node-vibrant + culori) is imported on demand inside the
+// effect: it's only needed once a photo exists, so it stays out of the
+// landing page's first-load bundle.
 
 import { useEffect, useState } from "react";
 
-import { buildPaletteFromImage } from "@/lib/palette";
 import type { ExtractedPalette } from "@/lib/palette";
 
 /**
@@ -32,15 +32,16 @@ export function useImagePalette(
       return;
     }
     let cancelled = false;
-    buildPaletteFromImage(src)
+    import("@/lib/palette")
+      .then(({ buildPaletteFromImage }) => buildPaletteFromImage(src))
       .then((next) => {
         if (!cancelled) {
           setPalette(next);
         }
       })
       .catch(() => {
-        // Extraction failed (pathological image): drop to null so consumers
-        // fall back to their theme defaults — legibility always wins.
+        // Extraction (or loading the extractor) failed: drop to null so
+        // consumers fall back to their theme defaults — legibility always wins.
         if (!cancelled) {
           setPalette(null);
         }

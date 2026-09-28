@@ -9,7 +9,7 @@
 // the chrome, the busy/one/all orchestration, the responsive tiles — is the
 // shared machinery from `export-sheet.tsx`.
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
@@ -23,10 +23,6 @@ import type { ColorScheme } from "@/theme/core/colors";
 import { FORMAT_ORDER, getFormat } from "@/theme/core/export-formats";
 import type { ExportFormat } from "@/theme/core/export-formats";
 import type { Visibility } from "@/theme/core/visibility";
-import {
-  carouselBaseName,
-  exportCarousel,
-} from "@/theme/export/export-carousel";
 
 import {
   ExportShell,
@@ -35,6 +31,9 @@ import {
   useTileMax,
 } from "./export-sheet";
 import type { TileBox } from "./export-sheet";
+
+// The slicing export pulls snapdom, so it loads on demand (warmed on mount).
+const loadExportCarousel = () => import("@/theme/export/export-carousel");
 
 // Wide-strip tile box (vs the single card's portrait one): a strip is several
 // slides across, so it wants a wider, shorter footprint to stay legible.
@@ -82,7 +81,9 @@ export function CarouselExportSheet({
   // One native-size strip mount per format, registered by each tile — the slicing
   // export reads it directly.
   const mounts = useRef<Record<string, HTMLDivElement | null>>({});
-  const baseName = carouselBaseName(data.sport, data.date);
+  useEffect(() => {
+    void loadExportCarousel();
+  }, []);
   // The deck draws no photo until its natural size resolves, so exporting before
   // then would rasterise a photo-less strip. Gate downloads on the decode while a
   // photo is shown (the single card has a CSS-cover fallback and needs no gate).
@@ -95,12 +96,14 @@ export function CarouselExportSheet({
         return;
       }
       try {
+        const { carouselBaseName, exportCarousel } = await loadExportCarousel();
+        const baseName = carouselBaseName(data.sport, data.date);
         await exportCarousel(node, count, baseName, format);
       } catch {
         toast.error("Export failed — please try again.");
       }
     },
-    [count, baseName]
+    [count, data.sport, data.date]
   );
 
   const { busy, handleOne, handleAll } = useFormatExports(exportOne);

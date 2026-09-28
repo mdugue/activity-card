@@ -1,12 +1,11 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-import { CarouselExportSheet } from "@/components/app/carousel-export-sheet";
 import { EffortWordmark } from "@/components/app/effort-wordmark";
 import { EmptyState } from "@/components/app/empty-state";
-import { ExportSheet } from "@/components/app/export-sheet";
 import { ModeToggle } from "@/components/app/mode-toggle";
 import type { CardMode } from "@/components/app/mode-toggle";
 import type { OnboardingResult } from "@/components/app/onboarding-wizard";
@@ -18,7 +17,6 @@ import {
   savePersistedUi,
 } from "@/components/app/persisted-ui";
 import { StravaFooter } from "@/components/app/strava-footer";
-import { StravaPicker } from "@/components/app/strava-picker";
 import { useCardPhoto } from "@/hooks/use-card-photo";
 import { useCarousel } from "@/hooks/use-carousel";
 import { useImagePalette } from "@/hooks/use-image-palette";
@@ -47,13 +45,60 @@ import {
   themeAvailability,
 } from "@/theme/core/visibility";
 import type { Visibility } from "@/theme/core/visibility";
-import { CarouselEditState } from "@/theme/editor/carousel-edit-state";
-import { EditState } from "@/theme/editor/edit-state";
 import type { EditorSession } from "@/theme/editor/editor-session";
 import type { ThemeId } from "@/theme/editor/render-theme";
 import { SINGLE_CARD_THEMES } from "@/theme/single-card";
 
 type AppState = "empty" | "picking-strava" | "edit" | "download";
+
+// Code-split by app state: the landing only needs the empty state, so the
+// editor, the Strava picker and the export sheets (which pull the snapdom
+// export pipeline) load as separate chunks. Each loader is also called ahead of
+// time on user intent (see `preloadEditor` / `preloadExport`) so the chunk is
+// normally in cache before the state flips; the fallback only holds the
+// layout slot for the rare case it isn't.
+const loadEditState = () => import("@/theme/editor/edit-state");
+const loadCarouselEditState = () =>
+  import("@/theme/editor/carousel-edit-state");
+const loadExportSheet = () => import("@/components/app/export-sheet");
+const loadCarouselExportSheet = () =>
+  import("@/components/app/carousel-export-sheet");
+
+function preloadEditor(): void {
+  void loadEditState();
+  void loadCarouselEditState();
+}
+
+function preloadExport(): void {
+  void loadExportSheet();
+  void loadCarouselExportSheet();
+}
+
+/** Holds the state's flex slot while its chunk loads — no collapse/jump. */
+function StateFallback() {
+  return <div aria-busy className="flex flex-1 flex-col" />;
+}
+
+const EditState = dynamic(() => loadEditState().then((m) => m.EditState), {
+  loading: StateFallback,
+  ssr: false,
+});
+const CarouselEditState = dynamic(
+  () => loadCarouselEditState().then((m) => m.CarouselEditState),
+  { loading: StateFallback, ssr: false }
+);
+const ExportSheet = dynamic(
+  () => loadExportSheet().then((m) => m.ExportSheet),
+  { loading: StateFallback, ssr: false }
+);
+const CarouselExportSheet = dynamic(
+  () => loadCarouselExportSheet().then((m) => m.CarouselExportSheet),
+  { loading: StateFallback, ssr: false }
+);
+const StravaPicker = dynamic(
+  () => import("@/components/app/strava-picker").then((m) => m.StravaPicker),
+  { loading: StateFallback, ssr: false }
+);
 
 function adoptParsed(
   parsed: ParsedActivity,
@@ -204,6 +249,14 @@ export default function Home() {
     mode,
     data?.athleteName,
   ]);
+
+  // In the editor the next stop is the export sheet: warm its chunk (and,
+  // through it, the export pipeline) while the user edits.
+  useEffect(() => {
+    if (state === "edit") {
+      preloadExport();
+    }
+  }, [state]);
 
   // After the Strava OAuth round-trip we land on `/?strava=...` — toast the
   // outcome and, on success, open the wizard with the Strava picker showing.
@@ -426,6 +479,7 @@ export default function Home() {
         <EmptyState
           autoStravaPicker={autoStravaPicker}
           onComplete={handleOnboardingComplete}
+          onIntent={preloadEditor}
         />
       ) : null}
       {state === "picking-strava" ? (
