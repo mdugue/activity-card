@@ -155,6 +155,13 @@ appear.
 - **TypeScript strict mode.** No `any` without a `// reason:` comment.
 - **Tailwind for styling.** No CSS-in-JS, no styled-components. Theme components may use scoped `<style>` for fonts.
 - **Combine class names with `cn()`** from `@/lib/utils` (clsx + tailwind-merge). Never template-literal concatenation for conditional classes — write `cn("base", active && "…")`, not `` `base ${active ? "…" : ""}` ``.
+- **App UI stays on the design system** (`shadcn/lint`): no arbitrary values
+  off the token scale, no inline styles (dynamic values go through a CSS
+  custom property consumed by a class, e.g. `w-(--tile-w)`), no raw colours,
+  and no restyling a shadcn primitive at a call site — call sites may only add
+  layout (margin, width, flex, position). A repeated treatment becomes a
+  styled wrapper in `components/app/primitives/`; a one-off value becomes a
+  token in `app/globals.css` (`@theme`) or an `@utility` recipe there.
 - **Shadows use Tailwind's scale** (`shadow-xs` … `shadow-2xl`), tinted when needed via `shadow-<token>` (e.g. `shadow-primary/50`). No arbitrary `shadow-[…]` in app chrome. Themes in `theme/` are the exception: they rasterise to PNG, so their shadows stay inline as `style={{ boxShadow }}`.
 - **Route/path silhouettes stay geographically faithful.** Project route coordinates with a single uniform scale and centre them in their container — use `projectRoute` / `routePath` (`lib/chart-helpers.ts`), which do exactly this. Never stretch a path per-axis to fill a box (e.g. to span the full carousel width): a distorted silhouette misrepresents the real route. Keep its true proportions and centre it (for the carousel hero, in the middle of the complete viewport).
 - **No console.log in committed code.** Use proper error UI for user-facing failures.
@@ -166,10 +173,12 @@ appear.
   `--type-aware`, so the promise, deprecation and assertion rules that need type
   information run too. `oxlint.config.ts` takes every applicable Ultracite
   preset as shipped (core, react, next, jest, js-plugins — github, sonarjs,
-  React Doctor — next/js-plugins, anti-slop) plus eslint-plugin-storybook and
-  @remotion/eslint-plugin, with **no rule deviations** (the only scoped
-  overrides are the vendored shadcn files and Next's verb-named Route
-  Handlers): when a rule fires, change the code. A targeted
+  React Doctor — next/js-plugins, anti-slop, shadcn) plus
+  eslint-plugin-storybook and @remotion/eslint-plugin, with **no rule
+  deviations**. The only scoped overrides: the vendored shadcn files, Next's
+  verb-named Route Handlers, and shadcn/lint's design-system rules not
+  applying to theme canvases / Remotion frames (pixel-exact inline-styled
+  output, not design-system UI). When a rule fires, change the code. A targeted
   `// oxlint-disable-next-line <rule> -- <reason>` is the escape hatch for a
   single line that genuinely cannot comply (a framework contract, a pixel-exact
   poster size); never a config switch, never a file-level disable.
@@ -183,6 +192,8 @@ app/                  Next.js App Router routes only (page.tsx, layout.tsx, rout
                       No private `_components/` folders — keep components in `/components/`.
 components/
   ui/                 shadcn primitives. VENDOR — do NOT edit; re-add via `bunx shadcn add`.
+  app/primitives/     OUR design-system layer over the vendored `ui/`: styled wrappers
+                      that own a treatment (appearance lives here, not at call sites).
   app/                App-level composite components NOT specific to theme editing —
                       states, shell, wordmark, sample data, control primitives /
                       control-deck, card-stage, mode-toggle, export-sheet, onboarding,
@@ -269,6 +280,9 @@ public/               Static assets.
 ### Vendor files
 
 `components/ui/**` and `hooks/use-mobile.ts` are scaffolded by the shadcn / Next.js CLIs.
+Need a variant a primitive doesn't have? Build it as a wrapper in
+`components/app/primitives/` (linted like `components/ui`: it may restyle the
+primitive it wraps), not as call-site classes and not by editing `ui/`.
 `oxlint.config.ts` has one override for them that relaxes the rules shadcn's generated code violates, so a re-scaffold is never a lint failure — they are still linted and
 formatted, just at the level their generator ships. Don't restyle vendor files; if a
 primitive doesn't fit, wrap it in `components/app/`. When re-adding one, check its
