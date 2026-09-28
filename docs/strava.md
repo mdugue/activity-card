@@ -278,6 +278,14 @@ route handler that needs an access token calls it; if there's no token
 returns 401, and the client treats that as "disconnected" and prompts
 to reconnect.
 
+Token responses are validated before any cookie is written
+(`lib/strava-token-response.ts`, a `zod/mini` schema: non-empty
+`access_token` / `refresh_token`, integer `expires_at`, best-effort
+`athlete`). A malformed code-exchange response redirects to
+`/?strava=token_exchange` and keeps the state cookie for a retry; a
+malformed refresh response throws `StravaNotConnectedError` like a 5xx
+refresh does, leaving the stored cookies in place.
+
 ## Photo proxy
 
 `/api/strava/photo` streams an activity photo from our origin. The
