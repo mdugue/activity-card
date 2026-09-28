@@ -46,7 +46,7 @@
       "source": "remotion-dev/skills",
       "sourceType": "github",
       "skillPath": "skills/remotion-best-practices/SKILL.md",
-      "computedHash": "451d9b6d5b72c5fc5cc85732d490046c8cd2e5cb782aa7efa840b54f28335306"
+      "computedHash": "b376c777195f1df4721c19d0c56b161431c39da317d6e48e68ee73d6cd5acd11"
     },
     "shadcn": {
       "source": "shadcn/ui",
