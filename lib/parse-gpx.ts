@@ -39,7 +39,9 @@ const TrkPtSchema = z.object({
   ele: z.optional(Numeric),
   // The TrackPointExtension namespace prefix varies by exporter (`gpxtpx:`,
   // Garmin's `ns3:`, …), so keep every key and pick by suffix in the mapping.
-  extensions: z.optional(ExtensionsSchema),
+  // An empty `<extensions/>` parses to "" — read it as no extension data
+  // rather than failing the file.
+  extensions: withFallback(z.nullish(ExtensionsSchema), null),
   time: z.optional(z.string()),
 });
 

@@ -70,6 +70,19 @@ describe("stravaToParsed", () => {
     expect(parsed.date).toBeString();
   });
 
+  test("the card date is the athlete's local day, the start stays UTC", () => {
+    // 06:30 in Sydney is 20:30 UTC the previous day.
+    const [parsed] = stravaToParsed(
+      makeDetail({
+        start_date: "2026-05-17T20:30:00Z",
+        start_date_local: "2026-05-18T06:30:00Z",
+      }),
+      makeStreams(3)
+    );
+    expect(parsed.date).toBe("2026-05-18");
+    expect(parsed.startTimeMs).toBe(Date.parse("2026-05-17T20:30:00Z"));
+  });
+
   test("empty streams produce a summary-only activity", () => {
     const [parsed] = stravaToParsed(makeDetail(), {});
     expect(parsed.distanceKm).toBe(25);

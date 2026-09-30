@@ -348,6 +348,27 @@ test.describe("strava OAuth + picker", () => {
     expect(page.url()).toMatch(/strava=bounce_rejected/u);
   });
 
+  test("callback refuses an unsigned bounce, even to an allowed host", async ({
+    page,
+  }) => {
+    // 127.0.0.1 passes the bounce allowlist (STRAVA_ALLOW_HTTP_BOUNCE), so
+    // only the missing signature stops the relay here. The signed happy path
+    // is unit-tested: `next start` reports every request as `localhost`, so a
+    // second origin can't initiate a real bounce in this setup.
+    const payload = JSON.stringify({
+      b: "http://127.0.0.1:3100",
+      r: "x".repeat(48),
+    });
+    const state = Buffer.from(payload).toString("base64url");
+    await page.goto(
+      `/api/strava/callback?code=intercepted&state=${encodeURIComponent(state)}`,
+      { waitUntil: "commit" }
+    );
+    expect(page.url()).toMatch(
+      /^http:\/\/localhost:3100\/.*strava=bounce_rejected/u
+    );
+  });
+
   test("502 from /api/strava/activity surfaces an upstream alert", async ({
     page,
   }) => {

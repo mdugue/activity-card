@@ -159,4 +159,16 @@ describe("parseGpx", () => {
     expect(parsed.avgHeartRate).toBe(142);
     expect(parsed.avgCadence).toBe(80);
   });
+
+  test("an empty <extensions/> element does not fail the file", () => {
+    const text = gpx(
+      `<trk><trkseg>${[
+        `<trkpt lat="47.0" lon="11.0"><time>2026-05-18T07:00:00Z</time><extensions></extensions></trkpt>`,
+        `<trkpt lat="47.001" lon="11.0"><time>2026-05-18T07:01:00Z</time><extensions/></trkpt>`,
+      ].join("")}</trkseg></trk>`
+    );
+    const parsed = parseGpx(text, "empty-ext.gpx");
+    expect(parsed.durationSec).toBe(60);
+    expect(parsed.avgHeartRate).toBeUndefined();
+  });
 });

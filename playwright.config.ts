@@ -58,6 +58,9 @@ export default defineConfig({
       env: {
         // Fake creds — the mock doesn't validate them, but the route
         // handlers refuse to start the flow without them set.
+        // Puts http://127.0.0.1 on the bounce allowlist, so the bounce test
+        // proves an unsigned target is refused even when its host passes.
+        STRAVA_ALLOW_HTTP_BOUNCE: "1",
         STRAVA_API_BASE: `${STRAVA_MOCK_BASE}/api/v3`,
         STRAVA_CLIENT_ID: "mock-client-id",
         STRAVA_CLIENT_SECRET: "mock-client-secret",

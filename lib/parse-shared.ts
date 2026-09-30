@@ -395,13 +395,15 @@ export const finalise = (input: FinaliseInput): ParsedActivity => {
 
 /**
  * Filename / activity-name hints, matched as whole words and checked in this
- * order (run → swim → ride → triathlon): the first hit wins.
+ * order (triathlon → run → swim → ride): the first hit wins. Triathlon leads
+ * because triathlon titles tend to name their legs too ("Olympic Triathlon:
+ * swim, bike, run").
  */
 const NAME_SPORT_WORDS: readonly [ParsedSport, readonly string[]][] = [
+  ["triathlon", ["triathlon"]],
   ["run", ["run", "running"]],
   ["swim", ["swim", "swimming"]],
   ["ride", ["ride", "bike", "cycling"]],
-  ["triathlon", ["triathlon"]],
 ];
 
 const sportFromDeclaredType = (s: string): ParsedSport | undefined => {

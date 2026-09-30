@@ -56,6 +56,12 @@ describe("detectSport", () => {
     expect(detectSport(undefined, "brunch-ride.gpx")).toBe("ride");
   });
 
+  test("a triathlon name wins over the legs it mentions", () => {
+    expect(detectSport(undefined, "Olympic Triathlon: swim, bike, run")).toBe(
+      "triathlon"
+    );
+  });
+
   test("defaults to ride for unrecognised input", () => {
     expect(detectSport("Yoga", "session.gpx")).toBe("ride");
     expect(detectSport(undefined, "activity.gpx")).toBe("ride");
