@@ -1,0 +1,21 @@
+Effort
+Copyright 2026 Manuel Dugué
+
+The source code is licensed under the Apache License, Version 2.0
+(see LICENSE).
+
+Not covered by that licence:
+
+  - Remotion, which renders the videos (remotion/) and plays them on the
+    site, is not open-source software. It is free for individuals,
+    non-profits and companies of up to three employees; larger companies
+    need a company licence. Its terms bind anyone who uses this code with
+    it: https://www.remotion.dev/license
+
+  - Strava's name, logo and the "Connect with Strava" button
+    (public/strava/) are trademarks of Strava, Inc.
+
+  - The photos in public/images/: all rights remain with their owners.
+
+  - The Storybook background photos are loaded from Unsplash at runtime
+    under the Unsplash License; none is bundled.

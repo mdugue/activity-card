@@ -45,3 +45,12 @@ bun run test         # unit tests (bun:test, scoped to ./lib ./theme)
 bun run test:e2e     # Playwright e2e
 bun run storybook    # theme/component workbench
 ```
+
+## License
+
+The code is licensed under the [Apache License 2.0](./LICENSE). Two things
+it builds on are not: the videos are made with
+[Remotion](https://www.remotion.dev/license), which is free for individuals
+and small companies but needs a company licence beyond three employees, and
+the Strava name, logo and connect button are Strava's trademarks. The photos
+in `public/images/` are not licensed either. See [`NOTICE`](./NOTICE).
