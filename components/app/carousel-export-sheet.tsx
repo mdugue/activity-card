@@ -9,7 +9,7 @@
 // the chrome, the busy/one/all orchestration, the responsive tiles — is the
 // shared machinery from `export-sheet.tsx`.
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
@@ -24,6 +24,7 @@ import { FORMAT_ORDER, getFormat } from "@/theme/core/export-formats";
 import type { ExportFormat } from "@/theme/core/export-formats";
 import type { ThemeConfig } from "@/theme/core/params/kinds";
 import type { Visibility } from "@/theme/core/visibility";
+import { delay } from "@/theme/export/export-shared";
 
 import {
   ExportShell,
@@ -39,6 +40,43 @@ const loadExportCarousel = async () =>
 
 // Wide-strip tile box (vs the single card's portrait one): a strip is several
 // slides across, so it wants a wider, shorter footprint to stay legible.
+/** How long an export waits for an offscreen tile's strip to mount. */
+const MOUNT_TIMEOUT_MS = 3000;
+const MOUNT_POLL_MS = 50;
+
+/** Resolve the format's strip once its deck has rendered into the mount. A
+ *  tile only keeps its deck mounted while on screen, so exporting a tile that
+ *  is scrolled away (or "Download all") mounts it first. */
+const waitForStrip = async (
+  read: () => HTMLDivElement | null | undefined
+): Promise<HTMLDivElement | null> => {
+  for (let waited = 0; waited <= MOUNT_TIMEOUT_MS; waited += MOUNT_POLL_MS) {
+    const node = read();
+    if (node?.firstElementChild) {
+      return node;
+    }
+    // oxlint-disable-next-line eslint/no-await-in-loop, react-doctor/async-await-in-loop -- polling: each check has to wait for React to commit the mount
+    await delay(MOUNT_POLL_MS);
+  }
+  return null;
+};
+
+/** Wait for the format's strip to mount, then slice and deliver it. */
+const exportStrip = async (
+  read: () => HTMLDivElement | null | undefined,
+  set: { count: number; date: string; sport: string },
+  format: ExportFormat
+): Promise<void> => {
+  const node = await waitForStrip(read);
+  if (!node) {
+    // The strip never mounted — fail loudly, never no-op.
+    throw new Error(`The ${format.label} strip did not mount`);
+  }
+  const { carouselBaseName, exportCarousel } = await loadExportCarousel();
+  const baseName = carouselBaseName(set.sport, set.date);
+  await exportCarousel(node, set.count, baseName, format);
+};
+
 const CAROUSEL_TILE: TileBox = {
   aspect: 0.56,
   capW: 520,
@@ -91,21 +129,22 @@ export const CarouselExportSheet = ({
   // photo is shown (the single card has a CSS-cover fallback and needs no gate).
   const photoNotReady = photoUrl !== null && imageSize === null;
 
+  // The format being exported keeps its strip mounted even offscreen.
+  const [exportingId, setExportingId] = useState<string | null>(null);
+
   const exportOne = useCallback(
     async (format: ExportFormat) => {
-      const node = mounts.current[format.id];
-      if (!node) {
-        // The strip isn't mounted (shouldn't happen) — say so, never no-op.
-        toast.error("Export failed — please try again.");
-        return;
-      }
+      setExportingId(format.id);
       try {
-        const { carouselBaseName, exportCarousel } = await loadExportCarousel();
-        const baseName = carouselBaseName(data.sport, data.date);
-        await exportCarousel(node, count, baseName, format);
+        await exportStrip(
+          () => mounts.current[format.id],
+          { count, date: data.date, sport: data.sport },
+          format
+        );
       } catch {
         toast.error("Export failed — please try again.");
       }
+      setExportingId(null);
     },
     [count, data.sport, data.date]
   );
@@ -138,8 +177,10 @@ export const CarouselExportSheet = ({
               busy={busy}
               busyId={id}
               disabled={photoNotReady}
+              forceMount={exportingId === id}
               key={id}
               label={format.label}
+              lazy
               nativeH={slideH}
               nativeW={stripW}
               onDownload={() => {

@@ -466,3 +466,50 @@ test("carousel Exposure export embeds the background via the photo composite", a
   // offset — the case the single card can't cover.
   expectSeamlessSet(await exportCarouselWithPhoto(page, FORCE_COMPOSITE));
 });
+
+test("the carousel overview mounts only the strips on screen, and Download all still exports every format", async ({
+  page,
+}) => {
+  // Seven native-size strips at once is what crashed iOS Safari when the
+  // overview opened; on a phone-sized viewport only the visible tiles mount.
+  await enterEditViaUpload(page);
+  await selectCarousel(page);
+  await selectTheme(page, "EXPOSURE");
+  await page.locator(PHOTO_INPUT).setInputFiles(MAGENTA_RAMP_PHOTO);
+  await expect(
+    page.getByRole("button", { name: /adjust photo/iu })
+  ).toBeVisible();
+  // Enter on desktop (the onboarding differs on mobile), then shrink to a phone.
+  await page.setViewportSize({ height: 844, width: 390 });
+  await page.getByTestId("export-action").click();
+  await expect(page.getByRole("heading", { name: /pick a/iu })).toBeVisible();
+  await page.locator('[style*="blob:"]').first().waitFor({ state: "attached" });
+
+  const tiles = page.getByTestId("export-tile");
+  await expect(tiles).toHaveCount(7);
+  const mounted = tiles.filter({ has: page.locator("[data-effort-photo]") });
+  const mountedCount = await mounted.count();
+  expect(mountedCount).toBeGreaterThan(0);
+  expect(mountedCount).toBeLessThan(7);
+
+  const sublabel = await page
+    .getByText(/4:5 · \d+ ×/u)
+    .first()
+    .textContent();
+  const count = Math.trunc(Number(sublabel?.split("· ")[1]?.split(" ")[0]));
+  const downloads: Download[] = [];
+  page.on("download", (download) => {
+    downloads.push(download);
+  });
+  await page.getByRole("button", { exact: true, name: "Download all" }).click();
+  await expect
+    .poll(() => downloads.length, { timeout: 60_000 })
+    .toBe(7 * count);
+  // The last format was offscreen when the export began; its slides must
+  // still carry the photo.
+  const last = downloads.at(-1);
+  if (!last) {
+    throw new Error("no download arrived");
+  }
+  expect(await magentaFraction(page, last)).toBeGreaterThan(0.2);
+});
