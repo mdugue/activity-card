@@ -54,6 +54,24 @@
       "skillPath": "skills/remotion-best-practices/SKILL.md",
       "computedHash": "5622d2809a04d655a2f89de7f480fcdd4eec827a417af6709a8e6e566784a48a"
     },
+    "sentry-debug-issue": {
+      "source": "getsentry/agent-plugin",
+      "sourceType": "github",
+      "skillPath": "skills/sentry-debug-issue/SKILL.md",
+      "computedHash": "7f3e7a30c90bac0977adb4400ddfd896ce21927c5f6365bda92e4a25ebc0a1cf"
+    },
+    "sentry-fix-stack-traces": {
+      "source": "getsentry/agent-plugin",
+      "sourceType": "github",
+      "skillPath": "skills/sentry-fix-stack-traces/SKILL.md",
+      "computedHash": "95ed54f303512505c7c670cfb18e0138b8b9edc1cc3300cabf02edaa7f0e9c97"
+    },
+    "sentry-instrument": {
+      "source": "getsentry/agent-plugin",
+      "sourceType": "github",
+      "skillPath": "skills/sentry-instrument/SKILL.md",
+      "computedHash": "7d2c7d9887bfe0d9a91c66f3ba5ebc63100f8defd28f957b153af1c2f94df589"
+    },
     "shadcn": {
       "source": "shadcn/ui",
       "sourceType": "github",

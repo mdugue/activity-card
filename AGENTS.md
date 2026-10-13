@@ -17,6 +17,12 @@ Single-page, fully client-side, no backend, no auth (for MVP). The card is a Rea
    - `theme-architecture/` — invariants for CROSS-CUTTING theme concerns (output formats, safe zones, shared photo/colour): single source of truth, no inversion of control, no dead contracts. Read before wrapping a theme in anything or adding a global rendering knob.
    - `carousel-themes/` — the Carousel ("accordion") theme system: tokens, decks, photo handling
    - `sport-data/` — sport-specific metrics, units, parsing normalisation
+   - `sentry-debug-issue/`, `sentry-fix-stack-traces/`, `sentry-instrument/` — Sentry's
+     own skills (vendored via `skills-lock.json`) for working issues from the Sentry
+     project `manuel-dugue/effort` through the Sentry MCP. Our config lives in
+     `lib/sentry-options.ts` (errors only, `dataCollection` off) and
+     `lib/export-watch.ts` (export errors + mid-export crash marker); keep it
+     data-minimal — the privacy page promises no IP, cookies, query strings or replay.
 3. Topic-specific docs under `docs/`:
    - [`docs/creating-a-theme.md`](./docs/creating-a-theme.md) — the step-by-step
      guide for adding a theme (either family) or a new adjustable knob: the

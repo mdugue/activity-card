@@ -14,6 +14,7 @@ import { toast } from "sonner";
 
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
 import type { ActivityData } from "@/lib/activity";
+import { watchExport, watchOverview } from "@/lib/export-watch";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PhotoEffects } from "@/lib/photo-effects";
 import { CarouselDeck } from "@/theme/carousel/deck";
@@ -124,6 +125,30 @@ export const CarouselExportSheet = ({
   useEffect(() => {
     void loadExportCarousel();
   }, []);
+  // Report a tab killed while the overview is open, with how many previews
+  // were mounted at the time.
+  const tiles = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const arm = () =>
+      watchOverview({
+        kind: "carousel",
+        mounted: Object.values(mounts.current).filter(
+          (node) => node?.firstElementChild
+        ).length,
+        slides: count,
+      });
+    const clear = arm();
+    const observer = new MutationObserver(() => {
+      arm();
+    });
+    if (tiles.current) {
+      observer.observe(tiles.current, { childList: true, subtree: true });
+    }
+    return () => {
+      observer.disconnect();
+      clear();
+    };
+  }, [count]);
   // The deck draws no photo until its natural size resolves, so exporting before
   // then would rasterise a photo-less strip. Gate downloads on the decode while a
   // photo is shown (the single card has a CSS-cover fallback and needs no gate).
@@ -136,10 +161,15 @@ export const CarouselExportSheet = ({
     async (format: ExportFormat) => {
       setExportingId(format.id);
       try {
-        await exportStrip(
-          () => mounts.current[format.id],
-          { count, date: data.date, sport: data.sport },
-          format
+        await watchExport(
+          { format: format.id, kind: "carousel", slides: count },
+          async () => {
+            await exportStrip(
+              () => mounts.current[format.id],
+              { count, date: data.date, sport: data.sport },
+              format
+            );
+          }
         );
       } catch {
         toast.error("Export failed — please try again.");
@@ -168,7 +198,10 @@ export const CarouselExportSheet = ({
           : `Each format slices the strip into its ${count} slides — grab one set, or every format. On mobile a set shares as one batch.`
       }
     >
-      <div className="mt-5 flex flex-wrap justify-center gap-3 sm:mt-7 sm:gap-5">
+      <div
+        className="mt-5 flex flex-wrap justify-center gap-3 sm:mt-7 sm:gap-5"
+        ref={tiles}
+      >
         {FORMAT_ORDER.map((id) => {
           const format = getFormat(id);
           const { slideH, stripW } = stripGeometry(format, count);

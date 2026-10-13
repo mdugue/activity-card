@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { useOnScreen } from "@/hooks/use-on-screen";
 import type { ActivityData } from "@/lib/activity";
 import { routePath } from "@/lib/chart-helpers";
+import { watchExport } from "@/lib/export-watch";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PhotoEffects } from "@/lib/photo-effects";
 import { cn } from "@/lib/utils";
@@ -458,13 +459,23 @@ export const ExportSheet = (props: ExportSheetProps) => {
       // download-all loop never aborts the rest of the set.
       try {
         const { activityMetadata, exportCard } = await loadExportCard();
-        await exportCard(node, {
-          filename: fileFor(data, format),
-          height: format.height,
-          metadata: activityMetadata(data),
-          metadataOptions: { gps },
-          width: format.width,
-        });
+        await watchExport(
+          {
+            format: format.id,
+            height: format.height,
+            kind: "card",
+            width: format.width,
+          },
+          async () => {
+            await exportCard(node, {
+              filename: fileFor(data, format),
+              height: format.height,
+              metadata: activityMetadata(data),
+              metadataOptions: { gps },
+              width: format.width,
+            });
+          }
+        );
       } catch {
         toast.error("Export failed — please try again.");
       }
