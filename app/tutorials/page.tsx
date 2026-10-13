@@ -46,11 +46,7 @@ const TutorialsPage = () => (
         <h2 className="font-heading leading-display-loose text-3xl text-balance uppercase lg:text-4xl">
           Ready to make yours?
         </h2>
-        <CtaButton
-          nativeButton={false}
-          render={<Link href="/" />}
-          scale="section"
-        >
+        <CtaButton nativeButton={false} render={<Link href="/" />} scale="hero">
           Open the editor
         </CtaButton>
       </div>

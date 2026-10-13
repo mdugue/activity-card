@@ -315,15 +315,9 @@ const ActivityItem = ({
   return (
     <SelectableItem
       aria-label={activity.name}
-      data-selected={isSelected ? "true" : undefined}
+      disabled={disabled}
       onClick={handleClick}
-      render={
-        // The label is the Item's aria-label above, which base-ui renders onto
-        // this button.
-        // oxlint-disable-next-line jsx-a11y/control-has-associated-label
-        <button disabled={disabled} type="button" />
-      }
-      variant="outline"
+      selected={isSelected}
     >
       <ItemMedia>
         <div className="flex items-center gap-3">

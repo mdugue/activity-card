@@ -4,13 +4,13 @@
 // derives the photo's natural size + a cover-overflow clamp for the active box,
 // gates availability on (photo shown ∧ size known), and owns the `adjusting`
 // flag (auto-closing when the photo goes away). `AdjustControls` renders the
-// shared Badge + overlay. Only the box dimensions and the label differ between
+// shared Adjust button + overlay. Only the box dimensions and the label differ between
 // the single card (format box) and the carousel (whole strip).
 
 import { ArrowsOutCardinalIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 
-import { FilledBadge } from "@/components/app/primitives/badge";
+import { PhotoOverlayButton } from "@/components/app/primitives/button";
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
 import type { ImageSize } from "@/hooks/use-image-natural-size";
 import { clampCoverTransform } from "@/lib/image-transform";
@@ -96,26 +96,20 @@ export const AdjustControls = ({
   return (
     <>
       {adjustAvailable && !adjusting ? (
-        <FilledBadge
+        <PhotoOverlayButton
           className="absolute top-3 right-3 z-10"
-          tone="scrimAction"
-          render={
-            <button
-              aria-label={label}
-              onClick={() => {
-                setAdjusting(true);
-              }}
-              type="button"
-            />
-          }
+          onClick={() => {
+            setAdjusting(true);
+          }}
+          size="sm"
         >
           <ArrowsOutCardinalIcon
             aria-hidden
-            className="size-3"
+            className="size-3.5"
             weight="duotone"
           />
           {label}
-        </FilledBadge>
+        </PhotoOverlayButton>
       ) : null}
       {adjusting ? (
         <ImageAdjustOverlay

@@ -20,9 +20,6 @@ const ctaButtonVariants = cva("font-heading tracking-wide uppercase", {
       default: "h-11 px-6 text-base sm:h-12 sm:px-8 sm:text-lg",
       /** the landing hero: larger, lifted on a primary-tinted shadow */
       hero: "shadow-primary/50 h-auto justify-center px-8 py-4 text-2xl shadow-xl hover:-translate-y-0.5",
-      /** a closing section's hand-off (the tutorials page footer) */
-      section:
-        "shadow-primary/50 h-auto justify-center px-7 py-3.5 text-xl shadow-lg",
     },
   },
 });

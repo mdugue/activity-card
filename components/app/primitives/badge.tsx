@@ -21,9 +21,6 @@ const filledBadgeVariants = cva("", {
       /** a frosted dark pill that reads over a photo */
       scrim:
         "rounded-full bg-black/55 px-3 py-1.5 font-mono text-xs text-white backdrop-blur-sm",
-      /** the scrim pill as a pressable chip (the photo "Adjust" affordance) */
-      scrimAction:
-        "rounded-full bg-black/55 px-3 py-1.5 font-mono text-xs text-white backdrop-blur-sm transition-colors hover:bg-black/75",
     },
   },
 });
