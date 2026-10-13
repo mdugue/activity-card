@@ -117,7 +117,7 @@ Both families share the same **editor machinery**:
   on its `ThemeBase` core. On the single card the declaration also narrows the
   component's `data` prop type (reading an undeclared field is a compile error).
   Both families drive editor availability the same way — `themeAvailability(data,
-theme)` (`theme/core/visibility.ts`).
+  theme)` (`theme/core/visibility.ts`).
 - **Colour** (`theme/core/colors.ts`): themes consume a resolved `ColorScheme`; the user
   picks a `ColorChoice` — a static preset (single hue or pair) or a photo-derived
   strategy — in one control, hidden for fixed-palette themes.
