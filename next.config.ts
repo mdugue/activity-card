@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
 // Baseline security headers for every route. Deliberately NOT a full CSP:
@@ -31,4 +32,14 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
 };
 
-export default nextConfig;
+// Sentry: error reports reach it through the same-origin `/monitoring` tunnel
+// (ad blockers drop direct requests to sentry.io). Source maps are uploaded
+// only when SENTRY_AUTH_TOKEN is set (Vercel), and never served publicly.
+export default withSentryConfig(nextConfig, {
+  org: "manuel-dugue",
+  project: "effort",
+  silent: process.env.CI === undefined,
+  sourcemaps: { deleteSourcemapsAfterUpload: true },
+  tunnelRoute: "/monitoring",
+  widenClientFileUpload: true,
+});

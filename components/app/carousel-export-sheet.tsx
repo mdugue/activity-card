@@ -14,6 +14,7 @@ import { toast } from "sonner";
 
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
 import type { ActivityData } from "@/lib/activity";
+import { watchExport } from "@/lib/export-watch";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PhotoEffects } from "@/lib/photo-effects";
 import { CarouselDeck } from "@/theme/carousel/deck";
@@ -102,7 +103,12 @@ export const CarouselExportSheet = ({
       try {
         const { carouselBaseName, exportCarousel } = await loadExportCarousel();
         const baseName = carouselBaseName(data.sport, data.date);
-        await exportCarousel(node, count, baseName, format);
+        await watchExport(
+          { format: format.id, kind: "carousel", slides: count },
+          async () => {
+            await exportCarousel(node, count, baseName, format);
+          }
+        );
       } catch {
         toast.error("Export failed — please try again.");
       }
