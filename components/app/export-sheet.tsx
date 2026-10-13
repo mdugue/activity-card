@@ -23,6 +23,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { useOnScreen } from "@/hooks/use-on-screen";
 import type { ActivityData } from "@/lib/activity";
 import { routePath } from "@/lib/chart-helpers";
 import type { ImageTransform } from "@/lib/image-transform";
@@ -306,7 +307,13 @@ interface ExportTileProps {
   children: ReactNode;
   /** force-disable the download button (e.g. while the photo decodes) */
   disabled?: boolean;
+  /** keep `children` mounted even offscreen — the format being exported */
+  forceMount?: boolean;
   label: string;
+  /** mount `children` only while the tile is on screen. The carousel's strips
+   *  are several native-size decks each; all seven at once is more than iOS
+   *  Safari will hold, and it kills the tab. */
+  lazy?: boolean;
   /** native pixel size of `children` — a single card box, or the whole strip */
   nativeH: number;
   nativeW: number;
@@ -328,7 +335,9 @@ export const ExportTile = ({
   busyId,
   children,
   disabled = false,
+  forceMount = false,
   label,
+  lazy = false,
   nativeH,
   nativeW,
   onDownload,
@@ -341,6 +350,9 @@ export const ExportTile = ({
   const tileW = nativeW * scale;
   const tileH = nativeH * scale;
   const isBusy = busy === busyId;
+  const frameRef = useRef<HTMLDivElement>(null);
+  const onScreen = useOnScreen(frameRef, lazy);
+  const mounted = onScreen || forceMount;
   // Tile + native sizes ride CSS custom properties (px); the scale lives on the
   // wrapper so the captured mount stays untransformed.
   const tileStyle: TileStyle = {
@@ -356,10 +368,11 @@ export const ExportTile = ({
       <div
         className="ring-foreground/10 relative h-(--tile-h) w-(--tile-w) overflow-hidden rounded-md shadow-sm ring-1"
         data-testid="export-tile"
+        ref={frameRef}
       >
         <div className="origin-top-left transform-(--tile-scale)">
           <div className="h-(--native-h) w-(--native-w)" ref={registerMount}>
-            {children}
+            {mounted ? children : null}
           </div>
         </div>
         {safe?.show === true ? (

@@ -2,23 +2,16 @@
 
 // The carousel export sheet — the carousel analogue of `ExportSheet`. Same
 // overview (pick a format, download one or all), reached the same way (a tap on
-// the editor's Export action, never an inline download). Unlike the single card
-// it shows ONE live preview: a row of format chips above a single tile holding
-// the whole n-slide strip rendered by the shared `CarouselDeck`. Each format is
-// a native-size, photo-backed strip several slides wide, and a tile per format
-// (seven at once) is more than iOS Safari will hold — it killed the tab as the
-// overview opened. Downloading slices the shown strip into its per-slide image
-// set (`exportCarousel`); "Download all" steps the preview through each format.
-// The chrome, the busy/one/all orchestration and the tile itself are the shared
-// machinery from `export-sheet.tsx`.
+// the editor's Export action, never an inline download). The only differences
+// from the single card: each tile is the whole n-slide strip rendered by the
+// shared `CarouselDeck`, and downloading a format slices that strip into its
+// per-slide image set (`exportCarousel`) instead of one card. Everything else —
+// the chrome, the busy/one/all orchestration, the responsive tiles — is the
+// shared machinery from `export-sheet.tsx`.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import {
-  OptionToggleItem,
-  ScrollToggleGroup,
-} from "@/components/app/primitives/toggle-group";
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
 import type { ActivityData } from "@/lib/activity";
 import type { ImageTransform } from "@/lib/image-transform";
@@ -27,12 +20,8 @@ import { CarouselDeck } from "@/theme/carousel/deck";
 import type { CarouselTheme } from "@/theme/carousel/define-theme";
 import { stripGeometry } from "@/theme/carousel/geometry";
 import type { ColorScheme } from "@/theme/core/colors";
-import {
-  DEFAULT_FORMAT_ID,
-  FORMAT_ORDER,
-  getFormat,
-} from "@/theme/core/export-formats";
-import type { ExportFormat, ExportFormatId } from "@/theme/core/export-formats";
+import { FORMAT_ORDER, getFormat } from "@/theme/core/export-formats";
+import type { ExportFormat } from "@/theme/core/export-formats";
 import type { ThemeConfig } from "@/theme/core/params/kinds";
 import type { Visibility } from "@/theme/core/visibility";
 import { delay } from "@/theme/export/export-shared";
@@ -49,56 +38,57 @@ import type { TileBox } from "./export-sheet";
 const loadExportCarousel = async () =>
   await import("@/theme/export/export-carousel");
 
-/** How long an export waits for the preview to show its format. */
+// Wide-strip tile box (vs the single card's portrait one): a strip is several
+// slides across, so it wants a wider, shorter footprint to stay legible.
+/** How long an export waits for an offscreen tile's strip to mount. */
 const MOUNT_TIMEOUT_MS = 3000;
 const MOUNT_POLL_MS = 50;
 
-/** Resolve the strip once `read` reports it rendered (the preview may first
- *  have to switch to the format being exported). */
+/** Resolve the format's strip once its deck has rendered into the mount. A
+ *  tile only keeps its deck mounted while on screen, so exporting a tile that
+ *  is scrolled away (or "Download all") mounts it first. */
 const waitForStrip = async (
-  read: () => HTMLDivElement | null
+  read: () => HTMLDivElement | null | undefined
 ): Promise<HTMLDivElement | null> => {
   for (let waited = 0; waited <= MOUNT_TIMEOUT_MS; waited += MOUNT_POLL_MS) {
     const node = read();
     if (node?.firstElementChild) {
       return node;
     }
-    // oxlint-disable-next-line eslint/no-await-in-loop, react-doctor/async-await-in-loop -- polling: each check has to wait for React to commit the switch
+    // oxlint-disable-next-line eslint/no-await-in-loop, react-doctor/async-await-in-loop -- polling: each check has to wait for React to commit the mount
     await delay(MOUNT_POLL_MS);
   }
   return null;
 };
 
-/** Wait for the format's strip to render, then slice and deliver it. */
+/** Wait for the format's strip to mount, then slice and deliver it. */
 const exportStrip = async (
-  read: () => HTMLDivElement | null,
+  read: () => HTMLDivElement | null | undefined,
   set: { count: number; date: string; sport: string },
   format: ExportFormat
 ): Promise<void> => {
   const node = await waitForStrip(read);
   if (!node) {
-    // The strip never rendered — fail loudly, never no-op.
-    throw new Error(`The ${format.label} strip did not render`);
+    // The strip never mounted — fail loudly, never no-op.
+    throw new Error(`The ${format.label} strip did not mount`);
   }
   const { carouselBaseName, exportCarousel } = await loadExportCarousel();
   const baseName = carouselBaseName(set.sport, set.date);
   await exportCarousel(node, set.count, baseName, format);
 };
 
-// The one preview gets the room the seven tiles used to share: wide, and
-// growing with the viewport.
 const CAROUSEL_TILE: TileBox = {
   aspect: 0.56,
-  capW: 960,
-  factor: 0.86,
-  floorW: 300,
+  capW: 520,
+  factor: 0.34,
+  floorW: 220,
 };
 
 interface CarouselExportSheetProps {
   colors: ColorScheme;
   config: ThemeConfig;
   count: number;
-  /** visibility-applied data, for rendering the preview */
+  /** visibility-applied data, for rendering the previews */
   data: ActivityData;
   imageTransform: ImageTransform;
   onKeepEditing: () => void;
@@ -128,21 +118,9 @@ export const CarouselExportSheet = ({
   // The deck needs the photo's natural size for the pannable panorama — the same
   // dependency the editor's deck has.
   const imageSize = useImageNaturalSize(photoUrl);
-  const [selectedId, setSelectedId] =
-    useState<ExportFormatId>(DEFAULT_FORMAT_ID);
-  // The format being exported takes over the preview until it is done.
-  const [exportingId, setExportingId] = useState<string | null>(null);
-  const shownId = FORMAT_ORDER.find((id) => id === exportingId) ?? selectedId;
-  const shown = getFormat(shownId);
-  const { slideH, stripW } = stripGeometry(shown, count);
-
-  // The one native-size strip mount, plus the format it holds once React has
-  // committed it — an export reads the strip only when the two agree.
-  const mount = useRef<HTMLDivElement | null>(null);
-  const committedId = useRef<string | null>(null);
-  useEffect(() => {
-    committedId.current = shownId;
-  }, [shownId]);
+  // One native-size strip mount per format, registered by each tile — the slicing
+  // export reads it directly.
+  const mounts = useRef<Record<string, HTMLDivElement | null>>({});
   useEffect(() => {
     void loadExportCarousel();
   }, []);
@@ -151,12 +129,15 @@ export const CarouselExportSheet = ({
   // photo is shown (the single card has a CSS-cover fallback and needs no gate).
   const photoNotReady = photoUrl !== null && imageSize === null;
 
+  // The format being exported keeps its strip mounted even offscreen.
+  const [exportingId, setExportingId] = useState<string | null>(null);
+
   const exportOne = useCallback(
     async (format: ExportFormat) => {
       setExportingId(format.id);
       try {
         await exportStrip(
-          () => (committedId.current === format.id ? mount.current : null),
+          () => mounts.current[format.id],
           { count, date: data.date, sport: data.sport },
           format
         );
@@ -184,62 +165,48 @@ export const CarouselExportSheet = ({
       subtitle={
         photoNotReady
           ? "Preparing your photo…"
-          : `Pick a format to preview its ${count} slides — grab one set, or every format. On mobile a set shares as one batch.`
+          : `Each format slices the strip into its ${count} slides — grab one set, or every format. On mobile a set shares as one batch.`
       }
     >
-      <ScrollToggleGroup
-        aria-label="Format"
-        className="mx-auto mt-5 flex max-w-full justify-start overflow-x-auto sm:mt-7 sm:flex-wrap sm:justify-center"
-        disabled={busy !== null}
-        onValueChange={(values) => {
-          const picked = FORMAT_ORDER.find((id) => id === values[0]);
-          if (picked !== undefined) {
-            setSelectedId(picked);
-          }
-        }}
-        spacing={2}
-        value={[shownId]}
-      >
+      <div className="mt-5 flex flex-wrap justify-center gap-3 sm:mt-7 sm:gap-5">
         {FORMAT_ORDER.map((id) => {
           const format = getFormat(id);
+          const { slideH, stripW } = stripGeometry(format, count);
           return (
-            <OptionToggleItem key={id} look="chip" tone="invert" value={id}>
-              {format.label}
-              <span className="opacity-60">{format.aspectLabel}</span>
-            </OptionToggleItem>
+            <ExportTile
+              busy={busy}
+              busyId={id}
+              disabled={photoNotReady}
+              forceMount={exportingId === id}
+              key={id}
+              label={format.label}
+              lazy
+              nativeH={slideH}
+              nativeW={stripW}
+              onDownload={() => {
+                void handleOne(format);
+              }}
+              registerMount={(node) => {
+                mounts.current[id] = node;
+              }}
+              sublabel={`${format.aspectLabel} · ${count} × ${format.width}×${format.height}`}
+              tileMax={tileMax}
+            >
+              <CarouselDeck
+                colors={colors}
+                config={config}
+                data={data}
+                format={format}
+                imageSize={imageSize}
+                imageTransform={imageTransform}
+                photoEffects={photoEffects}
+                photoUrl={photoUrl}
+                theme={theme}
+                visibility={visibility}
+              />
+            </ExportTile>
           );
         })}
-      </ScrollToggleGroup>
-      <div className="mt-4 flex justify-center sm:mt-6">
-        <ExportTile
-          busy={busy}
-          busyId={shownId}
-          disabled={photoNotReady}
-          label={shown.label}
-          nativeH={slideH}
-          nativeW={stripW}
-          onDownload={() => {
-            void handleOne(shown);
-          }}
-          registerMount={(node) => {
-            mount.current = node;
-          }}
-          sublabel={`${shown.aspectLabel} · ${count} × ${shown.width}×${shown.height}`}
-          tileMax={tileMax}
-        >
-          <CarouselDeck
-            colors={colors}
-            config={config}
-            data={data}
-            format={shown}
-            imageSize={imageSize}
-            imageTransform={imageTransform}
-            photoEffects={photoEffects}
-            photoUrl={photoUrl}
-            theme={theme}
-            visibility={visibility}
-          />
-        </ExportTile>
       </div>
     </ExportShell>
   );
