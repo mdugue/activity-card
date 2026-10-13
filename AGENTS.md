@@ -318,7 +318,7 @@ Ask before:
 
 - Introducing a backend / API route with state
 - Changing the data model in SPEC.md
-- Adding or removing a theme (currently 7 single-card and 6 carousel themes)
+- Adding or removing a theme (currently 13 single-card and 6 carousel themes)
 - Bringing in a map library
 
 Small refactors, bug fixes, styling iteration, theme polish — proceed.
