@@ -207,7 +207,9 @@ it renders in Storybook:
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import type { ComponentProps } from "react";
 import { expect } from "storybook/test";
+
 import { SAMPLE_RIDE, SAMPLE_RUN } from "@/components/app/sample-data";
+
 import {
   type BackgroundArgs,
   backgroundArgTypes,

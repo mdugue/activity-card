@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { EffortWordmark } from "@/components/app/effort-wordmark";
+import { CtaButton } from "@/components/app/primitives/button";
 import { TutorialsGallery } from "@/components/app/tutorials-gallery";
-import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   description:
@@ -46,14 +46,9 @@ const TutorialsPage = () => (
         <h2 className="font-heading leading-display-loose text-3xl text-balance uppercase lg:text-4xl">
           Ready to make yours?
         </h2>
-        <Button
-          className="font-heading shadow-primary/50 h-auto justify-center px-7 py-3.5 text-xl tracking-wide uppercase shadow-lg"
-          nativeButton={false}
-          render={<Link href="/" />}
-          size="lg"
-        >
+        <CtaButton nativeButton={false} render={<Link href="/" />} scale="hero">
           Open the editor
-        </Button>
+        </CtaButton>
       </div>
     </main>
   </div>

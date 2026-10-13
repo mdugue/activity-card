@@ -78,6 +78,9 @@ export default defineConfig({
     { name: "storybook", specifier: "eslint-plugin-storybook" },
     { name: "@remotion", specifier: "@remotion/eslint-plugin" },
   ],
+  // Type-aware rules (oxlint-tsgolint) on for every run, not only when a
+  // script passes `--type-aware` — editor integrations pick them up too.
+  options: { typeAware: true },
   overrides: [
     ...storybookOverrides,
     { files: ["remotion/**"], rules: remotion.configs.recommended.rules },
