@@ -467,11 +467,11 @@ test("carousel Exposure export embeds the background via the photo composite", a
   expectSeamlessSet(await exportCarouselWithPhoto(page, FORCE_COMPOSITE));
 });
 
-test("the carousel overview mounts only the strips on screen, and Download all still exports every format", async ({
+test("the carousel overview renders one strip, and Download all still exports every format", async ({
   page,
 }) => {
   // Seven native-size strips at once is what crashed iOS Safari when the
-  // overview opened; on a phone-sized viewport only the visible tiles mount.
+  // overview opened; it now shows a single preview behind format chips.
   await enterEditViaUpload(page);
   await selectCarousel(page);
   await selectTheme(page, "EXPOSURE");
@@ -485,18 +485,22 @@ test("the carousel overview mounts only the strips on screen, and Download all s
   await expect(page.getByRole("heading", { name: /pick a/iu })).toBeVisible();
   await page.locator('[style*="blob:"]').first().waitFor({ state: "attached" });
 
-  const tiles = page.getByTestId("export-tile");
-  await expect(tiles).toHaveCount(7);
-  const mounted = tiles.filter({ has: page.locator("[data-effort-photo]") });
-  const mountedCount = await mounted.count();
-  expect(mountedCount).toBeGreaterThan(0);
-  expect(mountedCount).toBeLessThan(7);
+  await expect(page.getByTestId("export-tile")).toHaveCount(1);
+  const chips = page.getByRole("group", { name: "Format" }).getByRole("button");
+  await expect(chips).toHaveCount(7);
+
+  // Picking a chip swaps the preview (and its download) to that format.
+  await chips.filter({ hasText: "Instagram Story" }).click();
+  await expect(
+    page.getByRole("button", { name: /download instagram story/iu })
+  ).toBeVisible();
 
   const sublabel = await page
-    .getByText(/4:5 · \d+ ×/u)
+    .getByText(/9:16 · \d+ ×/u)
     .first()
     .textContent();
   const count = Math.trunc(Number(sublabel?.split("· ")[1]?.split(" ")[0]));
+  expect(count).toBeGreaterThan(1);
   const downloads: Download[] = [];
   page.on("download", (download) => {
     downloads.push(download);
@@ -505,8 +509,8 @@ test("the carousel overview mounts only the strips on screen, and Download all s
   await expect
     .poll(() => downloads.length, { timeout: 60_000 })
     .toBe(7 * count);
-  // The last format was offscreen when the export began; its slides must
-  // still carry the photo.
+  // The last format was never on screen before the export; it must still
+  // carry the photo.
   const last = downloads.at(-1);
   if (!last) {
     throw new Error("no download arrived");
