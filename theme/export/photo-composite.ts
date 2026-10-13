@@ -33,8 +33,26 @@ export interface RasterSize {
   width: number;
 }
 
-/** Rasterise `node` at an exact pixel size — the one call both pipelines share. */
-export type Rasterize = (size: RasterSize) => Promise<HTMLCanvasElement>;
+/** One captured state of the node, rasterised a frame at a time: frame `i` is
+ *  the i-th of the grid's equal-width columns, at `frameSize(grid)`. */
+export type RenderFrame = (index: number) => Promise<HTMLCanvasElement>;
+
+/** Snapshot the node as the DOM shows it right now; rasterising comes later,
+ *  per frame — the one call both pipelines share. */
+export type Capture = () => Promise<RenderFrame>;
+
+/** The full output size, cut into `frames` equal columns (1 for a single card,
+ *  the slide count for a carousel strip). */
+export interface FrameGrid {
+  frames: number;
+  size: RasterSize;
+}
+
+/** The pixel size of one frame of `grid`. */
+export const frameSize = ({ frames, size }: FrameGrid): RasterSize => ({
+  height: size.height,
+  width: size.width / frames,
+});
 
 interface Layer {
   draw: PhotoDraw;
@@ -190,22 +208,86 @@ export const mergeProbes = (
 const BAND_PIXELS = 4_000_000;
 
 /** Release a canvas's backing store — iOS is strict about live canvas memory. */
-const release = (canvas: HTMLCanvasElement): void => {
+export const release = (canvas: HTMLCanvasElement): void => {
   canvas.width = 0;
   canvas.height = 0;
 };
 
+/** Composite one frame: the black/white probes of that frame merged with the
+ *  photo plane, painted band by band at the frame's offset in the strip. */
+const mergeFrame = (
+  black: HTMLCanvasElement,
+  white: HTMLCanvasElement,
+  offsetX: number,
+  collected: Collected,
+  images: Map<string, HTMLImageElement>
+): HTMLCanvasElement => {
+  const blackCtx = black.getContext("2d", { willReadFrequently: true });
+  const whiteCtx = white.getContext("2d", { willReadFrequently: true });
+  if (!(blackCtx && whiteCtx)) {
+    release(white);
+    return black;
+  }
+
+  // Merge in horizontal bands: three full-size pixel buffers of a frame are
+  // exactly the kind of allocation a phone refuses. One band's worth of photo
+  // plane is enough at a time.
+  const bandH = Math.max(
+    1,
+    Math.min(black.height, Math.floor(BAND_PIXELS / black.width))
+  );
+  const plane = document.createElement("canvas");
+  plane.width = black.width;
+  plane.height = bandH;
+  const planeCtx = plane.getContext("2d", { willReadFrequently: true });
+  if (!planeCtx) {
+    release(white);
+    release(plane);
+    return black;
+  }
+
+  for (let y = 0; y < black.height; y += bandH) {
+    const h = Math.min(bandH, black.height - y);
+    planeCtx.clearRect(0, 0, plane.width, plane.height);
+    planeCtx.save();
+    planeCtx.translate(-offsetX, -y);
+    for (const layer of collected.layers) {
+      const image = images.get(layer.draw.src);
+      if (image) {
+        paintLayer(planeCtx, layer, image, collected.scale);
+      }
+    }
+    planeCtx.restore();
+    const merged = mergeProbes(
+      blackCtx.getImageData(0, y, black.width, h),
+      whiteCtx.getImageData(0, y, black.width, h),
+      planeCtx.getImageData(0, 0, black.width, h)
+    );
+    blackCtx.putImageData(merged, 0, y);
+  }
+
+  release(white);
+  release(plane);
+  return black;
+};
+
 /**
- * Rasterise `node` with its photo layers composited in. Returns null when there
+ * Capture `node` with its photo layers composited in. Returns null when there
  * is nothing to composite (no photo, or the photo can't be read) so the caller
  * can fall back to the straight capture.
+ *
+ * Both probes are captured up front (the DOM is only borrowed for that long)
+ * but rasterised a frame at a time, so a carousel strip never needs more than
+ * one slide's worth of canvases alive — a full strip of them is what iOS
+ * kills the tab over.
  */
 export const rasterizeWithPhotoComposite = async (
   node: HTMLElement,
-  size: RasterSize,
-  rasterize: Rasterize
-): Promise<HTMLCanvasElement | null> => {
-  const { layers, scale } = collectLayers(node, size);
+  grid: FrameGrid,
+  capture: Capture
+): Promise<RenderFrame | null> => {
+  const collected = collectLayers(node, grid.size);
+  const { layers } = collected;
   if (layers.length === 0) {
     return null;
   }
@@ -240,62 +322,33 @@ export const rasterizeWithPhotoComposite = async (
     }
   };
 
-  let black: HTMLCanvasElement;
-  let white: HTMLCanvasElement;
+  let black: RenderFrame;
+  let white: RenderFrame;
   try {
     setProbe("#000");
-    black = await rasterize(size);
+    black = await capture();
     setProbe("#fff");
-    white = await rasterize(size);
+    white = await capture();
   } finally {
     restore();
   }
 
-  const blackCtx = black.getContext("2d", { willReadFrequently: true });
-  const whiteCtx = white.getContext("2d", { willReadFrequently: true });
-  if (!(blackCtx && whiteCtx)) {
-    release(white);
-    return black;
-  }
-
-  // Merge in horizontal bands: three full-size pixel buffers of a carousel
-  // strip would be ~200MB, which is exactly the kind of allocation a phone
-  // refuses. One band's worth of photo plane is enough at a time.
-  const bandH = Math.max(
-    1,
-    Math.min(black.height, Math.floor(BAND_PIXELS / black.width))
-  );
-  const plane = document.createElement("canvas");
-  plane.width = black.width;
-  plane.height = bandH;
-  const planeCtx = plane.getContext("2d", { willReadFrequently: true });
-  if (!planeCtx) {
-    release(white);
-    release(plane);
-    return black;
-  }
-
-  for (let y = 0; y < black.height; y += bandH) {
-    const h = Math.min(bandH, black.height - y);
-    planeCtx.clearRect(0, 0, plane.width, plane.height);
-    planeCtx.save();
-    planeCtx.translate(0, -y);
-    for (const layer of layers) {
-      const image = images.get(layer.draw.src);
-      if (image) {
-        paintLayer(planeCtx, layer, image, scale);
-      }
+  const frameW = frameSize(grid).width;
+  return async (index) => {
+    const blackFrame = await black(index);
+    let whiteFrame: HTMLCanvasElement;
+    try {
+      whiteFrame = await white(index);
+    } catch (error) {
+      release(blackFrame);
+      throw error;
     }
-    planeCtx.restore();
-    const merged = mergeProbes(
-      blackCtx.getImageData(0, y, black.width, h),
-      whiteCtx.getImageData(0, y, black.width, h),
-      planeCtx.getImageData(0, 0, black.width, h)
+    return mergeFrame(
+      blackFrame,
+      whiteFrame,
+      index * frameW,
+      collected,
+      images
     );
-    blackCtx.putImageData(merged, 0, y);
-  }
-
-  release(white);
-  release(plane);
-  return black;
+  };
 };

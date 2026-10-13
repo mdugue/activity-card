@@ -5,6 +5,7 @@ import type { Download, Page } from "@playwright/test";
 import { z } from "zod";
 
 import {
+  magentaRampPngBuffer,
   QUADRANT_PNG_BASE64,
   SOLID_MAGENTA_PNG_BASE64,
   solidPngBuffer,
@@ -39,6 +40,13 @@ const MAGENTA_PHOTO = {
   buffer: Buffer.from(SOLID_MAGENTA_PNG_BASE64, "base64"),
   mimeType: "image/png",
   name: "bg.png",
+};
+
+/** Roughly the strip's own aspect, so the panorama shows the whole ramp. */
+const MAGENTA_RAMP_PHOTO = {
+  buffer: magentaRampPngBuffer(960, 400),
+  mimeType: "image/png",
+  name: "ramp.png",
 };
 
 const QUADRANT_PHOTO = {
@@ -327,15 +335,61 @@ test("photo upload yields FROM YOUR PHOTO colour schemes (worker palette extract
   });
 });
 
+interface SlideStats {
+  /** RGB of the first / last pixel column, row by row — where neighbouring
+   *  slides meet */
+  edges: { left: number[]; right: number[] };
+  height: number;
+  magenta: number;
+  width: number;
+}
+
+/** Decode one downloaded slide in-page: its size, magenta fraction and the
+ *  mean colour of its outer columns (to check the seams line up). */
+const slideStats = async (
+  page: Page,
+  download: Download
+): Promise<SlideStats> => {
+  const bytes = await fs.readFile(await download.path());
+  const [magenta, rest] = await Promise.all([
+    magentaFraction(page, download),
+    page.evaluate(async (dataB64: string) => {
+      const img = new Image();
+      img.src = `data:image/png;base64,${dataB64}`;
+      await img.decode();
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext("2d");
+      const column = (x: number): number[] => {
+        if (!ctx) {
+          return [];
+        }
+        const { data } = ctx.getImageData(x, 0, 1, canvas.height);
+        return [...data].filter((_, i) => i % 4 !== 3);
+      };
+      ctx?.drawImage(img, 0, 0);
+      return {
+        edges: { left: column(0), right: column(canvas.width - 1) },
+        height: canvas.height,
+        width: canvas.width,
+      };
+    }, bytes.toString("base64")),
+  ]);
+  return { ...rest, magenta };
+};
+
+/** Upload the magenta photo onto Exposure and download its whole 4:5 feed set,
+ *  in slide order. */
 const exportCarouselWithPhoto = async (
   page: Page,
   query = ""
-): Promise<number> => {
+): Promise<SlideStats[]> => {
   await enterEditViaUpload(page, query);
   // Switch to carousel explicitly so the test is independent of the default mode.
   await selectCarousel(page);
   await selectTheme(page, "EXPOSURE");
-  await page.locator(PHOTO_INPUT).setInputFiles(MAGENTA_PHOTO);
+  await page.locator(PHOTO_INPUT).setInputFiles(MAGENTA_RAMP_PHOTO);
   // The carousel only draws the photo once its natural size resolves; the
   // "Adjust photo" affordance is gated on the same condition, so its
   // appearance means the panorama is ready to rasterise.
@@ -349,24 +403,66 @@ const exportCarouselWithPhoto = async (
   // The overview deck redraws the photo once its natural size re-resolves; wait
   // for the rasterised photo layer so the export can't capture a photo-less frame.
   await page.locator('[style*="blob:"]').first().waitFor({ state: "attached" });
+  // The feed tile's sublabel reads "4:5 · <count> × 1080×1350".
+  const sublabel = await page
+    .getByText(/4:5 · \d+ ×/u)
+    .first()
+    .textContent();
+  const count = Math.trunc(Number(sublabel?.split("· ")[1]?.split(" ")[0]));
+  expect(count).toBeGreaterThan(1);
 
-  const downloadPromise = page.waitForEvent("download");
+  const downloads: Download[] = [];
+  page.on("download", (download) => {
+    downloads.push(download);
+  });
   await page.getByRole("button", { name: /download instagram feed/iu }).click();
-  return await magentaFraction(page, await downloadPromise);
+  await expect.poll(() => downloads.length).toBe(count);
+  downloads.sort((a, b) =>
+    a.suggestedFilename().localeCompare(b.suggestedFilename())
+  );
+  return await Promise.all(
+    downloads.map(async (download) => await slideStats(page, download))
+  );
+};
+
+/** Mean per-channel difference allowed across a seam (0–255). A clean cut
+ *  measures 0; a slide off by a fifth of its width already reads above 1. */
+const SEAM_TOLERANCE = 1;
+
+/** Every slide is a full-size 2× feed frame carrying the photo, and each
+ *  seam lines up: a slide's last column matches the next one's first. */
+const expectSeamlessSet = (slides: SlideStats[]): void => {
+  for (const slide of slides) {
+    expect({ height: slide.height, width: slide.width }).toEqual({
+      height: 2700,
+      width: 2160,
+    });
+    expect(slide.magenta).toBeGreaterThan(0.2);
+  }
+  for (let i = 1; i < slides.length; i += 1) {
+    const before = slides[i - 1].edges.right;
+    const after = slides[i].edges.left;
+    // Adjacent strip columns are near-identical (the photo is a horizontal
+    // ramp); a slide cut or composited at the wrong offset puts unrelated
+    // pixels side by side and the mean jumps.
+    const diff =
+      before.reduce((sum, v, c) => sum + Math.abs(v - (after[c] ?? 0)), 0) /
+      Math.max(1, before.length);
+    expect(diff).toBeLessThan(SEAM_TOLERANCE);
+  }
 };
 
 test("carousel Exposure export embeds the uploaded background", async ({
   page,
 }) => {
-  expect(await exportCarouselWithPhoto(page)).toBeGreaterThan(0.2);
+  expectSeamlessSet(await exportCarouselWithPhoto(page));
 });
 
 test("carousel Exposure export embeds the background via the photo composite", async ({
   page,
 }) => {
-  // Each slide draws the same photo at its own strip offset, so the composite
-  // has to place several layers — the case the single card can't cover.
-  expect(await exportCarouselWithPhoto(page, FORCE_COMPOSITE)).toBeGreaterThan(
-    0.2
-  );
+  // Each slide draws the same photo at its own strip offset and is rasterised
+  // on its own, so the composite has to place every layer at that slide's
+  // offset — the case the single card can't cover.
+  expectSeamlessSet(await exportCarouselWithPhoto(page, FORCE_COMPOSITE));
 });

@@ -151,16 +151,19 @@ const pngChunk = (type: string, data: Buffer): Buffer => {
  * oversized photo (Strava serves renditions up to 5000px) without carrying a
  * multi-megapixel fixture in the repo — solid colour deflates to a few KB.
  */
-export const solidPngBuffer = (
+/** An 8-bit truecolour PNG whose pixel at (x, y) is `pixel(x, y)`. */
+const pngBuffer = (
   width: number,
   height: number,
-  rgb: [number, number, number]
+  pixel: (x: number, y: number) => [number, number, number]
 ): Buffer => {
-  const row = Buffer.concat([
-    Buffer.from([0]),
-    Buffer.from(Array.from({ length: width }, () => rgb).flat()),
-  ]);
-  const raw = Buffer.concat(Array.from({ length: height }, () => row));
+  const rows = Array.from({ length: height }, (_, y) =>
+    Buffer.concat([
+      Buffer.from([0]),
+      Buffer.from(Array.from({ length: width }, (__, x) => pixel(x, y)).flat()),
+    ])
+  );
+  const raw = Buffer.concat(rows);
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(width, 0);
   ihdr.writeUInt32BE(height, 4);
@@ -175,3 +178,18 @@ export const solidPngBuffer = (
     pngChunk("IEND", Buffer.alloc(0)),
   ]);
 };
+
+export const solidPngBuffer = (
+  width: number,
+  height: number,
+  rgb: [number, number, number]
+): Buffer => pngBuffer(width, height, () => rgb);
+
+/** A left-to-right ramp from red-magenta to blue-magenta: magenta everywhere
+ *  (so it passes a magenta check) but different in every column, so a slide cut
+ *  at the wrong offset shows up as a step at the seam. */
+export const magentaRampPngBuffer = (width: number, height: number): Buffer =>
+  pngBuffer(width, height, (x) => {
+    const t = x / Math.max(1, width - 1);
+    return [Math.round(255 - 85 * t), 0, Math.round(170 + 85 * t)];
+  });
