@@ -10,7 +10,7 @@
 import { ArrowsOutCardinalIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
+import { FilledBadge } from "@/components/app/primitives/badge";
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
 import type { ImageSize } from "@/hooks/use-image-natural-size";
 import { clampCoverTransform } from "@/lib/image-transform";
@@ -96,8 +96,9 @@ export const AdjustControls = ({
   return (
     <>
       {adjustAvailable && !adjusting ? (
-        <Badge
-          className="absolute top-3 right-3 z-10 rounded-full bg-black/55 px-3 py-1.5 font-mono text-xs text-white backdrop-blur-sm transition-colors hover:bg-black/75"
+        <FilledBadge
+          className="absolute top-3 right-3 z-10"
+          tone="scrimAction"
           render={
             <button
               aria-label={label}
@@ -114,7 +115,7 @@ export const AdjustControls = ({
             weight="duotone"
           />
           {label}
-        </Badge>
+        </FilledBadge>
       ) : null}
       {adjusting ? (
         <ImageAdjustOverlay

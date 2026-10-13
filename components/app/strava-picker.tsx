@@ -10,6 +10,7 @@ import {
 } from "@phosphor-icons/react";
 import { Suspense, use, useEffect, useId, useRef, useState } from "react";
 
+import { SelectableItem } from "@/components/app/primitives/item";
 import { ControlLabel } from "@/components/app/primitives/label";
 import {
   Pager,
@@ -32,7 +33,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Item,
   ItemActions,
   ItemContent,
   ItemDescription,
@@ -313,7 +313,7 @@ const ActivityItem = ({
   };
 
   return (
-    <Item
+    <SelectableItem
       aria-label={activity.name}
       data-selected={isSelected ? "true" : undefined}
       onClick={handleClick}
@@ -321,11 +321,7 @@ const ActivityItem = ({
         // The label is the Item's aria-label above, which base-ui renders onto
         // this button.
         // oxlint-disable-next-line jsx-a11y/control-has-associated-label
-        <button
-          className="data-[selected=true]:border-primary data-[selected=true]:bg-primary/5 cursor-pointer text-left disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={disabled}
-          type="button"
-        />
+        <button disabled={disabled} type="button" />
       }
       variant="outline"
     >
@@ -357,7 +353,7 @@ const ActivityItem = ({
       <ItemActions>
         <PickAffordance isPicking={isPicking} multiSelect={multiSelect} />
       </ItemActions>
-    </Item>
+    </SelectableItem>
   );
 };
 
