@@ -21,9 +21,10 @@ const PrivacyPage = () => (
       To find and fix crashes, Effort sends technical error reports to Sentry
       (Functional Software, Inc.), stored in Sentry’s EU data centre in
       Frankfurt, Germany. A report contains the error message and where in the
-      code it happened, the page path, your browser, operating system and device
-      type, and — for a failed export — the image size and format being
-      exported.
+      code it happened, the page path, your browser, operating system, device
+      type, language and time zone, the country the report came from (derived
+      from the connection; the IP address itself is not stored), and — for a
+      failed export — the image size and format being exported.
     </p>
     <p>
       Reports never contain your activity file, your photos, your Strava data,

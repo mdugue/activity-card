@@ -63,6 +63,14 @@ const readMarker = (): ExportMarker | null => {
   }
 };
 
+/** Names the issue in Sentry ("ExportCrashError: …"), unlike a bare message. */
+class ExportCrashError extends Error {
+  override name = "ExportCrashError";
+  constructor() {
+    super("Export did not finish: the tab was reloaded mid-export");
+  }
+}
+
 const tagsFor = (context: ExportContext) => ({
   "export.format": context.format,
   "export.kind": context.kind,
@@ -107,17 +115,14 @@ export const reportUnfinishedExport = () => {
   }
   clearMarker();
   const { startedAt, ...context } = marker;
-  Sentry.captureMessage(
-    "Export did not finish: the tab was reloaded mid-export",
-    {
-      contexts: {
-        export: {
-          ...context,
-          secondsBeforeReload: Math.round((Date.now() - startedAt) / 1000),
-        },
+  Sentry.captureException(new ExportCrashError(), {
+    contexts: {
+      export: {
+        ...context,
+        secondsBeforeReload: Math.round((Date.now() - startedAt) / 1000),
       },
-      level: "error",
-      tags: { ...tagsFor(context), "export.crash": "true" },
-    }
-  );
+    },
+    level: "error",
+    tags: { ...tagsFor(context), "export.crash": "true" },
+  });
 };
