@@ -467,12 +467,12 @@ test("carousel Exposure export embeds the background via the photo composite", a
   expectSeamlessSet(await exportCarouselWithPhoto(page, FORCE_COMPOSITE));
 });
 
-test("the carousel overview shows a still preview, and Download all still exports every format", async ({
+test("the carousel overview shows still previews, and Download all still exports every format", async ({
   page,
 }) => {
   // A live native-size strip on screen is what crashed iOS Safari in the
-  // overview (Sentry EFFORT-4); it now shows one small preview image behind
-  // format chips and mounts the strip off-screen only while capturing.
+  // overview (Sentry EFFORT-4); each tile now shows a small preview image and
+  // the strip is mounted off-screen only while capturing.
   await enterEditViaUpload(page);
   await selectCarousel(page);
   await selectTheme(page, "EXPOSURE");
@@ -484,27 +484,17 @@ test("the carousel overview shows a still preview, and Download all still export
   await page.setViewportSize({ height: 844, width: 390 });
   await page.getByTestId("export-action").click();
   await expect(page.getByRole("heading", { name: /pick a/iu })).toBeVisible();
-  await page.locator('[style*="blob:"]').first().waitFor({ state: "attached" });
 
-  const tile = page.getByTestId("export-tile");
-  await expect(tile).toHaveCount(1);
-  await expect(tile.locator('[style*="--preview"]')).toHaveCount(1, {
-    timeout: 20_000,
-  });
-  // The preview is an image: no live deck in the tile, no strip left staged.
-  await expect(tile.locator("img, svg, canvas")).toHaveCount(0);
-  await expect(page.getByTestId("capture-stage")).toHaveCount(0);
-  const chips = page.getByRole("group", { name: "Format" }).getByRole("button");
-  await expect(chips).toHaveCount(7);
-
-  // Picking a chip swaps the preview (and its download) to that format.
-  await chips.filter({ hasText: "Instagram Story" }).click();
+  const tiles = page.getByTestId("export-tile");
+  await expect(tiles).toHaveCount(7);
   await expect(
-    page.getByRole("button", { name: /download instagram story/iu })
-  ).toBeVisible();
-  await expect(tile.locator('[style*="--preview"]')).toHaveCount(1, {
-    timeout: 20_000,
+    page.locator('[data-testid="export-tile"] [style*="--preview"]')
+  ).toHaveCount(7, {
+    timeout: 60_000,
   });
+  // The previews are images: no live deck in a tile, no strip left staged.
+  await expect(tiles.locator("img, svg, canvas")).toHaveCount(0);
+  await expect(page.getByTestId("capture-stage")).toHaveCount(0);
 
   const sublabel = await page
     .getByText(/9:16 · \d+ ×/u)

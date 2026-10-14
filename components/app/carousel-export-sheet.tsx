@@ -1,14 +1,14 @@
 "use client";
 
 // The carousel export sheet — the carousel analogue of `ExportSheet`. Same
-// overview (pick a format, download one or all), reached the same way (a tap on
-// the editor's Export action, never an inline download). A row of format chips
-// sits above ONE preview tile, and that preview is a small still image, not a
-// live strip: each format is a native-size, photo-backed strip several slides
-// wide, and keeping even one of those on screen in the overview is what iOS
-// Safari killed the tab for (Sentry EFFORT-4). The real strip is mounted
-// off-screen only while it is being captured — once small for the preview,
-// once at export size for a download — and unmounted straight after.
+// overview (a grid of formats, download one or all), reached the same way (a
+// tap on the editor's Export action, never an inline download). Each tile's
+// preview is a small still image, not a live strip: each format is a
+// native-size, photo-backed strip several slides wide, and keeping even one of
+// those on screen in the overview is what iOS Safari killed the tab for (Sentry
+// EFFORT-4). The real strip is mounted off-screen only while it is being
+// captured — once per format for its preview, once more for a download — and
+// unmounted straight after; captures run one at a time.
 // Downloading slices that strip into its per-slide image set (`exportCarousel`).
 // The chrome, the busy/one/all orchestration and the tile itself are the shared
 // machinery from `export-sheet.tsx`.
@@ -17,10 +17,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode, RefObject } from "react";
 import { toast } from "sonner";
 
-import {
-  OptionToggleItem,
-  ScrollToggleGroup,
-} from "@/components/app/primitives/toggle-group";
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
 import type { ActivityData } from "@/lib/activity";
 import { watchExport, watchOverview } from "@/lib/export-watch";
@@ -31,12 +27,8 @@ import { CarouselDeck } from "@/theme/carousel/deck";
 import type { CarouselTheme } from "@/theme/carousel/define-theme";
 import { stripGeometry } from "@/theme/carousel/geometry";
 import type { ColorScheme } from "@/theme/core/colors";
-import {
-  DEFAULT_FORMAT_ID,
-  FORMAT_ORDER,
-  getFormat,
-} from "@/theme/core/export-formats";
-import type { ExportFormat, ExportFormatId } from "@/theme/core/export-formats";
+import { FORMAT_ORDER, getFormat } from "@/theme/core/export-formats";
+import type { ExportFormat } from "@/theme/core/export-formats";
 import type { ThemeConfig } from "@/theme/core/params/kinds";
 import type { Visibility } from "@/theme/core/visibility";
 import { createSerialQueue, delay } from "@/theme/export/export-shared";
@@ -54,12 +46,11 @@ import type { TileBox } from "./export-sheet";
 const loadExportCarousel = async () =>
   await import("@/theme/export/export-carousel");
 
-/** How long an export waits for the preview to show its format. */
+/** How long a capture waits for the off-screen strip to render. */
 const MOUNT_TIMEOUT_MS = 3000;
 const MOUNT_POLL_MS = 50;
 
-/** Resolve the strip once `read` reports it rendered (the preview may first
- *  have to switch to the format being exported). */
+/** Resolve the strip once `read` reports it rendered. */
 const waitForStrip = async (
   read: () => HTMLDivElement | null
 ): Promise<HTMLDivElement | null> => {
@@ -182,13 +173,13 @@ const StagedStrip = ({
   );
 };
 
-// The one preview gets the room the seven tiles used to share: wide, and
-// growing with the viewport.
+// Wide-strip tile box: 220→520 wide, so the grid fits two or three per row on
+// desktop and one per row on a phone.
 const CAROUSEL_TILE: TileBox = {
   aspect: 0.56,
-  capW: 960,
-  factor: 0.86,
-  floorW: 300,
+  capW: 520,
+  factor: 0.34,
+  floorW: 220,
 };
 
 interface CarouselExportSheetProps {
@@ -225,11 +216,6 @@ export const CarouselExportSheet = ({
   // The deck needs the photo's natural size for the pannable panorama — the same
   // dependency the editor's deck has.
   const imageSize = useImageNaturalSize(photoUrl);
-  const [selectedId, setSelectedId] =
-    useState<ExportFormatId>(DEFAULT_FORMAT_ID);
-  const shown = getFormat(selectedId);
-  const { slideH, stripW } = stripGeometry(shown, count);
-
   // The strip mounted off-screen right now (only while a capture runs), plus
   // the format it holds once React has committed it — a capture reads the strip
   // only when the two agree.
@@ -277,31 +263,39 @@ export const CarouselExportSheet = ({
   // decode while a photo is shown.
   const photoNotReady = photoUrl !== null && imageSize === null;
 
-  // One small preview image per format, rendered the first time it is picked.
-  const [previews, setPreviews] = useState<Partial<Record<string, string>>>({});
+  // One small preview image per format, rendered one after another once the
+  // photo has decoded. `null` marks a preview that failed — the format stays
+  // downloadable, its tile just has no image.
+  const [previews, setPreviews] = useState<
+    Partial<Record<string, string | null>>
+  >({});
   const requested = useRef(new Set<string>());
   const previewUrls = useRef<string[]>([]);
   useEffect(() => {
-    if (photoNotReady || requested.current.has(shown.id)) {
+    if (photoNotReady) {
       return;
     }
-    requested.current.add(shown.id);
-    void loadPreview(
-      async () =>
-        await enqueue(
-          shown,
-          async (node) => await previewStrip(node, count, shown)
-        ),
-      (url) => {
-        previewUrls.current.push(url);
-        setPreviews((prev) => ({ ...prev, [shown.id]: url }));
-      },
-      () => {
-        // Let a later pick of the format try again.
-        requested.current.delete(shown.id);
+    for (const id of FORMAT_ORDER) {
+      if (!requested.current.has(id)) {
+        requested.current.add(id);
+        const format = getFormat(id);
+        void loadPreview(
+          async () =>
+            await enqueue(
+              format,
+              async (node) => await previewStrip(node, count, format)
+            ),
+          (url) => {
+            previewUrls.current.push(url);
+            setPreviews((prev) => ({ ...prev, [id]: url }));
+          },
+          () => {
+            setPreviews((prev) => ({ ...prev, [id]: null }));
+          }
+        );
       }
-    );
-  }, [count, enqueue, photoNotReady, shown]);
+    }
+  }, [count, enqueue, photoNotReady]);
   useEffect(
     () => () => {
       for (const url of previewUrls.current) {
@@ -310,9 +304,6 @@ export const CarouselExportSheet = ({
     },
     []
   );
-  const preview = previews[shown.id];
-  const previewStyle: PreviewStyle =
-    preview === undefined ? {} : { "--preview": `url("${preview}")` };
 
   const exportOne = useCallback(
     async (format: ExportFormat) => {
@@ -352,58 +343,46 @@ export const CarouselExportSheet = ({
       subtitle={
         photoNotReady
           ? "Preparing your photo…"
-          : `Pick a format to preview its ${count} slides — grab one set, or every format. On mobile a set shares as one batch.`
+          : `Each format is a set of ${count} slides — grab one set, or every format. On mobile a set shares as one batch.`
       }
     >
-      <ScrollToggleGroup
-        aria-label="Format"
-        className="mx-auto mt-5 flex max-w-full justify-start overflow-x-auto sm:mt-7 sm:flex-wrap sm:justify-center"
-        disabled={busy !== null}
-        onValueChange={(values) => {
-          const picked = FORMAT_ORDER.find((id) => id === values[0]);
-          if (picked !== undefined) {
-            setSelectedId(picked);
-          }
-        }}
-        spacing={2}
-        value={[shown.id]}
-      >
+      <div className="mt-5 flex flex-wrap justify-center gap-3 sm:mt-7 sm:gap-5">
         {FORMAT_ORDER.map((id) => {
           const format = getFormat(id);
+          const { slideH, stripW } = stripGeometry(format, count);
+          const preview = previews[id];
+          const ready = preview !== undefined && preview !== null;
+          const previewStyle: PreviewStyle = ready
+            ? { "--preview": `url("${preview}")` }
+            : {};
           return (
-            <OptionToggleItem key={id} look="chip" tone="invert" value={id}>
-              {format.label}
-              <span className="opacity-60">{format.aspectLabel}</span>
-            </OptionToggleItem>
+            <ExportTile
+              busy={busy}
+              busyId={id}
+              disabled={photoNotReady}
+              key={id}
+              label={format.label}
+              nativeH={slideH}
+              nativeW={stripW}
+              onDownload={() => {
+                void handleOne(format);
+              }}
+              registerMount={noMount}
+              sublabel={`${format.aspectLabel} · ${count} × ${format.width}×${format.height}`}
+              tileMax={tileMax}
+            >
+              <div
+                aria-hidden
+                className={cn(
+                  "size-full bg-cover",
+                  ready ? "bg-(image:--preview)" : "bg-muted",
+                  preview === undefined && "animate-pulse"
+                )}
+                style={previewStyle}
+              />
+            </ExportTile>
           );
         })}
-      </ScrollToggleGroup>
-      <div className="mt-4 flex justify-center sm:mt-6">
-        <ExportTile
-          busy={busy}
-          busyId={shown.id}
-          disabled={photoNotReady}
-          label={shown.label}
-          nativeH={slideH}
-          nativeW={stripW}
-          onDownload={() => {
-            void handleOne(shown);
-          }}
-          registerMount={noMount}
-          sublabel={`${shown.aspectLabel} · ${count} × ${shown.width}×${shown.height}`}
-          tileMax={tileMax}
-        >
-          <div
-            aria-hidden
-            className={cn(
-              "size-full bg-cover",
-              preview === undefined
-                ? "bg-muted animate-pulse"
-                : "bg-(image:--preview)"
-            )}
-            style={previewStyle}
-          />
-        </ExportTile>
       </div>
       {staged === undefined ? null : (
         <StagedStrip
