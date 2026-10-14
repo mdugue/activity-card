@@ -1,8 +1,13 @@
 // Shared building blocks of the "woven" themes (Ridge, Light Trail, Window,
-// Contour, Word Path, Slices): the photo-led frame, full-canvas SVG layers that
-// can blend into the photo beneath them, and the quiet caption / stat pieces.
-// Everything rasterises as inline SVG + inline CSS (`mix-blend-mode` on a whole
-// layer, never an SVG `<filter>` on the photo) so snapdom exports it intact.
+// Contour, Word Path, Slices): the photo-led frame, extra clipped copies of the
+// photo, full-canvas SVG layers, and the quiet caption / stat pieces.
+//
+// Treating the photo differently in different regions (toned above a ridge,
+// colour only along the route) is done with STACKED PHOTO COPIES — each with
+// its own CSS colour filter and clip path — never with a `color`/`saturation`
+// blend layer: each copy publishes its own export descriptor, so the WebKit
+// (iOS) compositor rebuilds the card exactly (see theme/export/photo-composite).
+// Blend layers stay limited to `multiply` / `screen`, which composite linearly.
 
 import type { CSSProperties, ReactNode } from "react";
 
@@ -21,29 +26,63 @@ const FRAME_BASE = {
 } satisfies CSSProperties;
 
 /** The card root: the background photo (or a fallback wash) under the
- *  theme's layers. `isolation` keeps the layers' blend modes inside the card. */
+ *  theme's layers. `isolation` keeps the layers' blend modes inside the card.
+ *  `photo: false` leaves the base photo out (for themes built only of copies). */
 export const WovenFrame = ({
   children,
   fallback,
   imageTransform,
+  photo = true,
+  photoFilter = "",
   photoUrl,
 }: {
   children: ReactNode;
   /** CSS background shown when there is no photo */
   fallback: string;
   imageTransform?: ImageTransform | null;
+  photo?: boolean;
+  /** CSS colour filter for the base photo (before the user's preset) */
+  photoFilter?: string;
   photoUrl?: string | null;
 }) => {
   const { width, height } = useFormat();
   return (
     <div style={{ ...FRAME_BASE, background: fallback, height, width }}>
-      {hasText(photoUrl) ? (
-        <PhotoLayer imageTransform={imageTransform} photoUrl={photoUrl} />
+      {photo && hasText(photoUrl) ? (
+        <PhotoLayer
+          filter={photoFilter}
+          imageTransform={imageTransform}
+          photoUrl={photoUrl}
+        />
       ) : null}
       {children}
     </div>
   );
 };
+
+/** One more copy of the photo, clipped to `clip` (SVG path data in card px)
+ *  with its own colour `filter` — e.g. the colour inside the route over a
+ *  toned base. Renders nothing without a photo. */
+export const PhotoCopy = ({
+  clip,
+  filter = "",
+  imageTransform,
+  photoUrl,
+}: {
+  clip: string;
+  filter?: string;
+  imageTransform?: ImageTransform | null;
+  photoUrl?: string | null;
+}) =>
+  hasText(photoUrl) && clip !== "" ? (
+    <PhotoLayer
+      clip={clip}
+      filter={filter}
+      grain={false}
+      imageTransform={imageTransform}
+      photoUrl={photoUrl}
+    />
+  ) : null;
 
 const LAYER_BASE = {
   inset: 0,
@@ -51,13 +90,14 @@ const LAYER_BASE = {
 } satisfies CSSProperties;
 
 /** One full-canvas SVG layer. `blend` composites the whole layer onto what is
- *  painted beneath it (the photo), e.g. `saturation` to drain colour. */
+ *  painted beneath it — `multiply` or `screen` only (they composite linearly,
+ *  so the iOS export rebuilds them; see the header). */
 export const Layer = ({
   blend,
   children,
   label,
 }: {
-  blend?: CSSProperties["mixBlendMode"];
+  blend?: "multiply" | "screen";
   children: ReactNode;
   label: string;
 }) => {

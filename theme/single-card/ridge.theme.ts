@@ -1,7 +1,7 @@
 // The RIDGE descriptor: identity, capability declaration, colour + photo
 // policy and params — the row `SINGLE_CARD_THEMES` collects.
 
-import { DEFAULT_WOVEN_CONFIG, WOVEN_PARAMS } from "@/lib/woven";
+import { DEFAULT_RIDGE_CONFIG, RIDGE_PARAMS } from "@/lib/woven-themes";
 import { defineTheme } from "@/theme/core/theme-contract";
 
 import { RIDGE_TINT } from "./default-accents";
@@ -21,10 +21,10 @@ export const ridgeTheme = defineTheme({
   Component: ThemeRidge,
   // The accent tones the sky above the ridge.
   colors: { default: { primary: RIDGE_TINT }, userAdjustable: true },
-  defaults: DEFAULT_WOVEN_CONFIG,
+  defaults: DEFAULT_RIDGE_CONFIG,
   id: "ridge",
   label: "RIDGE",
-  params: WOVEN_PARAMS,
+  params: RIDGE_PARAMS,
   photo: { defaultOn: true },
   tagline: "the climb as a new horizon",
   uses: USES,

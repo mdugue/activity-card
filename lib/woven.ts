@@ -56,8 +56,6 @@ export const METRICS_PARAM: ParamDef = {
   ],
 };
 
-export const WOVEN_PARAMS: ParamDef[] = [METRICS_PARAM];
-
 /** Resolve the picked mode for the active export format. */
 export const metricsLevel = (
   mode: MetricsMode,
@@ -251,16 +249,76 @@ export const sampleProfile = (pts: Coord[], n: number): number[] => {
   return out;
 };
 
-/** Effort along the route, 0 = slowest … 1 = fastest: the speed profile, or
- *  the inverted pace profile. Null when neither was recorded. */
-export const wovenIntensity = (data: ActivityView): number[] | null => {
+/** The value at quantile `q` (0…1) of a series. */
+const quantile = (values: number[], q: number): number => {
+  const sorted = values.toSorted((a, b) => a - b);
+  const at = Math.min(
+    sorted.length - 1,
+    Math.max(0, Math.round(q * (sorted.length - 1)))
+  );
+  return sorted[at];
+};
+
+/** A light smoothing window: about 1% of the samples. */
+const smoothingRadius = (n: number): number => Math.max(1, Math.round(n / 120));
+
+/** The recorded speed along the route, lightly smoothed: km/h for a ride, or
+ *  pace (sec/km) for a run or swim. Null when neither was recorded. */
+const speedSeries = (
+  data: ActivityView
+): { kind: "pace" | "speed"; values: number[] } | null => {
   if (data.speedProfile && data.speedProfile.length > 1) {
-    return normalise(data.speedProfile);
+    const v = data.speedProfile;
+    return {
+      kind: "speed",
+      values: smoothSeries(v, smoothingRadius(v.length)),
+    };
   }
   if (data.paceProfile && data.paceProfile.length > 1) {
-    return normalise(data.paceProfile).map((v) => 1 - v);
+    const v = data.paceProfile;
+    return { kind: "pace", values: smoothSeries(v, smoothingRadius(v.length)) };
   }
   return null;
+};
+
+/** Ignore the slowest and fastest few percent (a stop at a light, a GPS
+ *  spike), so the scale spans what the activity actually felt like. */
+const SPEED_TAIL = 0.04;
+
+/** Effort along the route, 0 = slowest … 1 = fastest: the speed profile, or
+ *  the inverted pace profile, scaled between its 4th and 96th percentile.
+ *  Null when neither was recorded. */
+export const wovenIntensity = (data: ActivityView): number[] | null => {
+  const series = speedSeries(data);
+  if (!series) {
+    return null;
+  }
+  const lo = quantile(series.values, SPEED_TAIL);
+  const hi = quantile(series.values, 1 - SPEED_TAIL);
+  const span = hi - lo || 1;
+  return series.values.map((v) => {
+    const t = Math.min(1, Math.max(0, (v - lo) / span));
+    return series.kind === "pace" ? 1 - t : t;
+  });
+};
+
+/** The slow and fast ends of the intensity scale, formatted for a legend:
+ *  "12 – 54 km/h" for a ride, "6:10 – 4:20 /km" for a run. */
+export const wovenSpeedRange = (
+  data: ActivityView
+): { fast: string; slow: string; unit: string } | null => {
+  const series = speedSeries(data);
+  if (!series) {
+    return null;
+  }
+  const lo = quantile(series.values, SPEED_TAIL);
+  const hi = quantile(series.values, 1 - SPEED_TAIL);
+  if (series.kind === "speed") {
+    return { fast: formatNumber(hi), slow: formatNumber(lo), unit: "km/h" };
+  }
+  const unit = data.sport === "swim" ? "/100m" : "/km";
+  // Pace: the slow end is the larger number.
+  return { fast: formatPaceSec(lo), slow: formatPaceSec(hi), unit };
 };
 
 /** Total length of a polyline. */
@@ -322,4 +380,100 @@ export const distanceMarks = (distanceKm: number, count: number): number[] => {
     out.push(Number(km.toFixed(6)));
   }
   return out;
+};
+
+/** Resample a polyline to `n` points evenly spaced along its length. */
+export const resampleRoute = (pts: Coord[], n: number): Coord[] => {
+  if (pts.length < 2 || n < 2) {
+    return pts;
+  }
+  const total = polylineLength(pts);
+  if (total === 0) {
+    return pts;
+  }
+  const out: Coord[] = [pts[0]];
+  let seg = 1;
+  let walked = 0;
+  let segLen = Math.hypot(pts[1][0] - pts[0][0], pts[1][1] - pts[0][1]);
+  for (let i = 1; i < n - 1; i += 1) {
+    const at = (total * i) / (n - 1);
+    while (walked + segLen < at && seg < pts.length - 1) {
+      walked += segLen;
+      seg += 1;
+      segLen = Math.hypot(
+        pts[seg][0] - pts[seg - 1][0],
+        pts[seg][1] - pts[seg - 1][1]
+      );
+    }
+    const t = segLen === 0 ? 0 : (at - walked) / segLen;
+    const [ax, ay] = pts[seg - 1];
+    const [bx, by] = pts[seg];
+    out.push([ax + (bx - ax) * t, ay + (by - ay) * t]);
+  }
+  out.push(pts.at(-1) ?? pts[0]);
+  return out;
+};
+
+/** A calmer copy of a route: evenly resampled to `n` points, then each point
+ *  averaged with its ±`radius` neighbours. Hairpins open into curves — what
+ *  text needs to stay legible along it. The ends stay put. */
+export const smoothRoute = (
+  pts: Coord[],
+  n: number,
+  radius: number
+): Coord[] => {
+  const even = resampleRoute(pts, n);
+  const xs = smoothSeries(
+    even.map((p) => p[0]),
+    radius
+  );
+  const ys = smoothSeries(
+    even.map((p) => p[1]),
+    radius
+  );
+  return even.map((_, i): Coord => [xs[i], ys[i]]);
+};
+
+const f = (v: number): string => v.toFixed(1);
+
+/** Corners of a regular polygon approximating a round join. Clockwise on
+ *  screen, like every piece of `bandPath`. */
+const JOIN_SIDES = 10;
+
+/**
+ * The outline of a polyline stroked `width` wide with round joins, as SVG path
+ * data usable as a `clip-path: path(…)` (and a canvas `Path2D`): one quad per
+ * segment plus a polygon per vertex, all wound the same way, so the nonzero
+ * fill rule unions them. Lets a photo copy be clipped to the route itself.
+ */
+export const bandPath = (pts: Coord[], width: number): string => {
+  if (pts.length === 0 || !(width > 0)) {
+    return "";
+  }
+  const h = width / 2;
+  const parts: string[] = [];
+  for (let i = 1; i < pts.length; i += 1) {
+    const [ax, ay] = pts[i - 1];
+    const [bx, by] = pts[i];
+    const len = Math.hypot(bx - ax, by - ay);
+    if (len > 0) {
+      const nx = (-(by - ay) / len) * h;
+      const ny = ((bx - ax) / len) * h;
+      parts.push(
+        `M${f(ax + nx)} ${f(ay + ny)}L${f(bx + nx)} ${f(by + ny)}L${f(bx - nx)} ${f(by - ny)}L${f(ax - nx)} ${f(ay - ny)}Z`
+      );
+    }
+  }
+  for (const [x, y] of pts) {
+    const ring: string[] = [];
+    for (let s = 0; s < JOIN_SIDES; s += 1) {
+      // Decreasing angle = the same (negative) winding as the quads above.
+      const a = (-2 * Math.PI * s) / JOIN_SIDES;
+      ring.push(
+        `${s === 0 ? "M" : "L"}${f(x + Math.cos(a) * h)} ${f(y + Math.sin(a) * h)}`
+      );
+    }
+    parts.push(`${ring.join("")}Z`);
+  }
+  return parts.join("");
 };

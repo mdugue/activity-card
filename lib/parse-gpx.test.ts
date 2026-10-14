@@ -37,6 +37,28 @@ describe("parseGpx", () => {
     expect(parsed.elevationGainM).toBe(10);
   });
 
+  test("a ride gets a speed profile in km/h from its timestamps", () => {
+    // 60 points, 0.001° of latitude (~111 m) every 20 s ≈ 20 km/h.
+    const pts = Array.from({ length: 60 }, (_, i) =>
+      trkpt(
+        (47 + i * 0.001).toFixed(3),
+        "11.0",
+        500,
+        new Date(Date.UTC(2026, 4, 18, 7, 0, i * 20)).toISOString()
+      )
+    );
+    const parsed = parseGpx(
+      gpx(`<trk><type>cycling</type><trkseg>${pts.join("")}</trkseg></trk>`),
+      "ride.gpx"
+    );
+    expect(parsed.speedProfile?.length).toBeGreaterThan(8);
+    for (const v of parsed.speedProfile ?? []) {
+      expect(v).toBeGreaterThan(19);
+      expect(v).toBeLessThan(21);
+    }
+    expect(parsed.paceProfile).toBeUndefined();
+  });
+
   // fast-xml-parser is lenient: bare garbage parses to an empty document, so
   // it flows through as an empty activity rather than the "not XML" error.
   // Pinned here so a future parser-config change shows up as a test diff.

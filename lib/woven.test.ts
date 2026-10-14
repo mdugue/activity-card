@@ -7,16 +7,20 @@ import {
 } from "@/components/app/sample-data";
 
 import {
+  bandPath,
   distanceMarks,
   metricsLevel,
   polylineLength,
+  resampleRoute,
   sampleProfile,
+  smoothRoute,
   smoothSeries,
   splitTitle,
   statLine,
   wovenIntensity,
   wovenProfile,
   wovenRoute,
+  wovenSpeedRange,
   wovenStats,
 } from "./woven";
 
@@ -107,5 +111,53 @@ describe("text helpers", () => {
     expect(distanceMarks(87.3, 4)).toEqual([20, 40, 60, 80]);
     expect(distanceMarks(5.1, 4)).toEqual([2, 4]);
     expect(distanceMarks(0, 4)).toEqual([]);
+  });
+});
+
+describe("route geometry", () => {
+  const L: [number, number][] = [
+    [0, 0],
+    [100, 0],
+    [100, 100],
+  ];
+
+  test("resampleRoute spaces points evenly and keeps both ends", () => {
+    const pts = resampleRoute(L, 5);
+    expect(pts).toEqual([
+      [0, 0],
+      [50, 0],
+      [100, 0],
+      [100, 50],
+      [100, 100],
+    ]);
+  });
+
+  test("smoothRoute keeps the point count and rounds the corner", () => {
+    const pts = smoothRoute(L, 21, 3);
+    expect(pts.length).toBe(21);
+    // The corner (100, 0) is pulled inwards.
+    const corner = pts.at(10) ?? [0, 0];
+    expect(corner[0]).toBeLessThan(100);
+    expect(corner[1]).toBeGreaterThan(0);
+  });
+
+  test("bandPath is one quad per segment plus a join per point", () => {
+    const d = bandPath(L, 10);
+    expect(d.match(/M/gu)?.length).toBe(2 + 3);
+    expect(bandPath([], 10)).toBe("");
+    expect(bandPath(L, 0)).toBe("");
+  });
+});
+
+describe("wovenSpeedRange", () => {
+  test("a ride reads km/h, slow before fast", () => {
+    const range = wovenSpeedRange(SAMPLE_RIDE);
+    expect(range?.unit).toBe("km/h");
+    expect(Number(range?.slow)).toBeLessThan(Number(range?.fast));
+  });
+  test("a run reads pace, the slow end the larger number", () => {
+    const range = wovenSpeedRange(SAMPLE_RUN);
+    expect(range?.unit).toBe("/km");
+    expect((range?.slow ?? "") > (range?.fast ?? "")).toBe(true);
   });
 });

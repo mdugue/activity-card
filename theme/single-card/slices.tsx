@@ -1,11 +1,12 @@
-// SLICES — the photo cut into vertical strips, each one reaching as high as
-// the elevation at its point of the activity: the profile is built out of the
-// picture instead of drawn on it. Dark ground and the gaps between strips are
-// painted over the photo, so the photo itself stays one plain layer.
-// Type: Instrument Serif (title) + IBM Plex Mono (captions).
+// SLICES — the photo cut into vertical strips, each one lifted as far as the
+// elevation at its point of the activity: the strips' lower edges trace the
+// profile, so the climb is built out of the picture instead of drawn on it.
+// Every strip is its own clipped copy of the photo, shifted up, over a dark
+// ground that carries the title. Type: Instrument Serif + IBM Plex Mono.
 
 import type { Coord } from "@/lib/activity";
 import { formatDateUpper, formatNumber } from "@/lib/format";
+import { IDENTITY_TRANSFORM } from "@/lib/image-transform";
 import { hasText } from "@/lib/text";
 import {
   metricsLevel,
@@ -21,10 +22,15 @@ import type { ThemeProps } from "@/theme/core/theme-contract";
 
 import { useFormat, useSafeInsets } from "../shared/format-context";
 import type { SlicesCapability } from "./slices.theme";
-import { Caption, Layer, Title, WovenFrame } from "./woven-parts";
-import { fallbackWash, typeScale } from "./woven-style";
+import { Caption, Layer, PhotoCopy, Title, WovenFrame } from "./woven-parts";
+import { typeScale } from "./woven-style";
 
 const GROUND = "#0d0f12";
+/** The share of the canvas the lowest strip still reaches down to. */
+const LOWEST = 0.74;
+
+const rect = (x: number, y: number, w: number, h: number): string =>
+  `M${x.toFixed(1)} ${y.toFixed(1)}H${(x + w).toFixed(1)}V${(y + h).toFixed(1)}H${x.toFixed(1)}Z`;
 
 export const ThemeSlices = ({
   config = DEFAULT_SLICES_CONFIG,
@@ -39,18 +45,22 @@ export const ThemeSlices = ({
   const level = metricsLevel(config.metrics, format.id);
   const stats = wovenStats(data);
   const profile = wovenProfile(data);
+  const t = imageTransform ?? IDENTITY_TRANSFORM;
 
   const n = config.strips;
   const stripW = W / n;
   const gap = Math.max(2, 3 * k);
-  // The text zone under the lowest strip, then the profile's reach above it.
-  const floor = H - insets.bottom - 150 * k;
-  const reach = H * 0.36;
+  const reach = (H * config.relief) / 100;
   const heights = profile
     ? sampleProfile(profile.pts, n)
     : Array.from({ length: n }, () => 0.5);
-  const tops = heights.map((v) => floor - v * reach);
-  const edge = tops.map((y, i): Coord => [i * stripW + stripW / 2, y]);
+  // Each strip's lower edge: the lowest point of the activity sits at LOWEST,
+  // the highest `reach` above it. The photo in the strip moves up with it.
+  const lifts = heights.map((v) => H * (1 - LOWEST) + v * reach);
+  const edges = lifts.map((lift, i): Coord => [
+    i * stripW + stripW / 2,
+    H - lift,
+  ]);
 
   let peak = 0;
   for (const [i, v] of heights.entries()) {
@@ -60,43 +70,48 @@ export const ThemeSlices = ({
   }
   const peakLabel =
     profile?.useElevation === true ? `↑ ${formatNumber(profile.max)} m` : null;
+  const kmPerStrip = data.distanceKm / n;
   const meta = [formatDateUpper(data.date), data.location]
     .filter(hasText)
     .join(" · ");
+  const textTop = H - insets.bottom - (level === "off" ? 44 : 84) * k;
 
   return (
     <WovenFrame
-      fallback={fallbackWash(data.sport)}
+      fallback={GROUND}
       imageTransform={imageTransform}
+      photo={false}
       photoUrl={photoUrl}
     >
+      {lifts.map((lift, i) => (
+        <PhotoCopy
+          clip={rect(i * stripW, 0, stripW - gap, H - lift)}
+          imageTransform={{ ...t, y: t.y - lift }}
+          key={`s${i * stripW}`}
+          photoUrl={photoUrl}
+        />
+      ))}
       <Layer label={data.title}>
-        {tops.map((y, i) => (
-          <rect
-            fill={GROUND}
-            height={H - y}
-            key={`g${i * stripW}`}
-            width={stripW + 0.5}
-            x={i * stripW}
-            y={y}
-          />
-        ))}
-        {tops.slice(1).map((_, i) => (
-          <rect
-            fill={GROUND}
-            height={H}
-            key={`s${(i + 1) * stripW}`}
-            width={gap}
-            x={(i + 1) * stripW - gap / 2}
-            y={0}
-          />
-        ))}
+        {hasText(photoUrl)
+          ? null
+          : lifts.map((lift, i) => (
+              <rect
+                fill="#3a4250"
+                height={H - lift}
+                key={`f${i * stripW}`}
+                width={stripW - gap}
+                x={i * stripW}
+                y={0}
+              />
+            ))}
         <path
-          d={toPath(edge)}
+          d={toPath(edges)}
           fill="none"
+          opacity={0.9}
           stroke="#ffffff"
           strokeLinejoin="round"
-          strokeWidth={2 * k}
+          strokeWidth={1.5 * k}
+          transform={`translate(${-gap / 2} ${4 * k})`}
         />
 
         {level === "full" && peakLabel !== null ? (
@@ -104,18 +119,14 @@ export const ThemeSlices = ({
             anchor="middle"
             opacity={1}
             size={20 * k}
-            x={Math.min(Math.max(edge[peak][0], 90 * k), W - 90 * k)}
-            y={edge[peak][1] - 18 * k}
+            x={Math.min(Math.max(edges[peak][0], 90 * k), W - 90 * k)}
+            y={edges[peak][1] + 40 * k}
           >
             {peakLabel}
           </Caption>
         ) : null}
 
-        <Title
-          size={60 * k}
-          x={insets.left}
-          y={H - insets.bottom - (level === "off" ? 44 : 84) * k}
-        >
+        <Title size={60 * k} x={insets.left} y={textTop}>
           {data.title}
         </Title>
         <Caption
@@ -136,6 +147,17 @@ export const ThemeSlices = ({
             {meta}
           </Caption>
         )}
+        {level === "full" ? (
+          <Caption
+            anchor="end"
+            opacity={0.55}
+            size={16 * k}
+            x={W - insets.right}
+            y={H - insets.bottom}
+          >
+            {`1 STRIP = ${formatNumber(kmPerStrip, kmPerStrip < 10 ? 1 : 0)} KM`}
+          </Caption>
+        ) : null}
       </Layer>
     </WovenFrame>
   );

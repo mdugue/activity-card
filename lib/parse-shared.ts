@@ -32,6 +32,8 @@ export interface ParsedActivity {
   paceProfile?: number[];
 
   routeCoordinates?: Coord[];
+  /** ride, km/h along the activity */
+  speedProfile?: number[];
   splits?: Split[];
   sport: ParsedSport;
 
@@ -236,11 +238,15 @@ const derivePerKmSplits = (
 };
 
 /**
- * Smoothed pace profile (sec/km) for runs. Derived from rolling distance and
- * time deltas, then resampled to a fixed length so themes don't have to
- * re-bucket per render.
+ * Smoothed pace profile (sec/km). Derived from rolling distance and time
+ * deltas, then resampled to a fixed length so themes don't have to re-bucket
+ * per render. `fastest` is the quickest believable pace (sec/km) — anything
+ * quicker is a GPS jump.
  */
-const derivePaceProfile = (points: TrackPoint[]): number[] | undefined => {
+const derivePaceProfile = (
+  points: TrackPoint[],
+  fastest = 60
+): number[] | undefined => {
   const stamped: { time: number; lat: number; lng: number }[] = [];
   for (const p of points) {
     if (p.lat !== undefined && p.lng !== undefined && p.time !== undefined) {
@@ -261,7 +267,7 @@ const derivePaceProfile = (points: TrackPoint[]): number[] | undefined => {
     if (meters > 1 && secs > 0) {
       const secPerKm = (secs * 1000) / meters;
       // Clamp absurd values (GPS jumps, stops at lights, …)
-      if (secPerKm > 60 && secPerKm < 1800) {
+      if (secPerKm > fastest && secPerKm < 1800) {
         paces.push(secPerKm);
       }
     }
@@ -370,6 +376,14 @@ export const finalise = (input: FinaliseInput): ParsedActivity => {
     sport === "swim" ? undefined : derivePerKmSplits(points, distanceKm);
 
   const paceProfile = sport === "run" ? derivePaceProfile(points) : undefined;
+  // Rides read speed (km/h) — the same signal the other way up; 30 s/km
+  // (120 km/h) is the quickest believable descent.
+  const speedProfile =
+    sport === "ride"
+      ? derivePaceProfile(points, 30)?.map((secPerKm) =>
+          round(3600 / secPerKm, 1)
+        )
+      : undefined;
 
   return {
     // The sport-specific keys never overlap the ones below.
@@ -386,6 +400,7 @@ export const finalise = (input: FinaliseInput): ParsedActivity => {
     location: "",
     paceProfile,
     routeCoordinates,
+    speedProfile,
     splits,
     sport,
     startTimeMs,

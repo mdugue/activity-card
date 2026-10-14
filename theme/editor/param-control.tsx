@@ -41,6 +41,10 @@ interface ParamControlProps {
 const SLIDER_VALUE = z.number();
 const CHOICE_VALUE = z.string();
 
+/** Snap a slider reading to its step (and strip float noise like 0.30000004). */
+const snapToStep = (value: number, step: number): number =>
+  Number((Math.round(value / step) * step).toFixed(6));
+
 // Sized to match the editor's other rich selects (the sport picker).
 const ICON_PROPS = {
   "aria-hidden": true,
@@ -138,9 +142,15 @@ export const ParamControl = ({
               // Flatten the scalar-or-array payload (`Array.isArray` would widen
               // the readonly array to `any[]`) and take its first thumb.
               const next = [v].flat()[0] ?? 0;
-              onChange(Math.round(next));
+              onChange(snapToStep(next, def.step ?? 1));
             }}
             step={def.step ?? 1}
+            // "edge" (the primitive's default) positions the thumb from a
+            // layout measurement and keeps it `visibility: hidden` until one
+            // succeeds — a control mounted inside a panel that is still
+            // collapsed or animating in showed no handle until first touched.
+            // "center" places it by percentage alone, so it is always there.
+            thumbAlignment="center"
             value={[n]}
           />
           <span className="w-12 text-right font-mono text-xs font-medium tabular-nums opacity-70">

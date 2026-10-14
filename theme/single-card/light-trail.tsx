@@ -1,8 +1,12 @@
 // LIGHT TRAIL — the route laid onto the ground of the photo in perspective,
-// glowing like a long exposure. Colour and glow follow the effort: fast
-// stretches burn bright. The photo is drained towards night (a `saturation`
-// layer plus a dark veil) so the trail is the only colour left.
+// glowing like a long exposure. Speed is drawn twice: in the trail's colour
+// (slow embers → fast white light) and as a curtain of light rising off it,
+// tall where the activity was fast — its skyline is the speed profile. A small
+// legend names both ends. The photo is pressed towards night (a colour filter
+// on the photo itself) so the light is the only colour left.
 // Type: Instrument Serif (title, values) + IBM Plex Mono (captions).
+
+import { useId } from "react";
 
 import type { Coord } from "@/lib/activity";
 import { mixHex } from "@/lib/chart-helpers";
@@ -11,8 +15,10 @@ import { hasText } from "@/lib/text";
 import {
   distanceMarks,
   metricsLevel,
+  resampleRoute,
   wovenIntensity,
   wovenRoutePoints,
+  wovenSpeedRange,
   wovenStats,
 } from "@/lib/woven";
 import { DEFAULT_LIGHT_TRAIL_CONFIG } from "@/lib/woven-themes";
@@ -23,7 +29,7 @@ import { useFormat, useSafeInsets } from "../shared/format-context";
 import { LIGHT_TRAIL_FAST, LIGHT_TRAIL_SLOW } from "./default-accents";
 import type { LightTrailCapability } from "./light-trail.theme";
 import { Caption, Layer, Title, WovenFrame } from "./woven-parts";
-import { fallbackWash, typeScale } from "./woven-style";
+import { fallbackWash, MONO, typeScale } from "./woven-style";
 
 const GROUND = 1000;
 /** Depth of the route's nearest and farthest edge (camera units). */
@@ -57,6 +63,15 @@ const perspective = (
   });
 };
 
+/** Points the trail is resampled to — even spacing, so segment i sits at
+ *  i/TRAIL_POINTS of the distance. */
+const TRAIL_POINTS = 260;
+/** The night filter on the photo. */
+const NIGHT = "saturate(0.3) brightness(0.5) contrast(1.12)";
+/** The curtain's colours, quantised: one upward-fading gradient per step
+ *  of speed (a gradient can't take its colour from the shape using it). */
+const BUCKETS = Array.from({ length: 10 }, (_, i) => i);
+
 /** Glow passes, widest first: stroke-width factor and opacity. */
 const PASSES = [
   { opacity: 0.12, width: 3.4 },
@@ -82,10 +97,13 @@ export const ThemeLightTrail = ({
   const [distance, time] = stats;
   const third = stats.at(2);
 
-  const ground = wovenRoutePoints(data, GROUND, GROUND);
+  const ground = resampleRoute(
+    wovenRoutePoints(data, GROUND, GROUND),
+    TRAIL_POINTS
+  );
   // Keep the near edge of the trail clear of the title block.
   const horizon = (H * config.horizon) / 100;
-  const near = Math.max(horizon + 80 * k, H - insets.bottom - 150 * k);
+  const near = Math.max(horizon + 80 * k, H - insets.bottom - 190 * k);
   const trail = perspective(ground, W, horizon, near);
   const intensity = wovenIntensity(data);
   const heat = (i: number): number => {
@@ -97,13 +115,25 @@ export const ThemeLightTrail = ({
   };
   const segments = trail.slice(1).map((b, i) => {
     const a = trail[i];
+    const h = heat(i + 1);
     return {
       a,
       b,
-      color: mixHex(slow, fast, heat(i + 1)),
-      w: (22 * k) / ((a.z + b.z) / 2),
+      color: mixHex(slow, fast, h),
+      h,
+      w: ((16 + 12 * h) * k) / ((a.z + b.z) / 2),
     };
   });
+  // The curtain: as tall as the speed, foreshortened with depth; drawn far
+  // to near so nearer light sits in front.
+  const curtainH = (H * 0.36 * config.curtain) / 100;
+  const lift = (h: number, z: number) =>
+    (curtainH * (0.14 + 0.86 * h) * NEAR) / z;
+  const curtain = segments.toSorted((p, q) => q.a.z - p.a.z);
+  const range = wovenSpeedRange(data);
+  const uid = useId();
+  const legendId = `${uid}-legend`;
+  const curtainId = `${uid}-curtain`;
   const marks =
     level === "full" && trail.length > 1
       ? distanceMarks(data.distanceKm, 4)
@@ -117,13 +147,54 @@ export const ThemeLightTrail = ({
     <WovenFrame
       fallback={fallbackWash(data.sport)}
       imageTransform={imageTransform}
+      photoFilter={NIGHT}
       photoUrl={photoUrl}
     >
-      <Layer blend="saturation" label="Night">
-        <rect fill="#808080" height={H} opacity={0.8} width={W} />
-      </Layer>
+      {curtainH > 0 ? (
+        <Layer blend="screen" label="Speed">
+          <defs>
+            {BUCKETS.map((b) => (
+              <linearGradient
+                id={`${curtainId}-${b}`}
+                key={b}
+                x1="0"
+                x2="0"
+                y1="1"
+                y2="0"
+              >
+                <stop
+                  offset="0"
+                  stopColor={mixHex(slow, fast, b / (BUCKETS.length - 1))}
+                  stopOpacity="0.62"
+                />
+                <stop
+                  offset="0.3"
+                  stopColor={mixHex(slow, fast, b / (BUCKETS.length - 1))}
+                  stopOpacity="0.24"
+                />
+                <stop
+                  offset="1"
+                  stopColor={mixHex(slow, fast, b / (BUCKETS.length - 1))}
+                  stopOpacity="0"
+                />
+              </linearGradient>
+            ))}
+          </defs>
+          {curtain.map((s) => (
+            <polygon
+              fill={`url(#${curtainId}-${Math.round(s.h * (BUCKETS.length - 1))})`}
+              key={`${s.a.x}-${s.a.y}`}
+              points={[
+                `${s.a.x},${s.a.y}`,
+                `${s.b.x},${s.b.y}`,
+                `${s.b.x},${s.b.y - lift(s.h, s.b.z)}`,
+                `${s.a.x},${s.a.y - lift(s.h, s.a.z)}`,
+              ].join(" ")}
+            />
+          ))}
+        </Layer>
+      ) : null}
       <Layer label={data.title}>
-        <rect fill="#05060a" height={H} opacity={0.38} width={W} />
         {PASSES.map((pass) => (
           <g key={pass.width} opacity={pass.opacity}>
             {segments.map((s) => (
@@ -199,6 +270,43 @@ export const ThemeLightTrail = ({
           </g>
         ) : null}
 
+        {level !== "off" && range !== null ? (
+          <g
+            style={{ fontFamily: MONO, fontSize: 16 * k, letterSpacing: 3 * k }}
+          >
+            <defs>
+              <linearGradient id={legendId} x1="0" x2="1" y1="0" y2="0">
+                <stop offset="0" stopColor={slow} />
+                <stop offset="1" stopColor={mixHex(fast, "#ffffff", 0.35)} />
+              </linearGradient>
+            </defs>
+            <text
+              fill="#ffffff"
+              opacity={0.8}
+              textAnchor="end"
+              x={W / 2 - 90 * k}
+              y={H - insets.bottom - 120 * k}
+            >
+              {`SLOW ${range.slow}`}
+            </text>
+            <rect
+              fill={`url(#${legendId})`}
+              height={3 * k}
+              rx={1.5 * k}
+              width={160 * k}
+              x={W / 2 - 80 * k}
+              y={H - insets.bottom - 126 * k}
+            />
+            <text
+              fill="#ffffff"
+              opacity={0.8}
+              x={W / 2 + 90 * k}
+              y={H - insets.bottom - 120 * k}
+            >
+              {`${range.fast} ${range.unit.toUpperCase()} FAST`}
+            </text>
+          </g>
+        ) : null}
         <Title
           anchor="middle"
           italic

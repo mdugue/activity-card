@@ -66,6 +66,7 @@ const ParsedActivitySchema = z.object({
   maxSpeedKmh: optionalNumber,
   paceProfile: numberList,
   routeCoordinates: z.optional(z.array(z.tuple([z.number(), z.number()]))),
+  speedProfile: numberList,
   splits: z.optional(
     z.array(
       z.object({
