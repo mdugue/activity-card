@@ -96,7 +96,9 @@ export const CarouselDeck = ({
 
   return (
     <FormatProvider value={stripFormat(activeFormat, total)}>
-      <PhotoFxProvider value={{ effects: photoEffects, imageSize }}>
+      <PhotoFxProvider
+        value={{ effects: photoEffects, foregroundUrl: null, imageSize }}
+      >
         <div
           style={{
             background: style.background,

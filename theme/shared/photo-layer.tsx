@@ -13,6 +13,7 @@ import {
   CssCoverImage,
   GrainOverlay,
   usePhotoEffects,
+  usePhotoForegroundUrl,
   usePhotoImageSize,
 } from "./photo-fx";
 
@@ -23,7 +24,11 @@ interface PhotoLayerProps {
 
 export const PhotoLayer = ({ photoUrl, imageTransform }: PhotoLayerProps) => {
   const t = imageTransform ?? IDENTITY_TRANSFORM;
-  const fx = usePhotoEffects();
+  const effects = usePhotoEffects();
+  // With a foreground cut-out showing, its layer owns the grain (see
+  // PhotoForeground) so it isn't doubled over the sky.
+  const cutout = usePhotoForegroundUrl() !== null;
+  const fx = effects && cutout ? { ...effects, grain: false } : effects;
   const imageSize = usePhotoImageSize();
   const { width, height } = useFormat();
 

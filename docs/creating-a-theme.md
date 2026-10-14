@@ -326,6 +326,20 @@ Knobs are **data, not components** (`theme-params` skill has the full model):
 5. Add a story variant exercising the knob, and a `bun:test` for any new pure
    logic. The control renders generically — there is nothing else to build.
 
+### Text behind the horizon
+
+A single-card theme can lay a headline between the far landscape and
+everything nearer. Opt in by listing `BEHIND_HORIZON_PARAM`
+(`theme/core/horizon.ts`) in the theme's params: the switch shows in the PHOTO
+tool, the editor estimates the photo's depth on the device
+(`hooks/use-photo-cutout.ts`, after a one-time consent for the 27 MB model),
+and the user can tap the preview to choose what stands in front. In the
+component, render the headline, then `<PhotoForeground imageTransform={…} />`
+(`theme/shared/photo-foreground.tsx`), then whatever must stay in front of the
+landscape. `usePhotoForegroundUrl()` is non-null only while the cut-out is
+showing, so branch the layout on it (PHOTO moves its title up). The export
+handles the cut-out on every engine, including the WebKit photo composite.
+
 ---
 
 ## Where things live (quick map)

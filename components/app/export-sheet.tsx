@@ -398,6 +398,8 @@ interface ExportSheetProps {
   onNew: () => void;
   photoBackdropEnabled: boolean;
   photoEffects: PhotoEffects;
+  /** foreground cut-out for "text behind the horizon" (see RenderTheme) */
+  photoForegroundUrl?: string | null;
   photoUrl: string | null;
   routeCoordinates?: [number, number][];
   theme: ThemeId;
@@ -417,6 +419,7 @@ export const ExportSheet = (props: ExportSheetProps) => {
     imageTransform,
     photoBackdropEnabled,
     photoEffects,
+    photoForegroundUrl = null,
     photoUrl,
   } = props;
   const [gps, setGps] = useState(true);
@@ -519,6 +522,7 @@ export const ExportSheet = (props: ExportSheetProps) => {
                 imageTransform={imageTransform}
                 photoBackdropEnabled={photoBackdropEnabled}
                 photoEffects={photoEffects}
+                photoForegroundUrl={photoForegroundUrl}
                 photoUrl={photoUrl}
                 theme={theme}
               />

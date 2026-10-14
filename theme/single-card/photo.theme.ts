@@ -2,6 +2,7 @@
 // photo policy — the row `SINGLE_CARD_THEMES` collects. Kept out of
 // `photo.tsx` so that module exports only its component (Fast Refresh).
 
+import { DEFAULT_PHOTO_CONFIG, PHOTO_PARAMS } from "@/lib/photo-theme";
 import { defineTheme } from "@/theme/core/theme-contract";
 
 import { ThemePhoto } from "./photo";
@@ -19,8 +20,10 @@ export const photoTheme = defineTheme({
     defaultChoice: { kind: "photo", variant: "vibrant" },
     userAdjustable: true,
   },
+  defaults: DEFAULT_PHOTO_CONFIG,
   id: "photo",
   label: "PHOTO",
+  params: PHOTO_PARAMS,
   photo: { defaultOn: true },
   tagline: "magazine cover",
   uses: USES,

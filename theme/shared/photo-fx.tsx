@@ -28,12 +28,16 @@ import type { PhotoEffects } from "@/lib/photo-effects";
 
 export interface PhotoFx {
   effects: PhotoEffects | null;
+  /** the photo's near part as a transparent PNG ("text behind the horizon"),
+   *  set only for a theme whose switch is on — see `PhotoForeground` */
+  foregroundUrl: string | null;
   /** natural size of the photo — enables the rotation-correct cover layer */
   imageSize: ImageSize | null;
 }
 
 const PhotoFxContext = createContext<PhotoFx>({
   effects: null,
+  foregroundUrl: null,
   imageSize: null,
 });
 
@@ -53,6 +57,9 @@ export const usePhotoEffects = (): PhotoEffects | null =>
 
 export const usePhotoImageSize = (): ImageSize | null =>
   useContext(PhotoFxContext).imageSize;
+
+export const usePhotoForegroundUrl = (): string | null =>
+  useContext(PhotoFxContext).foregroundUrl;
 
 /** Shared CSS background-image cover layer behind the single-card photo
  *  treatments. Each treatment passes its own hand-tuned `restInset` (the
@@ -88,6 +95,7 @@ export const CssCoverImage = ({
           filter,
           flipH: fx?.flipH ?? false,
           flipV: fx?.flipV ?? false,
+          foreground: false,
           opacity: opacity ?? 1,
           rotate: fx?.rotate ?? 0,
           scale: t.scale,

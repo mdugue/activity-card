@@ -4,6 +4,7 @@ import type { ImageTransform } from "@/lib/image-transform";
 import type { PhotoEffects } from "@/lib/photo-effects";
 import type { ColorScheme } from "@/theme/core/colors";
 import type { ExportFormat } from "@/theme/core/export-formats";
+import { offersBehindHorizon, wantsBehindHorizon } from "@/theme/core/horizon";
 import type { ThemeConfig } from "@/theme/core/params/kinds";
 import { pickThemeData } from "@/theme/core/theme-contract";
 import { FormatProvider, useFormat } from "@/theme/shared/format-context";
@@ -31,6 +32,9 @@ interface RenderThemeProps {
   photoBackdropEnabled?: boolean;
   /** Filter / grain / mirror, provided to every theme's photo layer via context. */
   photoEffects?: PhotoEffects | null;
+  /** The photo's foreground cut-out (`usePhotoCutout`); reaches the theme
+   *  only while its "text behind the horizon" switch is on. */
+  photoForegroundUrl?: string | null;
   photoUrl?: string | null;
   theme: ThemeId;
 }
@@ -50,6 +54,7 @@ export const RenderTheme = ({
   colors,
   config,
   photoEffects = null,
+  photoForegroundUrl = null,
   imageTransform = null,
   format,
 }: RenderThemeProps) => {
@@ -66,10 +71,18 @@ export const RenderTheme = ({
   // itself defaults to the 4:5 feed master), so this composes inside a matrix
   // decorator that provides the format per tile.
   const activeFormat = format ?? ctxFormat;
+  const foregroundUrl =
+    photo !== null &&
+    offersBehindHorizon(descriptor.params) &&
+    wantsBehindHorizon(config)
+      ? photoForegroundUrl
+      : null;
 
   return (
     <FormatProvider value={activeFormat}>
-      <PhotoFxProvider value={{ effects: photoEffects, imageSize }}>
+      <PhotoFxProvider
+        value={{ effects: photoEffects, foregroundUrl, imageSize }}
+      >
         <Component
           colors={resolvedColors}
           config={config}

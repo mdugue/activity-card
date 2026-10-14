@@ -151,6 +151,7 @@ const FiltersStep = ({ durationInFrames }: { durationInFrames: number }) => {
       <PhotoFxProvider
         value={{
           effects: { ...NO_EFFECTS, filter: beat.preset, grain: beat.grain },
+          foregroundUrl: null,
           imageSize: RIDE_SIZE,
         }}
       >
