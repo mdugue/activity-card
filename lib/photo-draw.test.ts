@@ -10,6 +10,7 @@ import type { PhotoDraw } from "@/lib/photo-draw";
 
 const DRAW: PhotoDraw = {
   box: { h: 1350, kind: "box", w: 1200, x: -60, y: 0 },
+  clip: "M0 0 L100 0 L100 100 Z",
   filter: "grayscale(1)",
   flipH: true,
   flipV: false,
@@ -43,6 +44,7 @@ describe("photo-draw descriptor", () => {
     );
     expect(decoded).toEqual({
       box: { inset: 0, kind: "inset" },
+      clip: "",
       filter: "",
       flipH: false,
       flipV: false,

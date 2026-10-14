@@ -60,12 +60,15 @@ export const usePhotoImageSize = (): ImageSize | null =>
  *  over-bleeds to -160 so the rotated footprint still covers the box. Reads
  *  effects from context; inline CSS only (snapdom-safe). */
 export const CssCoverImage = ({
+  clip = "",
   photoUrl,
   imageTransform,
   restInset = 0,
   filterPrefix = "",
   opacity,
 }: {
+  /** SVG path data (card px) the layer is clipped to — see `PhotoDraw.clip` */
+  clip?: string;
   filterPrefix?: string;
   imageTransform?: ImageTransform | null;
   opacity?: number;
@@ -85,6 +88,7 @@ export const CssCoverImage = ({
       {...{
         [PHOTO_LAYER_ATTR]: encodePhotoDraw({
           box: { inset, kind: "inset" },
+          clip,
           filter,
           flipH: fx?.flipH ?? false,
           flipV: fx?.flipV ?? false,
@@ -96,7 +100,11 @@ export const CssCoverImage = ({
           y: t.y,
         }),
       }}
-      style={{ inset: 0, position: "absolute" }}
+      style={{
+        clipPath: clip === "" ? undefined : `path("${clip}")`,
+        inset: 0,
+        position: "absolute",
+      }}
     >
       <div
         {...{ [PHOTO_PAINT_ATTR]: "" }}

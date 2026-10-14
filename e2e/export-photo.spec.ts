@@ -232,6 +232,31 @@ test("single-card Altitude export embeds the background via the photo composite"
   ).toBeGreaterThan(0.2);
 });
 
+/**
+ * WINDOW shows the photo twice: a grayscale copy everywhere and a colour copy
+ * clipped to the route. Magenta survives only inside the route band, so the
+ * fraction lands between "none" (the colour copy or its clip was lost) and
+ * "most of the card" (the grayscale filter was lost). The composite path must
+ * rebuild the same stack from the copies' descriptors.
+ */
+const expectColourOnlyAlongRoute = async (page: Page, query: string) => {
+  const fraction = await exportSingleCardWithPhoto(page, "WINDOW", query);
+  expect(fraction).toBeGreaterThan(0.02);
+  expect(fraction).toBeLessThan(0.5);
+};
+
+test("single-card Window export keeps colour only along the route", async ({
+  page,
+}) => {
+  await expectColourOnlyAlongRoute(page, "");
+});
+
+test("single-card Window export keeps colour only along the route via the photo composite", async ({
+  page,
+}) => {
+  await expectColourOnlyAlongRoute(page, FORCE_COMPOSITE);
+});
+
 test("single-card Photo export embeds the background via the photo composite", async ({
   page,
 }) => {

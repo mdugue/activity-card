@@ -100,3 +100,30 @@ export const SwatchToggleItem = ({
     {...props}
   />
 );
+
+/** A pill switch that reads on top of any photo (the Adjust overlay's
+ *  Photo / Graphic target). */
+export const OverlayToggleGroup = ({
+  className,
+  ...props
+}: WithClassName<ComponentProps<typeof ToggleGroup>>) => (
+  <ToggleGroup
+    className={cn("rounded-full bg-black/65 p-1 backdrop-blur-sm", className)}
+    spacing={1}
+    {...props}
+  />
+);
+
+export const OverlayToggleItem = ({
+  className,
+  ...props
+}: WithClassName<ComponentProps<typeof ToggleGroupItem>>) => (
+  <ToggleGroupItem
+    className={cn(
+      "h-7 gap-1.5 rounded-full px-3 text-xs font-medium text-white hover:bg-white/15 hover:text-white data-[pressed]:bg-white data-[pressed]:text-black",
+      className
+    )}
+    size="sm"
+    {...props}
+  />
+);

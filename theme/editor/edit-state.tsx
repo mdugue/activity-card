@@ -36,6 +36,7 @@ export const EditState = ({
 }: EditStateProps) => {
   const { data, visibility, color, config, photo } = session;
   const { onTransformChange: handlePhotoTransformChange } = photo;
+  const { onChange: handleConfigChange } = config;
   // The safe-zone guide is an editor-only preview overlay; the FORMAT control
   // toggles it and the preview reads it.
   const [showSafe, setShowSafe] = useState(false);
@@ -71,7 +72,9 @@ export const EditState = ({
             data={data}
             format={format}
             imageTransform={photo.transform}
+            onConfigChange={handleConfigChange}
             onImageTransformChange={handlePhotoTransformChange}
+            params={config.params}
             photoBackdropEnabled={visibility.photoBackdrop}
             photoEffects={photo.effects}
             photoUrl={photo.url}

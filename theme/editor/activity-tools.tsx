@@ -297,6 +297,10 @@ export const useActivityTools = ({
             <p className="caption-micro mt-2">
               Tap “Adjust” on the preview to move &amp; zoom
             </p>
+            {/* The theme's own photo knobs (how far it darkens the photo). */}
+            {themeDeclaresGroup(config.params, "photo") ? (
+              <div className="mt-3">{paramGroup("photo")}</div>
+            ) : null}
             <div className="mt-3">
               <div className="caption-micro mb-1.5">FILTER</div>
               <PhotoFilterControl

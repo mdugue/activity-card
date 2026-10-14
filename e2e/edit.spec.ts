@@ -45,6 +45,33 @@ test.describe("edit controls", () => {
     await expect(hrValue).toHaveCount(0);
   });
 
+  test("Adjust moves a woven theme's graphic on the card", async ({ page }) => {
+    // WINDOW declares a movable graphic, so Adjust is offered even without a
+    // photo; dragging it writes the same value the LAYOUT slider shows.
+    await selectTheme(page, "WINDOW");
+    const shift = page
+      .locator('[aria-label="GRAPHIC ↔"]')
+      .getByRole("slider")
+      .first();
+    await expect(shift).toHaveAttribute("aria-valuenow", "0");
+
+    await page.getByRole("button", { name: /^adjust$/iu }).click();
+    const surface = page.locator("div.cursor-grab");
+    const box = await surface.boundingBox();
+    expect(box).not.toBeNull();
+    if (box) {
+      const x = box.x + box.width / 2;
+      const y = box.y + box.height / 2;
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      await page.mouse.move(x + 80, y, { steps: 6 });
+      await page.mouse.up();
+    }
+    await page.getByRole("button", { name: /^done$/iu }).click();
+
+    await expect(shift).not.toHaveAttribute("aria-valuenow", "0");
+  });
+
   test("photo upload populates the Photo theme background", async ({
     page,
   }) => {

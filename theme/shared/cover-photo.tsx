@@ -21,9 +21,14 @@ import { GrainOverlay } from "./photo-fx";
 interface CoverPhotoProps {
   boxH: number;
   boxW: number;
+  /** SVG path data (box px) the layer is clipped to — see `PhotoDraw.clip` */
+  clip?: string;
   effects?: PhotoEffects | null;
   /** extra CSS filter prepended before the user preset (e.g. desaturate) */
   extraFilter?: string;
+  /** draw the user's grain on this layer (off for a theme's extra copies, so
+   *  stacked copies don't stack the grain) */
+  grain?: boolean;
   imageSize: ImageSize;
   opacity?: number;
   photoUrl: string;
@@ -35,9 +40,11 @@ export const CoverPhoto = ({
   imageSize,
   boxW,
   boxH,
+  clip = "",
   transform,
   effects,
   extraFilter,
+  grain = true,
   opacity = 1,
 }: CoverPhotoProps) => {
   const t = transform ?? IDENTITY_TRANSFORM;
@@ -70,6 +77,7 @@ export const CoverPhoto = ({
       {...{
         [PHOTO_LAYER_ATTR]: encodePhotoDraw({
           box: { h: elH, kind: "box", w: elW, x: left, y: top },
+          clip,
           filter: filterParts,
           flipH: fx.flipH,
           flipV: fx.flipV,
@@ -82,6 +90,7 @@ export const CoverPhoto = ({
         }),
       }}
       style={{
+        clipPath: clip === "" ? undefined : `path("${clip}")`,
         inset: 0,
         opacity,
         overflow: "hidden",
@@ -106,7 +115,7 @@ export const CoverPhoto = ({
           width: elW,
         }}
       />
-      {fx.grain ? <GrainOverlay /> : null}
+      {fx.grain && grain ? <GrainOverlay /> : null}
     </div>
   );
 };

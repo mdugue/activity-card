@@ -8,6 +8,12 @@ import {
 } from "./helpers";
 
 const THEMES = [
+  "RIDGE",
+  "LIGHT TRAIL",
+  "WINDOW",
+  "CONTOUR",
+  "WORD PATH",
+  "SLICES",
   "ALTITUDE",
   "PHOTO",
   "STRATA",

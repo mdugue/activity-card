@@ -43,6 +43,12 @@ export interface Rect {
 /** Everything the exporter needs to repaint one photo layer onto a canvas. */
 export interface PhotoDraw {
   box: PhotoBox;
+  /** SVG path data (card px, relative to the container, nonzero fill rule)
+   *  the layer is clipped to, mirroring its CSS `clip-path: path(…)` — ""
+   *  when the layer shows the whole container. This is how a theme shows the
+   *  photo twice with different treatments (a colour copy inside the route, a
+   *  toned one outside) without a blend mode the compositor can't rebuild. */
+  clip: string;
   /** the painting element's own CSS `filter` ("" when none) */
   filter: string;
   flipH: boolean;
@@ -84,6 +90,7 @@ const { catch: orDefault } = z;
  *  neutral default when missing or of the wrong type. */
 const photoDrawSchema = z.object({
   box: photoBoxSchema,
+  clip: orDefault(z.string(), ""),
   filter: orDefault(z.string(), ""),
   flipH: orDefault(z.boolean(), false),
   flipV: orDefault(z.boolean(), false),
