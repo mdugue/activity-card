@@ -11,6 +11,8 @@ import {
 
 import {
   createInFlightGuard,
+  createSerialQueue,
+  delay,
   effortDateSlug,
   REVOKE_DELAY_MS,
   triggerDownload,
@@ -145,5 +147,38 @@ describe("createInFlightGuard", () => {
     expect(message).toBe("capture failed");
     expect(guard.busy).toBe(false);
     expect(await guard.run(async () => {})).toBe(true);
+  });
+});
+
+describe("createSerialQueue", () => {
+  test("runs tasks one at a time, in call order", async () => {
+    const run = createSerialQueue();
+    const log: string[] = [];
+    const task = (name: string, ms: number) => async () => {
+      log.push(`start ${name}`);
+      await delay(ms);
+      log.push(`end ${name}`);
+      return name;
+    };
+    const results = await Promise.all([run(task("a", 20)), run(task("b", 0))]);
+    expect(results).toEqual(["a", "b"]);
+    expect(log).toEqual(["start a", "end a", "start b", "end b"]);
+  });
+
+  test("a failing task rejects its own call and the queue carries on", async () => {
+    const run = createSerialQueue();
+    const failing = run(async () => {
+      await delay(0);
+      throw new Error("boom");
+    });
+    const next = run(async () => await Promise.resolve("ok"));
+    let message = "";
+    try {
+      await failing;
+    } catch (error) {
+      message = error instanceof Error ? error.message : "";
+    }
+    expect(message).toBe("boom");
+    expect(await next).toBe("ok");
   });
 });

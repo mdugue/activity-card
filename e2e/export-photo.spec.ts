@@ -467,11 +467,12 @@ test("carousel Exposure export embeds the background via the photo composite", a
   expectSeamlessSet(await exportCarouselWithPhoto(page, FORCE_COMPOSITE));
 });
 
-test("the carousel overview renders one strip, and Download all still exports every format", async ({
+test("the carousel overview shows a still preview, and Download all still exports every format", async ({
   page,
 }) => {
-  // Seven native-size strips at once is what crashed iOS Safari when the
-  // overview opened; it now shows a single preview behind format chips.
+  // A live native-size strip on screen is what crashed iOS Safari in the
+  // overview (Sentry EFFORT-4); it now shows one small preview image behind
+  // format chips and mounts the strip off-screen only while capturing.
   await enterEditViaUpload(page);
   await selectCarousel(page);
   await selectTheme(page, "EXPOSURE");
@@ -485,7 +486,14 @@ test("the carousel overview renders one strip, and Download all still exports ev
   await expect(page.getByRole("heading", { name: /pick a/iu })).toBeVisible();
   await page.locator('[style*="blob:"]').first().waitFor({ state: "attached" });
 
-  await expect(page.getByTestId("export-tile")).toHaveCount(1);
+  const tile = page.getByTestId("export-tile");
+  await expect(tile).toHaveCount(1);
+  await expect(tile.locator('[style*="--preview"]')).toHaveCount(1, {
+    timeout: 20_000,
+  });
+  // The preview is an image: no live deck in the tile, no strip left staged.
+  await expect(tile.locator("img, svg, canvas")).toHaveCount(0);
+  await expect(page.getByTestId("capture-stage")).toHaveCount(0);
   const chips = page.getByRole("group", { name: "Format" }).getByRole("button");
   await expect(chips).toHaveCount(7);
 
@@ -494,6 +502,9 @@ test("the carousel overview renders one strip, and Download all still exports ev
   await expect(
     page.getByRole("button", { name: /download instagram story/iu })
   ).toBeVisible();
+  await expect(tile.locator('[style*="--preview"]')).toHaveCount(1, {
+    timeout: 20_000,
+  });
 
   const sublabel = await page
     .getByText(/9:16 · \d+ ×/u)

@@ -84,6 +84,28 @@ export const createInFlightGuard = (): InFlightGuard => {
   };
 };
 
+/** Runs async tasks strictly one after another, in call order — for work that
+ *  shares one resource (the carousel overview's off-screen capture stage). A
+ *  task's failure rejects only its own call; the next task still runs. */
+export type SerialQueue = <T>(task: () => Promise<T>) => Promise<T>;
+
+export const createSerialQueue = (): SerialQueue => {
+  let tail: Promise<unknown> = Promise.resolve();
+  return async <T>(task: () => Promise<T>): Promise<T> => {
+    const previous = tail;
+    const current = (async () => {
+      try {
+        await previous;
+      } catch {
+        // An earlier task's failure belongs to its own caller.
+      }
+      return await task();
+    })();
+    tail = current;
+    return await current;
+  };
+};
+
 /** Adapt a callback-only DOM API (`setTimeout`, `canvas.toBlob`, image load
  *  events) to a promise — the one place the export pipeline builds one. */
 export const fromCallback = async <T>(

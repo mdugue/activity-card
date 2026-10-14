@@ -2,17 +2,19 @@
 
 // The carousel export sheet — the carousel analogue of `ExportSheet`. Same
 // overview (pick a format, download one or all), reached the same way (a tap on
-// the editor's Export action, never an inline download). Unlike the single card
-// it shows ONE live preview: a row of format chips above a single tile holding
-// the whole n-slide strip rendered by the shared `CarouselDeck`. Each format is
-// a native-size, photo-backed strip several slides wide, and a tile per format
-// (seven at once) is more than iOS Safari will hold — it killed the tab as the
-// overview opened. Downloading slices the shown strip into its per-slide image
-// set (`exportCarousel`); "Download all" steps the preview through each format.
+// the editor's Export action, never an inline download). A row of format chips
+// sits above ONE preview tile, and that preview is a small still image, not a
+// live strip: each format is a native-size, photo-backed strip several slides
+// wide, and keeping even one of those on screen in the overview is what iOS
+// Safari killed the tab for (Sentry EFFORT-4). The real strip is mounted
+// off-screen only while it is being captured — once small for the preview,
+// once at export size for a download — and unmounted straight after.
+// Downloading slices that strip into its per-slide image set (`exportCarousel`).
 // The chrome, the busy/one/all orchestration and the tile itself are the shared
 // machinery from `export-sheet.tsx`.
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties, ReactNode, RefObject } from "react";
 import { toast } from "sonner";
 
 import {
@@ -24,6 +26,7 @@ import type { ActivityData } from "@/lib/activity";
 import { watchExport, watchOverview } from "@/lib/export-watch";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PhotoEffects } from "@/lib/photo-effects";
+import { cn } from "@/lib/utils";
 import { CarouselDeck } from "@/theme/carousel/deck";
 import type { CarouselTheme } from "@/theme/carousel/define-theme";
 import { stripGeometry } from "@/theme/carousel/geometry";
@@ -36,7 +39,8 @@ import {
 import type { ExportFormat, ExportFormatId } from "@/theme/core/export-formats";
 import type { ThemeConfig } from "@/theme/core/params/kinds";
 import type { Visibility } from "@/theme/core/visibility";
-import { delay } from "@/theme/export/export-shared";
+import { createSerialQueue, delay } from "@/theme/export/export-shared";
+import type { SerialQueue } from "@/theme/export/export-shared";
 
 import {
   ExportShell,
@@ -70,20 +74,112 @@ const waitForStrip = async (
   return null;
 };
 
-/** Wait for the format's strip to render, then slice and deliver it. */
-const exportStrip = async (
+/** Mount `format`'s strip off-screen, run `task` on it once it has rendered,
+ *  and unmount it again — whatever `task` does. */
+const withStagedStrip = async <T,>(
+  stage: (id: string | null) => void,
   read: () => HTMLDivElement | null,
+  format: ExportFormat,
+  task: (node: HTMLDivElement) => Promise<T>
+): Promise<T> => {
+  stage(format.id);
+  try {
+    const node = await waitForStrip(read);
+    if (!node) {
+      // The strip never rendered — fail loudly, never no-op.
+      throw new Error(`The ${format.label} strip did not render`);
+    }
+    return await task(node);
+  } finally {
+    stage(null);
+  }
+};
+
+/** Slice the staged strip into its slides and deliver them. */
+const exportStrip = async (
+  node: HTMLDivElement,
   set: { count: number; date: string; sport: string },
   format: ExportFormat
 ): Promise<void> => {
-  const node = await waitForStrip(read);
-  if (!node) {
-    // The strip never rendered — fail loudly, never no-op.
-    throw new Error(`The ${format.label} strip did not render`);
-  }
   const { carouselBaseName, exportCarousel } = await loadExportCarousel();
-  const baseName = carouselBaseName(set.sport, set.date);
-  await exportCarousel(node, set.count, baseName, format);
+  await exportCarousel(
+    node,
+    set.count,
+    carouselBaseName(set.sport, set.date),
+    format
+  );
+};
+
+/** Render the staged strip as the overview's small preview image. */
+const previewStrip = async (
+  node: HTMLDivElement,
+  count: number,
+  format: ExportFormat
+): Promise<string> => {
+  const { renderCarouselPreview } = await loadExportCarousel();
+  return await renderCarouselPreview(node, count, format);
+};
+
+/** Render one preview and hand its URL on. A failed preview only leaves the
+ *  tile without its image — the format stays downloadable. */
+const loadPreview = async (
+  render: () => Promise<string>,
+  onReady: (url: string) => void,
+  onFailed: () => void
+): Promise<void> => {
+  try {
+    onReady(await render());
+  } catch {
+    onFailed();
+  }
+};
+
+/** The preview image and the off-screen strip's native size, as CSS custom
+ *  properties. */
+interface PreviewStyle extends CSSProperties {
+  "--preview"?: string;
+}
+
+interface StageStyle extends CSSProperties {
+  "--stage-h": string;
+  "--stage-w": string;
+}
+
+// The overview's tile shows an image, so it registers no capture mount.
+const noMount = (): void => {
+  // The capture mount is the off-screen stage, not the tile.
+};
+
+/** The off-screen stage: the native-size strip a capture reads, parked left of
+ *  the viewport (laid out, never painted) for as long as the capture runs. */
+const StagedStrip = ({
+  children,
+  count,
+  format,
+  mountRef,
+}: {
+  children: ReactNode;
+  count: number;
+  format: ExportFormat;
+  mountRef: RefObject<HTMLDivElement | null>;
+}) => {
+  const { slideH, stripW } = stripGeometry(format, count);
+  const stageStyle: StageStyle = {
+    "--stage-h": `${slideH}px`,
+    "--stage-w": `${stripW}px`,
+  };
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none fixed top-0 left-0 -translate-x-full"
+      data-testid="capture-stage"
+      style={stageStyle}
+    >
+      <div className="h-(--stage-h) w-(--stage-w)" ref={mountRef}>
+        {children}
+      </div>
+    </div>
+  );
 };
 
 // The one preview gets the room the seven tiles used to share: wide, and
@@ -131,52 +227,113 @@ export const CarouselExportSheet = ({
   const imageSize = useImageNaturalSize(photoUrl);
   const [selectedId, setSelectedId] =
     useState<ExportFormatId>(DEFAULT_FORMAT_ID);
-  // The format being exported takes over the preview until it is done.
-  const [exportingId, setExportingId] = useState<string | null>(null);
-  const shownId = FORMAT_ORDER.find((id) => id === exportingId) ?? selectedId;
-  const shown = getFormat(shownId);
+  const shown = getFormat(selectedId);
   const { slideH, stripW } = stripGeometry(shown, count);
 
-  // The one native-size strip mount, plus the format it holds once React has
-  // committed it — an export reads the strip only when the two agree.
-  const mount = useRef<HTMLDivElement | null>(null);
+  // The strip mounted off-screen right now (only while a capture runs), plus
+  // the format it holds once React has committed it — a capture reads the strip
+  // only when the two agree.
+  const [stagedId, setStagedId] = useState<string | null>(null);
+  const staged = FORMAT_ORDER.find((id) => id === stagedId);
+  const stageMount = useRef<HTMLDivElement | null>(null);
   const committedId = useRef<string | null>(null);
   useEffect(() => {
-    committedId.current = shownId;
-  }, [shownId]);
+    committedId.current = stagedId;
+  }, [stagedId]);
+
+  // Captures share the one stage, so they run one after another.
+  const queue = useRef<SerialQueue | null>(null);
+  const enqueue = useCallback(
+    async <T,>(
+      format: ExportFormat,
+      task: (node: HTMLDivElement) => Promise<T>
+    ): Promise<T> => {
+      const runCapture = queue.current ?? createSerialQueue();
+      queue.current = runCapture;
+      return await runCapture(
+        async () =>
+          await withStagedStrip(
+            setStagedId,
+            () =>
+              committedId.current === format.id ? stageMount.current : null,
+            format,
+            task
+          )
+      );
+    },
+    []
+  );
+
   useEffect(() => {
     void loadExportCarousel();
   }, []);
-  // Report a tab killed while the overview is open (one strip is mounted).
+  // Report a tab killed while the overview is open.
   useEffect(
-    () => watchOverview({ kind: "carousel", mounted: 1, slides: count }),
+    () => watchOverview({ kind: "carousel", mounted: 0, slides: count }),
     [count]
   );
-  // The deck draws no photo until its natural size resolves, so exporting before
-  // then would rasterise a photo-less strip. Gate downloads on the decode while a
-  // photo is shown (the single card has a CSS-cover fallback and needs no gate).
+  // The deck draws no photo until its natural size resolves, so capturing before
+  // then would rasterise a photo-less strip. Gate previews and downloads on the
+  // decode while a photo is shown.
   const photoNotReady = photoUrl !== null && imageSize === null;
+
+  // One small preview image per format, rendered the first time it is picked.
+  const [previews, setPreviews] = useState<Partial<Record<string, string>>>({});
+  const requested = useRef(new Set<string>());
+  const previewUrls = useRef<string[]>([]);
+  useEffect(() => {
+    if (photoNotReady || requested.current.has(shown.id)) {
+      return;
+    }
+    requested.current.add(shown.id);
+    void loadPreview(
+      async () =>
+        await enqueue(
+          shown,
+          async (node) => await previewStrip(node, count, shown)
+        ),
+      (url) => {
+        previewUrls.current.push(url);
+        setPreviews((prev) => ({ ...prev, [shown.id]: url }));
+      },
+      () => {
+        // Let a later pick of the format try again.
+        requested.current.delete(shown.id);
+      }
+    );
+  }, [count, enqueue, photoNotReady, shown]);
+  useEffect(
+    () => () => {
+      for (const url of previewUrls.current) {
+        URL.revokeObjectURL(url);
+      }
+    },
+    []
+  );
+  const preview = previews[shown.id];
+  const previewStyle: PreviewStyle =
+    preview === undefined ? {} : { "--preview": `url("${preview}")` };
 
   const exportOne = useCallback(
     async (format: ExportFormat) => {
-      setExportingId(format.id);
       try {
         await watchExport(
           { format: format.id, kind: "carousel", slides: count },
           async () => {
-            await exportStrip(
-              () => (committedId.current === format.id ? mount.current : null),
-              { count, date: data.date, sport: data.sport },
-              format
-            );
+            await enqueue(format, async (node) => {
+              await exportStrip(
+                node,
+                { count, date: data.date, sport: data.sport },
+                format
+              );
+            });
           }
         );
       } catch {
         toast.error("Export failed — please try again.");
       }
-      setExportingId(null);
     },
-    [count, data.sport, data.date]
+    [count, data.sport, data.date, enqueue]
   );
 
   const { busy, handleOne, handleAll } = useFormatExports(exportOne);
@@ -209,7 +366,7 @@ export const CarouselExportSheet = ({
           }
         }}
         spacing={2}
-        value={[shownId]}
+        value={[shown.id]}
       >
         {FORMAT_ORDER.map((id) => {
           const format = getFormat(id);
@@ -224,7 +381,7 @@ export const CarouselExportSheet = ({
       <div className="mt-4 flex justify-center sm:mt-6">
         <ExportTile
           busy={busy}
-          busyId={shownId}
+          busyId={shown.id}
           disabled={photoNotReady}
           label={shown.label}
           nativeH={slideH}
@@ -232,17 +389,33 @@ export const CarouselExportSheet = ({
           onDownload={() => {
             void handleOne(shown);
           }}
-          registerMount={(node) => {
-            mount.current = node;
-          }}
+          registerMount={noMount}
           sublabel={`${shown.aspectLabel} · ${count} × ${shown.width}×${shown.height}`}
           tileMax={tileMax}
+        >
+          <div
+            aria-hidden
+            className={cn(
+              "size-full bg-cover",
+              preview === undefined
+                ? "bg-muted animate-pulse"
+                : "bg-(image:--preview)"
+            )}
+            style={previewStyle}
+          />
+        </ExportTile>
+      </div>
+      {staged === undefined ? null : (
+        <StagedStrip
+          format={getFormat(staged)}
+          count={count}
+          mountRef={stageMount}
         >
           <CarouselDeck
             colors={colors}
             config={config}
             data={data}
-            format={shown}
+            format={getFormat(staged)}
             imageSize={imageSize}
             imageTransform={imageTransform}
             photoEffects={photoEffects}
@@ -250,8 +423,8 @@ export const CarouselExportSheet = ({
             theme={theme}
             visibility={visibility}
           />
-        </ExportTile>
-      </div>
+        </StagedStrip>
+      )}
     </ExportShell>
   );
 };
