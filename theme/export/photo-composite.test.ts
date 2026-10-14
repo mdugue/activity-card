@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { mergeProbes } from "./photo-composite";
+import { mergeForeground, mergeProbes } from "./photo-composite";
 
 /** Minimal stand-in for ImageData — bun's test runner has no DOM. */
 const imageData = (pixels: number[][]): ImageData => {
@@ -74,5 +74,60 @@ describe("mergeProbes", () => {
     );
     expect(merged.data[0]).toBeCloseTo(200 * (128 / 255), 0);
     expect(merged.data[1]).toBeCloseTo(100 * (128 / 255), 0);
+  });
+});
+
+/** Within a unit per channel — the probes only carry 8-bit values. */
+const close = (actual: Uint8ClampedArray, expected: number[]) => {
+  for (const [c, value] of expected.entries()) {
+    expect(Math.abs(actual[c] - value)).toBeLessThanOrEqual(1);
+  }
+};
+
+describe("mergeForeground", () => {
+  // The card without the cut-out: sky photo with a headline over it.
+  const LOWER = [30, 60, 200, 255];
+  const LAND = [40, 120, 30];
+
+  test("an opaque cut-out pixel replaces what lies beneath", () => {
+    const merged = mergeForeground(
+      imageData([LOWER]),
+      imageData([BLACK]),
+      imageData([WHITE]),
+      imageData([[...LAND, 255]])
+    );
+    close(merged.data, [...LAND, 255]);
+  });
+
+  test("a transparent cut-out pixel keeps the card beneath", () => {
+    const merged = mergeForeground(
+      imageData([LOWER]),
+      imageData([BLACK]),
+      imageData([WHITE]),
+      imageData([[...LAND, 0]])
+    );
+    expect([...merged.data]).toEqual(LOWER);
+  });
+
+  test("blends across the soft edge of the cut", () => {
+    const merged = mergeForeground(
+      imageData([LOWER]),
+      imageData([BLACK]),
+      imageData([WHITE]),
+      imageData([[...LAND, 128]])
+    );
+    close(merged.data, over([...LAND, 128], LOWER));
+  });
+
+  test("keeps layers drawn over the cut-out on top of it", () => {
+    // A 50% white stat line over the cut-out.
+    const stat = [255, 255, 255, 128];
+    const merged = mergeForeground(
+      imageData([over(stat, LOWER)]),
+      imageData([over(stat, BLACK)]),
+      imageData([over(stat, WHITE)]),
+      imageData([[...LAND, 255]])
+    );
+    close(merged.data, over(stat, [...LAND, 255]));
   });
 });

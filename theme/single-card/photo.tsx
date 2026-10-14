@@ -19,16 +19,20 @@ import {
   isNum,
 } from "@/lib/format";
 import { isMultiActivity, segmentRoutes } from "@/lib/multi-activity";
+import { DEFAULT_PHOTO_CONFIG, horizonTitleSize } from "@/lib/photo-theme";
+import type { PhotoConfig } from "@/lib/photo-theme";
 import { hasText } from "@/lib/text";
 import type { ColorScheme } from "@/theme/core/colors";
 import type { ThemeProps } from "@/theme/core/theme-contract";
 
 import { useFormat, useSafeInsets } from "../shared/format-context";
 import { OverlayRoute } from "../shared/overlay-route";
+import { PhotoForeground } from "../shared/photo-foreground";
+import { usePhotoForegroundUrl } from "../shared/photo-fx";
 import { PhotoLayer } from "../shared/photo-layer";
 import type { PhotoCapability } from "./photo.theme";
 
-type ThemePhotoProps = ThemeProps<PhotoCapability>;
+type ThemePhotoProps = ThemeProps<PhotoCapability, PhotoConfig>;
 type PhotoActivity = ThemePhotoProps["data"];
 
 const PLAYFAIR = "var(--font-playfair), serif";
@@ -365,16 +369,81 @@ const BYLINE_NAME_STYLE = {
   letterSpacing: "0",
 } satisfies CSSProperties;
 
+// Neutral vignette — pure black to read consistently across any photo. Split
+// in two non-overlapping halves so a foreground cut-out can sit between them:
+// the sky darkens under the headline, the ground darkens over the landscape.
+const TopVignette = () => (
+  <div
+    style={{
+      background:
+        "linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 30%)",
+      inset: 0,
+      position: "absolute",
+    }}
+  />
+);
+
+const BottomVignette = () => (
+  <div
+    style={{
+      background:
+        "linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(0,0,0,0.7) 100%)",
+      inset: 0,
+      position: "absolute",
+    }}
+  />
+);
+
+// "Text behind the horizon": the title as a big headline up in the landscape,
+// drawn before the photo's foreground so ridges and riders stand in front.
+const HorizonTitle = ({
+  title,
+  top,
+  left,
+  right,
+  width,
+}: {
+  left: number;
+  right: number;
+  title: string;
+  top: number;
+  width: number;
+}) => (
+  <h1
+    style={{
+      color: HEADLINE_VAR,
+      fontFamily: PLAYFAIR,
+      fontSize: horizonTitleSize(title, width - left - right),
+      fontWeight: 400,
+      left,
+      letterSpacing: "-0.03em",
+      lineHeight: 0.88,
+      margin: 0,
+      position: "absolute",
+      right,
+      textAlign: "center",
+      textWrap: "balance",
+      top,
+    }}
+  >
+    {title}
+  </h1>
+);
+
 export const ThemePhoto = ({
   data,
   photoUrl,
   colors,
+  config,
   imageTransform,
 }: ThemePhotoProps) => {
   const { width, height, safe } = useFormat();
   // Masthead / title / hero keep to the safe area; the photo + vignette bleed.
   const insets = useSafeInsets({ bottom: 70, left: 80, right: 80, top: 70 });
   const { sport } = data;
+  // Set only while the theme's "text behind the horizon" switch is on and the
+  // cut-out is ready (see RenderTheme).
+  const behindHorizon = usePhotoForegroundUrl() !== null && hasText(data.title);
 
   return (
     <div
@@ -394,15 +463,24 @@ export const ThemePhoto = ({
       ) : (
         <PlaceholderGrain />
       )}
-      {/* Neutral vignette — pure black to read consistently across any photo. */}
-      <div
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.7) 100%)",
-          inset: 0,
-          position: "absolute",
-        }}
-      />
+      <TopVignette />
+      {behindHorizon ? (
+        <>
+          <HorizonTitle
+            left={insets.left}
+            right={insets.right}
+            title={data.title}
+            top={Math.round(
+              (height *
+                (config?.horizonTitleY ?? DEFAULT_PHOTO_CONFIG.horizonTitleY)) /
+                100
+            )}
+            width={width}
+          />
+          <PhotoForeground imageTransform={imageTransform} />
+        </>
+      ) : null}
+      <BottomVignette />
       <Masthead
         data={data}
         left={insets.left}
@@ -416,27 +494,29 @@ export const ThemePhoto = ({
           top={Math.max(200, safe.top)}
         />
       )}
-      <div
-        style={{
-          bottom: insets.bottom + 150,
-          left: insets.left,
-          position: "absolute",
-          right: insets.right,
-        }}
-      >
+      {behindHorizon ? null : (
         <div
-          aria-hidden
           style={{
-            background:
-              "linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%)",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
-            height: 4,
-            marginBottom: 28,
-            width: 120,
+            bottom: insets.bottom + 150,
+            left: insets.left,
+            position: "absolute",
+            right: insets.right,
           }}
-        />
-        <h1 style={TITLE_STYLE}>{data.title}</h1>
-      </div>
+        >
+          <div
+            aria-hidden
+            style={{
+              background:
+                "linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%)",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
+              height: 4,
+              marginBottom: 28,
+              width: 120,
+            }}
+          />
+          <h1 style={TITLE_STYLE}>{data.title}</h1>
+        </div>
+      )}
       {/* Hero stat block + small stats — bottom strip */}
       <div
         style={{

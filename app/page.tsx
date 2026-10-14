@@ -15,6 +15,8 @@ import { useCarousel } from "@/hooks/use-carousel";
 import type { CarouselController } from "@/hooks/use-carousel";
 import { useEditorPrefs } from "@/hooks/use-editor-prefs";
 import { useImagePalette } from "@/hooks/use-image-palette";
+import { usePhotoCutout } from "@/hooks/use-photo-cutout";
+import type { UsePhotoCutout } from "@/hooks/use-photo-cutout";
 import { useStravaReturnToast } from "@/hooks/use-strava-return-toast";
 import type { ActivityData, ActivitySource } from "@/lib/activity";
 import { assembleTriathlon } from "@/lib/assemble-triathlon";
@@ -25,9 +27,10 @@ import { cn } from "@/lib/utils";
 import { CAROUSEL_THEMES } from "@/theme/carousel/registry";
 import type { CarouselThemeId } from "@/theme/carousel/registry";
 import { resolveColors } from "@/theme/core/colors";
-import type { ColorScheme } from "@/theme/core/colors";
+import type { ColorChoice, ColorScheme } from "@/theme/core/colors";
 import { DEFAULT_FORMAT_ID, getFormat } from "@/theme/core/export-formats";
 import type { ExportFormatId } from "@/theme/core/export-formats";
+import { behindHorizonActive } from "@/theme/core/horizon";
 import type { ThemeConfig } from "@/theme/core/params/kinds";
 import { coerceConfig } from "@/theme/core/params/resolve";
 import { effectiveChoiceFor } from "@/theme/core/theme-contract";
@@ -165,6 +168,7 @@ const ExportView = ({
   count,
   data,
   photo,
+  photoForegroundUrl,
   visibility,
   theme,
   carouselTheme,
@@ -181,6 +185,7 @@ const ExportView = ({
   onKeepEditing: () => void;
   onNew: () => void;
   photo: ReturnType<typeof useCardPhoto>;
+  photoForegroundUrl: string | null;
   routeCoordinates?: [number, number][];
   theme: ThemeId;
   visibility: Visibility;
@@ -213,6 +218,7 @@ const ExportView = ({
       onNew={onNew}
       photoBackdropEnabled={visibility.photoBackdrop}
       photoEffects={photo.effects}
+      photoForegroundUrl={photoForegroundUrl}
       photoUrl={photo.url}
       routeCoordinates={routeCoordinates}
       theme={theme}
@@ -316,6 +322,44 @@ const EditView = ({
   </div>
 );
 
+/**
+ * Colour resolution: the active theme's policy supplies the default scheme
+ * and (for photo-first themes like Exposure) a default photo-derived choice;
+ * the user's explicit choice overrides. A photo-kind choice resolves through
+ * the extracted palette and falls back to the theme default while none is
+ * available. One palette extraction serves the whole app (the colour
+ * control's swatches + any photo-derived choice).
+ */
+const useThemeColors = (
+  activeTheme: ThemeBase,
+  colorChoice: ColorChoice | null,
+  photoUrl: string | null
+) => {
+  const effectiveColorChoice = effectiveChoiceFor(activeTheme, colorChoice);
+  const photoPalette = useImagePalette(photoUrl);
+  const colors = resolveColors(
+    effectiveColorChoice,
+    activeTheme.colors.default,
+    photoPalette
+  );
+  return { colors, effectiveColorChoice, photoPalette };
+};
+
+/** The photo slice of the editor session: the photo cluster + its cut-out. */
+const photoSession = (
+  photo: ReturnType<typeof useCardPhoto>,
+  cutout: UsePhotoCutout,
+  onChange: (file: File | null) => void
+): EditorSession["photo"] => ({
+  cutout,
+  effects: photo.effects,
+  onChange,
+  onEffectsChange: photo.setEffects,
+  onTransformChange: photo.setTransform,
+  transform: photo.transform,
+  url: photo.url,
+});
+
 const Home = () => {
   const [state, setState] = useState<AppState>("empty");
   // Set after the Strava OAuth round-trip so the empty state opens the wizard
@@ -350,19 +394,21 @@ const Home = () => {
     activeTheme.params,
     prefs.themeConfigs[activeTheme.id]
   );
+  // "Text behind the horizon": the depth-cut foreground (see the hook).
+  const cutout = usePhotoCutout(
+    photo.url,
+    behindHorizonActive(
+      mode,
+      visibility.photoBackdrop,
+      activeTheme,
+      activeConfig
+    )
+  );
 
-  // Colour resolution: the active theme's policy supplies the default scheme
-  // and (for photo-first themes like Exposure) a default photo-derived choice;
-  // the user's explicit choice overrides. A photo-kind choice resolves through
-  // the extracted palette and falls back to the theme default while none is
-  // available. One palette extraction serves the whole app (the colour
-  // control's swatches + any photo-derived choice).
-  const effectiveColorChoice = effectiveChoiceFor(activeTheme, colorChoice);
-  const photoPalette = useImagePalette(photo.url);
-  const colors = resolveColors(
-    effectiveColorChoice,
-    activeTheme.colors.default,
-    photoPalette
+  const { colors, effectiveColorChoice, photoPalette } = useThemeColors(
+    activeTheme,
+    colorChoice,
+    photo.url
   );
 
   // After the Strava OAuth round-trip we land on `/?strava=...` — toast the
@@ -524,16 +570,9 @@ const Home = () => {
             updateData({ title });
           },
           onVisibilityChange: prefs.setVisibility,
-          photo: {
-            effects: photo.effects,
-            onChange: (file) => {
-              void handlePhotoChange(file);
-            },
-            onEffectsChange: photo.setEffects,
-            onTransformChange: photo.setTransform,
-            transform: photo.transform,
-            url: photo.url,
-          },
+          photo: photoSession(photo, cutout, (file) => {
+            void handlePhotoChange(file);
+          }),
           title: data.title,
           visibility,
         };
@@ -608,6 +647,7 @@ const Home = () => {
           onKeepEditing={enterEditor}
           onNew={handleNew}
           photo={photo}
+          photoForegroundUrl={cutout.foregroundUrl}
           routeCoordinates={data?.routeCoordinates}
           theme={theme}
           visibility={visibility}

@@ -47,6 +47,9 @@ export interface PhotoDraw {
   filter: string;
   flipH: boolean;
   flipV: boolean;
+  /** the photo's foreground cut-out ("text behind the horizon"), painted over
+   *  the theme's own layers rather than under them */
+  foreground: boolean;
   /** the painting element's own opacity (container opacity is NOT included —
    *  the compositor's probes already capture that) */
   opacity: number;
@@ -87,6 +90,7 @@ const photoDrawSchema = z.object({
   filter: orDefault(z.string(), ""),
   flipH: orDefault(z.boolean(), false),
   flipV: orDefault(z.boolean(), false),
+  foreground: orDefault(z.boolean(), false),
   opacity: orDefault(z.number(), 1),
   rotate: orDefault(z.number(), 0),
   scale: orDefault(z.number(), 1),

@@ -5,6 +5,7 @@
 // prop through page → editor → tools. Mode-specific things (the theme id +
 // rail, the carousel controller, export) stay ordinary props.
 
+import type { UsePhotoCutout } from "@/hooks/use-photo-cutout";
 import type { ActivityData, Sport } from "@/lib/activity";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { ExtractedPalette } from "@/lib/palette";
@@ -52,6 +53,8 @@ export interface EditorSession {
   onTitleChange: (title: string) => void;
   onVisibilityChange: (visibility: Visibility) => void;
   photo: {
+    /** "text behind the horizon": depth estimate + foreground cut-out */
+    cutout: UsePhotoCutout;
     effects: PhotoEffects;
     onChange: (file: File | null) => void;
     onEffectsChange: (next: PhotoEffects) => void;

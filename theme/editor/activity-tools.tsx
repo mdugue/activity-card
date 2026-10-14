@@ -36,6 +36,8 @@ import {
 import type { RichSelectOption } from "@/components/app/control-primitives";
 import type { CardMode } from "@/components/app/mode-toggle";
 import { StravaPhotoStrip } from "@/components/app/strava-photo-strip";
+import { Progress } from "@/components/ui/progress";
+import type { UsePhotoCutout } from "@/hooks/use-photo-cutout";
 import type { Sport, StravaPhotoRef } from "@/lib/activity";
 import { fetchStravaPhotoFile, stravaPhotoKey } from "@/lib/strava-photos";
 import type { ParamCtx } from "@/theme/core/params/kinds";
@@ -124,6 +126,39 @@ interface UseActivityToolsProps {
   /** the theme rail for this mode (rendered at the top of the STYLE section) */
   themeControl: React.ReactNode;
 }
+
+/** What "text behind the horizon" is doing right now, under its switch. */
+const CutoutStatusLine = ({ cutout }: { cutout: UsePhotoCutout }) => {
+  if (cutout.status === "loading") {
+    return (
+      <div className="mt-3 flex flex-col gap-1.5">
+        <p className="caption-micro">
+          {cutout.progress === null
+            ? "Finding the horizon…"
+            : `Downloading the depth model… ${Math.round(cutout.progress * 100)}%`}
+        </p>
+        {cutout.progress === null ? null : (
+          <Progress value={Math.round(cutout.progress * 100)} />
+        )}
+      </div>
+    );
+  }
+  if (cutout.status === "ready") {
+    return (
+      <p className="caption-micro mt-3">
+        Tap “Depth” on the preview to choose what stands in front
+      </p>
+    );
+  }
+  if (cutout.status === "error") {
+    return (
+      <p className="caption-micro mt-3">
+        This device couldn’t find the horizon. The title stays in front.
+      </p>
+    );
+  }
+  return null;
+};
 
 export const useActivityTools = ({
   mode,
@@ -308,6 +343,12 @@ export const useActivityTools = ({
               effects={photo.effects}
               onChange={handlePhotoEffectsChange}
             />
+            {themeDeclaresGroup(config.params, "photo") ? (
+              <div className="mt-5">
+                {paramGroup("photo")}
+                <CutoutStatusLine cutout={photo.cutout} />
+              </div>
+            ) : null}
           </>
         ) : null}
       </ControlBlock>

@@ -4,8 +4,10 @@ import { ShareNetworkIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 
 import { ControlDeck } from "@/components/app/control-deck";
+import { CutoutConsentDialog } from "@/components/app/cutout-consent-dialog";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { ExportFormat, ExportFormatId } from "@/theme/core/export-formats";
+import { BEHIND_HORIZON } from "@/theme/core/horizon";
 import { SINGLE_CARD_THEMES, THEME_ORDER } from "@/theme/single-card";
 
 import { useActivityTools } from "./activity-tools";
@@ -36,6 +38,8 @@ export const EditState = ({
 }: EditStateProps) => {
   const { data, visibility, color, config, photo } = session;
   const { onTransformChange: handlePhotoTransformChange } = photo;
+  const { confirm: handleCutoutConfirm } = photo.cutout;
+  const { onChange: handleConfigChange } = config;
   // The safe-zone guide is an editor-only preview overlay; the FORMAT control
   // toggles it and the preview reads it.
   const [showSafe, setShowSafe] = useState(false);
@@ -68,6 +72,7 @@ export const EditState = ({
           <SingleCardPreview
             colors={color.scheme}
             config={config.value}
+            cutout={photo.cutout}
             data={data}
             format={format}
             imageTransform={photo.transform}
@@ -88,6 +93,15 @@ export const EditState = ({
           />
         }
         tools={tools}
+      />
+      {/* Asked once, before "text behind the horizon" downloads its model;
+          declining turns the switch back off. */}
+      <CutoutConsentDialog
+        onConfirm={handleCutoutConfirm}
+        onDecline={() => {
+          handleConfigChange({ ...config.value, [BEHIND_HORIZON]: false });
+        }}
+        open={photo.cutout.status === "consent"}
       />
     </TooltipProvider>
   );

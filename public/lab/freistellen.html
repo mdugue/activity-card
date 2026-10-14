@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Freistellen · Labor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@800&display=swap"
+    />
+    <!--
+      Prototype only: measures on-device subject / horizon segmentation on a
+      real phone before anything lands in the app. Not linked from the app.
+      Models: BiRefNet lite (MIT) and Depth Anything V2 Small (Apache-2.0),
+      run with transformers.js in a Web Worker. The photo never leaves the device.
+    -->
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f5f2;
+        --fg: #161616;
+        --muted: #6b6b6b;
+        --line: #d8d6d0;
+        --accent: #1f5eff;
+        --warn: #b45309;
+        --bad: #b91c1c;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #121212;
+          --fg: #f1f1f1;
+          --muted: #9a9a9a;
+          --line: #2c2c2c;
+          --accent: #6f95ff;
+          --warn: #f59e0b;
+          --bad: #f87171;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          15px/1.45 system-ui,
+          -apple-system,
+          sans-serif;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 4px 0 2px;
+      }
+      p.lead {
+        color: var(--muted);
+        margin: 0 0 16px;
+      }
+      fieldset {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        margin: 0 0 12px;
+        padding: 10px 12px 12px;
+      }
+      legend {
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      label {
+        display: block;
+        margin: 6px 0;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 16px;
+        align-items: center;
+      }
+      input[type="text"] {
+        width: 100%;
+        font: inherit;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: transparent;
+        color: inherit;
+      }
+      input[type="range"] {
+        width: 100%;
+      }
+      button {
+        font: inherit;
+        padding: 10px 16px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: transparent;
+        color: inherit;
+      }
+      button.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+      button:disabled {
+        opacity: 0.5;
+      }
+      #stage {
+        width: 100%;
+        height: auto;
+        border-radius: 10px;
+        display: block;
+        background: var(--line);
+        margin: 12px 0;
+      }
+      progress {
+        width: 100%;
+      }
+      #status {
+        min-height: 1.4em;
+      }
+      .bad {
+        color: var(--bad);
+      }
+      .warn {
+        color: var(--warn);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      td {
+        border-top: 1px solid var(--line);
+        padding: 4px 0;
+        vertical-align: top;
+      }
+      td:first-child {
+        color: var(--muted);
+        width: 44%;
+      }
+      dialog {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--bg);
+        color: var(--fg);
+        max-width: 420px;
+        padding: 20px;
+      }
+      dialog::backdrop {
+        background: rgb(0 0 0 / 0.45);
+      }
+      dialog h2 {
+        font-size: 18px;
+        margin: 0 0 8px;
+      }
+      dialog .row {
+        justify-content: flex-end;
+        margin-top: 16px;
+      }
+      [hidden] {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Freistellen · Labor</h1>
+      <p class="lead">
+        Testet, ob dein Gerät Text zwischen Vorder- und Hintergrund eines Fotos
+        legen kann. Das Foto bleibt auf deinem Gerät, nur das Modell wird
+        geladen.
+      </p>
+
+      <p id="crash" class="bad" hidden>
+        Der letzte Lauf wurde abgebrochen, bevor er fertig war. Auf dem iPhone
+        heißt das meist: zu wenig Speicher. Versuch es mit WASM oder dem
+        Horizont-Modell.
+      </p>
+
+      <fieldset>
+        <legend>Foto</legend>
+        <input id="file" type="file" accept="image/*" />
+      </fieldset>
+
+      <fieldset>
+        <legend>Effekt</legend>
+        <label
+          ><input type="radio" name="mode" value="subject" checked /> Text
+          hinter dem Motiv · BiRefNet lite</label
+        >
+        <label
+          ><input type="radio" name="mode" value="horizon" /> Text hinter dem
+          Horizont · Depth Anything V2 Small</label
+        >
+        <div class="row">
+          <label
+            >Rechenweg
+            <select id="device">
+              <option value="webgpu">WebGPU</option>
+              <option value="wasm">WASM (CPU, nur Horizont)</option>
+            </select></label
+          >
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Text</legend>
+        <input id="word" type="text" value="Sella" />
+        <label
+          >Höhe <input id="ty" type="range" min="0" max="100" value="6"
+        /></label>
+        <label
+          >Größe <input id="ts" type="range" min="8" max="40" value="24"
+        /></label>
+        <p id="depthRow" class="lead" hidden>
+          Tippe aufs Foto auf das, was vor dem Text stehen soll. Alles, was
+          gleich nah oder näher ist, kommt mit nach vorne. Ohne Antippen steht
+          nur der Himmel hinter dem Text.
+        </p>
+        <label
+          ><input id="showFg" type="checkbox" /> Vordergrund einfärben</label
+        >
+      </fieldset>
+
+      <div class="row">
+        <button id="run" class="primary" disabled>Freistellen</button>
+        <button id="save" disabled>Bild sichern</button>
+        <button id="clear">Modelle löschen</button>
+      </div>
+
+      <p id="status"></p>
+      <progress id="prog" max="1" value="0" hidden></progress>
+      <canvas id="stage" width="1080" height="1350"></canvas>
+
+      <fieldset>
+        <legend>Messwerte</legend>
+        <table id="metrics"></table>
+      </fieldset>
+    </main>
+
+    <dialog id="consent">
+      <h2>Modell für die Freistellung laden?</h2>
+      <p id="consentText"></p>
+      <p class="warn" id="consentNet" hidden>
+        Im WLAN geht es schneller und kostet kein Datenvolumen.
+      </p>
+      <div class="row">
+        <button value="cancel" id="consentNo">Nicht jetzt</button>
+        <button value="ok" id="consentYes" class="primary">Jetzt laden</button>
+      </div>
+    </dialog>
+
+    <script type="module">
+      const TJS =
+        "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.1";
+      const MODELS = {
+        subject: {
+          // WebGPU-runnable re-export of BiRefNet lite (MIT, weights unchanged).
+          // The stock onnx-community export dies of std::bad_alloc in the
+          // browser; see the model card for why.
+          id: "jiabins0303/birefnet-lite-1024-webgpu",
+          file: "onnx/model_fp16.onnx",
+          mb: 115,
+          label: "Text hinter dem Motiv",
+        },
+        horizon: {
+          id: "onnx-community/depth-anything-v2-small",
+          file: "onnx/model_quantized.onnx",
+          mb: 27,
+          label: "Text hinter dem Horizont",
+        },
+      };
+      const CACHE = "transformers-cache";
+      const RUNNING = "freistellen-lab-running";
+
+      // The worker owns transformers.js and the model sessions, so the
+      // editor thread stays responsive and the memory can be dropped by
+      // terminating it.
+      const workerSrc = `
+        import { AutoModel, AutoModelForDepthEstimation, AutoProcessor, RawImage, env } from "${TJS}";
+        env.allowLocalModels = false;
+        let loaded = null;
+        let model = null;
+        let processor = null;
+        const post = (m, t) => self.postMessage(m, t ?? []);
+        self.onmessage = async ({ data }) => {
+          const { mode, id, device, blob } = data;
+          try {
+            const key = [mode, device].join("|");
+            const t0 = performance.now();
+            if (loaded !== key) {
+              await model?.dispose?.();
+              const opts = {
+                device,
+                progress_callback: (p) => post({ type: "progress", p }),
+              };
+              if (mode === "subject") {
+                // The file is already fp16; fp32 stops the dtype suffix.
+                opts.dtype = "fp32";
+                opts.model_file_name = "model_fp16";
+              } else {
+                opts.dtype = "q8";
+              }
+              model = await (mode === "subject" ? AutoModel : AutoModelForDepthEstimation).from_pretrained(id, opts);
+              processor = await AutoProcessor.from_pretrained(id);
+              loaded = key;
+            }
+            const t1 = performance.now();
+            const image = await RawImage.fromBlob(blob);
+            const inputs = await processor(image);
+            let out;
+            if (mode === "subject") {
+              const { output_image } = await model({ input_image: inputs.pixel_values });
+              out = output_image[0].sigmoid().mul(255).to("uint8");
+            } else {
+              const { predicted_depth } = await model(inputs);
+              const d = predicted_depth.squeeze();
+              const min = d.min().item();
+              const max = d.max().item();
+              out = d.sub(min).div(max - min + 1e-6).mul(255).to("uint8");
+            }
+            const dims = out.dims.slice(-2);
+            const mask = new Uint8Array(out.data);
+            const t2 = performance.now();
+            post({ type: "done", mask, h: dims[0], w: dims[1], load: t1 - t0, infer: t2 - t1 }, [mask.buffer]);
+          } catch (e) {
+            post({ type: "error", message: String(e?.message ?? e) });
+          }
+        };
+      `;
+
+      const $ = (id) => document.getElementById(id);
+      const stage = $("stage");
+      const ctx = stage.getContext("2d");
+      let worker = null;
+      let photo = null; // ImageBitmap, capped
+      let photoBlob = null;
+      let raw = null; // { mask, w, h, mode }
+      const metrics = {};
+
+      const mode = () =>
+        document.querySelector("input[name=mode]:checked").value;
+      const setStatus = (text, cls = "") => {
+        $("status").textContent = text;
+        $("status").className = cls;
+      };
+      const renderMetrics = () => {
+        $("metrics").replaceChildren(
+          ...Object.entries(metrics).map(([k, v]) => {
+            const tr = document.createElement("tr");
+            const a = document.createElement("td");
+            const b = document.createElement("td");
+            a.textContent = k;
+            b.textContent = v;
+            tr.append(a, b);
+            return tr;
+          })
+        );
+      };
+
+      // Environment facts the decision depends on.
+      metrics["Browser"] = navigator.userAgent.replace(/^Mozilla\/5\.0 /, "");
+      metrics["WebGPU vorhanden"] = "gpu" in navigator ? "ja" : "nein";
+      metrics["Gerätespeicher (grob)"] = navigator.deviceMemory
+        ? `${navigator.deviceMemory} GB`
+        : "unbekannt";
+      metrics["Logische Kerne"] = String(navigator.hardwareConcurrency ?? "?");
+      if (!("gpu" in navigator)) $("device").value = "wasm";
+      renderMetrics();
+      // BiRefNet on WebGPU needs >= 8 storage buffers per shader stage.
+      navigator.gpu
+        ?.requestAdapter()
+        .then((a) => {
+          metrics["WebGPU Speicherpuffer/Stufe"] = a
+            ? String(a.limits.maxStorageBuffersPerShaderStage)
+            : "kein Adapter";
+          metrics["WebGPU fp16 (shader-f16)"] = a
+            ? a.features.has("shader-f16")
+              ? "ja"
+              : "nein"
+            : "–";
+          metrics["WebGPU max. Puffer"] = a
+            ? `${Math.round(a.limits.maxBufferSize / 2 ** 20)} MB`
+            : "–";
+          renderMetrics();
+        })
+        .catch(() => {});
+
+      try {
+        if (sessionStorage.getItem(RUNNING)) {
+          $("crash").hidden = false;
+          metrics["Letzter Lauf"] =
+            `abgebrochen: ${sessionStorage.getItem(RUNNING)}`;
+          sessionStorage.removeItem(RUNNING);
+          renderMetrics();
+        }
+      } catch {}
+
+      const fileUrl = (m) =>
+        `https://huggingface.co/${m.id}/resolve/main/${m.file}`;
+      const isCached = async (m) => {
+        try {
+          const c = await caches.open(CACHE);
+          return Boolean(await c.match(fileUrl(m)));
+        } catch {
+          return false;
+        }
+      };
+
+      const askConsent = (m) =>
+        new Promise((resolve) => {
+          $("consentText").textContent =
+            `Für „${m.label}“ lädt Effort einmalig ein Bildmodell (${m.mb} MB) auf dieses Gerät. Dein Foto bleibt dabei auf deinem Gerät.`;
+          const c = navigator.connection;
+          $("consentNet").hidden = Boolean(c && c.type === "wifi");
+          const dlg = $("consent");
+          const done = (ok) => {
+            dlg.close();
+            resolve(ok);
+          };
+          $("consentYes").onclick = () => done(true);
+          $("consentNo").onclick = () => done(false);
+          dlg.showModal();
+        });
+
+      const capToBitmap = async (file) => {
+        const bmp = await createImageBitmap(file, {
+          imageOrientation: "from-image",
+        });
+        const max = 2048;
+        const s = Math.min(1, max / Math.max(bmp.width, bmp.height));
+        if (s === 1) return bmp;
+        const w = Math.round(bmp.width * s);
+        const h = Math.round(bmp.height * s);
+        const small = await createImageBitmap(bmp, {
+          resizeWidth: w,
+          resizeHeight: h,
+          resizeQuality: "high",
+        });
+        bmp.close();
+        return small;
+      };
+
+      const toBlob = (bmp) => {
+        const c = new OffscreenCanvas(bmp.width, bmp.height);
+        c.getContext("2d").drawImage(bmp, 0, 0);
+        return c.convertToBlob({ type: "image/jpeg", quality: 0.92 });
+      };
+
+      // Alpha mask canvas at the photo's size from the model output.
+      const maskCanvas = () => {
+        const { mask, w, h } = raw;
+        const small = new OffscreenCanvas(w, h);
+        const sctx = small.getContext("2d");
+        const img = sctx.createImageData(w, h);
+        const { cut } = raw;
+        for (let i = 0; i < mask.length; i++) {
+          let a = mask[i];
+          if (raw.mode === "horizon") {
+            // depth: high = near. Everything nearer than the cut is foreground.
+            const v = a / 255;
+            a = Math.max(0, Math.min(1, (v - cut) / 0.03 + 0.5)) * 255;
+          }
+          img.data[i * 4 + 3] = a;
+        }
+        sctx.putImageData(img, 0, 0);
+        const big = new OffscreenCanvas(stage.width, stage.height);
+        const bctx = big.getContext("2d");
+        bctx.imageSmoothingQuality = "high";
+        bctx.drawImage(small, 0, 0, stage.width, stage.height);
+        return big;
+      };
+
+      const draw = async () => {
+        if (!photo) return;
+        stage.width = photo.width;
+        stage.height = photo.height;
+        ctx.drawImage(photo, 0, 0);
+        const word = $("word").value;
+        const size = (Number($("ts").value) / 100) * stage.width;
+        await document.fonts.load(`800 ${size}px "Playfair Display"`);
+        ctx.font = `800 ${size}px "Playfair Display", Georgia, serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillStyle = "#fff";
+        const y = (Number($("ty").value) / 100) * stage.height + size * 0.8;
+        ctx.fillText(word, stage.width / 2, y);
+        if (!raw) return;
+        const fg = new OffscreenCanvas(stage.width, stage.height);
+        const fctx = fg.getContext("2d");
+        fctx.drawImage(photo, 0, 0);
+        fctx.globalCompositeOperation = "destination-in";
+        fctx.drawImage(maskCanvas(), 0, 0);
+        if ($("showFg").checked) {
+          fctx.globalCompositeOperation = "source-atop";
+          fctx.fillStyle = "rgb(255 60 60 / 0.4)";
+          fctx.fillRect(0, 0, stage.width, stage.height);
+        }
+        ctx.drawImage(fg, 0, 0);
+      };
+
+      // Depth is relative (high = near). Default cut: just in front of the
+      // sky, read from the top rows of the photo, so only the sky goes behind.
+      const skyCut = ({ mask, w, h }) => {
+        const rows = Math.max(1, Math.round(h * 0.05));
+        const top = Array.from(mask.subarray(0, rows * w)).sort(
+          (a, b) => a - b
+        );
+        const sky = top[Math.floor(top.length / 2)] / 255;
+        return Math.min(0.6, sky + 0.04);
+      };
+
+      // Tap on the photo: the tapped thing and everything nearer go in front.
+      stage.addEventListener("click", (e) => {
+        if (!raw || raw.mode !== "horizon") return;
+        const r = stage.getBoundingClientRect();
+        const x = Math.floor(((e.clientX - r.left) / r.width) * raw.w);
+        const y = Math.floor(((e.clientY - r.top) / r.height) * raw.h);
+        const picked = raw.mask[y * raw.w + x] / 255;
+        raw.cut = Math.max(0.01, picked - 0.03);
+        draw();
+      });
+
+      const progress = {};
+      const onProgress = (p) => {
+        if (p.status !== "progress" || !p.total) return;
+        progress[p.file] = p;
+        const all = Object.values(progress);
+        const loaded = all.reduce((s, x) => s + x.loaded, 0);
+        const total = all.reduce((s, x) => s + x.total, 0);
+        $("prog").hidden = false;
+        $("prog").value = loaded / total;
+        setStatus(
+          `Lade Modell … ${(loaded / 1e6).toFixed(0)} von ${(total / 1e6).toFixed(0)} MB`
+        );
+      };
+
+      $("file").onchange = async (e) => {
+        const f = e.target.files?.[0];
+        if (!f) return;
+        photo?.close?.();
+        photo = await capToBitmap(f);
+        photoBlob = await toBlob(photo);
+        raw = null;
+        metrics["Foto"] = `${photo.width} × ${photo.height} px`;
+        renderMetrics();
+        $("run").disabled = false;
+        $("save").disabled = false;
+        setStatus("");
+        draw();
+      };
+
+      for (const r of document.querySelectorAll("input[name=mode]")) {
+        r.onchange = () => {
+          $("depthRow").hidden = mode() !== "horizon";
+          stage.style.cursor = mode() === "horizon" ? "crosshair" : "";
+          raw = null;
+          draw();
+        };
+      }
+      for (const id of ["word", "ty", "ts", "showFg"])
+        $(id).oninput = () => draw();
+
+      $("run").onclick = async () => {
+        const m = MODELS[mode()];
+        const device = $("device").value;
+        if (!(await isCached(m)) && !(await askConsent(m))) {
+          setStatus("Abgebrochen. Ohne Modell bleibt der Text vor dem Foto.");
+          return;
+        }
+        $("run").disabled = true;
+        for (const k of Object.keys(progress)) delete progress[k];
+        worker ??= new Worker(
+          URL.createObjectURL(
+            new Blob([workerSrc], { type: "text/javascript" })
+          ),
+          { type: "module" }
+        );
+        setStatus("Starte …");
+        try {
+          sessionStorage.setItem(RUNNING, `${m.label}, ${device}`);
+        } catch {}
+        const started = performance.now();
+        const result = await new Promise((resolve) => {
+          worker.onmessage = ({ data }) => {
+            if (data.type === "progress") onProgress(data.p);
+            else resolve(data);
+          };
+          worker.onerror = (e) =>
+            resolve({ type: "error", message: e.message || "Worker-Fehler" });
+          worker.postMessage({
+            mode: mode(),
+            id: m.id,
+            device,
+            blob: photoBlob,
+          });
+        });
+        try {
+          sessionStorage.removeItem(RUNNING);
+        } catch {}
+        $("prog").hidden = true;
+        $("run").disabled = false;
+        const key = `${m.label} · ${device}`;
+        if (result.type === "error") {
+          metrics[key] = `Fehler: ${result.message}`;
+          setStatus(`Fehler: ${result.message}`, "bad");
+          worker.terminate();
+          worker = null;
+        } else {
+          raw = { mask: result.mask, w: result.w, h: result.h, mode: mode() };
+          raw.cut = raw.mode === "horizon" ? skyCut(raw) : 0;
+          metrics[key] =
+            `Laden ${(result.load / 1000).toFixed(1)} s · Freistellen ${(result.infer / 1000).toFixed(1)} s · gesamt ${((performance.now() - started) / 1000).toFixed(1)} s`;
+          setStatus(
+            raw.mode === "horizon"
+              ? "Fertig. Tippe aufs Foto, um festzulegen, was vor dem Text steht."
+              : "Fertig. Text mit den Reglern verschieben."
+          );
+          await draw();
+        }
+        renderMetrics();
+      };
+
+      $("save").onclick = () => {
+        stage.toBlob(
+          (b) => {
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(b);
+            a.download = "freistellen-test.jpg";
+            a.click();
+          },
+          "image/jpeg",
+          0.9
+        );
+      };
+
+      $("clear").onclick = async () => {
+        worker?.terminate();
+        worker = null;
+        try {
+          await caches.delete(CACHE);
+          setStatus("Modelle gelöscht. Der nächste Lauf fragt wieder.");
+        } catch {
+          setStatus("Konnte den Cache nicht löschen.", "bad");
+        }
+      };
+    </script>
+  </body>
+</html>

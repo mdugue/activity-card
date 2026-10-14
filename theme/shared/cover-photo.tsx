@@ -24,6 +24,9 @@ interface CoverPhotoProps {
   effects?: PhotoEffects | null;
   /** extra CSS filter prepended before the user preset (e.g. desaturate) */
   extraFilter?: string;
+  /** published to the exporter: this is the foreground cut-out, drawn over
+   *  the theme's layers (see theme/export/photo-composite) */
+  foreground?: boolean;
   imageSize: ImageSize;
   opacity?: number;
   photoUrl: string;
@@ -38,6 +41,7 @@ export const CoverPhoto = ({
   transform,
   effects,
   extraFilter,
+  foreground = false,
   opacity = 1,
 }: CoverPhotoProps) => {
   const t = transform ?? IDENTITY_TRANSFORM;
@@ -73,6 +77,7 @@ export const CoverPhoto = ({
           filter: filterParts,
           flipH: fx.flipH,
           flipV: fx.flipV,
+          foreground,
           opacity: 1,
           rotate: fx.rotate,
           scale: t.scale,

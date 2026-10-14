@@ -10,6 +10,7 @@
 import type { CSSProperties } from "react";
 
 import { CardStage } from "@/components/app/card-stage";
+import type { UsePhotoCutout } from "@/hooks/use-photo-cutout";
 import type { ActivityData } from "@/lib/activity";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PhotoEffects } from "@/lib/photo-effects";
@@ -20,6 +21,7 @@ import { RenderTheme } from "@/theme/editor/render-theme";
 import type { ThemeId } from "@/theme/editor/render-theme";
 import { SafeZoneOverlay } from "@/theme/editor/safe-zone-overlay";
 
+import { DepthPick } from "./depth-pick";
 import { AdjustControls, usePhotoAdjust } from "./photo-adjust";
 
 /** The active format's geometry, carried as CSS custom properties. */
@@ -33,6 +35,8 @@ interface FormatFitStyle extends CSSProperties {
 interface SingleCardPreviewProps {
   colors: ColorScheme;
   config: ThemeConfig;
+  /** "text behind the horizon" cut-out (foreground layer + depth picking) */
+  cutout: UsePhotoCutout;
   data: ActivityData;
   /** target format the theme renders itself into (chosen in the FORMAT tool) */
   format: ExportFormat;
@@ -47,6 +51,7 @@ interface SingleCardPreviewProps {
 }
 
 export const SingleCardPreview = ({
+  cutout,
   data,
   theme,
   format,
@@ -96,6 +101,7 @@ export const SingleCardPreview = ({
             imageTransform={imageTransform}
             photoBackdropEnabled={photoBackdropEnabled}
             photoEffects={photoEffects}
+            photoForegroundUrl={cutout.foregroundUrl}
             photoUrl={photoUrl}
             theme={theme}
           />
@@ -104,6 +110,15 @@ export const SingleCardPreview = ({
           {showSafe ? <SafeZoneOverlay format={format} scale={1} /> : null}
         </div>
 
+        <DepthPick
+          boxH={format.height}
+          boxW={format.width}
+          cutout={cutout}
+          effects={photoEffects}
+          hidden={adjust.adjusting}
+          imageSize={adjust.imageSize}
+          transform={imageTransform}
+        />
         <AdjustControls
           adjust={adjust}
           contentWidth={format.width}
