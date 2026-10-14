@@ -11,13 +11,8 @@ import { snapdom } from "@zumer/snapdom";
 import { canRasterizeEmbeddedImages } from "@/lib/svg-raster-support";
 
 import { fromCallback } from "./export-shared";
-import { frameSize, rasterizeWithPhotoComposite } from "./photo-composite";
-import type {
-  Capture,
-  FrameGrid,
-  RasterSize,
-  RenderFrame,
-} from "./photo-composite";
+import { rasterizeWithPhotoComposite } from "./photo-composite";
+import type { Capture, RasterSize } from "./photo-composite";
 
 /** `?photoComposite=force` / `=off` overrides the probe — for e2e coverage of
  *  the fallback on engines that don't need it, and as a field escape hatch. */
@@ -40,14 +35,8 @@ const needsComposite = async (): Promise<boolean> => {
 };
 
 /**
- * Capture a card / strip node once and rasterise it frame by frame: frame `i`
- * is the i-th of `grid.frames` equal columns of the full `grid.size`.
- *
- * A carousel strip is never drawn whole. At 2× a four-slide feed strip is
- * 8640×2700 — 23 megapixels, past the ~16.7 MP a canvas may hold on iOS, and
- * the photo composite needs two of them plus the slides: Safari kills the tab
- * long before that adds up. snapdom's `crop` re-windows the captured SVG, so
- * each slide is rasterised on its own at its own size.
+ * Rasterise a card (or one carousel slide's window) to a canvas of exactly
+ * `size`.
  *
  * snapdom options, unchanged from when they lived in `export-card`:
  * - `embedFonts` inlines the theme's @font-face — a headline silently falling
@@ -57,37 +46,18 @@ const needsComposite = async (): Promise<boolean> => {
  * - `dpr: 1` pins the output to the requested size; left at its default it
  *   tracks the viewer's screen density and a Retina display doubles it again.
  */
-export const rasterizeFrames = async (
+export const rasterizeNode = async (
   node: HTMLElement,
-  grid: FrameGrid
-): Promise<RenderFrame> => {
-  const frame = frameSize(grid);
+  size: RasterSize
+): Promise<HTMLCanvasElement> => {
   const capture: Capture = async () => {
     const result = await snapdom(node, {
       dpr: 1,
       embedFonts: true,
-      height: grid.size.height,
-      width: grid.size.width,
+      height: size.height,
+      width: size.width,
     });
-    if (grid.frames === 1) {
-      return async () => await result.toCanvas();
-    }
-    // The crop window is in the capture's viewBox units; the logical box sits
-    // at (contentX, contentY) inside any bleed.
-    const { contentX, contentY, h0, w0 } = result.meta;
-    const cropW = w0 / grid.frames;
-    return async (index) =>
-      await result.toCanvas({
-        crop: {
-          height: h0,
-          width: cropW,
-          x: contentX + index * cropW,
-          y: contentY,
-        },
-        dpr: 1,
-        height: frame.height,
-        width: frame.width,
-      });
+    return await result.toCanvas();
   };
 
   if (await needsComposite()) {
@@ -95,21 +65,9 @@ export const rasterizeFrames = async (
     // didn't load, a browser that refuses the extra canvases — any of that
     // degrades to the straight capture rather than to no card at all.
     try {
-      const composited = await rasterizeWithPhotoComposite(node, grid, capture);
+      const composited = await rasterizeWithPhotoComposite(node, size, capture);
       if (composited) {
-        // A frame whose merge fails still degrades to the straight capture,
-        // taken once and only if some frame needs it.
-        let straight: Promise<RenderFrame> | undefined;
-        return async (index) => {
-          try {
-            return await composited(index);
-          } catch {
-            straight ??= capture();
-            return await (
-              await straight
-            )(index);
-          }
-        };
+        return composited;
       }
     } catch {
       // fall through to the straight capture
@@ -117,15 +75,6 @@ export const rasterizeFrames = async (
   }
   return await capture();
 };
-
-/** Rasterise a single card node to a canvas of exactly `size`. */
-export const rasterizeNode = async (
-  node: HTMLElement,
-  size: RasterSize
-): Promise<HTMLCanvasElement> =>
-  await (
-    await rasterizeFrames(node, { frames: 1, size })
-  )(0);
 
 /** Encode a rasterised canvas as PNG bytes. */
 export const canvasToPng = async (canvas: HTMLCanvasElement): Promise<Blob> => {

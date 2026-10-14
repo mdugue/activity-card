@@ -4,6 +4,7 @@ import { expect, test } from "@playwright/test";
 import type { Download, Page } from "@playwright/test";
 import { z } from "zod";
 
+import { readZip } from "../lib/zip";
 import {
   magentaRampPngBuffer,
   QUADRANT_PNG_BASE64,
@@ -138,18 +139,16 @@ const quadrantHues = async (
 };
 
 /**
- * Decode a downloaded PNG in-page and return the fraction of sampled pixels
- * that read as magenta-ish — red and blue both clearly dominating green. The
- * uploaded background is solid magenta, so a healthy export reads mostly
- * magenta; an export that dropped the photo reads ~none.
+ * Decode PNG bytes in-page and return the fraction of sampled pixels that read
+ * as magenta-ish — red and blue both clearly dominating green. The uploaded
+ * background is solid magenta, so a healthy export reads mostly magenta; an
+ * export that dropped the photo reads ~none.
  */
-const magentaFraction = async (
+const magentaFractionOf = async (
   page: Page,
-  download: Download
+  bytes: Uint8Array
 ): Promise<number> => {
-  const path = await download.path();
-  const bytes = await fs.readFile(path);
-  const base64 = bytes.toString("base64");
+  const base64 = Buffer.from(bytes).toString("base64");
   return await page.evaluate(async (dataB64: string) => {
     const img = new Image();
     img.src = `data:image/png;base64,${dataB64}`;
@@ -188,6 +187,13 @@ const magentaFraction = async (
     return total === 0 ? 0 : magenta / total;
   }, base64);
 };
+
+/** `magentaFractionOf` for a downloaded PNG. */
+const magentaFraction = async (
+  page: Page,
+  download: Download
+): Promise<number> =>
+  await magentaFractionOf(page, await fs.readFile(await download.path()));
 
 /** Upload the magenta photo onto `theme` and download its 4:5 feed export. */
 const exportSingleCardWithPhoto = async (
@@ -467,7 +473,7 @@ test("carousel Exposure export embeds the background via the photo composite", a
   expectSeamlessSet(await exportCarouselWithPhoto(page, FORCE_COMPOSITE));
 });
 
-test("the carousel overview shows still previews, and Download all still exports every format", async ({
+test("the carousel overview shows still previews, and Download all zips every format", async ({
   page,
 }) => {
   // A live native-size strip on screen is what crashed iOS Safari in the
@@ -502,19 +508,30 @@ test("the carousel overview shows still previews, and Download all still exports
     .textContent();
   const count = Math.trunc(Number(sublabel?.split("· ")[1]?.split(" ")[0]));
   expect(count).toBeGreaterThan(1);
-  const downloads: Download[] = [];
-  page.on("download", (download) => {
-    downloads.push(download);
-  });
+  // Download all is one ZIP, a folder per format holding its slides.
+  const downloadPromise = page.waitForEvent("download", { timeout: 120_000 });
   await page.getByRole("button", { exact: true, name: "Download all" }).click();
-  await expect
-    .poll(() => downloads.length, { timeout: 60_000 })
-    .toBe(7 * count);
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^effort_.+_carousel\.zip$/u);
+  const entries = readZip(await fs.readFile(await download.path()));
+  expect(entries).toHaveLength(7 * count);
+  expect(new Set(entries.map((entry) => entry.path.split("/")[0]))).toEqual(
+    new Set([
+      "instagram-feed",
+      "instagram-story",
+      "square",
+      "strava",
+      "tiktok",
+      "whatsapp-status",
+      "x-landscape",
+    ])
+  );
   // The last format was never on screen before the export; it must still
   // carry the photo.
-  const last = downloads.at(-1);
+  const last = entries.at(-1);
   if (!last) {
-    throw new Error("no download arrived");
+    throw new Error("the ZIP is empty");
   }
-  expect(await magentaFraction(page, last)).toBeGreaterThan(0.2);
+  expect(last.path).toMatch(/^x-landscape\/effort_.+_x-landscape_\d{2}\.png$/u);
+  expect(await magentaFractionOf(page, last.data)).toBeGreaterThan(0.2);
 });

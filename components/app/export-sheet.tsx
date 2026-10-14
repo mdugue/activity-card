@@ -11,7 +11,7 @@
 // the responsive tile box (`useTileMax`) and the tile itself (`ExportTile`, a
 // children slot for whatever the format renders) are shared with the carousel
 // export sheet — see `carousel-export-sheet.tsx`. The single card just supplies a
-// `RenderTheme` per tile and exports it with `exportCard`.
+// `RenderTheme` per tile and renders it with `renderCard`.
 
 import {
   ArrowLeftIcon,
@@ -29,6 +29,7 @@ import { watchExport } from "@/lib/export-watch";
 import type { ImageTransform } from "@/lib/image-transform";
 import type { PhotoEffects } from "@/lib/photo-effects";
 import { cn } from "@/lib/utils";
+import type { ZipEntry } from "@/lib/zip";
 import type { ColorScheme } from "@/theme/core/colors";
 import { FORMAT_ORDER, getFormat } from "@/theme/core/export-formats";
 import type { ExportFormat } from "@/theme/core/export-formats";
@@ -38,7 +39,8 @@ import type { ThemeId } from "@/theme/editor/render-theme";
 import { SafeZoneOverlay } from "@/theme/editor/safe-zone-overlay";
 import {
   createInFlightGuard,
-  delay,
+  deliverFiles,
+  downloadZip,
   effortDateSlug,
 } from "@/theme/export/export-shared";
 import type { InFlightGuard } from "@/theme/export/export-shared";
@@ -117,19 +119,70 @@ export const useTileMax = (box: TileBox = SINGLE_TILE): TileMax => {
 // warms it on mount so the first tap never waits on the network.
 const loadExportCard = async () => await import("@/theme/export/export-card");
 
-/** Shared download orchestration: a single `busy` id (a format id, or "all"),
- *  `handleOne` (one format) and `handleAll` (every format, throttled — browsers
- *  rate-limit back-to-back programmatic downloads). The per-mode `exportOne`
- *  body is the only thing that differs (a card vs a sliced strip). */
+/** Render one format, reporting a failure as a toast — a failed format in the
+ *  Download-all loop never aborts the rest of the set. */
+const renderOrReport = async (
+  render: (format: ExportFormat) => Promise<File[]>,
+  format: ExportFormat
+): Promise<File[] | null> => {
+  try {
+    return await render(format);
+  } catch {
+    toast.error(`${format.label} export failed — please try again.`);
+    return null;
+  }
+};
+
+/** Deliver a rendered set. A phone that wants a fresh tap before it opens the
+ *  share sheet (the capture outlived the tap that started it) gets a Save
+ *  button to tap; that tap delivers the same files. */
+const deliverOrAsk = async (
+  files: File[],
+  label: string,
+  opts: { title: string; zipName: string }
+): Promise<void> => {
+  if ((await deliverFiles(files, opts)) === "blocked") {
+    toast(`${label} is ready`, {
+      action: {
+        label: "Save",
+        onClick: () => {
+          void deliverFiles(files, opts);
+        },
+      },
+      duration: 60_000,
+    });
+  }
+};
+
+/** How a sheet's exports are delivered. */
+export interface ExportDelivery {
+  /** where a format's files go inside the Download-all ZIP (a folder per
+   *  format for carousel sets; flat when omitted) */
+  folderFor?: (format: ExportFormat) => string;
+  /** the share sheet's title */
+  title: string;
+  /** file-name stem of the ZIPs: `<stem>.zip` for Download all */
+  zipStem: string;
+}
+
+/** Shared export orchestration: a single `busy` id (a format id, or "all"),
+ *  `handleOne` (one format, shared or downloaded) and `handleAll` (every
+ *  format, bundled into one ZIP — one download prompt instead of one per
+ *  image). The per-mode `render` body is the only thing that differs (a card
+ *  vs a sliced strip). */
 export const useFormatExports = (
-  exportOne: (format: ExportFormat) => Promise<void>
+  render: (format: ExportFormat) => Promise<File[]>,
+  delivery: ExportDelivery
 ) => {
   // `busy` drives the UI; the guard is what actually serialises exports. React
   // state only updates on the next render, so a double click could otherwise
   // read a stale `busy === null` twice and start two captures.
   const [busy, setBusy] = useState<string | null>(null);
+  // How far Download all has got, for its button label.
+  const [progress, setProgress] = useState(0);
   // Created lazily, on the first export, and kept for the sheet's lifetime.
   const guardRef = useRef<InFlightGuard | null>(null);
+  const { folderFor, title, zipStem } = delivery;
 
   const runExclusive = async (id: string, task: () => Promise<void>) => {
     const guard = guardRef.current ?? createInFlightGuard();
@@ -148,25 +201,49 @@ export const useFormatExports = (
 
   const handleOne = async (format: ExportFormat) => {
     await runExclusive(format.id, async () => {
-      await exportOne(format);
-    });
-  };
-
-  const exportThenPause = async (format: ExportFormat) => {
-    await exportOne(format);
-    await delay(350);
-  };
-
-  const handleAll = async () => {
-    await runExclusive("all", async () => {
-      for (const id of FORMAT_ORDER) {
-        // oxlint-disable-next-line eslint/no-await-in-loop, react-doctor/async-await-in-loop -- deliberately sequential: browsers rate-limit back-to-back programmatic downloads, so each format exports then pauses before the next
-        await exportThenPause(getFormat(id));
+      const files = await renderOrReport(render, format);
+      if (files) {
+        await deliverOrAsk(files, format.label, {
+          title,
+          zipName: `${zipStem}_${format.id}.zip`,
+        });
       }
     });
   };
 
-  return { busy, handleAll, handleOne };
+  const renderEntries = async (
+    format: ExportFormat,
+    step: number
+  ): Promise<ZipEntry[]> => {
+    setProgress(step);
+    const files = (await renderOrReport(render, format)) ?? [];
+    return files.map((file) => ({
+      file,
+      path: folderFor ? `${folderFor(format)}/${file.name}` : file.name,
+    }));
+  };
+
+  const handleAll = async () => {
+    await runExclusive("all", async () => {
+      const entries: ZipEntry[] = [];
+      for (const [index, id] of FORMAT_ORDER.entries()) {
+        // oxlint-disable-next-line eslint/no-await-in-loop, react-doctor/async-await-in-loop -- one format at a time: the captures share one stage and a phone's memory
+        entries.push(...(await renderEntries(getFormat(id), index + 1)));
+      }
+      if (entries.length > 0) {
+        await downloadZip(`${zipStem}.zip`, entries).catch(() => {
+          toast.error("The download could not be prepared — please try again.");
+        });
+      }
+    });
+  };
+
+  return {
+    busy,
+    handleAll,
+    handleOne,
+    progress: `${progress}/${FORMAT_ORDER.length}`,
+  };
 };
 
 interface ExportShellProps {
@@ -178,6 +255,8 @@ interface ExportShellProps {
   onDownloadAll: () => void;
   onKeepEditing: () => void;
   onNew: () => void;
+  /** Download all's progress while it runs, e.g. "3/7" */
+  progress: string;
   /** the activity's route for the background draw-on — from the FULL data, so
    *  it shows even on themes (e.g. Altitude) that don't render the route. */
   routeCoordinates?: [number, number][];
@@ -249,6 +328,7 @@ export const ExportShell = ({
   onDownloadAll,
   onKeepEditing,
   onNew,
+  progress,
   routeCoordinates,
   subtitle,
 }: ExportShellProps) => (
@@ -273,7 +353,7 @@ export const ExportShell = ({
           size="sm"
         >
           <DownloadSimpleIcon aria-hidden className="size-4" weight="duotone" />
-          {busy === "all" ? "Exporting…" : "Download all"}
+          {busy === "all" ? `Exporting ${progress}…` : "Download all"}
         </Button>
         <Button onClick={onKeepEditing} size="sm" variant="outline">
           <ArrowLeftIcon aria-hidden className="size-4" weight="duotone" />
@@ -434,43 +514,39 @@ export const ExportSheet = (props: ExportSheetProps) => {
     void loadExportCard();
   }, []);
 
-  const exportOne = useCallback(
-    async (format: ExportFormat) => {
+  const renderOne = useCallback(
+    async (format: ExportFormat): Promise<File[]> => {
       const node = mounts.current[format.id];
       if (!node) {
-        // The tile isn't mounted (shouldn't happen) — say so, never no-op.
-        toast.error("Export failed — please try again.");
-        return;
+        // The tile isn't mounted (shouldn't happen) — fail loudly, never no-op.
+        throw new Error(`The ${format.label} tile is not mounted`);
       }
-      // Errors are surfaced here (not bubbled) so a failed format in the
-      // download-all loop never aborts the rest of the set.
-      try {
-        const { activityMetadata, exportCard } = await loadExportCard();
-        await watchExport(
-          {
-            format: format.id,
+      const { activityMetadata, renderCard } = await loadExportCard();
+      const file = await watchExport(
+        {
+          format: format.id,
+          height: format.height,
+          kind: "card",
+          width: format.width,
+        },
+        async () =>
+          await renderCard(node, {
+            filename: fileFor(data, format),
             height: format.height,
-            kind: "card",
+            metadata: activityMetadata(data),
+            metadataOptions: { gps },
             width: format.width,
-          },
-          async () => {
-            await exportCard(node, {
-              filename: fileFor(data, format),
-              height: format.height,
-              metadata: activityMetadata(data),
-              metadataOptions: { gps },
-              width: format.width,
-            });
-          }
-        );
-      } catch {
-        toast.error("Export failed — please try again.");
-      }
+          })
+      );
+      return [file];
     },
     [data, gps]
   );
 
-  const { busy, handleOne, handleAll } = useFormatExports(exportOne);
+  const { busy, handleOne, handleAll, progress } = useFormatExports(renderOne, {
+    title: "My Effort card",
+    zipStem: `effort_${data.sport}_${effortDateSlug(data.date)}`,
+  });
 
   return (
     <ExportShell
@@ -481,8 +557,9 @@ export const ExportSheet = (props: ExportSheetProps) => {
       }}
       onKeepEditing={onKeepEditing}
       onNew={onNew}
+      progress={progress}
       routeCoordinates={props.routeCoordinates ?? data.routeCoordinates}
-      subtitle="Each card is optimised for its platform — aspect ratio and safe zones baked in. Download one, or grab the whole set."
+      subtitle="Each card is optimised for its platform — aspect ratio and safe zones baked in. Grab one, or every format as a single ZIP."
     >
       <div className="border-foreground/12 mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-md border px-3 py-2">
         <div className="min-w-[150px] flex-1 sm:flex-none">

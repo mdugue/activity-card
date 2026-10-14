@@ -1,35 +1,40 @@
-// Carousel export. The deck is one continuous wide strip; we capture it once
-// and rasterise it as n format-sized frames so the photo/route bleed lines up
-// across cuts. The frame size is the chosen export format (4:5 feed by default),
-// so the strip is `count × format.width` wide and `format.height` tall. Frames
-// are delivered as an ordered set — shared together on mobile (Web Share API) or
-// downloaded sequentially on desktop. Mirrors the single-card pipeline's
-// font-ready wait and snapdom options.
+// Carousel export. The deck is one continuous wide strip, so the photo/route
+// bleed lines up across cuts; each slide is rasterised on its own through a
+// slide-sized window onto that strip. The frame size is the chosen export
+// format (4:5 feed by default), so the strip is `count × format.width` wide and
+// `format.height` tall. Mirrors the single-card pipeline's font-ready wait and
+// snapdom options; delivery is the caller's (`deliverFiles` / a ZIP).
 
 import type { ExportFormat } from "@/theme/core/export-formats";
 
-import {
-  deliverFiles,
-  effortDateSlug,
-  fromCallback,
-  waitForFonts,
-} from "./export-shared";
+import { fromCallback, waitForFonts } from "./export-shared";
 import { release } from "./photo-composite";
-import type { RenderFrame } from "./photo-composite";
-import { canvasToPng, rasterizeFrames, rasterizeNode } from "./rasterize";
+import { canvasToPng, rasterizeNode } from "./rasterize";
 
 // Each slide → 2× its format size, matching the single card.
 const PIXEL_RATIO = 2;
 
 const pad2 = (n: number): string => String(n).padStart(2, "0");
 
+/** The staged strip and the slide-sized window it sits in: the window clips
+ *  the strip to one slide, and the strip shifts left to bring slide `i` in. */
+export interface StripWindow {
+  strip: HTMLElement;
+  window: HTMLElement;
+}
+
 /** Rasterise and encode slide `index`, releasing its canvas straight after. */
 const renderSlide = async (
-  renderFrame: RenderFrame,
+  stage: StripWindow,
   index: number,
+  format: ExportFormat,
   baseName: string
 ): Promise<File> => {
-  const canvas = await renderFrame(index);
+  stage.strip.style.marginLeft = `${-index * format.width}px`;
+  const canvas = await rasterizeNode(stage.window, {
+    height: format.height * PIXEL_RATIO,
+    width: format.width * PIXEL_RATIO,
+  });
   try {
     const blob = await canvasToPng(canvas);
     return new File([blob], `${baseName}_${pad2(index + 1)}.png`, {
@@ -40,40 +45,33 @@ const renderSlide = async (
   }
 };
 
-/** Rasterise the wide strip node and slice it into `count` format-sized
- *  frames. `format` is the chosen export format (4:5 feed by default).
+/** Render the staged strip as its `count` slide images, in order.
  *
- *  The strip is captured once but rasterised and encoded one slide at a time,
+ *  One slide at a time, each a capture of its own window onto the strip and
  *  each canvas released before the next is drawn: iOS caps a canvas at ~16.7
  *  megapixels and the tab's canvas memory well below a full strip plus its
- *  slices, and blowing either is what crashed the export on iPhone. */
-export const exportCarousel = async (
-  wideNode: HTMLElement,
+ *  slices. Cutting one capture of the whole strip into slides with snapdom's
+ *  `crop` is no way round it either — WebKit draws the cropped capture's HTML
+ *  (text, marks) from the strip's origin, so every slide got the first one's
+ *  overlay over its own photo. */
+export const renderCarousel = async (
+  stage: StripWindow,
   count: number,
   baseName: string,
   format: ExportFormat
-): Promise<void> => {
+): Promise<File[]> => {
   await waitForFonts();
-
-  const renderFrame = await rasterizeFrames(wideNode, {
-    frames: count,
-    size: {
-      height: format.height * PIXEL_RATIO,
-      width: count * format.width * PIXEL_RATIO,
-    },
-  });
-
   const files: File[] = [];
-  for (let i = 0; i < count; i += 1) {
-    // oxlint-disable-next-line eslint/no-await-in-loop, react-doctor/async-await-in-loop -- sequential on purpose: one slide's canvas alive at a time is the iOS fix; running them together brings the crash back
-    files.push(await renderSlide(renderFrame, i, baseName));
+  try {
+    for (let i = 0; i < count; i += 1) {
+      // oxlint-disable-next-line eslint/no-await-in-loop, react-doctor/async-await-in-loop -- sequential on purpose: the slides share the one window, and one slide's canvas alive at a time is the iOS fix
+      files.push(await renderSlide(stage, i, format, baseName));
+    }
+  } finally {
+    stage.strip.style.marginLeft = "";
   }
-  await deliverFiles(files, { betweenMs: 350, title: "My Effort carousel" });
+  return files;
 };
-
-/** "effort_ride_20260518_carousel" — slide index is appended at export. */
-export const carouselBaseName = (sport: string, date: string): string =>
-  `effort_${sport}_${effortDateSlug(date)}_carousel`;
 
 /** The overview's preview width in pixels — enough for a sharp tile on a
  *  Retina screen, a fraction of the export's size. */

@@ -90,10 +90,10 @@ const tagsFor = (context: ExportContext) => ({
 });
 
 /** Run one export, reporting a thrown error and arming the crash marker. */
-export const watchExport = async (
+export const watchExport = async <T>(
   context: ExportContext,
-  run: () => Promise<void>
-): Promise<void> => {
+  run: () => Promise<T>
+): Promise<T> => {
   Sentry.addBreadcrumb({
     category: "export",
     data: { ...context },
@@ -101,7 +101,7 @@ export const watchExport = async (
   });
   writeMarker({ ...context, startedAt: Date.now() });
   try {
-    await run();
+    return await run();
   } catch (error) {
     Sentry.captureException(error, {
       contexts: { export: { ...context } },

@@ -9,6 +9,9 @@
 // background silently vanishes from the export. `rasterize.ts` probes for that
 // and composites the photo onto the canvas itself.
 
+import { createZip } from "@/lib/zip";
+import type { ZipEntry } from "@/lib/zip";
+
 /** Fonts must be ready before rasterisation or fallbacks leak into the export. */
 export const waitForFonts = async (): Promise<void> => {
   if (typeof document !== "undefined" && "fonts" in document) {
@@ -37,9 +40,10 @@ export const isDesktopDevice = (): boolean => {
 };
 
 /** How long a download's object URL outlives its click. `a.click()` only
- *  queues the navigation — revoking in the same task can cancel the download
- *  (seen in Firefox and Safari), so the URL is released a beat later. */
-export const REVOKE_DELAY_MS = 1000;
+ *  queues the navigation, and iOS Safari first asks "Download …?" — the URL
+ *  has to survive until the person answers, or the confirmed download fetches
+ *  a revoked URL and saves nothing. */
+export const REVOKE_DELAY_MS = 120_000;
 
 export const triggerDownload = (file: File): void => {
   const url = URL.createObjectURL(file);
@@ -122,35 +126,86 @@ export const delay = async (ms: number): Promise<void> => {
   });
 };
 
-/** Share the set on mobile (Web Share API), else download each in order. A
- *  positive `betweenMs` spaces downloads out (browsers throttle back-to-back). */
+/** What sharing a set came to. `blocked` means the browser wants a fresh tap
+ *  first: a share must start from a user gesture, and a capture that takes a
+ *  few seconds outlives the gesture that started it (iOS Safari). */
+export type ShareOutcome = "shared" | "cancelled" | "blocked" | "unsupported";
+
+/** Hand `files` to the OS share sheet (iOS: "Save N Images" to Photos). */
+export const shareFiles = async (
+  files: File[],
+  title: string
+): Promise<ShareOutcome> => {
+  const nav = typeof navigator === "undefined" ? undefined : navigator;
+  if (nav?.canShare?.({ files }) !== true) {
+    return "unsupported";
+  }
+  try {
+    await nav.share({ files, title });
+    return "shared";
+  } catch (error) {
+    // Dismissing the sheet rejects with an AbortError, a share without a live
+    // gesture with a NotAllowedError (both DOMExceptions, Error subclasses).
+    if (error instanceof Error && error.name === "AbortError") {
+      return "cancelled";
+    }
+    if (error instanceof Error && error.name === "NotAllowedError") {
+      return "blocked";
+    }
+    return "unsupported";
+  }
+};
+
+/** Download each file in order, spaced out — browsers throttle back-to-back
+ *  programmatic downloads. */
+export const downloadFiles = async (files: File[]): Promise<void> => {
+  for (const [index, file] of files.entries()) {
+    if (index > 0) {
+      // oxlint-disable-next-line eslint/no-await-in-loop -- the spacing IS the point: browsers throttle back-to-back downloads, so each one must wait for the previous gap
+      await delay(350);
+    }
+    triggerDownload(file);
+  }
+};
+
+/** Bundle `entries` into one ZIP named `name` and download it — one prompt
+ *  instead of one per image. */
+export const downloadZip = async (
+  name: string,
+  entries: ZipEntry[]
+): Promise<void> => {
+  const zip = await createZip(entries);
+  triggerDownload(new File([zip], name, { type: "application/zip" }));
+};
+
+/** Deliver one export: the share sheet on a phone (a carousel set lands in
+ *  Photos as one batch), plain downloads on a desktop. Resolves `blocked` when
+ *  the phone needs another tap before it may share — the caller asks for it
+ *  and calls `shareFiles` again from that tap. Without a share sheet, a set of
+ *  several images comes as one ZIP. */
 export const deliverFiles = async (
   files: File[],
-  opts: { title: string; betweenMs?: number }
-): Promise<void> => {
+  opts: { title: string; zipName: string }
+): Promise<"done" | "blocked"> => {
   if (files.length === 0) {
-    return;
+    return "done";
   }
-  const nav = typeof navigator === "undefined" ? undefined : navigator;
-  if (!isDesktopDevice() && nav?.canShare?.({ files }) === true) {
-    try {
-      await nav.share({ files, title: opts.title });
-      return;
-    } catch (error) {
-      // The user dismissing the share sheet rejects with an AbortError
-      // DOMException (an Error subclass).
-      if (error instanceof Error && error.name === "AbortError") {
-        return;
-      }
-      // fall through to downloads
+  if (!isDesktopDevice()) {
+    const outcome = await shareFiles(files, opts.title);
+    if (outcome === "blocked") {
+      return "blocked";
+    }
+    if (outcome !== "unsupported") {
+      return "done";
+    }
+    if (files.length > 1) {
+      await downloadZip(
+        opts.zipName,
+        files.map((file) => ({ file, path: file.name }))
+      );
+      return "done";
     }
   }
-  const { betweenMs } = opts;
-  for (const file of files) {
-    triggerDownload(file);
-    if (betweenMs !== undefined && betweenMs > 0) {
-      // oxlint-disable-next-line eslint/no-await-in-loop -- the spacing IS the point: browsers throttle back-to-back downloads, so each one must wait for the previous gap
-      await delay(betweenMs);
-    }
-  }
+  await downloadFiles(files);
+  return "done";
 };

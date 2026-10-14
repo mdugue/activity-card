@@ -33,26 +33,9 @@ export interface RasterSize {
   width: number;
 }
 
-/** One captured state of the node, rasterised a frame at a time: frame `i` is
- *  the i-th of the grid's equal-width columns, at `frameSize(grid)`. */
-export type RenderFrame = (index: number) => Promise<HTMLCanvasElement>;
-
-/** Snapshot the node as the DOM shows it right now; rasterising comes later,
- *  per frame — the one call both pipelines share. */
-export type Capture = () => Promise<RenderFrame>;
-
-/** The full output size, cut into `frames` equal columns (1 for a single card,
- *  the slide count for a carousel strip). */
-export interface FrameGrid {
-  frames: number;
-  size: RasterSize;
-}
-
-/** The pixel size of one frame of `grid`. */
-export const frameSize = ({ frames, size }: FrameGrid): RasterSize => ({
-  height: size.height,
-  width: size.width / frames,
-});
+/** Rasterise the node as the DOM shows it right now, at the requested size —
+ *  the one snapdom call both pipelines share. */
+export type Capture = () => Promise<HTMLCanvasElement>;
 
 interface Layer {
   draw: PhotoDraw;
@@ -213,12 +196,11 @@ export const release = (canvas: HTMLCanvasElement): void => {
   canvas.height = 0;
 };
 
-/** Composite one frame: the black/white probes of that frame merged with the
- *  photo plane, painted band by band at the frame's offset in the strip. */
+/** Composite the black/white probes with the photo plane, painted band by
+ *  band. */
 const mergeFrame = (
   black: HTMLCanvasElement,
   white: HTMLCanvasElement,
-  offsetX: number,
   collected: Collected,
   images: Map<string, HTMLImageElement>
 ): HTMLCanvasElement => {
@@ -250,7 +232,7 @@ const mergeFrame = (
     const h = Math.min(bandH, black.height - y);
     planeCtx.clearRect(0, 0, plane.width, plane.height);
     planeCtx.save();
-    planeCtx.translate(-offsetX, -y);
+    planeCtx.translate(0, -y);
     for (const layer of collected.layers) {
       const image = images.get(layer.draw.src);
       if (image) {
@@ -275,18 +257,13 @@ const mergeFrame = (
  * Capture `node` with its photo layers composited in. Returns null when there
  * is nothing to composite (no photo, or the photo can't be read) so the caller
  * can fall back to the straight capture.
- *
- * Both probes are captured up front (the DOM is only borrowed for that long)
- * but rasterised a frame at a time, so a carousel strip never needs more than
- * one slide's worth of canvases alive — a full strip of them is what iOS
- * kills the tab over.
  */
 export const rasterizeWithPhotoComposite = async (
   node: HTMLElement,
-  grid: FrameGrid,
+  size: RasterSize,
   capture: Capture
-): Promise<RenderFrame | null> => {
-  const collected = collectLayers(node, grid.size);
+): Promise<HTMLCanvasElement | null> => {
+  const collected = collectLayers(node, size);
   const { layers } = collected;
   if (layers.length === 0) {
     return null;
@@ -322,33 +299,20 @@ export const rasterizeWithPhotoComposite = async (
     }
   };
 
-  let black: RenderFrame;
-  let white: RenderFrame;
+  let black: HTMLCanvasElement;
+  let white: HTMLCanvasElement;
   try {
     setProbe("#000");
     black = await capture();
     setProbe("#fff");
-    white = await capture();
+    try {
+      white = await capture();
+    } catch (error) {
+      release(black);
+      throw error;
+    }
   } finally {
     restore();
   }
-
-  const frameW = frameSize(grid).width;
-  return async (index) => {
-    const blackFrame = await black(index);
-    let whiteFrame: HTMLCanvasElement;
-    try {
-      whiteFrame = await white(index);
-    } catch (error) {
-      release(blackFrame);
-      throw error;
-    }
-    return mergeFrame(
-      blackFrame,
-      whiteFrame,
-      index * frameW,
-      collected,
-      images
-    );
-  };
+  return mergeFrame(black, white, collected, images);
 };

@@ -9,13 +9,12 @@
 // EFFORT-4). The real strip is mounted off-screen only while it is being
 // captured — once per format for its preview, once more for a download — and
 // unmounted straight after; captures run one at a time.
-// Downloading slices that strip into its per-slide image set (`exportCarousel`).
+// Downloading renders that strip as its per-slide image set (`renderCarousel`).
 // The chrome, the busy/one/all orchestration and the tile itself are the shared
 // machinery from `export-sheet.tsx`.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode, RefObject } from "react";
-import { toast } from "sonner";
 
 import { useImageNaturalSize } from "@/hooks/use-image-natural-size";
 import type { ActivityData } from "@/lib/activity";
@@ -31,7 +30,11 @@ import { FORMAT_ORDER, getFormat } from "@/theme/core/export-formats";
 import type { ExportFormat } from "@/theme/core/export-formats";
 import type { ThemeConfig } from "@/theme/core/params/kinds";
 import type { Visibility } from "@/theme/core/visibility";
-import { createSerialQueue, delay } from "@/theme/export/export-shared";
+import {
+  createSerialQueue,
+  delay,
+  effortDateSlug,
+} from "@/theme/export/export-shared";
 import type { SerialQueue } from "@/theme/export/export-shared";
 
 import {
@@ -86,19 +89,20 @@ const withStagedStrip = async <T,>(
   }
 };
 
-/** Slice the staged strip into its slides and deliver them. */
-const exportStrip = async (
-  node: HTMLDivElement,
-  set: { count: number; date: string; sport: string },
+/** Render the staged strip as its slide images, through the slide-sized
+ *  window the stage wraps it in. */
+const renderStrip = async (
+  strip: HTMLDivElement,
+  count: number,
+  baseName: string,
   format: ExportFormat
-): Promise<void> => {
-  const { carouselBaseName, exportCarousel } = await loadExportCarousel();
-  await exportCarousel(
-    node,
-    set.count,
-    carouselBaseName(set.sport, set.date),
-    format
-  );
+): Promise<File[]> => {
+  const window = strip.parentElement;
+  if (!window) {
+    throw new Error("The carousel strip is not staged in its window");
+  }
+  const { renderCarousel } = await loadExportCarousel();
+  return await renderCarousel({ strip, window }, count, baseName, format);
 };
 
 /** Render the staged strip as the overview's small preview image. */
@@ -109,6 +113,22 @@ const previewStrip = async (
 ): Promise<string> => {
   const { renderCarouselPreview } = await loadExportCarousel();
   return await renderCarouselPreview(node, count, format);
+};
+
+/** Load previews one after another, each queued only once the previous one is
+ *  done, so a download tapped meanwhile waits for one preview, not all seven. */
+const loadPreviewsInTurn = async <Id extends string>(
+  ids: readonly Id[],
+  load: (id: Id) => Promise<void>,
+  stopped: () => boolean
+): Promise<void> => {
+  for (const id of ids) {
+    if (stopped()) {
+      return;
+    }
+    // oxlint-disable-next-line eslint/no-await-in-loop, react-doctor/async-await-in-loop -- in turn on purpose: see above
+    await load(id);
+  }
 };
 
 /** Render one preview and hand its URL on. A failed preview only leaves the
@@ -132,6 +152,7 @@ interface PreviewStyle extends CSSProperties {
 }
 
 interface StageStyle extends CSSProperties {
+  "--slide-w": string;
   "--stage-h": string;
   "--stage-w": string;
 }
@@ -142,7 +163,9 @@ const noMount = (): void => {
 };
 
 /** The off-screen stage: the native-size strip a capture reads, parked left of
- *  the viewport (laid out, never painted) for as long as the capture runs. */
+ *  the viewport (laid out, never painted) for as long as the capture runs. The
+ *  strip sits in a slide-sized window, so a slide export captures the window
+ *  with the strip shifted to that slide. */
 const StagedStrip = ({
   children,
   count,
@@ -156,6 +179,7 @@ const StagedStrip = ({
 }) => {
   const { slideH, stripW } = stripGeometry(format, count);
   const stageStyle: StageStyle = {
+    "--slide-w": `${format.width}px`,
     "--stage-h": `${slideH}px`,
     "--stage-w": `${stripW}px`,
   };
@@ -166,8 +190,10 @@ const StagedStrip = ({
       data-testid="capture-stage"
       style={stageStyle}
     >
-      <div className="h-(--stage-h) w-(--stage-w)" ref={mountRef}>
-        {children}
+      <div className="h-(--stage-h) w-(--slide-w) overflow-hidden">
+        <div className="h-(--stage-h) w-(--stage-w)" ref={mountRef}>
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -272,29 +298,37 @@ export const CarouselExportSheet = ({
   const requested = useRef(new Set<string>());
   const previewUrls = useRef<string[]>([]);
   useEffect(() => {
-    if (photoNotReady) {
-      return;
-    }
-    for (const id of FORMAT_ORDER) {
-      if (!requested.current.has(id)) {
-        requested.current.add(id);
-        const format = getFormat(id);
-        void loadPreview(
-          async () =>
-            await enqueue(
-              format,
-              async (node) => await previewStrip(node, count, format)
-            ),
-          (url) => {
-            previewUrls.current.push(url);
-            setPreviews((prev) => ({ ...prev, [id]: url }));
-          },
-          () => {
-            setPreviews((prev) => ({ ...prev, [id]: null }));
+    let stopped = false;
+    if (!photoNotReady) {
+      void loadPreviewsInTurn(
+        FORMAT_ORDER,
+        async (id) => {
+          if (requested.current.has(id)) {
+            return;
           }
-        );
-      }
+          requested.current.add(id);
+          const format = getFormat(id);
+          await loadPreview(
+            async () =>
+              await enqueue(
+                format,
+                async (node) => await previewStrip(node, count, format)
+              ),
+            (url) => {
+              previewUrls.current.push(url);
+              setPreviews((prev) => ({ ...prev, [id]: url }));
+            },
+            () => {
+              setPreviews((prev) => ({ ...prev, [id]: null }));
+            }
+          );
+        },
+        () => stopped
+      );
     }
+    return () => {
+      stopped = true;
+    };
   }, [count, enqueue, photoNotReady]);
   useEffect(
     () => () => {
@@ -305,29 +339,26 @@ export const CarouselExportSheet = ({
     []
   );
 
-  const exportOne = useCallback(
-    async (format: ExportFormat) => {
-      try {
-        await watchExport(
-          { format: format.id, kind: "carousel", slides: count },
-          async () => {
-            await enqueue(format, async (node) => {
-              await exportStrip(
-                node,
-                { count, date: data.date, sport: data.sport },
-                format
-              );
-            });
-          }
-        );
-      } catch {
-        toast.error("Export failed — please try again.");
-      }
-    },
-    [count, data.sport, data.date, enqueue]
+  const baseName = `effort_${data.sport}_${effortDateSlug(data.date)}_carousel`;
+  const renderOne = useCallback(
+    async (format: ExportFormat): Promise<File[]> =>
+      await watchExport(
+        { format: format.id, kind: "carousel", slides: count },
+        async () =>
+          await enqueue(
+            format,
+            async (node) =>
+              await renderStrip(node, count, `${baseName}_${format.id}`, format)
+          )
+      ),
+    [baseName, count, enqueue]
   );
 
-  const { busy, handleOne, handleAll } = useFormatExports(exportOne);
+  const { busy, handleOne, handleAll, progress } = useFormatExports(renderOne, {
+    folderFor: (format) => format.id,
+    title: "My Effort carousel",
+    zipStem: baseName,
+  });
 
   return (
     <ExportShell
@@ -339,11 +370,12 @@ export const CarouselExportSheet = ({
       }}
       onKeepEditing={onKeepEditing}
       onNew={onNew}
+      progress={progress}
       routeCoordinates={routeCoordinates ?? data.routeCoordinates}
       subtitle={
         photoNotReady
           ? "Preparing your photo…"
-          : `Each format is a set of ${count} slides — grab one set, or every format. On mobile a set shares as one batch.`
+          : `Each format is a set of ${count} slides. On a phone a set opens the share sheet, so it lands in Photos in one go; Download all bundles every format into one ZIP, a folder per format.`
       }
     >
       <div className="mt-5 flex flex-wrap justify-center gap-3 sm:mt-7 sm:gap-5">

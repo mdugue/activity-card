@@ -15,6 +15,7 @@ import {
   delay,
   effortDateSlug,
   REVOKE_DELAY_MS,
+  shareFiles,
   triggerDownload,
 } from "@/theme/export/export-shared";
 
@@ -180,5 +181,53 @@ describe("createSerialQueue", () => {
     }
     expect(message).toBe("boom");
     expect(await next).toBe("ok");
+  });
+});
+
+/** Install a navigator with the given share() and canShare() answer. */
+const stubShare = (share: () => Promise<void>, canShare = true): void => {
+  Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: { canShare: () => canShare, share },
+    writable: true,
+  });
+};
+
+describe("shareFiles", () => {
+  const realNavigator = globalThis.navigator;
+  const files = [new File(["png"], "slide_01.png", { type: "image/png" })];
+
+  afterEach(() => {
+    Object.defineProperty(globalThis, "navigator", {
+      configurable: true,
+      value: realNavigator,
+      writable: true,
+    });
+  });
+
+  test("reports a share that went through", async () => {
+    stubShare(async () => {});
+    expect(await shareFiles(files, "set")).toBe("shared");
+  });
+
+  test("reports a share refused for want of a fresh tap as blocked", async () => {
+    stubShare(async () => {
+      await Promise.resolve();
+      throw new DOMException("no user gesture", "NotAllowedError");
+    });
+    expect(await shareFiles(files, "set")).toBe("blocked");
+  });
+
+  test("reports a dismissed share sheet as cancelled", async () => {
+    stubShare(async () => {
+      await Promise.resolve();
+      throw new DOMException("dismissed", "AbortError");
+    });
+    expect(await shareFiles(files, "set")).toBe("cancelled");
+  });
+
+  test("reports a browser that can't share these files as unsupported", async () => {
+    stubShare(async () => {}, false);
+    expect(await shareFiles(files, "set")).toBe("unsupported");
   });
 });

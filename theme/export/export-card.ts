@@ -2,7 +2,7 @@ import type { ActivityData } from "@/lib/activity";
 import { applyMetadata, routeCentroid } from "@/lib/metadata";
 import type { MetadataInput, MetadataOptions } from "@/lib/metadata";
 
-import { deliverFiles, waitForFonts } from "./export-shared";
+import { waitForFonts } from "./export-shared";
 import { canvasToPng, rasterizeNode } from "./rasterize";
 
 export interface ExportOptions {
@@ -16,14 +16,13 @@ export interface ExportOptions {
 }
 
 /**
- * Rasterize a DOM node to PNG at the given intrinsic size, inject metadata,
- * then either share via the Web Share API (mobile) or trigger a download
- * (desktop).
+ * Rasterize a DOM node to PNG at the given intrinsic size and inject metadata.
+ * Delivery (share sheet, download, ZIP) is the caller's: see `deliverFiles`.
  */
-export const exportCard = async (
+export const renderCard = async (
   node: HTMLElement,
   opts: ExportOptions = {}
-): Promise<void> => {
+): Promise<File> => {
   const {
     width = 1080,
     height = 1350,
@@ -49,9 +48,7 @@ export const exportCard = async (
   // BlobPart wants an ArrayBuffer-backed view; `applyMetadata` is typed over
   // ArrayBufferLike, so hand the Blob a byte-identical ArrayBuffer-backed copy.
   const out = new Blob([new Uint8Array(bytes)], { type: "image/png" });
-  const file = new File([out], filename, { type: "image/png" });
-
-  await deliverFiles([file], { title: "My Effort card" });
+  return new File([out], filename, { type: "image/png" });
 };
 
 /** Map an activity to the metadata baked into its export (GPS gated by opts). */
