@@ -4,9 +4,11 @@
  * how its visualisation sits in the photo.
  */
 
+import { ART_PARAMS, DEFAULT_ART_CONFIG } from "@/lib/art-placement";
+import type { ArtConfig } from "@/lib/art-placement";
 import type { ParamDef } from "@/theme/core/params/kinds";
 
-import { DEFAULT_WOVEN_CONFIG, METRICS_PARAM } from "./woven";
+import { DEFAULT_WOVEN_CONFIG, dimParam, METRICS_PARAM } from "./woven";
 import type { WovenConfig } from "./woven";
 
 // --- Ridge: where the second horizon runs ------------------------------------
@@ -83,7 +85,9 @@ export const RIDGE_PARAMS: ParamDef[] = [
 
 // --- Light Trail: where the ground meets the sky -----------------------------
 
-export interface LightTrailConfig extends WovenConfig {
+export interface LightTrailConfig extends WovenConfig, ArtConfig {
+  /** how far the photo is pressed down, 0 = as shot */
+  dim: number;
   /** height of the speed curtain over the trail, 0 = off */
   curtain: number;
   /** horizon height in % of the canvas, from the top */
@@ -92,12 +96,15 @@ export interface LightTrailConfig extends WovenConfig {
 
 export const DEFAULT_LIGHT_TRAIL_CONFIG: LightTrailConfig = {
   ...DEFAULT_WOVEN_CONFIG,
+  ...DEFAULT_ART_CONFIG,
   curtain: 60,
+  dim: 70,
   horizon: 48,
 };
 
 export const LIGHT_TRAIL_PARAMS: ParamDef[] = [
   METRICS_PARAM,
+  dimParam(DEFAULT_LIGHT_TRAIL_CONFIG.dim),
   {
     default: DEFAULT_LIGHT_TRAIL_CONFIG.horizon,
     group: "layout",
@@ -120,13 +127,16 @@ export const LIGHT_TRAIL_PARAMS: ParamDef[] = [
     step: 5,
     unit: "%",
   },
+  ...ART_PARAMS,
 ];
 
 // --- Window: how wide the coloured band is, and how it stands out -----------
 
 export type WindowEdge = "shadow" | "line" | "both" | "none";
 
-export interface WindowConfig extends WovenConfig {
+export interface WindowConfig extends WovenConfig, ArtConfig {
+  /** how far the photo is pressed down, 0 = as shot */
+  dim: number;
   /** width of the colour band along the route, in px on the 1080 master */
   band: number;
   /** what separates the band from the toned photo around it */
@@ -135,12 +145,15 @@ export interface WindowConfig extends WovenConfig {
 
 export const DEFAULT_WINDOW_CONFIG: WindowConfig = {
   ...DEFAULT_WOVEN_CONFIG,
+  ...DEFAULT_ART_CONFIG,
   band: 84,
+  dim: 30,
   edge: "both",
 };
 
 export const WINDOW_PARAMS: ParamDef[] = [
   METRICS_PARAM,
+  dimParam(DEFAULT_WINDOW_CONFIG.dim),
   {
     default: DEFAULT_WINDOW_CONFIG.band,
     group: "layout",
@@ -165,25 +178,31 @@ export const WINDOW_PARAMS: ParamDef[] = [
       { blurb: "flush", id: "none", label: "NONE" },
     ],
   },
+  ...ART_PARAMS,
 ];
 
 // --- Contour: how many rings, and where the map hangs -----------------------
 
 export type ContourPlacement = "auto" | "hero" | "side" | "corner" | "low";
 
-export interface ContourConfig extends WovenConfig {
+export interface ContourConfig extends WovenConfig, ArtConfig {
+  /** how far the photo is pressed down, 0 = as shot */
+  dim: number;
   placement: ContourPlacement;
   rings: number;
 }
 
 export const DEFAULT_CONTOUR_CONFIG: ContourConfig = {
   ...DEFAULT_WOVEN_CONFIG,
+  ...DEFAULT_ART_CONFIG,
+  dim: 30,
   placement: "auto",
   rings: 11,
 };
 
 export const CONTOUR_PARAMS: ParamDef[] = [
   METRICS_PARAM,
+  dimParam(DEFAULT_CONTOUR_CONFIG.dim),
   {
     default: DEFAULT_CONTOUR_CONFIG.placement,
     group: "layout",
@@ -208,22 +227,28 @@ export const CONTOUR_PARAMS: ParamDef[] = [
     min: 4,
     step: 1,
   },
+  ...ART_PARAMS,
 ];
 
 // --- Word Path: how large the writing is -------------------------------------
 
-export interface WordPathConfig extends WovenConfig {
+export interface WordPathConfig extends WovenConfig, ArtConfig {
+  /** how far the photo is pressed down, 0 = as shot */
+  dim: number;
   /** letter size in px on the 1080 master */
   size: number;
 }
 
 export const DEFAULT_WORD_PATH_CONFIG: WordPathConfig = {
   ...DEFAULT_WOVEN_CONFIG,
+  ...DEFAULT_ART_CONFIG,
+  dim: 50,
   size: 20,
 };
 
 export const WORD_PATH_PARAMS: ParamDef[] = [
   METRICS_PARAM,
+  dimParam(DEFAULT_WORD_PATH_CONFIG.dim),
   {
     default: DEFAULT_WORD_PATH_CONFIG.size,
     group: "text",
@@ -235,6 +260,7 @@ export const WORD_PATH_PARAMS: ParamDef[] = [
     step: 1,
     unit: "px",
   },
+  ...ART_PARAMS,
 ];
 
 // --- Slices: how finely the photo is cut, and how far it lifts ---------------

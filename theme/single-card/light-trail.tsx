@@ -9,6 +9,7 @@
 import { useId } from "react";
 
 import type { Coord } from "@/lib/activity";
+import { artPlacement, boundsCentre, placePoints } from "@/lib/art-placement";
 import { mixHex } from "@/lib/chart-helpers";
 import { formatDateUpper, formatNumber } from "@/lib/format";
 import { hasText } from "@/lib/text";
@@ -16,6 +17,7 @@ import {
   distanceMarks,
   metricsLevel,
   resampleRoute,
+  scrimStrength,
   wovenIntensity,
   wovenRoutePoints,
   wovenSpeedRange,
@@ -28,7 +30,7 @@ import type { ThemeProps } from "@/theme/core/theme-contract";
 import { useFormat, useSafeInsets } from "../shared/format-context";
 import { LIGHT_TRAIL_FAST, LIGHT_TRAIL_SLOW } from "./default-accents";
 import type { LightTrailCapability } from "./light-trail.theme";
-import { Caption, Layer, Title, WovenFrame } from "./woven-parts";
+import { Caption, Layer, TextScrim, Title, WovenFrame } from "./woven-parts";
 import { fallbackWash, MONO, typeScale } from "./woven-style";
 
 const GROUND = 1000;
@@ -66,8 +68,20 @@ const perspective = (
 /** Points the trail is resampled to — even spacing, so segment i sits at
  *  i/TRAIL_POINTS of the distance. */
 const TRAIL_POINTS = 260;
-/** The night filter on the photo. */
-const NIGHT = "saturate(0.3) brightness(0.5) contrast(1.12)";
+/** The night filter on the photo; `dim` (0…1) sets how deep the night. */
+const night = (dim: number): string =>
+  `saturate(${(1 - dim).toFixed(3)}) brightness(${(1 - 0.72 * dim).toFixed(3)}) contrast(${(1 + 0.17 * dim).toFixed(3)})`;
+
+/** Lay the trail where the user placed it (drag / pinch on the card): moved
+ *  and scaled about its own centre, depth kept for the stroke widths. */
+const placeTrail = (
+  trail: TrailPoint[],
+  place: ReturnType<typeof artPlacement>
+): TrailPoint[] => {
+  const flat = trail.map((p): Coord => [p.x, p.y]);
+  const moved = placePoints(flat, place, boundsCentre(flat, [0, 0]));
+  return trail.map((p, i) => ({ ...p, x: moved[i][0], y: moved[i][1] }));
+};
 /** The curtain's colours, quantised: one upward-fading gradient per step
  *  of speed (a gradient can't take its colour from the shape using it). */
 const BUCKETS = Array.from({ length: 10 }, (_, i) => i);
@@ -104,7 +118,9 @@ export const ThemeLightTrail = ({
   // Keep the near edge of the trail clear of the title block.
   const horizon = (H * config.horizon) / 100;
   const near = Math.max(horizon + 80 * k, H - insets.bottom - 190 * k);
-  const trail = perspective(ground, W, horizon, near);
+  const place = artPlacement(config, W, H);
+  const trail = placeTrail(perspective(ground, W, horizon, near), place);
+  const dim = config.dim / 100;
   const intensity = wovenIntensity(data);
   const heat = (i: number): number => {
     if (!intensity) {
@@ -121,18 +137,19 @@ export const ThemeLightTrail = ({
       b,
       color: mixHex(slow, fast, h),
       h,
-      w: ((16 + 12 * h) * k) / ((a.z + b.z) / 2),
+      w: ((16 + 12 * h) * k * place.scale) / ((a.z + b.z) / 2),
     };
   });
   // The curtain: as tall as the speed, foreshortened with depth; drawn far
   // to near so nearer light sits in front.
-  const curtainH = (H * 0.36 * config.curtain) / 100;
+  const curtainH = (H * 0.36 * config.curtain * place.scale) / 100;
   const lift = (h: number, z: number) =>
     (curtainH * (0.14 + 0.86 * h) * NEAR) / z;
   const curtain = segments.toSorted((p, q) => q.a.z - p.a.z);
   const range = wovenSpeedRange(data);
   const uid = useId();
   const legendId = `${uid}-legend`;
+  const scrimId = `${uid}-scrim`;
   const curtainId = `${uid}-curtain`;
   const marks =
     level === "full" && trail.length > 1
@@ -147,7 +164,7 @@ export const ThemeLightTrail = ({
     <WovenFrame
       fallback={fallbackWash(data.sport)}
       imageTransform={imageTransform}
-      photoFilter={NIGHT}
+      photoFilter={night(dim)}
       photoUrl={photoUrl}
     >
       {curtainH > 0 ? (
@@ -195,6 +212,7 @@ export const ThemeLightTrail = ({
         </Layer>
       ) : null}
       <Layer label={data.title}>
+        <TextScrim id={scrimId} strength={scrimStrength(dim, 0.7)} />
         {PASSES.map((pass) => (
           <g key={pass.width} opacity={pass.opacity}>
             {segments.map((s) => (

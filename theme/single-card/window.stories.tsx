@@ -73,3 +73,9 @@ export const MetricsFull = meta.story({ args: { metrics: "full" } });
 export const Run = meta.story({ args: { data: SAMPLE_RUN } });
 export const Triathlon = meta.story({ args: { data: SAMPLE_TRI } });
 export const NoPhoto = meta.story({ globals: { background: "none" } });
+/** DARKEN off: the photo as shot, type kept readable by a soft scrim. */
+export const PhotoAsShot = meta.story({ args: { dim: 0 } });
+/** The graphic moved and scaled (what the editor's Adjust → Graphic sets). */
+export const GraphicPlaced = meta.story({
+  args: { artScale: 70, artX: 12, artY: -14 },
+});

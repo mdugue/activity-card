@@ -11,12 +11,14 @@
 import { useId } from "react";
 
 import type { Coord } from "@/lib/activity";
+import { artPlacement, placePoints } from "@/lib/art-placement";
 import { mixHex } from "@/lib/chart-helpers";
 import { formatDateUpper, formatNumber } from "@/lib/format";
 import { hasText } from "@/lib/text";
 import {
   metricsLevel,
   resampleRoute,
+  scrimStrength,
   splitTitle,
   statLine,
   toPath,
@@ -33,7 +35,7 @@ import type { ThemeProps } from "@/theme/core/theme-contract";
 import { useFormat, useSafeInsets } from "../shared/format-context";
 import type { ContourCapability } from "./contour.theme";
 import { CONTOUR_ACCENT } from "./default-accents";
-import { Caption, Layer, Title, WovenFrame } from "./woven-parts";
+import { Caption, Layer, TextScrim, Title, WovenFrame } from "./woven-parts";
 import { fallbackWash, typeScale } from "./woven-style";
 
 const PAPER = "#ece6da";
@@ -175,16 +177,23 @@ export const ThemeContour = ({
   // little further out (a buffer of the route, rounded at the ends), spaced
   // wider towards the foot like real contours on a slope. Any route shape
   // works — a loop, an out-and-back, a point-to-point climb.
-  const reach = Math.min(box.w, box.h) * 0.2;
+  // The user's placement (drag / pinch on the card) moves and scales the
+  // whole map about its box centre.
+  const place = artPlacement(config, W, H);
+  const designedReach = Math.min(box.w, box.h) * 0.2;
+  const reach = designedReach * place.scale;
+  const centre: Coord = [box.x + box.w / 2, box.y + box.h / 2];
   const outline = resampleRoute(
-    wovenRoutePoints(data, box.w, box.h, reach + 8 * k).map(([x, y]): Coord => [
-      x + box.x,
-      y + box.y,
-    ]),
+    placePoints(
+      wovenRoutePoints(data, box.w, box.h, designedReach + 8 * k).map(
+        ([x, y]): Coord => [x + box.x, y + box.y]
+      ),
+      place,
+      centre
+    ),
     RING_POINTS
   );
   const d = toPath(outline);
-  const centre: Coord = [box.x + box.w / 2, box.y + box.h / 2];
   const summitPt =
     outline.at(Math.round(summitShare(profile) * (outline.length - 1))) ??
     centre;
@@ -201,6 +210,7 @@ export const ThemeContour = ({
       ? profile.min + t * (profile.max - profile.min)
       : null;
   const summit = heightAt(1);
+  const dim = config.dim / 100;
 
   const meta = [data.location, formatDateUpper(data.date)]
     .filter(hasText)
@@ -225,11 +235,16 @@ export const ThemeContour = ({
             y2={titleAtTop ? "0" : "1"}
           >
             <stop offset="0.55" stopColor="#000" stopOpacity="0" />
-            <stop offset="1" stopColor="#000" stopOpacity="0.5" />
+            <stop offset="1" stopColor="#000" stopOpacity={0.3 + 0.67 * dim} />
           </linearGradient>
         </defs>
-        <rect fill="#000" height={H} opacity={0.18} width={W} />
+        <rect fill="#000" height={H} opacity={0.6 * dim} width={W} />
         <rect fill={`url(#${shadeId})`} height={H} width={W} />
+        <TextScrim
+          id={`${uid}-scrim`}
+          strength={scrimStrength(dim, 0.3, 0.5)}
+          top={false}
+        />
         <defs>
           {rings.slice(1).map(({ dist, t }) => (
             <g key={t}>

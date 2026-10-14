@@ -5,13 +5,17 @@
 // band off the grey so it reads on busy photos too.
 // Type: Instrument Serif (title, values) + IBM Plex Mono (captions).
 
+import { useId } from "react";
+
 import type { Coord } from "@/lib/activity";
+import { artPlacement, boundsCentre, placePoints } from "@/lib/art-placement";
 import { formatDateUpper } from "@/lib/format";
 import { hasText } from "@/lib/text";
 import {
   bandPath,
   metricsLevel,
   resampleRoute,
+  scrimStrength,
   statLine,
   toPath,
   wovenRoutePoints,
@@ -28,6 +32,7 @@ import {
   Layer,
   PhotoCopy,
   StatColumns,
+  TextScrim,
   Title,
   WovenFrame,
 } from "./woven-parts";
@@ -37,8 +42,10 @@ const WHITE = "#ffffff";
 /** Points the band outline is built from — plenty for a smooth band at any
  *  width, few enough to keep the clip path light. */
 const BAND_POINTS = 360;
-/** The grey the rest of the photo is pressed into. */
-const TONED = "grayscale(1) brightness(0.68) contrast(1.12)";
+/** The grey the rest of the photo is pressed into; `dim` (0…1) sets how
+ *  dark. */
+const toned = (dim: number): string =>
+  `grayscale(1) brightness(${Math.max(0.08, 1 - dim).toFixed(3)}) contrast(${(1 + 0.4 * dim).toFixed(3)})`;
 const COLOUR = "saturate(1.18) contrast(1.04)";
 /** Shadow passes under the band, widest first: extra width and opacity. */
 const SHADOW = [
@@ -60,7 +67,8 @@ export const ThemeWindow = ({
   const k = typeScale(W, H);
   const level = metricsLevel(config.metrics, format.id);
   const stats = wovenStats(data);
-  const band = config.band * k;
+  const place = artPlacement(config, W, H);
+  const band = config.band * k * place.scale;
   const shadow = config.edge === "shadow" || config.edge === "both";
   const line = config.edge === "line" || config.edge === "both";
 
@@ -68,13 +76,15 @@ export const ThemeWindow = ({
   const top = insets.top + 160 * k;
   const bottom = H - insets.bottom - (level === "full" ? 200 : 110) * k;
   const local = wovenRoutePoints(data, W, bottom - top, band / 2 + 40 * k);
+  const designed = local.map(([x, y]): Coord => [x, y + top]);
   const route = resampleRoute(
-    local.map(([x, y]): Coord => [x, y + top]),
+    placePoints(designed, place, boundsCentre(designed, [W / 2, H / 2])),
     BAND_POINTS
   );
   const d = toPath(route);
   const clip = bandPath(route, band);
   const start = route.at(0);
+  const scrimId = `${useId()}-scrim`;
   const meta = [data.location, formatDateUpper(data.date)]
     .filter(hasText)
     .join(" · ");
@@ -83,11 +93,15 @@ export const ThemeWindow = ({
     <WovenFrame
       fallback={fallbackWash(data.sport)}
       imageTransform={imageTransform}
-      photoFilter={TONED}
+      photoFilter={toned(config.dim / 100)}
       photoUrl={photoUrl}
     >
       {/* Under the colour band: its shadow and its hairline edge. */}
       <Layer label="Band edge">
+        <TextScrim
+          id={scrimId}
+          strength={scrimStrength(config.dim / 100, 0.3, 0.5)}
+        />
         {shadow
           ? SHADOW.map((pass) => (
               <path
@@ -98,7 +112,7 @@ export const ThemeWindow = ({
                 stroke="#000"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeWidth={band + pass.extra * k}
+                strokeWidth={band + pass.extra * k * place.scale}
                 transform={`translate(0 ${6 * k})`}
               />
             ))

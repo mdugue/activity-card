@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowCounterClockwiseIcon, CheckIcon } from "@phosphor-icons/react";
+import type { ReactNode } from "react";
 
 import { FilledBadge } from "@/components/app/primitives/badge";
 import { PhotoOverlayButton } from "@/components/app/primitives/button";
@@ -15,6 +16,10 @@ interface ImageAdjustOverlayProps {
   clamp?: (t: ImageTransform) => ImageTransform;
   /** card-space width of the box the overlay covers (active format / slide) */
   contentWidth: number;
+  /** what the gesture moves, shown over the hint (the Photo / Graphic switch) */
+  header?: ReactNode;
+  /** the gesture hint chip */
+  hint?: string;
   onChange: (next: ImageTransform) => void;
   onDone: () => void;
   transform: ImageTransform;
@@ -32,6 +37,8 @@ export const ImageAdjustOverlay = ({
   onDone,
   clamp,
   contentWidth,
+  header,
+  hint = "Drag · pinch or scroll to zoom",
 }: ImageAdjustOverlayProps) => {
   const { ref } = useImageAdjust({
     clamp,
@@ -80,13 +87,13 @@ export const ImageAdjustOverlay = ({
         ))}
       </div>
 
-      {/* Hint chip */}
-      <FilledBadge
-        className="pointer-events-none absolute top-5 left-1/2 z-[3] -translate-x-1/2"
-        tone="scrim"
-      >
-        Drag · pinch or scroll to zoom
-      </FilledBadge>
+      {/* Target switch (when there is a choice) + hint chip */}
+      <div className="absolute top-5 left-1/2 z-[3] flex -translate-x-1/2 flex-col items-center gap-2">
+        {header}
+        <FilledBadge className="pointer-events-none" tone="scrim">
+          {hint}
+        </FilledBadge>
+      </div>
 
       {/* Controls */}
       <div className="absolute bottom-4 left-1/2 z-[3] flex -translate-x-1/2 items-center gap-2">

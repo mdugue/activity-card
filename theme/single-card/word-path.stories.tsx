@@ -6,8 +6,8 @@ import {
   SAMPLE_RUN,
   SAMPLE_TRI,
 } from "@/components/app/sample-data";
-import { DEFAULT_WOVEN_CONFIG } from "@/lib/woven";
-import type { WovenConfig } from "@/lib/woven";
+import { DEFAULT_WORD_PATH_CONFIG } from "@/lib/woven-themes";
+import type { WordPathConfig } from "@/lib/woven-themes";
 import { SINGLE_CARD_THEMES } from "@/theme/single-card";
 
 import { backgroundArgTypes } from "../../.storybook/backgrounds";
@@ -34,7 +34,7 @@ const THEME = SINGLE_CARD_THEMES.wordpath;
 
 type Args = ComponentProps<typeof ThemeWordPath> &
   ThemeStoryExtras &
-  ParamArgs<WovenConfig>;
+  ParamArgs<WordPathConfig>;
 
 const meta = preview.type<{ args: Args }>().meta({
   argTypes: {
@@ -47,7 +47,7 @@ const meta = preview.type<{ args: Args }>().meta({
   args: {
     color: "Theme default",
     data: SAMPLE_RIDE,
-    ...DEFAULT_WOVEN_CONFIG,
+    ...DEFAULT_WORD_PATH_CONFIG,
   },
   component: ThemeWordPath,
   decorators: [withFormatMatrix],
@@ -73,3 +73,9 @@ export const MetricsFull = meta.story({ args: { metrics: "full" } });
 export const Run = meta.story({ args: { data: SAMPLE_RUN } });
 export const Triathlon = meta.story({ args: { data: SAMPLE_TRI } });
 export const NoPhoto = meta.story({ globals: { background: "none" } });
+/** DARKEN off: the photo as shot, type kept readable by a soft scrim. */
+export const PhotoAsShot = meta.story({ args: { dim: 0 } });
+/** The graphic moved and scaled (what the editor's Adjust → Graphic sets). */
+export const GraphicPlaced = meta.story({
+  args: { artScale: 70, artX: 12, artY: -14 },
+});

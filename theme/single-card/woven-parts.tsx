@@ -227,3 +227,37 @@ export const StatColumns = ({
     })}
   </g>
 );
+
+/** Soft dark gradients at the top and bottom edge, behind the type — so the
+ *  words stay readable when the user keeps the photo light. Draw it inside a
+ *  `Layer`, before the text. */
+export const TextScrim = ({
+  bottom = true,
+  id,
+  strength,
+  top = true,
+}: {
+  bottom?: boolean;
+  /** unique gradient id */
+  id: string;
+  strength: number;
+  top?: boolean;
+}) => {
+  const { width: W, height: H } = useFormat();
+  if (strength <= 0) {
+    return null;
+  }
+  return (
+    <>
+      <defs>
+        <linearGradient id={id} x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stopColor="#000" stopOpacity={top ? 0.8 : 0} />
+          <stop offset="0.2" stopColor="#000" stopOpacity="0" />
+          <stop offset="0.72" stopColor="#000" stopOpacity="0" />
+          <stop offset="1" stopColor="#000" stopOpacity={bottom ? 0.9 : 0} />
+        </linearGradient>
+      </defs>
+      <rect fill={`url(#${id})`} height={H} opacity={strength} width={W} />
+    </>
+  );
+};

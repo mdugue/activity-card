@@ -56,6 +56,27 @@ export const METRICS_PARAM: ParamDef = {
   ],
 };
 
+/** The DARKEN knob: how far a theme presses the photo down so its light and
+ *  colour read (0 = the photo as shot). Each theme maps it onto its own
+ *  filter; its default is the theme's designed look. */
+export const dimParam = (fallback: number): ParamDef => ({
+  default: fallback,
+  group: "photo",
+  id: "dim",
+  kind: "slider",
+  label: "DARKEN",
+  max: 100,
+  min: 0,
+  step: 5,
+  unit: "%",
+});
+
+/** How much a text scrim is needed at a theme's DARKEN value: none at the
+ *  designed darkness (`from`) and above, rising to `max` on the untouched
+ *  photo. */
+export const scrimStrength = (dim: number, from: number, max = 0.6): number =>
+  dim >= from ? 0 : max * (1 - dim / from);
+
 /** Resolve the picked mode for the active export format. */
 export const metricsLevel = (
   mode: MetricsMode,

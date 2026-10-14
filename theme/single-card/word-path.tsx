@@ -8,11 +8,13 @@
 import { useId } from "react";
 
 import type { Coord } from "@/lib/activity";
+import { artPlacement, boundsCentre, placePoints } from "@/lib/art-placement";
 import { formatDateUpper } from "@/lib/format";
 import { hasText } from "@/lib/text";
 import {
   metricsLevel,
   polylineLength,
+  scrimStrength,
   smoothRoute,
   statLine,
   toPath,
@@ -27,7 +29,7 @@ import type { ThemeProps } from "@/theme/core/theme-contract";
 import { useFormat, useSafeInsets } from "../shared/format-context";
 import { WORD_PATH_ACCENT } from "./default-accents";
 import type { WordPathCapability } from "./word-path.theme";
-import { Caption, Layer, WovenFrame } from "./woven-parts";
+import { Caption, Layer, TextScrim, WovenFrame } from "./woven-parts";
 import { fallbackWash, SANS, typeScale } from "./woven-style";
 
 /** Letter spacing, in ems. */
@@ -41,8 +43,9 @@ const RAIL_POINTS = 480;
 /** How far (in letter heights) the rail is smoothed: enough that a word never
  *  folds round a hairpin. */
 const SMOOTHING = 2.2;
-/** The grey the photo is pressed into. */
-const TONED = "grayscale(1) brightness(0.52) contrast(1.15)";
+/** The grey the photo is pressed into; `dim` (0…1) sets how dark. */
+const toned = (dim: number): string =>
+  `grayscale(1) brightness(${Math.max(0.08, 1 - 0.96 * dim).toFixed(3)}) contrast(${(1 + 0.3 * dim).toFixed(3)})`;
 
 const bandUnit = (
   title: string,
@@ -82,8 +85,13 @@ export const ThemeWordPath = ({
   // caption.
   const boxW = W - insets.left - insets.right;
   const boxH = H - insets.top - insets.bottom - 90 * k;
-  const route = wovenRoutePoints(data, boxW, boxH, 40 * k).map(
+  const designed = wovenRoutePoints(data, boxW, boxH, 40 * k).map(
     ([x, y]): Coord => [x + insets.left, y + insets.top]
+  );
+  const route = placePoints(
+    designed,
+    artPlacement(config, W, H),
+    boundsCentre(designed, [W / 2, H / 2])
   );
   const size = config.size * k;
   // Smooth over a few letter heights, measured in rail samples.
@@ -99,19 +107,37 @@ export const ThemeWordPath = ({
   const repeats = Math.max(1, Math.round(length / (unit.length * glyph)));
   const band = unit.repeat(repeats);
   const railId = `${uid}-rail`;
+  const dim = config.dim / 100;
   const start = route.at(0);
 
   return (
     <WovenFrame
       fallback={fallbackWash(data.sport)}
       imageTransform={imageTransform}
-      photoFilter={TONED}
+      photoFilter={toned(dim)}
       photoUrl={photoUrl}
     >
       <Layer label={data.title}>
         <defs>
           <path d={toPath(rail)} id={railId} />
         </defs>
+        <TextScrim
+          id={`${uid}-scrim`}
+          strength={scrimStrength(dim, 0.5, 0.5)}
+          top={false}
+        />
+        {/* A dark bed under the words, deeper the lighter the photo. */}
+        {dim < 0.5 ? (
+          <path
+            d={toPath(rail)}
+            fill="none"
+            opacity={0.5 * (1 - dim / 0.5)}
+            stroke="#000"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={size * 2}
+          />
+        ) : null}
         <path
           d={toPath(rail)}
           fill="none"

@@ -326,6 +326,18 @@ Knobs are **data, not components** (`theme-params` skill has the full model):
 5. Add a story variant exercising the knob, and a `bun:test` for any new pure
    logic. The control renders generically — there is nothing else to build.
 
+**A graphic the user can move on the card.** Spread `ART_PARAMS`
+(`lib/art-placement.ts`) into the params and `DEFAULT_ART_CONFIG` into the
+defaults. The editor then offers a Photo / Graphic switch in the preview's
+Adjust overlay: the same drag and pinch that move the photo edit
+`artX` / `artY` / `artScale` (which also show as LAYOUT sliders). The theme
+applies them itself: `artPlacement(config, W, H)` gives the placement, and
+`placePoints` moves the graphic's coordinates numerically, so clip paths and
+stroke widths follow it in the export.
+
+Params in the `photo` group (such as the woven themes' DARKEN) render in the
+PHOTO tool, under the shared filters, while a photo is shown.
+
 ---
 
 ## Where things live (quick map)
