@@ -302,8 +302,9 @@ export const wovenIntensity = (data: ActivityView): number[] | null => {
   });
 };
 
-/** The slow and fast ends of the intensity scale, formatted for a legend:
- *  "12 – 54 km/h" for a ride, "6:10 – 4:20 /km" for a run. */
+/** The slowest and fastest stretch of the activity, formatted for a legend:
+ *  "6 – 54 km/h" for a ride, "6:10 – 4:20 /km" for a run. (The colour scale
+ *  saturates a little inside these, see `wovenIntensity`.) */
 export const wovenSpeedRange = (
   data: ActivityView
 ): { fast: string; slow: string; unit: string } | null => {
@@ -311,8 +312,8 @@ export const wovenSpeedRange = (
   if (!series) {
     return null;
   }
-  const lo = quantile(series.values, SPEED_TAIL);
-  const hi = quantile(series.values, 1 - SPEED_TAIL);
+  const lo = Math.min(...series.values);
+  const hi = Math.max(...series.values);
   if (series.kind === "speed") {
     return { fast: formatNumber(hi), slow: formatNumber(lo), unit: "km/h" };
   }
