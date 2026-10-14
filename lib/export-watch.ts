@@ -11,6 +11,9 @@ import * as Sentry from "@sentry/nextjs";
 import { z } from "zod";
 
 const MARKER_KEY = "effort:export-in-flight";
+// The export overview renders every format's preview at native size, so it can
+// run out of memory before any export starts. It gets its own marker.
+const OVERVIEW_KEY = "effort:export-overview-open";
 
 export interface ExportContext {
   /** Which export sheet: one card or a carousel strip. */
@@ -34,12 +37,20 @@ const exportMarker = z.object({
 });
 type ExportMarker = z.infer<typeof exportMarker>;
 
-const clearMarker = () => {
+const removeKey = (key: string) => {
   try {
-    sessionStorage.removeItem(MARKER_KEY);
+    sessionStorage.removeItem(key);
   } catch {
     // Storage blocked (private mode, sandbox) — crash detection is best-effort.
   }
+};
+
+const clearMarker = () => {
+  removeKey(MARKER_KEY);
+};
+
+const clearOverviewMarker = () => {
+  removeKey(OVERVIEW_KEY);
 };
 
 const writeMarker = (marker: ExportMarker) => {
@@ -66,8 +77,10 @@ const readMarker = (): ExportMarker | null => {
 /** Names the issue in Sentry ("ExportCrashError: …"), unlike a bare message. */
 class ExportCrashError extends Error {
   override name = "ExportCrashError";
-  constructor() {
-    super("Export did not finish: the tab was reloaded mid-export");
+  constructor(
+    message = "Export did not finish: the tab was reloaded mid-export"
+  ) {
+    super(message);
   }
 }
 
@@ -77,10 +90,10 @@ const tagsFor = (context: ExportContext) => ({
 });
 
 /** Run one export, reporting a thrown error and arming the crash marker. */
-export const watchExport = async (
+export const watchExport = async <T>(
   context: ExportContext,
-  run: () => Promise<void>
-): Promise<void> => {
+  run: () => Promise<T>
+): Promise<T> => {
   Sentry.addBreadcrumb({
     category: "export",
     data: { ...context },
@@ -88,7 +101,7 @@ export const watchExport = async (
   });
   writeMarker({ ...context, startedAt: Date.now() });
   try {
-    await run();
+    return await run();
   } catch (error) {
     Sentry.captureException(error, {
       contexts: { export: { ...context } },
@@ -100,6 +113,75 @@ export const watchExport = async (
   }
 };
 
+const overviewMarker = z.object({
+  kind: z.enum(["card", "carousel"]),
+  /** Format previews mounted when the marker was last written. */
+  mounted: z.number(),
+  slides: z.number().optional(),
+  startedAt: z.number(),
+});
+type OverviewMarker = z.infer<typeof overviewMarker>;
+
+const readOverviewMarker = (): OverviewMarker | null => {
+  try {
+    const raw = sessionStorage.getItem(OVERVIEW_KEY);
+    if (raw === null) {
+      return null;
+    }
+    const parsed = overviewMarker.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Arm the overview marker while the export overview is open (and update it as
+ * previews mount). Returns the function that clears it on close.
+ */
+export const watchOverview = (
+  marker: Omit<OverviewMarker, "startedAt">
+): (() => void) => {
+  const startedAt = readOverviewMarker()?.startedAt ?? Date.now();
+  try {
+    sessionStorage.setItem(
+      OVERVIEW_KEY,
+      JSON.stringify({ ...marker, startedAt })
+    );
+  } catch {
+    // See removeKey.
+  }
+  return clearOverviewMarker;
+};
+
+const reportUnfinishedOverview = () => {
+  const marker = readOverviewMarker();
+  if (marker === null) {
+    return;
+  }
+  clearOverviewMarker();
+  const { startedAt, ...context } = marker;
+  Sentry.captureException(
+    new ExportCrashError(
+      "Export overview crashed: the tab was reloaded while it was open"
+    ),
+    {
+      contexts: {
+        overview: {
+          ...context,
+          secondsBeforeReload: Math.round((Date.now() - startedAt) / 1000),
+        },
+      },
+      level: "error",
+      tags: {
+        "export.crash": "true",
+        "export.kind": context.kind,
+        "export.phase": "overview",
+      },
+    }
+  );
+};
+
 /**
  * At startup: report an export that never finished (the tab was killed), then
  * forget it. Also clears the marker whenever the page is deliberately left.
@@ -109,10 +191,15 @@ export const reportUnfinishedExport = () => {
     return;
   }
   window.addEventListener("pagehide", clearMarker);
+  window.addEventListener("pagehide", clearOverviewMarker);
   const marker = readMarker();
+  // A crash mid-export also leaves the overview open: report it once, as the
+  // export crash.
   if (marker === null) {
+    reportUnfinishedOverview();
     return;
   }
+  clearOverviewMarker();
   clearMarker();
   const { startedAt, ...context } = marker;
   Sentry.captureException(new ExportCrashError(), {

@@ -1,98 +1,107 @@
-// Carousel export. The deck is one continuous wide strip; we rasterise it once
-// and slice it into n format-sized frames so the photo/route bleed lines up
-// across cuts. The frame size is the chosen export format (4:5 feed by default),
-// so the strip is `count × format.width` wide and `format.height` tall. Frames
-// are delivered as an ordered set — shared together on mobile (Web Share API) or
-// downloaded sequentially on desktop. Mirrors the single-card pipeline's
-// font-ready wait and snapdom options.
+// Carousel export. The deck is one continuous wide strip, so the photo/route
+// bleed lines up across cuts; each slide is rasterised on its own through a
+// slide-sized window onto that strip. The frame size is the chosen export
+// format (4:5 feed by default), so the strip is `count × format.width` wide and
+// `format.height` tall. Mirrors the single-card pipeline's font-ready wait and
+// snapdom options; delivery is the caller's (`deliverFiles` / a ZIP).
 
 import type { ExportFormat } from "@/theme/core/export-formats";
 
-import {
-  deliverFiles,
-  effortDateSlug,
-  fromCallback,
-  waitForFonts,
-} from "./export-shared";
-import { rasterizeNode } from "./rasterize";
+import { fromCallback, waitForFonts } from "./export-shared";
+import { release } from "./photo-composite";
+import { canvasToPng, rasterizeNode } from "./rasterize";
 
 // Each slide → 2× its format size, matching the single card.
 const PIXEL_RATIO = 2;
-// Conservative cross-browser canvas width cap.
-const MAX_CANVAS_DIM = 16_384;
 
 const pad2 = (n: number): string => String(n).padStart(2, "0");
 
-/** Rasterise the wide strip node once and slice it into `count` format-sized
- *  frames. `format` is the chosen export format (4:5 feed by default). */
-export const exportCarousel = async (
-  wideNode: HTMLElement,
+/** The staged strip and the slide-sized window it sits in: the window clips
+ *  the strip to one slide, and the strip shifts left to bring slide `i` in. */
+export interface StripWindow {
+  strip: HTMLElement;
+  window: HTMLElement;
+}
+
+/** Rasterise and encode slide `index`, releasing its canvas straight after. */
+const renderSlide = async (
+  stage: StripWindow,
+  index: number,
+  format: ExportFormat,
+  baseName: string
+): Promise<File> => {
+  stage.strip.style.marginLeft = `${-index * format.width}px`;
+  const canvas = await rasterizeNode(stage.window, {
+    height: format.height * PIXEL_RATIO,
+    width: format.width * PIXEL_RATIO,
+  });
+  try {
+    const blob = await canvasToPng(canvas);
+    return new File([blob], `${baseName}_${pad2(index + 1)}.png`, {
+      type: "image/png",
+    });
+  } finally {
+    release(canvas);
+  }
+};
+
+/** Render the staged strip as its `count` slide images, in order.
+ *
+ *  One slide at a time, each a capture of its own window onto the strip and
+ *  each canvas released before the next is drawn: iOS caps a canvas at ~16.7
+ *  megapixels and the tab's canvas memory well below a full strip plus its
+ *  slices. Cutting one capture of the whole strip into slides with snapdom's
+ *  `crop` is no way round it either — WebKit draws the cropped capture's HTML
+ *  (text, marks) from the strip's origin, so every slide got the first one's
+ *  overlay over its own photo. */
+export const renderCarousel = async (
+  stage: StripWindow,
   count: number,
   baseName: string,
   format: ExportFormat
-): Promise<void> => {
+): Promise<File[]> => {
   await waitForFonts();
-
-  const width = count * format.width;
-  // Keep the rasterised strip under the canvas dimension cap — this now guards a
-  // `count × format.width` strip, so a wide landscape strip would clamp sooner.
-  const pr = Math.max(
-    1,
-    Math.min(PIXEL_RATIO, Math.floor(MAX_CANVAS_DIM / width))
-  );
-  // The output size is given pre-multiplied by `pr`; `rasterizeNode` owns the
-  // snapdom options and the WebKit photo fallback.
-  const canvas = await rasterizeNode(wideNode, {
-    height: format.height * pr,
-    width: width * pr,
-  });
-
-  const sliceW = format.width * pr;
-  const sliceH = format.height * pr;
-  const outW = format.width * PIXEL_RATIO;
-  const outH = format.height * PIXEL_RATIO;
-
-  // Draw every frame synchronously (which kicks off its PNG encode), then
-  // collect them concurrently — toBlob is the slow part of export, so
-  // overlapping the 3–4 encodes beats awaiting them one after another. The
-  // frame index rides along so ordering/naming holds.
-  const encodings: { blob: Promise<Blob | null>; index: number }[] = [];
-  for (let i = 0; i < count; i += 1) {
-    const out = document.createElement("canvas");
-    out.width = outW;
-    out.height = outH;
-    const ctx = out.getContext("2d");
-    if (!ctx) {
-      // A null context means the browser refused the canvas (memory pressure,
-      // too many live canvases). Delivering a partial set with a numbering gap
-      // would look like success — fail loudly instead.
-      throw new Error(`Carousel frame ${i + 1} could not be drawn`);
+  const files: File[] = [];
+  try {
+    for (let i = 0; i < count; i += 1) {
+      // oxlint-disable-next-line eslint/no-await-in-loop, react-doctor/async-await-in-loop -- sequential on purpose: the slides share the one window, and one slide's canvas alive at a time is the iOS fix
+      files.push(await renderSlide(stage, i, format, baseName));
     }
-    ctx.drawImage(canvas, i * sliceW, 0, sliceW, sliceH, 0, 0, outW, outH);
-    encodings.push({
-      blob: fromCallback<Blob | null>((resolve) => {
-        out.toBlob(resolve, "image/png");
-      }),
-      index: i,
-    });
+  } finally {
+    stage.strip.style.marginLeft = "";
   }
-
-  const files = await Promise.all(
-    encodings.map(async ({ index, blob }) => {
-      const resolved = await blob;
-      if (!resolved) {
-        // toBlob yields null on encode failure; a silently shrunken set would
-        // ship a carousel with missing slides.
-        throw new Error(`Carousel frame ${index + 1} failed to encode`);
-      }
-      return new File([resolved], `${baseName}_${pad2(index + 1)}.png`, {
-        type: "image/png",
-      });
-    })
-  );
-  await deliverFiles(files, { betweenMs: 350, title: "My Effort carousel" });
+  return files;
 };
 
-/** "effort_ride_20260518_carousel" — slide index is appended at export. */
-export const carouselBaseName = (sport: string, date: string): string =>
-  `effort_${sport}_${effortDateSlug(date)}_carousel`;
+/** The overview's preview width in pixels — enough for a sharp tile on a
+ *  Retina screen, a fraction of the export's size. */
+const PREVIEW_WIDTH = 1200;
+
+/** Rasterise the whole strip once, small, as a JPEG for the export overview.
+ *  The overview shows this image instead of a live, native-size strip: holding
+ *  a live photo-backed strip on screen is what iOS Safari killed the tab for.
+ *  Returns an object URL the caller revokes. */
+export const renderCarouselPreview = async (
+  wideNode: HTMLElement,
+  count: number,
+  format: ExportFormat
+): Promise<string> => {
+  await waitForFonts();
+  const stripW = count * format.width;
+  const scale = Math.min(1, PREVIEW_WIDTH / stripW);
+  const canvas = await rasterizeNode(wideNode, {
+    height: Math.round(format.height * scale),
+    width: Math.round(stripW * scale),
+  });
+  try {
+    const blob = await fromCallback<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, "image/jpeg", 0.85);
+    });
+    if (!blob) {
+      throw new Error("The carousel preview could not be encoded");
+    }
+    return URL.createObjectURL(blob);
+  } finally {
+    release(canvas);
+  }
+};

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { z } from "zod";
 
 import { TINY_PNG_BASE64 } from "./fixtures";
 import {
@@ -106,8 +107,74 @@ test.describe("carousel mode", () => {
       .click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(
-      /^effort_.+_carousel_01\.png$/u
+      /^effort_.+_carousel_instagram-feed_01\.png$/u
     );
+  });
+});
+
+/** What the stubbed share sheet received: one file-name list per share. */
+const SharedSchema = z.array(z.array(z.string()));
+
+test.describe("carousel export on a phone", () => {
+  // An iPhone's user agent puts the export on the share-sheet path; the share
+  // API is stubbed to behave like iOS Safari after a capture of a few seconds:
+  // the first share (no live tap any more) is refused, a share from a fresh
+  // tap goes through.
+  test.use({
+    userAgent:
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
+  });
+
+  test("a set the phone refuses to share straight away is shared from a Save tap", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const shared: string[][] = [];
+      let calls = 0;
+      Object.defineProperty(navigator, "canShare", {
+        value: () => true,
+      });
+      Object.defineProperty(navigator, "share", {
+        value: async ({ files }: { files: File[] }) => {
+          calls += 1;
+          if (calls === 1) {
+            throw new DOMException("no user gesture", "NotAllowedError");
+          }
+          shared.push(files.map((file) => file.name));
+          // Published on <html> for the test to read back.
+          document.documentElement.dataset.effortShared =
+            JSON.stringify(shared);
+          await Promise.resolve();
+        },
+      });
+    });
+    await enterEditViaUpload(page);
+    await selectCarousel(page);
+    await page.getByRole("button", { name: /export carousel/iu }).click();
+    await expect(page.getByRole("heading", { name: /pick a/iu })).toBeVisible();
+
+    await page
+      .getByRole("button", { name: /download instagram feed/iu })
+      .click();
+    await page
+      .getByRole("button", { exact: true, name: "Save" })
+      .click({ timeout: 60_000 });
+    await expect
+      .poll(async () =>
+        SharedSchema.parse(
+          JSON.parse(
+            (await page.locator("html").getAttribute("data-effort-shared")) ??
+              "[]"
+          )
+        )
+      )
+      .toEqual([
+        [
+          expect.stringMatching(/_carousel_instagram-feed_01\.png$/u),
+          expect.stringMatching(/_carousel_instagram-feed_02\.png$/u),
+          expect.stringMatching(/_carousel_instagram-feed_03\.png$/u),
+        ],
+      ]);
   });
 });
 

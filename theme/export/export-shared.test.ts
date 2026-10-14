@@ -11,8 +11,11 @@ import {
 
 import {
   createInFlightGuard,
+  createSerialQueue,
+  delay,
   effortDateSlug,
   REVOKE_DELAY_MS,
+  shareFiles,
   triggerDownload,
 } from "@/theme/export/export-shared";
 
@@ -145,5 +148,86 @@ describe("createInFlightGuard", () => {
     expect(message).toBe("capture failed");
     expect(guard.busy).toBe(false);
     expect(await guard.run(async () => {})).toBe(true);
+  });
+});
+
+describe("createSerialQueue", () => {
+  test("runs tasks one at a time, in call order", async () => {
+    const run = createSerialQueue();
+    const log: string[] = [];
+    const task = (name: string, ms: number) => async () => {
+      log.push(`start ${name}`);
+      await delay(ms);
+      log.push(`end ${name}`);
+      return name;
+    };
+    const results = await Promise.all([run(task("a", 20)), run(task("b", 0))]);
+    expect(results).toEqual(["a", "b"]);
+    expect(log).toEqual(["start a", "end a", "start b", "end b"]);
+  });
+
+  test("a failing task rejects its own call and the queue carries on", async () => {
+    const run = createSerialQueue();
+    const failing = run(async () => {
+      await delay(0);
+      throw new Error("boom");
+    });
+    const next = run(async () => await Promise.resolve("ok"));
+    let message = "";
+    try {
+      await failing;
+    } catch (error) {
+      message = error instanceof Error ? error.message : "";
+    }
+    expect(message).toBe("boom");
+    expect(await next).toBe("ok");
+  });
+});
+
+/** Install a navigator with the given share() and canShare() answer. */
+const stubShare = (share: () => Promise<void>, canShare = true): void => {
+  Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: { canShare: () => canShare, share },
+    writable: true,
+  });
+};
+
+describe("shareFiles", () => {
+  const realNavigator = globalThis.navigator;
+  const files = [new File(["png"], "slide_01.png", { type: "image/png" })];
+
+  afterEach(() => {
+    Object.defineProperty(globalThis, "navigator", {
+      configurable: true,
+      value: realNavigator,
+      writable: true,
+    });
+  });
+
+  test("reports a share that went through", async () => {
+    stubShare(async () => {});
+    expect(await shareFiles(files, "set")).toBe("shared");
+  });
+
+  test("reports a share refused for want of a fresh tap as blocked", async () => {
+    stubShare(async () => {
+      await Promise.resolve();
+      throw new DOMException("no user gesture", "NotAllowedError");
+    });
+    expect(await shareFiles(files, "set")).toBe("blocked");
+  });
+
+  test("reports a dismissed share sheet as cancelled", async () => {
+    stubShare(async () => {
+      await Promise.resolve();
+      throw new DOMException("dismissed", "AbortError");
+    });
+    expect(await shareFiles(files, "set")).toBe("cancelled");
+  });
+
+  test("reports a browser that can't share these files as unsupported", async () => {
+    stubShare(async () => {}, false);
+    expect(await shareFiles(files, "set")).toBe("unsupported");
   });
 });

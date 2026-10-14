@@ -33,8 +33,9 @@ export interface RasterSize {
   width: number;
 }
 
-/** Rasterise `node` at an exact pixel size — the one call both pipelines share. */
-export type Rasterize = (size: RasterSize) => Promise<HTMLCanvasElement>;
+/** Rasterise the node as the DOM shows it right now, at the requested size —
+ *  the one snapdom call both pipelines share. */
+export type Capture = () => Promise<HTMLCanvasElement>;
 
 interface Layer {
   draw: PhotoDraw;
@@ -190,22 +191,80 @@ export const mergeProbes = (
 const BAND_PIXELS = 4_000_000;
 
 /** Release a canvas's backing store — iOS is strict about live canvas memory. */
-const release = (canvas: HTMLCanvasElement): void => {
+export const release = (canvas: HTMLCanvasElement): void => {
   canvas.width = 0;
   canvas.height = 0;
 };
 
+/** Composite the black/white probes with the photo plane, painted band by
+ *  band. */
+const mergeFrame = (
+  black: HTMLCanvasElement,
+  white: HTMLCanvasElement,
+  collected: Collected,
+  images: Map<string, HTMLImageElement>
+): HTMLCanvasElement => {
+  const blackCtx = black.getContext("2d", { willReadFrequently: true });
+  const whiteCtx = white.getContext("2d", { willReadFrequently: true });
+  if (!(blackCtx && whiteCtx)) {
+    release(white);
+    return black;
+  }
+
+  // Merge in horizontal bands: three full-size pixel buffers of a frame are
+  // exactly the kind of allocation a phone refuses. One band's worth of photo
+  // plane is enough at a time.
+  const bandH = Math.max(
+    1,
+    Math.min(black.height, Math.floor(BAND_PIXELS / black.width))
+  );
+  const plane = document.createElement("canvas");
+  plane.width = black.width;
+  plane.height = bandH;
+  const planeCtx = plane.getContext("2d", { willReadFrequently: true });
+  if (!planeCtx) {
+    release(white);
+    release(plane);
+    return black;
+  }
+
+  for (let y = 0; y < black.height; y += bandH) {
+    const h = Math.min(bandH, black.height - y);
+    planeCtx.clearRect(0, 0, plane.width, plane.height);
+    planeCtx.save();
+    planeCtx.translate(0, -y);
+    for (const layer of collected.layers) {
+      const image = images.get(layer.draw.src);
+      if (image) {
+        paintLayer(planeCtx, layer, image, collected.scale);
+      }
+    }
+    planeCtx.restore();
+    const merged = mergeProbes(
+      blackCtx.getImageData(0, y, black.width, h),
+      whiteCtx.getImageData(0, y, black.width, h),
+      planeCtx.getImageData(0, 0, black.width, h)
+    );
+    blackCtx.putImageData(merged, 0, y);
+  }
+
+  release(white);
+  release(plane);
+  return black;
+};
+
 /**
- * Rasterise `node` with its photo layers composited in. Returns null when there
+ * Capture `node` with its photo layers composited in. Returns null when there
  * is nothing to composite (no photo, or the photo can't be read) so the caller
  * can fall back to the straight capture.
  */
 export const rasterizeWithPhotoComposite = async (
   node: HTMLElement,
   size: RasterSize,
-  rasterize: Rasterize
+  capture: Capture
 ): Promise<HTMLCanvasElement | null> => {
-  const { layers, scale } = collectLayers(node, size);
+  const collected = collectLayers(node, size);
+  const { layers } = collected;
   if (layers.length === 0) {
     return null;
   }
@@ -244,58 +303,16 @@ export const rasterizeWithPhotoComposite = async (
   let white: HTMLCanvasElement;
   try {
     setProbe("#000");
-    black = await rasterize(size);
+    black = await capture();
     setProbe("#fff");
-    white = await rasterize(size);
+    try {
+      white = await capture();
+    } catch (error) {
+      release(black);
+      throw error;
+    }
   } finally {
     restore();
   }
-
-  const blackCtx = black.getContext("2d", { willReadFrequently: true });
-  const whiteCtx = white.getContext("2d", { willReadFrequently: true });
-  if (!(blackCtx && whiteCtx)) {
-    release(white);
-    return black;
-  }
-
-  // Merge in horizontal bands: three full-size pixel buffers of a carousel
-  // strip would be ~200MB, which is exactly the kind of allocation a phone
-  // refuses. One band's worth of photo plane is enough at a time.
-  const bandH = Math.max(
-    1,
-    Math.min(black.height, Math.floor(BAND_PIXELS / black.width))
-  );
-  const plane = document.createElement("canvas");
-  plane.width = black.width;
-  plane.height = bandH;
-  const planeCtx = plane.getContext("2d", { willReadFrequently: true });
-  if (!planeCtx) {
-    release(white);
-    release(plane);
-    return black;
-  }
-
-  for (let y = 0; y < black.height; y += bandH) {
-    const h = Math.min(bandH, black.height - y);
-    planeCtx.clearRect(0, 0, plane.width, plane.height);
-    planeCtx.save();
-    planeCtx.translate(0, -y);
-    for (const layer of layers) {
-      const image = images.get(layer.draw.src);
-      if (image) {
-        paintLayer(planeCtx, layer, image, scale);
-      }
-    }
-    planeCtx.restore();
-    const merged = mergeProbes(
-      blackCtx.getImageData(0, y, black.width, h),
-      whiteCtx.getImageData(0, y, black.width, h),
-      planeCtx.getImageData(0, 0, black.width, h)
-    );
-    blackCtx.putImageData(merged, 0, y);
-  }
-
-  release(white);
-  release(plane);
-  return black;
+  return mergeFrame(black, white, collected, images);
 };

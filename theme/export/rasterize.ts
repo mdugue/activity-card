@@ -12,7 +12,7 @@ import { canRasterizeEmbeddedImages } from "@/lib/svg-raster-support";
 
 import { fromCallback } from "./export-shared";
 import { rasterizeWithPhotoComposite } from "./photo-composite";
-import type { RasterSize } from "./photo-composite";
+import type { Capture, RasterSize } from "./photo-composite";
 
 /** `?photoComposite=force` / `=off` overrides the probe — for e2e coverage of
  *  the fallback on engines that don't need it, and as a field escape hatch. */
@@ -35,7 +35,8 @@ const needsComposite = async (): Promise<boolean> => {
 };
 
 /**
- * Rasterise a card / strip node to a canvas of exactly `size`.
+ * Rasterise a card (or one carousel slide's window) to a canvas of exactly
+ * `size`.
  *
  * snapdom options, unchanged from when they lived in `export-card`:
  * - `embedFonts` inlines the theme's @font-face — a headline silently falling
@@ -49,13 +50,15 @@ export const rasterizeNode = async (
   node: HTMLElement,
   size: RasterSize
 ): Promise<HTMLCanvasElement> => {
-  const capture = async (s: RasterSize) =>
-    await snapdom.toCanvas(node, {
+  const capture: Capture = async () => {
+    const result = await snapdom(node, {
       dpr: 1,
       embedFonts: true,
-      height: s.height,
-      width: s.width,
+      height: size.height,
+      width: size.width,
     });
+    return await result.toCanvas();
+  };
 
   if (await needsComposite()) {
     // Never let the fallback be the reason an export fails: a card whose photo
@@ -70,7 +73,7 @@ export const rasterizeNode = async (
       // fall through to the straight capture
     }
   }
-  return await capture(size);
+  return await capture();
 };
 
 /** Encode a rasterised canvas as PNG bytes. */
